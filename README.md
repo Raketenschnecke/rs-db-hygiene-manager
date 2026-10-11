@@ -56,7 +56,7 @@ recorder:
 
 ### 2. Automation „Löschlauf“
 
-Startet jede Nacht einen Löschlauf nach den aktiven Regeln. Ist die Analyse älter als 6 Stunden, analysiert die App vorher neu. Ist nichts zu löschen oder ein Schalter aus, passiert nichts.
+Startet jede Nacht einen Löschlauf im RS DB Hygiene Manager (und automatisiert somit lediglich das manuelle "auf den Löschknopf drücken").
 
 ```yaml
 alias: RS DB Hygiene – Löschlauf
