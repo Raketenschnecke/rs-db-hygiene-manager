@@ -45,14 +45,14 @@ Die Idee: Home Assistant bewahrt grundsätzlich alles lange auf, der Hygiene Man
 ```yaml
 recorder:
   purge_keep_days: 3650   # Beispiel und Empfehlung: 10 Jahre als Obergrenze für alles ohne eigene Regel (bis 7300 möglich)
-  auto_purge: false       # HAs nächtliches Aufräumen übernimmt die Automation „Purge und Repack“
-  auto_repack: false      # das monatliche Verdichten ebenfalls
+  auto_purge: false       # HAs nächtliches Löschen aus – gelöscht wird nur noch nach deinen Regeln
+  auto_repack: false      # HAs monatliches Verdichten aus – übernimmt die Automation „Repack“
 ```
 
 - **`purge_keep_days`** ist die längste Vorhaltezeit; 3650 Tage (10 Jahre) sind ein Beispiel und unsere Empfehlung als Startwert. Alles ohne eigene Regel („global“) bleibt so lange in der DB. Regeln können nur kürzen; eine Regel mit längerer Zeit wird auf diesen Wert gedeckelt.
-- **`auto_purge: false`** schaltet HAs eigenes Löschen um 04:12 ab. So löscht nachts zuerst der Hygiene Manager nach deinen Regeln und danach HA alles, was älter als `purge_keep_days` ist.
-- **`auto_repack: false`** schaltet HAs eigenes Verdichten (2. Sonntag im Monat) ab. Das Repack macht die Automation „Purge und Repack“ zum selben Termin.
-- Wichtig: `auto_purge` und `auto_repack` erst abschalten, wenn die Automation „Purge und Repack“ angelegt ist. Sonst räumt HA gar nicht mehr auf, und die Datei wird nie kleiner. Nach der Änderung Konfiguration prüfen und HA neu starten.
+- **`auto_purge: false`** schaltet HAs eigenes Löschen um 04:12 ab. Die Datenbank verwaltet dann allein der Hygiene Manager mit seinem Löschlauf.
+- **`auto_repack: false`** schaltet HAs eigenes Verdichten am 2. Sonntag im Monat ab (es läuft ohnehin nur zusammen mit `auto_purge`). Das Repack macht die Automation „Repack“ zum selben Termin.
+- Wichtig: `auto_repack` erst abschalten, wenn die Automation „Repack“ angelegt ist, sonst wird die Datei nach Löschläufen nie kleiner. Nach der Änderung Konfiguration prüfen und HA neu starten.
 
 ### 2. Automation „Löschlauf“
 
@@ -86,27 +86,40 @@ actions:
 
 Die Benachrichtigung am Ende ist optional. Das Event `rs_db_hygiene_lauf_beendet` liefert außerdem `attributzeilen`, `umfang` und `fehler`.
 
-### 3. Automation „Purge und Repack“ (ersetzt `auto_purge` und `auto_repack`)
+### 3. Automation „Repack“
 
-Löscht jede Nacht nach dem Löschlauf alles, was älter als `purge_keep_days` ist (auch Daten, die keine Regel erfasst, z. B. Laufprotokolle des Recorders). Am 2. Sonntag im Monat verdichtet sie die Datenbank zusätzlich (Repack). Erst dadurch wird die Datei kleiner; vorher wird der freie Platz nur für neue Daten wiederverwendet.
+**Warum ein Repack?** SQLite gibt Platz, der durch Löschen frei wird, nicht an das Dateisystem zurück. Die gelöschten Zeilen hinterlassen freie Seiten in der Datei; neue Daten füllen sie nach und nach wieder auf. Die Datei `home-assistant_v2.db` bleibt deshalb nach einem Löschlauf genauso groß wie vorher, auch wenn Millionen Zeilen weg sind. Erst ein Repack (SQLite `VACUUM`) schreibt die Datenbank neu und lückenlos, danach ist die Datei kleiner.
+
+Sinnvoll oder nötig ist das vor allem:
+
+- **nach großen Löschläufen**, z. B. beim ersten Lauf mit neuen Regeln, der Jahre an Daten entfernt. Ohne Repack bleibt der Platz auf dem Datenträger belegt;
+- **für Backups:** HA sichert die Datenbankdatei samt freier Seiten. Eine kleinere Datei macht jedes Backup kleiner und schneller;
+- **gegen Zerstückelung:** Nach vielen Lösch- und Schreibvorgängen liegen die Daten verstreut in der Datei. Ein Repack ordnet sie neu, Abfragen für Verlauf und Statistik werden dadurch oft wieder schneller.
+
+Bleibt die Datenbank dagegen ungefähr gleich groß, weil täglich etwa so viel gelöscht wie neu geschrieben wird, bringt ein Repack wenig. Einmal im Monat genügt dann völlig.
 
 ```yaml
-alias: RS DB Hygiene – Purge und Repack
+alias: RS DB Hygiene – Repack
 mode: single
 triggers:
   - trigger: time
     at: "05:00:00"
+conditions:
+  # einmal im Monat: 2. Sonntag (wie HAs eigenes auto_repack)
+  - condition: template
+    value_template: "{{ now().weekday() == 6 and 8 <= now().day <= 14 }}"
 actions:
   # läuft noch ein Löschlauf, erst sein Ende abwarten
   - wait_template: "{{ not is_state('sensor.rs_db_hygiene_status', 'loeschlauf') }}"
     timeout: "03:00:00"
   - action: recorder.purge
     data:
-      repack: "{{ now().weekday() == 6 and 8 <= now().day <= 14 }}"
+      repack: true
 ```
 
-- `recorder.purge` ohne `keep_days` nimmt den Wert `purge_keep_days` aus der `configuration.yaml`, beide passen also immer zusammen.
-- Ein Repack sperrt den Recorder für einige Minuten (bei großen Datenbanken länger) und braucht vorübergehend freien Platz in Größe der Datenbank. Neue Werte puffert der Recorder in dieser Zeit und schreibt sie danach.
+- HA hat keinen eigenen Dienst nur für das Repack, es läuft über `recorder.purge` mit `repack: true`. Ohne `keep_days` löscht der Dienst dabei nur, was älter als `purge_keep_days` ist, also nichts, was deine Einstellung nicht ohnehin erlaubt.
+- Ein Repack sperrt den Recorder für einige Minuten, bei großen Datenbanken auch länger. Neue Werte puffert der Recorder in dieser Zeit und schreibt sie danach.
+- Es braucht vorübergehend freien Platz in Größe der Datenbank. Nicht gleichzeitig mit einem Backup laufen lassen.
 
 ## Updates
 
