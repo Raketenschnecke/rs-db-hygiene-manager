@@ -12,6 +12,11 @@
   --kleb-h: 120px; --zeile-hell: #ffffff; --zeile-dunkel: #f2f4f7;
   --reiter: #e3e7ee; --reiter-hover: #d5dbe5; --reiter-rand: #c9d0db;
   --zf-ist: #d98880; --zf-loesch: #d4a72c; --zf-prog: #4fa36a;
+  /* Punkt 122 (0.5.1): Bedienelemente des Browsers (Checkboxen, Scrollbalken) folgen dem hellen/dunklen Modus
+     und den Farben der App, statt im hellen Standardlook (weiß) zu bleiben */
+  color-scheme: light dark;
+  accent-color: var(--accent);
+  scrollbar-color: var(--reiter-rand) transparent;
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #111418; --panel: #1a1f26; --text: #e6e9ee; --muted: #9aa3b1; --line: #2b323c;

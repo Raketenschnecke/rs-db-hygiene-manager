@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.1
+- **Häkchen und Scrollbalken im App-Design (Punkt 122):** Checkboxen zeigen das Blau der App, Scrollbalken den Grauton der Reiterränder; im dunklen Modus sind beide dunkel statt weiß
+- Nur die Web-GUI ändert sich. Die Integration bekommt nur die neue Versionsnummer; ihr Update in HACS ist inhaltlich gleich, der dafür gemeldete HA-Neustart kann bis zum nächsten geplanten Neustart warten
+
 ## 0.5.0
 - **Neue Heimat GitHub:** App über das App-Store-Repository, Integration über HACS – Updates kommen ab jetzt über HA bzw. HACS
 - App und Integration haben ab jetzt dieselbe Versionsnummer
