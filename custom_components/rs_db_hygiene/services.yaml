@@ -1,0 +1,63 @@
+purge:
+  fields:
+    tabelle:
+      required: true
+      selector:
+        select:
+          options: ["statistics", "statistics_short_term", "events"]
+    namen:
+      required: true
+      selector:
+        object:
+    keep_days:
+      selector:
+        number:
+          min: 1
+          max: 7300
+    vor_ts:
+      selector:
+        number:
+          min: 0
+          max: 9999999999
+          mode: box
+    alle:
+      default: false
+      selector:
+        boolean:
+    mit_meta:
+      default: false
+      selector:
+        boolean:
+    max_zeilen:
+      default: 100000
+      selector:
+        number:
+          min: 1
+          max: 1000000
+    nur_zaehlen:
+      default: false
+      selector:
+        boolean:
+purge_states:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          multiple: true
+    vor_ts:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 9999999999
+          mode: box
+loeschlauf_starten:
+  fields:
+    regel:
+      required: false
+      example: "EV:call_service"
+      selector:
+        text:
+analyse_starten:
+attribut_analyse_starten:

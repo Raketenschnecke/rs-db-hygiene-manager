@@ -1,0 +1,150 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "RS DB Hygiene",
+        "description": "Stellt den Dienst rs_db_hygiene.purge für die App „RS DB Hygiene Manager“ bereit (Löschen von 5-Min-Statistik, Langzeitstatistik und Events). Keine Einstellungen nötig."
+      },
+      "hassio_confirm": {
+        "title": "RS DB Hygiene",
+        "description": "Die App „RS DB Hygiene Manager“ hat sich gemeldet. Einrichten, damit Status-Entitäten, Knöpfe und der Dienst rs_db_hygiene.loeschlauf_starten für Automationen verfügbar werden?"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Die Integration ist bereits eingerichtet.",
+      "already_configured": "Die Integration ist bereits eingerichtet; Verbindungsdaten wurden aktualisiert."
+    }
+  },
+  "services": {
+    "purge": {
+      "name": "Recorder-Daten löschen (RS DB Hygiene)",
+      "description": "Löscht Zeilen der 5-Min-Statistik, der Langzeitstatistik oder Events älter als keep_days bzw. vor vor_ts – nur für die genannten statistic_ids bzw. Event-Typen. Wird von der App aufgerufen.",
+      "fields": {
+        "tabelle": {
+          "name": "Tabelle",
+          "description": "statistics (Langzeit), statistics_short_term (5 min) oder events"
+        },
+        "namen": {
+          "name": "Namen",
+          "description": "Liste der statistic_ids bzw. Event-Typen (nie leer)"
+        },
+        "keep_days": {
+          "name": "Tage behalten",
+          "description": "Zeilen älter als so viele Tage werden gelöscht"
+        },
+        "alle": {
+          "name": "Alle",
+          "description": "Alle Zeilen löschen (Langzeit „keine“), nur Statistik"
+        },
+        "mit_meta": {
+          "name": "Mit Meta",
+          "description": "Zusätzlich statistics_meta löschen (nur mit alle, nur statistics)"
+        },
+        "max_zeilen": {
+          "name": "Höchstens Zeilen",
+          "description": "Obergrenze je Aufruf"
+        },
+        "nur_zaehlen": {
+          "name": "Nur zählen",
+          "description": "Nichts löschen, nur zählen"
+        },
+        "vor_ts": {
+          "name": "Vor Zeitpunkt",
+          "description": "Unix-Zeit; Zeilen davor werden gelöscht (z. B. lokale Mitternacht). Hat Vorrang vor keep_days."
+        }
+      }
+    },
+    "purge_states": {
+      "name": "States löschen bis Zeitpunkt (RS DB Hygiene)",
+      "description": "Löscht die States der genannten Entitäten vor einem exakten Zeitpunkt – wie recorder.purge_entities, aber ohne Rundung auf ganze Tage ab jetzt. Wird von der App aufgerufen.",
+      "fields": {
+        "entity_id": {
+          "name": "Entitäten",
+          "description": "Liste der Entitäten (nie leer)"
+        },
+        "vor_ts": {
+          "name": "Vor Zeitpunkt",
+          "description": "Unix-Zeit; States davor werden gelöscht (z. B. lokale Mitternacht)"
+        }
+      }
+    },
+    "loeschlauf_starten": {
+      "name": "Löschlauf starten (RS DB Hygiene)",
+      "description": "Startet in der App einen Löschlauf mit allen aktiven Regeln oder einer Regel. Braucht in der App „Löschen freigegeben“ und „Automatik freigegeben“; Obergrenze und Sperren gelten wie im Tab „Löschen“.",
+      "fields": {
+        "regel": {
+          "name": "Regel",
+          "description": "Optional: nur diese Regel (z. B. EV:call_service); leer = alle aktiven Regeln"
+        }
+      }
+    },
+    "analyse_starten": {
+      "name": "Analyse starten (RS DB Hygiene)",
+      "description": "Startet in der App die (lesende) Analyse."
+    },
+    "attribut_analyse_starten": {
+      "name": "Attribut-Analyse starten (RS DB Hygiene)",
+      "description": "Startet in der App die (lesende) Attribut-Analyse (≈ 5–10 min). Sie liefert die Attributzeilen für Plan, Prognose und Entitäten."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "bereit": "bereit",
+          "nichts_zu_tun": "nichts zu tun",
+          "gesperrt": "gesperrt",
+          "analyse": "Analyse",
+          "attribut_analyse": "Attribut-Analyse",
+          "loeschlauf": "Löschlauf",
+          "fehler": "Fehler",
+          "nicht_erreichbar": "nicht erreichbar"
+        }
+      },
+      "fortschritt": {
+        "name": "Fortschritt"
+      },
+      "geplante_zeilen": {
+        "name": "Geplante Zeilen"
+      },
+      "letzter_lauf": {
+        "name": "Letzter Lauf"
+      },
+      "letzter_lauf_geloescht": {
+        "name": "Letzter Lauf gelöscht"
+      },
+      "db_groesse": {
+        "name": "SQLite DB Größe"
+      },
+      "prognose": {
+        "name": "Prognose DB Größe (Vorhaltezeit)"
+      },
+      "analyse_stand": {
+        "name": "Letzte Analyse"
+      },
+      "letzte_attribut_analyse": {
+        "name": "Letzte Attribut-Analyse"
+      }
+    },
+    "binary_sensor": {
+      "laeuft": {
+        "name": "Läuft"
+      }
+    },
+    "button": {
+      "loeschlauf_starten": {
+        "name": "Löschlauf starten"
+      },
+      "analyse_starten": {
+        "name": "Analyse starten"
+      },
+      "attribut_analyse_starten": {
+        "name": "Attribut-Analyse starten"
+      },
+      "abbrechen": {
+        "name": "Löschlauf abbrechen"
+      }
+    }
+  }
+}

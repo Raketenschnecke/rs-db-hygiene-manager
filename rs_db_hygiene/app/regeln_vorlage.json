@@ -1,0 +1,26 @@
+{
+  "_hinweis": "Startliste für neue Installationen: allgemeine Muster, alle Regeln passiv (auch die Event-Regel). Erst im Probelauf prüfen (passive Regeln mitrechnen), dann einzeln aktiv schalten. Werte: n d/w/m/j, global, unbegrenzt, keine.",
+  "standard": {"kurzzeit": "global", "attribute": "wie_kurzzeit", "langzeit": "unbegrenzt"},
+  "regeln": [
+    {"id": "R01", "name": "Uhrzeit-Sensoren", "typ": "entity", "muster": ["sensor.time", "sensor.date", "sensor.date_time", "sensor.date_time_iso"],
+     "aktiv": false, "kurzzeit": "1d", "attribute": null, "langzeit": null, "notiz": ""},
+    {"id": "R02", "name": "Geräte-Diagnose", "typ": "glob", "muster": ["sensor.*_wifi_signal*", "sensor.*_rssi*", "sensor.*heap_*", "sensor.*loop_time*"],
+     "aktiv": false, "kurzzeit": "7d", "attribute": null, "langzeit": null, "notiz": ""},
+    {"id": "R03", "name": "Kamera-Bilder", "typ": "glob", "muster": ["camera.*", "image.*"],
+     "aktiv": false, "kurzzeit": "7d", "attribute": null, "langzeit": null, "notiz": ""},
+    {"id": "R04", "name": "System-Auslastung", "typ": "glob", "muster": ["sensor.system_monitor_*", "sensor.*_cpu_*", "sensor.*_memory_*", "sensor.*_load_*"],
+     "aktiv": false, "kurzzeit": "14d", "attribute": null, "langzeit": null, "notiz": ""},
+    {"id": "R05", "name": "Netzwerk-Durchsatz", "typ": "klasse", "muster": ["sensor|data_rate", "sensor|data_size"],
+     "aktiv": false, "kurzzeit": "14d", "attribute": null, "langzeit": null, "notiz": ""},
+    {"id": "R06", "name": "Leistung, Strom, Spannung", "typ": "klasse", "muster": ["sensor|power", "sensor|power_factor", "sensor|current", "sensor|voltage"],
+     "aktiv": false, "kurzzeit": "30d", "attribute": null, "langzeit": null, "notiz": "Energiezähler (total*) sind davon nicht betroffen"},
+    {"id": "R07", "name": "Helligkeit", "typ": "klasse", "muster": ["sensor|illuminance"],
+     "aktiv": false, "kurzzeit": "30d", "attribute": null, "langzeit": null, "notiz": ""},
+    {"id": "R08", "name": "Automationen und Skripte", "typ": "glob", "muster": ["automation.*", "script.*"],
+     "aktiv": false, "kurzzeit": "30d", "attribute": null, "langzeit": null, "notiz": ""},
+    {"id": "R09", "name": "Gelöschte Entitäten", "typ": "verwaist", "muster": ["geloescht"],
+     "aktiv": false, "kurzzeit": "30d", "attribute": null, "langzeit": null, "notiz": "Entitäten, die es in HA nicht mehr gibt"},
+    {"id": "EV:call_service", "name": "Events call_service", "typ": "event", "muster": ["call_service"],
+     "aktiv": false, "kurzzeit": "7d", "attribute": null, "langzeit": null, "notiz": "Dienstaufrufe (call_service)"}
+  ]
+}

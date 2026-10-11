@@ -1,0 +1,25 @@
+configuration:
+  db_pfad:
+    name: Pfad der Recorder-Datenbank
+    description: Wird nur lesend geöffnet.
+  analyse_uhrzeit:
+    name: Uhrzeit der nächtlichen Analyse
+    description: Format HH:MM. Die Analyse liest nur; der Nachtlauf löscht nichts.
+  purge_keep_days:
+    name: purge_keep_days (Vorgabe)
+    description: 0 = Wert aus der configuration.yaml (empfohlen). Die configuration.yaml hat Vorrang – ein eigener Wert wirkt nur, wenn er kleiner ist, und nur in der App, nicht in Home Assistant.
+  loeschen_freigegeben:
+    name: Löschen freigegeben (Hauptschalter)
+    description: Erst wenn eingeschaltet, kann ein Löschlauf starten – im Tab „Löschen“ auf Knopfdruck oder aus HA, wenn zusätzlich „Automatik freigegeben“ an ist.
+  loeschen_max_zeilen:
+    name: Höchstens gelöschte Zeilen pro Lauf
+    description: Obergrenze für States-Zeilen je Löschlauf; der Rest folgt im nächsten Lauf.
+  loeschen_max_zeilen_b:
+    name: Höchstens gelöschte Zeilen pro Lauf (Statistik und Events)
+    description: Eigene Obergrenze für 5-Min-Statistik, Langzeit und Events (Stufe B, über die Integration RS DB Hygiene). Sie gilt zusätzlich zur Obergrenze der States; Stufe B läuft zuerst.
+  protokoll_tage:
+    name: Aufbewahrung Löschprotokoll (Tage)
+    description: Ältere Läufe werden gelöscht; 0 = unbegrenzt. Die Monatssumme je Entität bleibt immer erhalten.
+  automatik_freigegeben:
+    name: Automatik freigegeben
+    description: Erlaubt Löschläufe aus Home Assistant heraus (Knopf, Dienst rs_db_hygiene.loeschlauf_starten, Automation) über die Integration RS DB Hygiene. Zusätzlich muss „Löschen freigegeben“ an sein.

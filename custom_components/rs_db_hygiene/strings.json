@@ -1,0 +1,150 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "RS DB Hygiene",
+        "description": "Provides the service rs_db_hygiene.purge for the add-on RS DB Hygiene Manager. No settings required."
+      },
+      "hassio_confirm": {
+        "title": "RS DB Hygiene",
+        "description": "The add-on RS DB Hygiene Manager was discovered. Set up status entities, buttons and the service rs_db_hygiene.loeschlauf_starten?"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Die Integration ist bereits eingerichtet.",
+      "already_configured": "Already configured; connection data updated."
+    }
+  },
+  "services": {
+    "purge": {
+      "name": "Recorder-Daten löschen (RS DB Hygiene)",
+      "description": "Löscht Zeilen der 5-Min-Statistik, der Langzeitstatistik oder Events älter als keep_days bzw. vor vor_ts – nur für die genannten statistic_ids bzw. Event-Typen. Wird von der App aufgerufen.",
+      "fields": {
+        "tabelle": {
+          "name": "Tabelle",
+          "description": "statistics (Langzeit), statistics_short_term (5 min) oder events"
+        },
+        "namen": {
+          "name": "Namen",
+          "description": "Liste der statistic_ids bzw. Event-Typen (nie leer)"
+        },
+        "keep_days": {
+          "name": "Tage behalten",
+          "description": "Zeilen älter als so viele Tage werden gelöscht"
+        },
+        "alle": {
+          "name": "Alle",
+          "description": "Alle Zeilen löschen (Langzeit „keine“), nur Statistik"
+        },
+        "mit_meta": {
+          "name": "Mit Meta",
+          "description": "Zusätzlich statistics_meta löschen (nur mit alle, nur statistics)"
+        },
+        "max_zeilen": {
+          "name": "Höchstens Zeilen",
+          "description": "Obergrenze je Aufruf"
+        },
+        "nur_zaehlen": {
+          "name": "Nur zählen",
+          "description": "Nichts löschen, nur zählen"
+        },
+        "vor_ts": {
+          "name": "Vor Zeitpunkt",
+          "description": "Unix-Zeit; Zeilen davor werden gelöscht (z. B. lokale Mitternacht). Hat Vorrang vor keep_days."
+        }
+      }
+    },
+    "purge_states": {
+      "name": "States löschen bis Zeitpunkt (RS DB Hygiene)",
+      "description": "Löscht die States der genannten Entitäten vor einem exakten Zeitpunkt – wie recorder.purge_entities, aber ohne Rundung auf ganze Tage ab jetzt. Wird von der App aufgerufen.",
+      "fields": {
+        "entity_id": {
+          "name": "Entitäten",
+          "description": "Liste der Entitäten (nie leer)"
+        },
+        "vor_ts": {
+          "name": "Vor Zeitpunkt",
+          "description": "Unix-Zeit; States davor werden gelöscht (z. B. lokale Mitternacht)"
+        }
+      }
+    },
+    "loeschlauf_starten": {
+      "name": "Start deletion run (RS DB Hygiene)",
+      "description": "Starts a deletion run in the add-on (all active rules or one rule).",
+      "fields": {
+        "regel": {
+          "name": "Rule",
+          "description": "Optional rule id; empty = all active rules"
+        }
+      }
+    },
+    "analyse_starten": {
+      "name": "Start analysis (RS DB Hygiene)",
+      "description": "Starts the read-only analysis in the add-on."
+    },
+    "attribut_analyse_starten": {
+      "name": "Start attribute analysis (RS DB Hygiene)",
+      "description": "Starts the read-only attribute analysis in the add-on (≈ 5–10 min)."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "bereit": "ready",
+          "nichts_zu_tun": "nothing to do",
+          "gesperrt": "locked",
+          "analyse": "analysis",
+          "attribut_analyse": "attribute analysis",
+          "loeschlauf": "deletion run",
+          "fehler": "error",
+          "nicht_erreichbar": "unreachable"
+        }
+      },
+      "fortschritt": {
+        "name": "Progress"
+      },
+      "geplante_zeilen": {
+        "name": "Planned rows"
+      },
+      "letzter_lauf": {
+        "name": "Last run"
+      },
+      "letzter_lauf_geloescht": {
+        "name": "Last run deleted"
+      },
+      "db_groesse": {
+        "name": "SQLite DB size"
+      },
+      "prognose": {
+        "name": "Forecast DB size (retention period)"
+      },
+      "analyse_stand": {
+        "name": "Last analysis"
+      },
+      "letzte_attribut_analyse": {
+        "name": "Last attribute analysis"
+      }
+    },
+    "binary_sensor": {
+      "laeuft": {
+        "name": "Running"
+      }
+    },
+    "button": {
+      "loeschlauf_starten": {
+        "name": "Start deletion run"
+      },
+      "analyse_starten": {
+        "name": "Start analysis"
+      },
+      "attribut_analyse_starten": {
+        "name": "Start attribute analysis"
+      },
+      "abbrechen": {
+        "name": "Abort deletion run"
+      }
+    }
+  }
+}

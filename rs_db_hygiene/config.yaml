@@ -1,0 +1,50 @@
+name: RS DB Hygiene Manager
+version: "0.5.0"
+slug: rs_db_hygiene
+description: >-
+  Vorhaltezeiten pro Entität (Kurzzeit samt Attributen, Langzeit) und je Event-Typ für die Recorder-Datenbank.
+  Löschlauf manuell oder aus HA (Automatik), jeweils nur mit Hauptschalter: Kurzzeit-States per recorder.purge_entities, mit der Integration RS DB Hygiene auch 5-Min-Statistik, Langzeit und Events.
+url: https://github.com/Raketenschnecke/rs-db-hygiene-manager
+arch:
+  - amd64
+init: false
+startup: application
+boot: manual
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:database-cog
+panel_title: DB Hygiene
+homeassistant_api: true
+# Punkt 62: Anmeldung bei HA per Discovery (Dienst rs_db_hygiene) und Abfrage der eigenen Infos beim Supervisor
+hassio_api: true
+discovery:
+  - rs_db_hygiene
+# Nur lesend eingebunden. SQLite liest die WAL-Datenbank dann ohne Schreibzugriff auf -shm.
+map:
+  - homeassistant_config:ro
+options:
+  db_pfad: /homeassistant/home-assistant_v2.db
+  analyse_uhrzeit: "02:15"
+  purge_keep_days: 0
+  loeschen_freigegeben: false
+  loeschen_max_zeilen: 5000000
+  loeschen_max_zeilen_b: 2000000
+  protokoll_tage: 365
+  automatik_freigegeben: false
+schema:
+  db_pfad: str
+  analyse_uhrzeit: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
+  # 0 = aus configuration.yaml lesen; ab 0.4.8 (Punkt 103) wirkt ein eigener Wert nur, wenn er kleiner ist
+  purge_keep_days: int(0,7300)
+  # Hauptschalter: ohne ihn ruft die App keinen Löschdienst auf
+  loeschen_freigegeben: bool
+  # Obergrenze gelöschter States-Zeilen pro Lauf
+  loeschen_max_zeilen: int(10000,50000000)
+  # Punkt 82: eigene Obergrenze für 5-Min-Statistik, Langzeit und Events (Stufe B), unabhängig von den States.
+  # Punkt 87: optional (?), sonst lehnt der Supervisor das Speichern alter Konfigurationen ohne diese Option ab;
+  # ohne Wert nimmt die App 2.000.000. Grundsatz: neue Optionen immer mit ? einführen.
+  loeschen_max_zeilen_b: int(10000,50000000)?
+  # Aufbewahrung des Löschprotokolls in Tagen, 0 = unbegrenzt (die Monatssumme je Entität bleibt immer)
+  protokoll_tage: int(0,3650)
+  # Läufe aus HA heraus (Knopf, Dienst, Automation) zulassen – zusätzlich zum Hauptschalter
+  automatik_freigegeben: bool
