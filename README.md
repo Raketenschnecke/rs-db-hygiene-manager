@@ -34,7 +34,7 @@ Home-Assistant-Datenbank vom Hygiene Manager analysieren lassen → Analyseergeb
 **Automatik:**
 In HA eine Automation anlegen, die über die Integration RS DB Hygiene einen Löschlauf startet (Aktion `rs_db_hygiene.loeschlauf_starten`) → fertig.
 
-Gelöscht wird nur, wenn in der App-Konfiguration „Löschen freigegeben“ eingeschaltet ist; für die Automatik zusätzlich „Automatik freigegeben“.
+Gelöscht wird nur, wenn in der App-Konfiguration „Löschen freigegeben“ eingeschaltet ist; für die Steuerung via Automation muss zusätzlich „Automatik freigegeben“ aktiviert sein.
 
 ## Updates
 
