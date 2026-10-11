@@ -41,6 +41,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import time
 
 _LOG = logging.getLogger("regeln")
 WERTE = ("kurzzeit", "attribute", "langzeit")
@@ -205,6 +207,73 @@ def speichere(pfad, daten):
         json.dump(daten, f, ensure_ascii=False, indent=1)
     os.replace(tmp, pfad)
     return daten
+
+
+# Punkte 123/124 (0.5.2): Sicherungen vor Zurücksetzen, Wiederherstellen und Import
+# Dateiname regeln_<JJJJMMTT>_<hhmmss>_<grund>[<n>].json – n nur, wenn zwei Sicherungen in dieselbe Sekunde fallen
+SICHERUNGEN_BEHALTEN = 10
+_SICHERUNG = re.compile(r"^regeln_\d{8}_\d{6}_([a-z]+?)(\d*)\.json$")
+GRUENDE = {"zuruecksetzen": "vor Zurücksetzen", "wiederherstellen": "vor Wiederherstellen", "import": "vor Import"}
+
+
+def kennzahlen(daten):
+    """Anzahl Regeln und davon aktive – für Rückfragen und die Sicherungsliste."""
+    r = daten.get("regeln") or []
+    return {"anzahl": len(r), "aktiv": sum(1 for x in r if x.get("aktiv", True) is not False)}
+
+
+def lies_import(roh):
+    """Prüft eine Regeldatei aus Export oder Sicherung; wirft RegelFehler. Liefert die normalisierten Daten."""
+    if not isinstance(roh, dict) or not isinstance(roh.get("regeln"), list):
+        raise RegelFehler("Keine Regeldatei: es fehlt die Liste „regeln“")
+    # ohne Schlüssel „events“ ergänzt normalisiere den Startwert EV:call_service – beim Import nicht erwünscht
+    return normalisiere({**roh, "events": roh.get("events") or {}})
+
+
+def sichere(pfad, ordner, grund):
+    """Kopie der aktuellen Regeldatei nach ordner; behält die letzten SICHERUNGEN_BEHALTEN. Liefert den Dateinamen."""
+    if not os.path.exists(pfad):
+        return None
+    os.makedirs(ordner, exist_ok=True)
+    stamm, n = f"regeln_{time.strftime('%Y%m%d_%H%M%S')}_{grund}", 1
+    name = stamm + ".json"
+    while os.path.exists(os.path.join(ordner, name)):
+        n += 1
+        name = f"{stamm}{n}.json"
+    shutil.copyfile(pfad, os.path.join(ordner, name))   # neue Änderungszeit = Zeitpunkt der Sicherung
+    for alt in liste_sicherungen(ordner)[SICHERUNGEN_BEHALTEN:]:
+        os.remove(os.path.join(ordner, alt["name"]))
+    return name
+
+
+def liste_sicherungen(ordner):
+    """Sicherungen, neueste zuerst: [{name, zeit, grund, anzahl, aktiv}] – unlesbare Dateien mit fehler."""
+    if not os.path.isdir(ordner):
+        return []
+    aus = []
+    for name in os.listdir(ordner):
+        m = _SICHERUNG.match(name)
+        if not m:
+            continue
+        p = os.path.join(ordner, name)
+        e = {"name": name, "zeit": os.path.getmtime(p), "grund": GRUENDE.get(m.group(1), m.group(1))}
+        try:
+            with open(p, encoding="utf-8") as f:
+                e.update(kennzahlen(json.load(f)))
+        except (OSError, ValueError) as x:
+            e["fehler"] = str(x)
+        aus.append(e)
+    return sorted(aus, key=lambda e: (e["zeit"], e["name"]), reverse=True)
+
+
+def lies_sicherung(ordner, name):
+    if not _SICHERUNG.match(name or ""):
+        raise RegelFehler("Unbekannte Sicherung")
+    p = os.path.join(ordner, name)
+    if not os.path.exists(p):
+        raise RegelFehler("Sicherung nicht gefunden")
+    with open(p, encoding="utf-8") as f:
+        return lies_import(json.load(f))
 
 
 class Aufloeser:

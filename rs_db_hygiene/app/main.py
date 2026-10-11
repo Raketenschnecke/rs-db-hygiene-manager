@@ -34,6 +34,7 @@ REGELN = os.path.join(DATA, "regeln.json")
 LAEUFE = os.path.join(DATA, "laeufe")
 LAEUFE_SUMME = os.path.join(DATA, "laeufe_summe.json")
 VORLAGE = os.path.join(APP_DIR, "regeln_vorlage.json")
+SICHERUNGEN = os.path.join(DATA, "regeln_sicherungen")   # Punkt 123
 HA_CONFIG = "/homeassistant"
 INGRESS_IP = "172.30.32.2"
 
@@ -471,6 +472,74 @@ async def regeln_schreiben(request):
                               "ueberschneidungen": rg.entity_ueberschneidungen(daten)})
 
 
+# Punkte 123/124 (0.5.2): Regeln verwalten – Zurücksetzen, Sicherungen, Export und Import.
+# Jede Ersetzung legt vorher eine Sicherung an und ist gesperrt, solange ein Löschlauf läuft.
+def _ersetzen_gesperrt(body):
+    if Z.job and Z.job.get("art") == "loeschen":
+        return web.json_response({"fehler": "gesperrt, solange der Löschlauf läuft"}, status=409)
+    if float(body.get("version") or 0) != Z.mtime(REGELN):
+        return web.json_response({"fehler": "Regeln wurden zwischenzeitlich geändert – bitte neu laden"}, status=409)
+    return None
+
+
+def _ersetze_regeln(daten, grund):
+    sicherung = rg.sichere(REGELN, SICHERUNGEN, grund)
+    daten = rg.speichere(REGELN, daten)
+    _LOG.info("Regeln ersetzt (%s): %d Regeln, davon %d aktiv; Sicherung %s", grund, *rg.kennzahlen(daten).values(), sicherung)
+    return web.json_response({"daten": daten, "version": Z.mtime(REGELN), "sicherung": sicherung,
+                              "ueberschneidungen": rg.entity_ueberschneidungen(daten)})
+
+
+def _vorlage():
+    with open(VORLAGE, encoding="utf-8") as f:
+        return rg.lies_import(json.load(f))
+
+
+async def regeln_verwalten(_request):
+    """Kennzahlen für die Rückfragen: aktuelle Regeln, Startregeln und die Liste der Sicherungen."""
+    return web.json_response({"aktuell": rg.kennzahlen(rg.lade(REGELN, VORLAGE)), "vorlage": rg.kennzahlen(_vorlage()),
+                              "sicherungen": rg.liste_sicherungen(SICHERUNGEN), "behalten": rg.SICHERUNGEN_BEHALTEN,
+                              "gesperrt": bool(Z.job and Z.job.get("art") == "loeschen")})
+
+
+async def regeln_zuruecksetzen(request):
+    body = await request.json()
+    gesperrt = _ersetzen_gesperrt(body)
+    return gesperrt if gesperrt is not None else _ersetze_regeln(_vorlage(), "zuruecksetzen")
+
+
+async def regeln_wiederherstellen(request):
+    body = await request.json()
+    try:
+        daten = rg.lies_sicherung(SICHERUNGEN, body.get("name"))
+    except (rg.RegelFehler, ValueError) as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    gesperrt = _ersetzen_gesperrt(body)
+    return gesperrt if gesperrt is not None else _ersetze_regeln(daten, "wiederherstellen")
+
+
+async def regeln_export(_request):
+    daten = rg.lade(REGELN, VORLAGE)
+    inhalt = {"_export": {"app": "RS DB Hygiene Manager", "zeit": time.strftime("%Y-%m-%d %H:%M:%S")}, **daten}
+    name = f"rs_db_hygiene_regeln_{time.strftime('%Y-%m-%d')}.json"
+    return web.Response(text=json.dumps(inhalt, ensure_ascii=False, indent=1), content_type="application/json", charset="utf-8",
+                        headers={"Content-Disposition": f"attachment; filename={name}"})
+
+
+async def regeln_import(request):
+    """Importierte Datei prüfen (pruefen = true: nur Vorschau) bzw. die Regeln damit ersetzen."""
+    body = await request.json()
+    try:
+        daten = rg.lies_import(body.get("datei"))
+    except (rg.RegelFehler, ValueError, TypeError) as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    if body.get("pruefen"):
+        return web.json_response({"neu": rg.kennzahlen(daten), "aktuell": rg.kennzahlen(rg.lade(REGELN, VORLAGE)),
+                                  "export": (body.get("datei") or {}).get("_export")})
+    gesperrt = _ersetzen_gesperrt(body)
+    return gesperrt if gesperrt is not None else _ersetze_regeln(daten, "import")
+
+
 async def regel_vorschau(request):
     """Welche Entitäten träfe diese Regel – und wo wird sie im Regelwerk überstimmt (Punkt 29)?
 
@@ -903,6 +972,11 @@ def erstelle_app():
         web.put("/api/regeln", regeln_schreiben),
         web.post("/api/regeln/vorschau", regel_vorschau),
         web.post("/api/regeln/pruefen", regel_pruefen),
+        web.get("/api/regeln/verwalten", regeln_verwalten),
+        web.post("/api/regeln/zuruecksetzen", regeln_zuruecksetzen),
+        web.post("/api/regeln/wiederherstellen", regeln_wiederherstellen),
+        web.get("/api/regeln/export", regeln_export),
+        web.post("/api/regeln/import", regeln_import),
         web.get("/api/lts_ohne_entitaet", lts_ohne),
         web.get("/api/loeschen/plan", loesch_plan),
         web.post("/api/loeschen/start", loesch_start),

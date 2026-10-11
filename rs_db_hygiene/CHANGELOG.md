@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.2
+- **Regeln verwalten (Punkte 123, 124):** neuer Knopf im Reiter Regeln. Darüber lassen sich die Regeln als JSON exportieren und importieren (mit Prüfung, Vorschau und Rückfrage), auf die Startregeln zurücksetzen und frühere Stände wiederherstellen. Vor jedem Ersetzen sichert die App die bisherigen Regeln; die letzten 10 Sicherungen bleiben. Solange ein Löschlauf läuft, ist das Ersetzen gesperrt
+- **Knopf „Analyse starten“ (Punkt 125):** doppelt so breit wie hoch. Der Stand-Text daneben entfällt; der Stand steht jetzt im Tooltip und in der Rückfrage. Ist eine Analyse veraltet, zeigt ein gelbes Ausrufezeichen am Knopf das an
+- Hilfe: zwei neue FAQ (Regeln von vorn, Regeln mitnehmen)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer; der HA-Neustart für ihr HACS-Update kann bis zum nächsten geplanten Neustart warten
+
 ## 0.5.1
 - **Häkchen und Scrollbalken im App-Design (Punkt 122):** Checkboxen zeigen das Blau der App, Scrollbalken den Grauton der Reiterränder; im dunklen Modus sind beide dunkel statt weiß
 - Nur die Web-GUI ändert sich. Die Integration bekommt nur die neue Versionsnummer; ihr Update in HACS ist inhaltlich gleich, der dafür gemeldete HA-Neustart kann bis zum nächsten geplanten Neustart warten

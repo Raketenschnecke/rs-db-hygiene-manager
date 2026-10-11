@@ -39,17 +39,17 @@ h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spac
 .kopf-titel { min-width: 0; display: flex; align-items: center; }
 .kopf-fehler { margin: 0 20px; }   /* nur bei einem Fehler gefüllt; leer ohne Höhe und ohne Abstand */
 .kopf-fehler:not(:empty) { margin-bottom: 10px; }
-/* quadratisch, zweizeilig „Analyse / starten“; mindestens 40 px, damit zwei Zeilen lesbar bleiben */
-#btnAnalyse { width: max(var(--kopf-h), 40px); height: max(var(--kopf-h), 40px); padding: 2px; flex: none;
+/* Punkt 125 (0.5.2): doppelt so breit wie hoch, zweizeilig „Analyse / starten“; mindestens 40 px hoch, damit zwei Zeilen lesbar bleiben */
+#btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h)); height: var(--knopf-h); padding: 2px; flex: none; position: relative;
   font-size: 12.5px; line-height: 1.15; font-weight: 700; text-align: center;
   /* Punkt 107: gefüllt im Rot der Kachelzeile „Istzustand“ – bewusst nicht das Gefahr-Rot der Löschknöpfe */
   background: var(--zf-ist); border-color: var(--zf-ist); color: #fff; }
 #btnAnalyse:hover:not(:disabled), #btnAnalyse:focus-visible { background: color-mix(in srgb, var(--zf-ist) 80%, #000); border-color: color-mix(in srgb, var(--zf-ist) 80%, #000); outline: none; }
+/* Punkt 125: Markierung oben rechts, wenn eine Analyse veraltet ist (Grund im Tooltip) – gelb, damit sie auf dem Rot auffällt */
+#btnAnalyse.alt::after { content: "!"; position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+  background: #f5c400; color: #1d2330; border: 2px solid var(--bg); font-size: 11px; line-height: 16px; font-weight: 800; }
 .kopf-job { display: flex; align-items: center; gap: 10px; flex: none; }
-.kopf-job .stand { white-space: nowrap; text-align: right; }
-.kopf-job .stand b { font-weight: 700; }
-.kopf-job .sm { display: none; }
-@media (max-width: 900px) { header { --kopf-h: calc(26px * 1.2); } h1 { font-size: 26px; } .kopf-job .sl { display: none; } .kopf-job .sm { display: inline; } }
+@media (max-width: 900px) { header { --kopf-h: calc(26px * 1.2); } h1 { font-size: 26px; } }
 h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .sub { color: var(--muted); }
 /* Punkt 89: je Hinweis ein eigenes Banner, Titel fett */
@@ -98,8 +98,6 @@ main { padding: 0 20px 24px; }
 .info:hover, .info:focus-visible { color: var(--accent); }
 .leiste { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-bottom: 10px; }
 .jobblock { display: grid; gap: 2px; justify-items: start; }
-.stand { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.stand.alt { color: var(--warn); font-weight: 600; }
 button, select, input, textarea { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
 button { cursor: pointer; }
 button.primaer { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -249,13 +247,13 @@ button.gefahr:disabled { opacity: .45; }
 .risiko.schwer { color: var(--bad); font-weight: 600; }
 .laeufe-titel { margin: 18px 0 6px; font-size: 14px; }
 .stufeb { font-size: 11px; color: var(--warn); margin-top: 3px; }
-@media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } header { --kopf-h: calc(20px * 1.2); } h1 { font-size: 20px; } .kopf-job .sm { display: none; } .kopf-fehler { margin-left: 16px; margin-right: 16px; } .banner { margin: 0 16px 8px; } .lauf { margin: 0 16px 12px; } }
+@media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } header { --kopf-h: calc(20px * 1.2); } h1 { font-size: 20px; } .kopf-fehler { margin-left: 16px; margin-right: 16px; } .banner { margin: 0 16px 8px; } .lauf { margin: 0 16px 12px; } }
 </style>
 </head>
 <body>
 <header>
   <div class="kopf-titel"><h1>RS DB Hygiene Manager</h1></div>
-  <div class="kopf-job"><span class="stand" id="standAnalyse"></span><button id="btnAnalyse" aria-label="Analyse starten">Analyse<br>starten</button></div>
+  <div class="kopf-job"><button id="btnAnalyse" aria-label="Analyse starten">Analyse<br>starten</button></div>
 </header>
 <div class="sub kopf-fehler" id="stand"></div>
 <div id="banner" role="status" hidden></div>
@@ -292,6 +290,7 @@ button.gefahr:disabled { opacity: .45; }
     </div>
     <div class="leiste" data-leiste="regeln" hidden>
       <button class="primaer" id="btnNeu">Neue Regel</button>
+      <button id="btnVerwalten" title="Regeln exportieren und importieren, auf die Startregeln zurücksetzen, Sicherungen wiederherstellen">Regeln verwalten …</button>
       <button id="nurEvent" title="Regeltabelle auf Regeln vom Typ event filtern bzw. Filter aufheben">nur Event-Regeln</button>
       <button data-reset-filter="regeln">Filter zurücksetzen</button>
       <button data-reset-breiten="regeln">Spaltenbreiten zurücksetzen</button>
@@ -372,7 +371,7 @@ button.gefahr:disabled { opacity: .45; }
 
       <details open id="h-start"><summary>2. Erste Schritte</summary>
         <ol>
-          <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 4–10 min). Nachts läuft die Analyse automatisch.</li>
+          <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 4–10 min). Nachts läuft die Analyse automatisch. Ist eine Analyse veraltet (älter als 26 h bzw. die Attribut-Analyse älter als 7 Tage), trägt der Knopf ein gelbes Ausrufezeichen; sein Tooltip zeigt den Stand beider Analysen.</li>
           <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird).</li>
           <li><b>Tab Entitäten:</b> nach „/24 h“ sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
           <li><b>Regel anlegen</b> (Tab Regeln → „Neue Regel“) und zunächst <b>passiv</b> lassen. Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert.</li>
@@ -449,7 +448,7 @@ button.gefahr:disabled { opacity: .45; }
           <tbody>
             <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
-            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen</td></tr>
+            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
             <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“; der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
@@ -521,6 +520,10 @@ button.gefahr:disabled { opacity: .45; }
         <p>Nur für das Logbuch („Aktivität“). Verlauf, Statistik und Energie-Dashboard kommen ohne Events aus. Große, wenig genutzte Typen wie <code>call_service</code> kurz halten.</p>
         <h3 id="h-faq-attribute">Was ist mit Attributen, die ich lange brauche?</h3>
         <p>Attribute folgen der Kurzzeit. Wichtige Werte daraus in eigene Entitäten überführen (z. B. Template-Sensoren). Dann kann die Kurzzeit der Quelle kurz bleiben.</p>
+        <h3 id="h-faq-vorn">Wie fange ich mit den Regeln von vorn an?</h3>
+        <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Auf Startregeln zurücksetzen</b>. Alle Regeln werden durch die Startliste ersetzt (alle passiv). Vorher sichert die App die bisherigen Regeln; unter „Sicherungen“ lässt sich jeder Stand wiederherstellen (die letzten 10 bleiben). Gesperrt, solange ein Löschlauf läuft.</p>
+        <h3 id="h-faq-export">Wie nehme ich meine Regeln auf eine andere Installation mit?</h3>
+        <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>
       </details>
     </div>
   </section>
@@ -933,8 +936,9 @@ function zeigeBanner(o, pruefung) {
     `<div class="banner"${tip ? ` title="${esc(tip)}"` : ""}>${titel ? `<b>${esc(titel)}</b> ` : ""}${esc(text)}</div>`).join("");
   $("#banner").hidden = !t.length;
 }
-// Punkt 90 (0.4.5): ein Stand für beide Analysen – Zeitpunkt der zuletzt gelaufenen, Laufzeit = Summe beider (fett).
-// Orange, wenn die Analyse älter als 26 h oder die Attribut-Analyse älter als 7 Tage ist; der Tooltip nennt beide.
+// Punkt 90 (0.4.5): ein Stand für beide Analysen – Zeitpunkt der zuletzt gelaufenen, Laufzeit = Summe beider.
+// Punkt 125 (0.5.2): kein Stand-Text mehr neben dem Knopf. Veraltet (Analyse älter als 26 h oder Attribut-Analyse älter
+// als 7 Tage) = Markierung am Knopf; der Stand steht im Knopf-Tooltip und in der Rückfrage.
 function standDaten(s, jetzt = Date.now() / 1000) {
   const a = s.analyse || {}, at = s.attribute || {};
   const ta = +a.analyse_zeit || 0, tt = +at.analyse_zeit || 0;
@@ -942,26 +946,24 @@ function standDaten(s, jetzt = Date.now() / 1000) {
   const da = +a.analyse_dauer_s || 0, dt = tt ? +at.analyse_dauer_s || 0 : 0;
   const anaAlt = jetzt - ta > 26 * 3600, attrAlt = !tt || jetzt - tt > 7 * 86400;
   return { letzte: Math.max(ta, tt), dauer: da + dt, alt: anaAlt || attrAlt, tip: [
-    `Analyse: ${zeit(ta)} · ${dauerText(da)}`,
-    tt ? `Attribut-Analyse: ${zeit(tt)} · ${dauerText(dt)}` : "Attribut-Analyse: noch nicht gelaufen – Attribute geschätzt",
+    `Analyse: ${zeit(ta)} (${alterText(ta)}) · Dauer ${dauerText(da)}`,
+    tt ? `Attribut-Analyse: ${zeit(tt)} (${alterText(tt)}) · Dauer ${dauerText(dt)}` : "Attribut-Analyse: noch nicht gelaufen – Attribute geschätzt",
     anaAlt ? "Die Analyse ist älter als 26 h – ist die nächtliche Analyse ausgefallen?" : "",
     attrAlt ? "Die Attribut-Analyse ist älter als 7 Tage – Attribut-Zahlen sind möglicherweise veraltet. „Analyse starten“ führt beide Analysen aus." : "",
   ].filter(Boolean).join("\n") };
 }
+let standTip = "";
 function zeigeStand(s) {
-  const el = $("#standAnalyse"), d = standDaten(s);
-  if (!d) { el.textContent = "Analyse: noch keine"; el.classList.add("alt"); el.title = ""; return; }
-  // Punkt 96: lange Form (sl), mittlere Form ab 900 px (sm), ganz schmal nur die Laufzeit; der Tooltip hat alles
-  el.innerHTML = `<span class="sl">Analyse Stand ${esc(zeit(d.letzte))} · ${esc(alterText(d.letzte))} · </span><span class="sm">Analyse ${esc(zeit(d.letzte))} · </span><b>${esc(dauerText(d.dauer))}</b>`;
-  el.classList.toggle("alt", d.alt);
-  el.title = d.tip;
+  const d = standDaten(s);
+  standTip = d ? d.tip : "Analyse: noch keine";
+  $("#btnAnalyse").classList.toggle("alt", !d || d.alt);
 }
 function zeigeLauf(s) {
   const box = $("#lauf"), j = s.job, ersteAnalyse = !s.analyse?.analyse_zeit;
   const gesperrt = !!j || (ersteAnalyse && !s.fehler);
   $("#btnAnalyse").disabled = gesperrt;
-  $("#btnAnalyse").title = gesperrt ? (j?.art === "loeschen" ? "gesperrt, solange der Löschlauf läuft" : "gesperrt, solange eine Analyse läuft")
-    : "liest die Kennzahlen neu ein (ca. 1 min) und danach alle States für die Attribute (ca. 4–10 min) – beides nur lesend";
+  $("#btnAnalyse").title = (gesperrt ? (j?.art === "loeschen" ? "gesperrt, solange der Löschlauf läuft" : "gesperrt, solange eine Analyse läuft")
+    : "liest die Kennzahlen neu ein (ca. 1 min) und danach alle States für die Attribute (ca. 4–10 min) – beides nur lesend") + "\n\n" + standTip;
   box.classList.remove("fehlerbox");
   if (j && j.art === "loeschen") {
     const f = j.fortschritt || {}, lief = Date.now() / 1000 - j.start;
@@ -1892,6 +1894,78 @@ function massenWerte(ids) {
      }, true]]);
 }
 $("#btnNeu").onclick = () => bearbeiteRegel(-1);
+
+// Punkte 123/124 (0.5.2): Regeln verwalten – Export, Import, Zurücksetzen auf die Startregeln, Sicherungen.
+// Jede Ersetzung legt in der App vorher eine Sicherung an; gesperrt, solange ein Löschlauf läuft.
+const regelZahl = k => `${mzahl(k.anzahl, "Regel", "Regeln")}, davon ${zahl(k.aktiv)} aktiv`;
+const postJson = (p, body) => api(p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+function regelnErsetzt(r, was) {
+  S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
+  S.auswahl.clear(); T.regeln.daten(S.regeln.regeln); ladeAlles(false);
+  return meldung(was, `Jetzt: ${regelZahl(rgKennzahl(r.daten))}.` + (r.sicherung ? `\n\nDie bisherigen Regeln sind gesichert (${r.sicherung}) und lassen sich unter „Regeln verwalten“ wiederherstellen.` : ""));
+}
+const rgKennzahl = d => ({ anzahl: d.regeln.length, aktiv: d.regeln.filter(x => x.aktiv).length });
+async function verwalteRegeln() {
+  let v;
+  try { v = await api("regeln/verwalten"); } catch (e) { return meldung("Regeln verwalten", e.message); }
+  const sperre = v.gesperrt ? " disabled title=\"gesperrt, solange der Löschlauf läuft\"" : "";
+  const zeilen = v.sicherungen.map(s => `<tr><td>${esc(zeit(s.zeit))}</td><td>${esc(s.grund || "–")}</td>
+    <td>${s.fehler ? `<span class="fehler" title="${esc(s.fehler)}">nicht lesbar</span>` : esc(regelZahl(s))}</td>
+    <td>${s.fehler ? "" : `<button data-wiederherstellen="${esc(s.name)}"${sperre}>Wiederherstellen</button>`}</td></tr>`).join("");
+  dialog("Regeln verwalten", `
+    <p>Aktuell: <b>${esc(regelZahl(v.aktuell))}</b>.${v.gesperrt ? ' <span class="chip warn">Ein Löschlauf läuft – Ersetzen ist bis zum Ende gesperrt.</span>' : ""}</p>
+    <div class="leiste" style="margin:0">
+      <button id="vExport" title="lädt die aktuellen Regeln als JSON-Datei herunter">Exportieren</button>
+      <button id="vImport"${sperre} title="Regeln aus einer exportierten JSON-Datei übernehmen – mit Vorschau und Rückfrage">Importieren …</button>
+      <button id="vReset" class="gefahr"${sperre} title="ersetzt alle Regeln durch die Startliste (alle passiv)">Auf Startregeln zurücksetzen …</button>
+      <input type="file" id="vDatei" accept=".json,application/json" hidden>
+    </div>
+    <p class="sub">Vor jedem Zurücksetzen, Wiederherstellen und Import sichert die App die bisherigen Regeln; die letzten ${zahl(v.behalten)} Sicherungen bleiben.</p>
+    <h3 style="margin:4px 0 0;font-size:14px">Sicherungen</h3>
+    ${zeilen ? `<table class="baustein"><thead><tr><th>Zeitpunkt</th><th>Anlass</th><th>Inhalt</th><th></th></tr></thead><tbody>${zeilen}</tbody></table>`
+      : '<p class="sub">Noch keine Sicherung vorhanden.</p>'}
+    <div id="dlgFehler" class="fehler"></div>`, [["Schließen", () => $("#dlg").close(), true]]);
+  const fehler = e => $("#dlgFehler").textContent = e.message;
+  $("#vExport").onclick = async () => {
+    try {
+      const r = await fetch("api/regeln/export");
+      if (!r.ok) throw new Error(r.statusText);
+      const name = /filename=([^;]+)/.exec(r.headers.get("content-disposition") || "")?.[1] || "rs_db_hygiene_regeln.json";
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(await r.blob()); a.download = name; document.body.append(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    } catch (e) { fehler(e); }
+  };
+  $("#vReset").onclick = async () => {
+    if (!await frage("Auf Startregeln zurücksetzen",
+      `${regelZahl(v.aktuell)} werden ersetzt durch ${mzahl(v.vorlage.anzahl, "Startregel", "Startregeln")} (alle passiv). ` +
+      "Vorher wird eine Sicherung angelegt, die sich hier wiederherstellen lässt. Zurücksetzen?", "Zurücksetzen")) return;
+    try { await regelnErsetzt(await postJson("regeln/zuruecksetzen", { version: S.version }), "Startregeln geladen"); $("#dlg").close(); }
+    catch (e) { fehler(e); }
+  };
+  $("#vImport").onclick = () => { $("#vDatei").value = ""; $("#vDatei").click(); };
+  $("#vDatei").onchange = async () => {
+    const f = $("#vDatei").files[0]; if (!f) return;
+    let datei;
+    try { datei = JSON.parse(await f.text()); } catch (e) { return meldung("Import nicht möglich", `${f.name} ist keine gültige JSON-Datei (${e.message}).`); }
+    let p;
+    try { p = await postJson("regeln/import", { datei, pruefen: true }); }
+    catch (e) { return meldung("Import nicht möglich", `${f.name}: ${e.message}`); }
+    const herkunft = p.export?.zeit ? ` (exportiert ${p.export.zeit})` : "";
+    if (!await frage("Regeln importieren", `${f.name}${herkunft}: ${regelZahl(p.neu)}.\n\n` +
+      `Ersetzt werden die aktuellen ${regelZahl(p.aktuell)}. Vorher wird eine Sicherung angelegt. Importieren?`, "Importieren")) return;
+    try { await regelnErsetzt(await postJson("regeln/import", { datei, version: S.version }), "Regeln importiert"); $("#dlg").close(); }
+    catch (e) { fehler(e); }
+  };
+  $("#dlgInhalt").querySelectorAll("[data-wiederherstellen]").forEach(b => b.onclick = async () => {
+    const s = v.sicherungen.find(x => x.name === b.dataset.wiederherstellen);
+    if (!await frage("Sicherung wiederherstellen", `Sicherung vom ${zeit(s.zeit)} (${regelZahl(s)}) ersetzt die aktuellen ${regelZahl(v.aktuell)}. ` +
+      "Vorher wird eine Sicherung der aktuellen Regeln angelegt. Wiederherstellen?", "Wiederherstellen")) return;
+    try { await regelnErsetzt(await postJson("regeln/wiederherstellen", { name: s.name, version: S.version }), "Sicherung wiederhergestellt"); $("#dlg").close(); }
+    catch (e) { fehler(e); }
+  });
+}
+$("#btnVerwalten").onclick = verwalteRegeln;
 // Punkt 55: Schnellfilter „nur Event-Regeln“ (Spaltenfilter Typ) und neue Event-Regel aus dem Reiter Events
 $("#nurEvent").onclick = () => {
   const an = T.regeln.f.typ !== "event";
@@ -2556,7 +2630,9 @@ async function starteJob(art) {
 $("#btnAnalyse").onclick = async () => {
   const d = standDaten(S.status || {});
   const dauer = d && d.dauer ? ` Zuletzt dauerten beide zusammen ${dauerText(d.dauer)}.` : " Das dauert etwa 5–10 Minuten.";
-  if (await frage("Analyse starten", `Liest erst die Kennzahlen neu ein und direkt danach alle States für die Attribute – beides nur lesend.${dauer} Starten?`, "Starten"))
+  // Punkt 125: der bisherige Stand-Text aus dem Kopf steht jetzt hier
+  const stand = d ? `\n\nBisheriger Stand:\n${d.tip}` : "";
+  if (await frage("Analyse starten", `Liest erst die Kennzahlen neu ein und direkt danach alle States für die Attribute – beides nur lesend.${dauer}${stand}\n\nStarten?`, "Starten"))
     starteJob("beide");
 };
 
