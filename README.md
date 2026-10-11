@@ -2,6 +2,8 @@
 
 Vorhaltezeiten pro Entität für die Recorder-Datenbank von Home Assistant.
 
+![Übersicht der App: Kacheln zu Istzustand, Löschmenge sofort und Prognose, darunter die Reiter](https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/uebersicht.png)
+
 Das Repository besteht aus zwei Teilen mit gemeinsamer Versionsnummer:
 
 - **App** `rs_db_hygiene/`: Web-Oberfläche (Ingress) mit Analyse, Regeln, Probelauf und Löschlauf.
