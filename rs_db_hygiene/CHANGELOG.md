@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.3b5 (Beta)
+- **Reiter (Punkt 158):** neue Reihenfolge Entitäten, Events, Statistik ohne Entität, Regeln, Löschen, Löschprotokolle, Prognosen je Regel; „Regeln“ mit gelber Oberkante wie Löschen; „Löschprotokoll“ heißt jetzt „Löschprotokolle“
+- Behoben: In der Überschrift wurden „g“ und „y“ unten abgeschnitten (Punkt 159)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.3b4 (Beta)
 - **Alle Tabellen im Look & Feel des Tabs Entitäten (Punkte 144–151):** Events, Regeln, Prognosen je Regel, Statistik ohne Entität, Löschen, Löschprotokoll (Läufe, Lauf-Details, Monatssumme) haben jetzt farbige Spaltengruppen (Stammdaten/Lauf blau, Vorhaltezeiten/Wirkung/Plan zweites Blau, Istzustand rot, Löschmenge/Gelöscht gelb, Prognose grün), zweizeilige Spaltenköpfe, eine schlanke Summenzeile, Filter in zwei Ebenen, fixierte erste Spalte(n) und einen nach Gruppen geordneten Spaltendialog
 - Kürzere Spaltentitel nach dem Muster „Titel / Zusatz“ (z. B. „States“ statt „davon States“); der CSV-Export übernimmt die neuen Titel

@@ -38,7 +38,8 @@ a { color: var(--accent); }
    oben und unten gleicher Abstand. Bei schmalen Fenstern wird gekürzt (Überschrift kleiner bzw. „…“, Stand in Kurzform). */
 /* Punkt 98 (0.4.7): unten 10 px mehr Abstand zum Kachelblock; --kopf-h = Höhe der Überschrift (Schrift × 1,2) */
 header { --kopf-h: calc(34px * 1.2); padding: 12px 20px 22px; display: flex; flex-wrap: nowrap; gap: 16px; align-items: flex-start; justify-content: space-between; }
-h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-bottom: .15em; margin-bottom: -.15em; }   /* 0.5.3: Platz für die Unterlängen (g, y) – overflow: hidden schnitt sie ab; der Abstand nach unten bleibt gleich */
 .kopf-titel { min-width: 0; display: flex; align-items: center; }
 .kopf-fehler { margin: 0 20px; }   /* nur bei einem Fehler gefüllt; leer ohne Höhe und ohne Abstand */
 .kopf-fehler:not(:empty) { margin-bottom: 10px; }
@@ -153,7 +154,7 @@ input[type=number] { width: 72px; }
 .hilfe .hziel { animation: hziel 2s ease-out; border-radius: 4px; }
 @keyframes hziel { from { background: var(--accent-weak); } to { background: transparent; } }
 .hilfe-rang { font-weight: 700; font-size: 15px; padding: 6px 10px; background: var(--accent-weak); color: var(--accent); border-radius: 8px; display: inline-block; }
-/* „Löschen“ und „Löschprotokoll“ hebt eine rote Linie ab: die einzigen Bereiche, die mit dem Löschen zu tun haben */
+/* bis 0.5.3b3: „Löschen“ und „Löschprotokoll“ mit roter Linie; seit Punkt 157/158 Farbe je Inhalt (siehe .tabs button.rf-…) */
 /* Punkt 157 (0.5.3, Variante C): Oberkante der Reiter in der Farbe ihres Inhalts wie Kacheln und Spaltengruppen –
    Istzustand rot, Vorhaltezeiten blau, Prognose grün, Löschmenge gelb; aktiv volle Farbe und farbige Schrift; Hilfe bleibt neutral */
 .tabs button.rf-ist { --rf: var(--zf-ist); } .tabs button.rf-vorh { --rf: var(--zf-vorh); }
@@ -349,13 +350,14 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
   </div>
   <div class="klebend" id="klebend">
     <nav class="tabs" id="tabs">
+      <!-- Punkt 158 (0.5.3): Reihenfolge Istzustand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
       <button data-tab="ent" class="an rf-ist">Entitäten</button>
       <button data-tab="events" class="rf-ist">Events</button>
-      <button data-tab="regeln" class="rf-vorh">Regeln</button>
-      <button data-tab="probe" class="rf-prog">Prognosen je Regel</button>
       <button data-tab="lts" class="rf-ist">Statistik ohne Entität</button>
+      <button data-tab="regeln" class="rf-loesch">Regeln</button>
       <button data-tab="loeschen" class="rf-loesch">Löschen</button>
-      <button data-tab="protokoll" class="rf-loesch">Löschprotokoll</button>
+      <button data-tab="protokoll" class="rf-loesch">Löschprotokolle</button>
+      <button data-tab="probe" class="rf-prog">Prognosen je Regel</button>
       <button data-tab="hilfe" class="rechts" title="Einstieg, Begriffe, Regel-Rangfolge, FAQ">Hilfe</button>
     </nav>
     <div class="leiste" data-leiste="ent">
@@ -532,11 +534,11 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
           <tbody>
             <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort; ab 0.5.3), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
-            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
-            <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt</td></tr>
+            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“; der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
-            <tr><td><b>Löschprotokoll</b></td><td>alle Läufe mit Einzelheiten (auch die Pause wegen eines Backups) und die Monatssumme je Entität</td></tr>
+            <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Einzelheiten (auch die Pause wegen eines Backups) und die Monatssumme je Entität</td></tr>
+            <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
             <tr><td><b>Hilfe</b></td><td>diese Seite</td></tr>
           </tbody>
         </table>
@@ -666,7 +668,7 @@ actions:
           <li>Die App erkennt das nach spätestens etwa einer Minute. Sie schreibt „Backup läuft … es wird gewartet“ ins App-Log, die GUI zeigt „wartet auf Backup seit …“. Die Wartezeit zählt nicht als Stillstand.</li>
           <li>Nach dem Backup geht der Lauf von selbst weiter; im Log steht „Backup beendet nach …, es wird weiter gelöscht“. Gewartet wird höchstens 2 Stunden.</li>
           <li>Das Backup bleibt in Ordnung. Ein neuer Lauf startet erst, wenn das Backup fertig ist.</li>
-          <li>Im Löschprotokoll steht in der Spalte „davon Backup-Pause“, wie lange der Lauf gewartet hat.</li>
+          <li>Im Reiter Löschprotokolle steht in der Spalte „Backup-Pause“, wie lange der Lauf gewartet hat.</li>
         </ul>
         <h3 id="h-faq-global">Was bedeutet „global“ genau?</h3>
         <p><code>purge_keep_days</code> aus der <code>configuration.yaml</code> (derzeit <span data-live="pkd">–</span>). Ändert sich der Wert dort, übernimmt HA ihn erst nach einem Neustart. Siehe auch <a class="hverweis" href="#h-werte">Werte einer Vorhaltezeit</a>.</p>
@@ -2027,7 +2029,7 @@ document.addEventListener("click", ev => {
   const sw = ev.target.closest("[data-spalten]");
   if (sw) {
     const t = sw.dataset.spalten;
-    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognosen je Regel", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokoll", events: "Events" }[t]);
+    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognosen je Regel", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokolle – Läufe", events: "Events" }[t]);
   }
   const rf = ev.target.closest("[data-reset-filter]"); if (rf) return T[rf.dataset.resetFilter].resetFilter();
   const rb = ev.target.closest("[data-reset-breiten]"); if (rb) return T[rb.dataset.resetBreiten].z.reset();
@@ -2911,7 +2913,7 @@ async function ladeLoeschen() {
       ${p.sperren.map(s => `<div class="sperre">⚠ ${esc(s)}</div>`).join("")}
       <div><button class="gefahr" id="lStart" ${p.sperren.length ? "disabled" : ""}>Jetzt ausführen</button>
         ${ll ? `<span class="sub" style="margin-left:10px">Letzter Lauf: ${zeit(ll.start)} · ${esc(ll.status)} · ${zahl(ll.geloescht)} Zeilen gelöscht${ll.nur_regel ? ` (${esc(ll.nur_regel)})` : ""}${ll.backup_warte_s ? ` · ${dauerText(ll.backup_warte_s)} auf Backup gewartet` : ""}
-          – <a href="#" id="lZumProtokoll">Löschprotokoll</a></span>` : ""}</div>`;
+          – <a href="#" id="lZumProtokoll">Löschprotokolle</a></span>` : ""}</div>`;
     $("#lStart").onclick = starteLoeschen;
     const ab = $("#lAusnahme"); if (ab) ab.onchange = () => { S.loeschAusnahme = ab.checked; ladeLoeschen(); };
     k.querySelectorAll("[data-vu]").forEach(b => b.onclick = () => {
@@ -2925,7 +2927,7 @@ async function ladeLoeschen() {
     k.innerHTML = `<div class="fehler">${esc(e.message)}</div>`;
   }
 }
-// ---- Reiter Löschprotokoll (Punkt 45)
+// ---- Reiter Löschprotokolle (Punkt 45; Name seit Punkt 158)
 const gezaehltLauf = r => (r.pakete || []).reduce((s, p) => s + (p.vorher || 0), 0);
 const laufArt = (r, art) => (r.pakete || []).filter(p => (p.art || "states") === art).reduce((s, p) => s + (p.geloescht || 0), 0);
 const artZeilen = (r, k) => k === "states" ? (r.states ?? r.zeilen - (r.kurz || 0) - (r.lts || 0) - (r.events || 0)) : (r[k] || 0);
