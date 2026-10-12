@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.3b3 (Beta)
+- **Tab Entitäten:** Summenzeile schlanker – je Spalte nur noch ein Wert, die Gesamtzahl in Klammern nur bei gesetztem Filter, Details im Tooltip (Punkt 139). Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen (Punkt 140). Dezente Trennlinie in der Gruppenfarbe zwischen Kopf und Daten, Kopf etwas kräftiger getönt (Punkt 142)
+- **Regel-Chip:** Ein Klick auf den Chip einer Regel (z. B. „R32“) in Kurzzeit/Langzeit öffnet jetzt die Maske dieser Regel statt der Filtermaske; „Std.“ ist nicht mehr anklickbar; der Chip wird nicht mehr abgeschnitten (Punkt 143)
+- **HA-Standard:** Symbol von Home Assistant (Material Design Icons) im HA-Blau statt Haus-Emoji (Punkt 141)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.3b2 (Beta)
 - **Prüfung der Recorder-Einrichtung (Punkt 133):** Beim Start, bei jeder Änderung der configuration.yaml und vor jeder Analyse prüft die App, ob `auto_purge: false`, `auto_repack: false` und `purge_keep_days` (mindestens 3650 Tage) gesetzt sind und `db_url` – falls vorhanden – auf die SQLite-Datei zeigt. Fehlt etwas, erscheint ein Banner mit Verweis auf die Hilfe. `recorder: !include …` wird mitgelesen
 - **Hilfe:** neue erste FAQ „Erstinbetriebnahme“ mit Beispielen für die configuration.yaml und die beiden Automationen Löschlauf und Verdichten (Punkt 134)

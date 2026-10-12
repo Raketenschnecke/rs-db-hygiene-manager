@@ -183,15 +183,31 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
    die Tönung zieht sich schwächer durch Titel-, Filter- und Summenzeile und ganz schwach durch die Datenzeilen; Trennlinie am Gruppenwechsel */
 .gr-stamm { --gf: var(--zf-stamm); } .gr-vorh { --gf: var(--zf-vorh); } .gr-ist { --gf: var(--zf-ist); } .gr-loesch { --gf: var(--zf-loesch); }
 tr.gruppenzeile th.gruppe { text-align: center; font-size: 16px; font-weight: 700; padding: 5px 9px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: color-mix(in srgb, var(--gf) 55%, var(--text)); background: color-mix(in srgb, var(--gf) 16%, var(--panel)); border-top: 3px solid var(--gf); }
+  color: color-mix(in srgb, var(--gf) 55%, var(--text)); background: color-mix(in srgb, var(--gf) 22%, var(--panel)); border-top: 3px solid var(--gf); }   /* Punkt 142: 16 → 22 % */
 tr.gruppenzeile th.gruppe-leer { border-top: 3px solid transparent; }
-#tEnt thead tr:not(.gruppenzeile) th.gr { background: color-mix(in srgb, var(--gf) 7%, var(--panel)); }
+#tEnt thead tr:not(.gruppenzeile) th.gr { background: color-mix(in srgb, var(--gf) 12%, var(--panel)); }   /* Punkt 142: 7 → 12 % */
 .tabelle tbody tr:nth-child(odd) td.gr { background: color-mix(in srgb, var(--gf) 4%, var(--zeile-hell)); }
 .tabelle tbody tr:nth-child(even) td.gr { background: color-mix(in srgb, var(--gf) 4%, var(--zeile-dunkel)); }
 .tabelle tbody tr.klick:hover td.gr { background: var(--accent-weak); }
-#tEnt th.gstart, #tEnt td.gstart { border-left: 2px solid color-mix(in srgb, var(--gf) 60%, var(--line)); }
-.chip.wfilter { cursor: pointer; }
-.chip.wfilter:hover { background: var(--accent); color: #fff; }
+/* Punkt 140 (0.5.3): Auswahl und Entität links fixiert (Breite der Auswahlspalte fest 40 px); Schattenkante, solange nach rechts gescrollt ist */
+#tEnt thead tr.gruppenzeile th.fix, #tEnt .fix { position: sticky; z-index: 1; }
+#tEnt thead .fix { z-index: 3; }
+#tEnt .fix0 { left: 0; } #tEnt .fix1 { left: 40px; }
+#tEnt thead tr.gruppenzeile th.fix0 { left: 0; }
+.tabelle.nach-rechts #tEnt .fix1, .tabelle.nach-rechts #tEnt th.gname-links { box-shadow: 6px 0 6px -4px rgba(0, 0, 0, .45); }
+#tEnt th.gname-links { text-align: left; padding-left: 52px; }
+/* Punkt 142 (0.5.3): kräftige Trennlinie in der Gruppenfarbe zwischen Kopf und Daten, Schatten, solange Daten unter dem Kopf durchlaufen */
+#tEnt thead tr.summenzeile th.gr { border-bottom: 1px solid color-mix(in srgb, var(--gf) 60%, var(--panel)); }   /* 1 px, abgedimmt */
+.tabelle.nach-unten #tEnt thead tr.summenzeile th { box-shadow: 0 6px 6px -4px rgba(0, 0, 0, .45); }
+#tEnt th.gstart, #tEnt td.gstart { border-left: 1px solid color-mix(in srgb, var(--gf) 60%, var(--line)); }
+/* Punkt 143 (0.5.3): Regel-Chip öffnet die Regel; Wert kürzen statt Chip abschneiden */
+/* Punkt 141 (0.5.3): HA-Symbol in Schrifthöhe, im HA-Blau */
+.ha-icon { width: 1.15em; height: 1.15em; vertical-align: -0.2em; fill: #18bcf2; flex: none; }
+.chip.rklick { cursor: pointer; }
+.chip.rklick:hover { background: var(--accent); color: #fff; }
+.wzelle { display: flex; align-items: center; min-width: 0; }
+.wzelle .wtext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.wzelle .chip { flex: none; }
 tr.summenzeile th { font-weight: 400; padding: 3px 9px 5px; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
 tr.summenzeile th b { font-weight: 600; }
 tr.summenzeile th .ges { display: block; color: var(--muted); font-size: 11px; }
@@ -464,7 +480,7 @@ button.gefahr:disabled { opacity: .45; }
             <tr><td><b>klasse</b></td><td><code>domain|device_class</code></td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
             <tr><td><b>verwaist</b></td><td><code>alle</code>, <code>geloescht</code>, <code>ohne_spur</code> oder Platzhalter</td><td>nur verwaiste</td><td><code>*</code></td></tr>
             <tr><td><b>event</b></td><td>Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
-            <tr><td><b>🏠 HA-Standard</b></td><td>fest <code>*</code></td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage, Langzeit unbegrenzt</td></tr>
+            <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>fest <code>*</code></td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage, Langzeit unbegrenzt</td></tr>
           </tbody>
         </table>
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
@@ -489,7 +505,7 @@ button.gefahr:disabled { opacity: .45; }
         <table>
           <thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
           <tbody>
-            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort; ab 0.5.3), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf das Label (Regel oder „Std.“) die Filtermaske der Spalte, vorbelegt mit diesem Wert; gefiltert wird mit „Filtern“.</td></tr>
+            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort; ab 0.5.3), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
             <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
@@ -729,6 +745,9 @@ const EV_NAME = "Vorhaltezeit (Events)";
 // Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / verwaist / verwaist_geloescht)
 const STATUS_TEXT = { aktiv: "aktiv", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
 // Punkt 128 (0.5.3): Spalte mit dem Zustand der Entität – in den Tabs Entitäten und Löschen gleich beschriftet
+// Punkt 141 (0.5.3): Symbol „home-assistant“ aus Material Design Icons (Pictogrammers, @mdi/svg 7.4.47, Pictogrammers Free License /
+// Apache 2.0) statt Haus-Emoji – das HA-Logo selbst ist eine geschützte Marke. Farbe: HA-Blau (CSS .ha-icon)
+const HA_ICON = `<svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg>`;
 const STATUS_TITEL = "Entitäts-Status";   // 0.5.3: eindeutig neben der Spalte „Entität“ (entity_id)
 const STATUS_HILFE = "Zustand der Entität in HA (aktiv / verwaist / verwaist (gelöscht)), nicht der Regel";
 const SONDER = { kurzzeit: ["global", "keine"], attribute: ["wie_kurzzeit", "keine"], langzeit: ["unbegrenzt", "keine"] };
@@ -1358,7 +1377,8 @@ if (SPALTEN.length !== SPALTEN_ROH.length || SPALTEN.includes(undefined)) throw 
 const SPALTENGRUPPE = Object.fromEntries(SPALTENGRUPPEN.flatMap(([g, , ks]) => ks.map(k => [k, g])));
 const GRUPPEN_ID = Object.fromEntries(SPALTENGRUPPEN.flatMap(([, id, ks]) => ks.map(k => [k, id])));
 // Klassen einer Zelle: Gruppenfarbe, am Gruppenwechsel zusätzlich die Trennlinie (sp = sichtbare Spalten, i = Position)
-const gruppenKlasse = (sp, i) => `gr gr-${GRUPPEN_ID[sp[i][0]]}${i > 0 && GRUPPEN_ID[sp[i - 1][0]] !== GRUPPEN_ID[sp[i][0]] ? " gstart" : ""}`;
+const gruppenKlasse = (sp, i) => `gr gr-${GRUPPEN_ID[sp[i][0]]}${i > 0 && GRUPPEN_ID[sp[i - 1][0]] !== GRUPPEN_ID[sp[i][0]] ? " gstart" : ""}` +
+  (sp[i][0] === "entity_id" ? " fix fix1" : "");   // Punkt 140: Spalte Entität bleibt beim Scrollen nach rechts stehen
 // erste <td …> bzw. <th …> eines Zell-HTMLs um Klassen ergänzen
 const mitKlasse = (html, kl) => {
   const ende = html.indexOf(">"), kopf = html.slice(0, ende);
@@ -1438,6 +1458,9 @@ function spaltenDialog(titel, spalten, sichtbar, ansichten, uebernehmen) {
 
 const ZE = ziehbar($("#tEnt"), "dbh_breiten_ent", () => ({ wahl: 40, ...Object.fromEntries(SPALTEN.map(s => [s[0], s[5]])) }));
 $("#breitenReset").onclick = () => ZE.reset();
+// Punkte 140/142 (0.5.3): Schatten an der fixierten Spalte bzw. unter dem Kopf nur, wenn wirklich etwas darunter durchläuft
+{ const box = $("#tEnt").closest(".tabelle");
+  box.addEventListener("scroll", () => { box.classList.toggle("nach-rechts", box.scrollLeft > 0); box.classList.toggle("nach-unten", box.scrollTop > 0); }, { passive: true }); }
 
 function baueKopf() {
   const sp = sichtbareSpalten();
@@ -1463,17 +1486,22 @@ function baueKopf() {
   const filter = filterRoh.map((h, i) => mitKlasse(h, gk[i] + ebene(h))).join("");
   const summe = sp.map(([k, , n], i) => `<th class="${n ? "n " : ""}${gk[i]}" data-summe="${k}"></th>`).join("");
   // Punkt 91: Kästchen im Kopf wählt nur die angezeigte Seite
-  const wahl = `<th class="mitte gr gr-stamm"><input type="checkbox" class="wahl" id="wahlAlleEnt" title="alle Entitäten dieser Seite auswählen bzw. abwählen" aria-label="alle Entitäten dieser Seite auswählen"></th>`;
+  const wahl = `<th class="mitte gr gr-stamm fix fix0"><input type="checkbox" class="wahl" id="wahlAlleEnt" title="alle Entitäten dieser Seite auswählen bzw. abwählen" aria-label="alle Entitäten dieser Seite auswählen"></th>`;
   // Punkt 130: Gruppenzeile – je Gruppe ein Feld über ihren sichtbaren, nebeneinanderliegenden Spalten
   let gruppen = "";
   for (let i = 0; i < sp.length;) {
     const g = SPALTENGRUPPE[sp[i][0]]; let n = 1;
     while (i + n < sp.length && SPALTENGRUPPE[sp[i + n][0]] === g) n++;
     // Punkt 137 (0.5.3): die Auswahlspalte (☐) gehört farblich zu den Stammdaten (Entität steht immer vorn)
-    gruppen += `<th colspan="${n + (i === 0 && GRUPPEN_ID[sp[0][0]] === "stamm" ? 1 : 0)}" class="gruppe ${gk[i]}" title="Gruppe ${esc(g)}">${esc(g)}</th>`; i += n;
+    // Punkt 140: über Auswahl und Entität ein eigenes, fixiertes Feld mit dem Namen; der Rest der Gruppe scrollt ohne Namen mit
+    if (i === 0 && GRUPPEN_ID[sp[0][0]] === "stamm") {
+      gruppen += `<th colspan="2" class="gruppe gr gr-stamm fix fix0 gname-links" title="Gruppe ${esc(g)}">${esc(g)}</th>` +
+        (n > 1 ? `<th colspan="${n - 1}" class="gruppe gr gr-stamm gruppe-rest" title="Gruppe ${esc(g)}"></th>` : "");
+    } else gruppen += `<th colspan="${n}" class="gruppe ${gk[i]}" title="Gruppe ${esc(g)}">${esc(g)}</th>`;
+    i += n;
   }
   const gruppenzeile = `<tr class="gruppenzeile">${GRUPPEN_ID[sp[0][0]] === "stamm" ? "" : `<th class="gruppe-leer"></th>`}${gruppen}</tr>`;
-  $("#tEntKopf").innerHTML = `${gruppenzeile}<tr class="titelzeile">${wahl}${titel}</tr><tr class="filterzeile"><th class="gr gr-stamm"></th>${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt"><th class="mitte gr gr-stamm" id="wahlSummeEnt"></th>${summe}</tr>`;
+  $("#tEntKopf").innerHTML = `${gruppenzeile}<tr class="titelzeile">${wahl}${titel}</tr><tr class="filterzeile"><th class="gr gr-stamm fix fix0"></th>${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt"><th class="mitte gr gr-stamm fix fix0" id="wahlSummeEnt"></th>${summe}</tr>`;
   S.optionen = null;   // Auswahlwerte neu füllen
   ZE.setze();
   zeigeSortierung();
@@ -1482,26 +1510,44 @@ function zeigeSortierung() {
   $("#tEntKopf").querySelectorAll("th[data-sort]").forEach(th => th.querySelector(".pfeil").textContent = pfeilText(S.sortierung, th.dataset.sort));
 }
 const prozent = v => v == null ? "–" : v.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %";
+// Punkt 139 (0.5.3): je Zelle nur ein Wert – oben gefiltert (fett), darunter „(gesamt)“, nur wenn gefiltert ist;
+// Texte und Einheiten entfallen (Einheiten stehen im Spaltenkopf), die Bedeutung und weitere Zahlen nennt der Tooltip
 function zeigeSummen(su) {
   if (!su) return;
-  const g = su.gefiltert, a = su.gesamt;
-  const zelle = (oben, unten) => `<b>${oben}</b><span class="ges">gesamt ${unten}</span>`;
-  const werte = art => [`R ${zahl(g[art].regel)} · Std ${zahl(g[art].std)}`, `R ${zahl(a[art].regel)} · Std ${zahl(a[art].std)}`];
+  const g = su.gefiltert, a = su.gesamt, gefiltert = g.entitaeten !== a.entitaeten;
+  const ohneEinheit = s => s.replace(/\s*(MB|%)$/, "");
+  const zelle = (oben, unten, tip) => ({ html: `<b>${oben}</b>${gefiltert ? `<span class="ges">(${unten})</span>` : ""}`, tip });
+  const zz = (k, tip) => zelle(zahl(g[k] || 0), zahl(a[k] || 0), tip);
+  const anz = tip => zelle(zahl(g.entitaeten), zahl(a.entitaeten), tip);
+  const teil = (x, art) => `aus Regel ${zahl(x[art].regel)} · Standard (Std.) ${zahl(x[art].std)}`;
+  const vgl = (gs, as) => gefiltert ? `\ngefiltert: ${gs}\nalle: ${as}` : `\n${as}`;
+  const GEF = "oben gefiltert, in Klammern alle (nur bei gesetztem Filter)";
+  const mbz = b => b == null ? "–" : ohneEinheit(mb(b)), pz = v => v == null ? "–" : ohneEinheit(prozent(v));
   const inhalt = {
-    entity_id: zelle(`${zahl(g.entitaeten)} Entitäten`, zahl(a.entitaeten)),
-    herkunft: zelle(`${zahl(g.geraete)} Geräte`, zahl(a.geraete)),
-    labels: zelle(`${zahl(g.labels || 0)} mit Label`, `${zahl(a.labels || 0)} · ${zahl(a.label_namen || 0)} Labels`),
-    status: zelle(`${zahl(g.aktiv)} aktiv · ${zahl(g.verwaist)} verw.`, `${zahl(a.aktiv)} · ${zahl(a.verwaist)}`),
-    rows: zelle(zahl(g.rows), zahl(a.rows)), rows_24h: zelle(zahl(g.rows_24h), zahl(a.rows_24h)),
-    first_ts: zelle(`ab ${datum(g.first_ts)}`, datum(a.first_ts)), last_ts: zelle(`bis ${datum(g.last_ts)}`, datum(a.last_ts)),
-    lts_rows: zelle(zahl(g.lts_rows), zahl(a.lts_rows)), kurz_rows: zelle(zahl(g.kurz_rows || 0), zahl(a.kurz_rows || 0)),
-    kurzzeit: zelle(...werte("kurzzeit")), langzeit: zelle(...werte("langzeit")),
-    ...Object.fromEntries(["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"].map(k => [k, zelle(zahl(g[k]), zahl(a[k]))])),
-    attr_bytes: zelle(mb(g.attr_bytes), mb(a.attr_bytes)), attr_zuwachs_tag: zelle(mb(g.attr_zuwachs_tag), mb(a.attr_zuwachs_tag)),
-    attr_avg: zelle(g.attr_avg == null ? "–" : zahl(g.attr_avg) + " B", a.attr_avg == null ? "–" : zahl(a.attr_avg) + " B"),
-    attr_loesch: zelle(mb(g.attr_loesch), mb(a.attr_loesch)), attr_anteil: zelle(prozent(g.attr_anteil), prozent(a.attr_anteil)),
+    entity_id: anz(`Anzahl Entitäten – ${GEF}`),
+    herkunft: zelle(zahl(g.geraete), zahl(a.geraete), `Anzahl Geräte – ${GEF}`),
+    labels: zelle(zahl(g.labels || 0), zahl(a.labels || 0),
+      `Entitäten mit mindestens einem Label – ${GEF}` + vgl(`${zahl(g.label_namen || 0)} verschiedene Labels`, `${zahl(a.label_namen || 0)} verschiedene Labels`)),
+    status: anz(`Anzahl Entitäten – ${GEF}` + vgl(`aktiv ${zahl(g.aktiv)} · verwaist ${zahl(g.verwaist)}`, `aktiv ${zahl(a.aktiv)} · verwaist ${zahl(a.verwaist)}`)),
+    kurzzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "kurzzeit"), teil(a, "kurzzeit"))),
+    langzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "langzeit"), teil(a, "langzeit"))),
+    first_ts: zelle(datum(g.first_ts), datum(a.first_ts), `frühester Zeitstempel – ${GEF}`),
+    last_ts: zelle(datum(g.last_ts), datum(a.last_ts), `spätester Zeitstempel – ${GEF}`),
+    rows: zz("rows", `Zeilen in states – ${GEF}`), rows_24h: zz("rows_24h", `neue Zeilen in states in 24 h – ${GEF}`),
+    kurz_rows: zz("kurz_rows", `Zeilen 5-Min-Statistik – ${GEF}`), lts_rows: zz("lts_rows", `Zeilen Langzeit – ${GEF}`),
+    loesch_summe: zz("loesch_summe", `Zeilen sofort löschbar (States + 5-Min + Langzeit) – ${GEF}`),
+    loesch_states: zz("loesch_states", `States sofort löschbar – ${GEF}`), loesch_kurz: zz("loesch_kurz", `5-Min-Statistik sofort löschbar – ${GEF}`),
+    loesch_lts: zz("loesch_lts", `Langzeit sofort löschbar – ${GEF}`), loesch_attr_zeilen: zz("loesch_attr_zeilen", `Attributzeilen, die mit den States wegfallen – ${GEF}`),
+    attr_bytes: zelle(mbz(g.attr_bytes), mbz(a.attr_bytes), `Attribute Bestand in MB – ${GEF}`),
+    attr_zuwachs_tag: zelle(mbz(g.attr_zuwachs_tag), mbz(a.attr_zuwachs_tag), `Attribute Zuwachs pro Tag in MB – ${GEF}`),
+    attr_avg: zelle(g.attr_avg == null ? "–" : zahl(g.attr_avg), a.attr_avg == null ? "–" : zahl(a.attr_avg), `Ø Größe einer Attributzeile in Byte – ${GEF}`),
+    attr_loesch: zelle(mbz(g.attr_loesch), mbz(a.attr_loesch), `Attribute sofort löschbar in MB – ${GEF}`),
+    attr_anteil: zelle(pz(g.attr_anteil), pz(a.attr_anteil), `Anteil der Attribute in % – ${GEF}`),
   };
-  $("#tEntKopf").querySelectorAll("[data-summe]").forEach(th => th.innerHTML = inhalt[th.dataset.summe] || "");
+  $("#tEntKopf").querySelectorAll("[data-summe]").forEach(th => {
+    const z = inhalt[th.dataset.summe];
+    th.innerHTML = z ? z.html : ""; th.title = z ? z.tip : "";
+  });
 }
 function fuelleWertOptionen(opt) {
   if (!opt) return;
@@ -1554,25 +1600,17 @@ $("#filterReset").onclick = () => {
   S.offset = 0; ladeEntitaeten();
 };
 
-// Punkt 129 (0.5.3): Klick auf das Label (Regel bzw. „Std.“) öffnet die Filtermaske dieser Spalte, vorbelegt mit diesem Wert
-function wertZelle(w, art) {
+// Punkt 143 (0.5.3, ersetzt Punkt 129): Klick auf den Regel-Chip öffnet die Maske dieser Regel; „Std.“ ist nicht anklickbar.
+// Der Wert wird bei Platzmangel gekürzt, der Chip bleibt immer ganz sichtbar.
+function wertZelle(w) {
   if (!w) return "–";
-  const klick = wert => `data-wfilter="${art}" data-wert="${esc(wert)}"`;
-  const quelle = w.regel ? `<span class="chip regel wfilter" ${klick("regel:" + w.regel)} title="${esc(w.muster)}\nKlick: Filter öffnen">${esc(w.regel)}</span>`
-    : `<span class="chip wfilter" ${klick("std")} title="Standard (keine Regel)\nKlick: Filter öffnen">Std.</span>`;
-  return esc(w.anzeige) + quelle;
+  const quelle = w.regel ? `<span class="chip regel rklick" data-regel="${esc(w.regel)}" title="${esc(w.muster)}\nKlick: Regel ${esc(w.regel)} öffnen">${esc(w.regel)}</span>`
+    : `<span class="chip" title="Standard (keine Regel)">Std.</span>`;
+  return `<span class="wzelle"><span class="wtext" title="${esc(w.anzeige)}">${esc(w.anzeige)}</span>${quelle}</span>`;
 }
-// Filtermaske zur Spalte kurzzeit/langzeit: Auswahl wie im Filterfeld der Kopfzeile; gefiltert wird erst mit „Filtern“
-function oeffneWertFilter(art, wert) {
-  const feld = $(`#tEntKopf select[data-f="${art}"]`); if (!feld) return;
-  dialog(`Filter: ${WNAME[art]}`, `
-    <label class="feld">Anzeigen<select id="wfSel">${feld.innerHTML}</select></label>
-    <p class="sub">Vorbelegt mit dem angeklickten Wert. Gefiltert wird erst mit „Filtern“; „alle“ hebt den Filter auf.</p>`, [
-    ["Abbrechen", () => $("#dlg").close()],
-    ["Filtern", () => { const v = $("#wfSel").value; $("#dlg").close(); setzeFilter(art, v, true); }, true]]);
-  const sel = $("#wfSel");
-  sel.value = [...sel.options].some(o => o.value === wert) ? wert : (S.f[art] || "");
-  sel.focus();
+function oeffneRegel(id) {
+  const i = (S.regeln?.regeln || []).findIndex(r => r.id === id);
+  if (i >= 0) bearbeiteRegel(i);
 }
 function herkunftZelle(e) {
   if (!e.herkunft_art) return `<td class="sub">–</td>`;
@@ -1623,7 +1661,7 @@ const ZELLEN = {
   attr_anteil: e => attrTd(e.attr_anteil, prozent),
 };
 function zeileHtml(e) {
-  const w = `<td class="mitte wahlzelle gr gr-stamm"><input type="checkbox" class="wahl" data-wahl-ent="${esc(e.entity_id)}" ${S.auswahlEnt.has(e.entity_id) ? "checked" : ""} aria-label="${esc(e.entity_id)} auswählen"></td>`;
+  const w = `<td class="mitte wahlzelle gr gr-stamm fix fix0"><input type="checkbox" class="wahl" data-wahl-ent="${esc(e.entity_id)}" ${S.auswahlEnt.has(e.entity_id) ? "checked" : ""} aria-label="${esc(e.entity_id)} auswählen"></td>`;
   const sp = sichtbareSpalten();   // Punkt 132: Gruppenfarbe je Zelle
   return `<tr class="klick" data-eid="${esc(e.entity_id)}">${w}${sp.map((s, i) => mitKlasse(ZELLEN[s[0]](e), gruppenKlasse(sp, i))).join("")}</tr>`;
 }
@@ -1695,8 +1733,8 @@ $("#tEntRumpf").addEventListener("click", ev => {
   if (g) { S.geraetName = g.dataset.gname; return setzeFilter("device_id", g.dataset.geraet, true); }
   const lb = ev.target.closest("[data-label]");   // Punkt 115
   if (lb) return setzeFilter("labels", lb.dataset.label, true);
-  const wf = ev.target.closest("[data-wfilter]");   // Punkt 129
-  if (wf) return oeffneWertFilter(wf.dataset.wfilter, wf.dataset.wert);
+  const rc = ev.target.closest("[data-regel]");   // Punkt 143
+  if (rc) return oeffneRegel(rc.dataset.regel);
   const tr = ev.target.closest("tr[data-eid]");
   if (tr) oeffneEntitaet(S.zeilen[tr.dataset.eid]);
 });
@@ -1760,7 +1798,7 @@ T.regeln = new LokaleTabelle({
     { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => r.typ, csv: r => r.typ,
       // Punkt 111: Schloss bei Schutz; Punkt 106: Warnung bei Platzhaltern in einer entity-Regel
       zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
-        : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, nur passiv schaltbar">🏠 HA-Standard</span>`   // Punkt 127
+        : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, nur passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
         : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : r.typ,
       hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
       optionen: () => TYPEN_TABELLE.map(t => [t, t]),
@@ -2358,7 +2396,7 @@ const MUSTERHILFE = {
 // Punkt 127: Regel HA-Standard – nur Erklärung und Schalter aktiv/passiv, kein Entfernen, keine Werte
 function zeigeHaStandard(r) {
   dialog(`Regel ${r.id}`, `
-    <p><b>🏠 ${esc(r.name)}</b></p>
+    <p><b>${HA_ICON} ${esc(r.name)}</b></p>
     <p>Diese Regel bildet das Löschverhalten von Home Assistant in der <b>Grundeinstellung</b> ab (Recorder <span class="mono">purge_keep_days: 10</span>):</p>
     <ul>
       <li><b>${WNAME.kurzzeit}:</b> 10 Tage</li>
