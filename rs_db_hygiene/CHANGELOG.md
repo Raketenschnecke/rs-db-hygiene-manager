@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4b1 (Beta)
+- **Beta-Version, nur auf dem Branch `beta`:** Stand wie 0.5.3, Grundlage für die nächsten Testversionen (noch keine neuen Punkte)
+
 ## 0.5.3
 Zusammenfassung der Testversionen 0.5.3b1 bis 0.5.3b7 (Einzelheiten darunter).
 - **Neue Startregel HA-Standard:** bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (10 Tage, Langzeit unbegrenzt); bei bestehenden Installationen passiv ergänzt, nicht löschbar
