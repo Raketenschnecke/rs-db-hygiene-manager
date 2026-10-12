@@ -2882,7 +2882,6 @@ async function ladeLoeschen() {
       <span class="mono">${esc(g.muster.join(", "))}</span> aus ${esc(g.regel)}, werden von dieser glob-Regel aber nicht erfasst – glob-Regeln gelten nur für aktive Entitäten.
       <span class="sub" title="${esc(g.beispiele.join("\n"))}">z. B. ${esc(g.beispiele.slice(0, 2).join(", "))}${g.entitaeten > 2 ? " …" : ""}</span>
       <button data-vu="${i}" style="margin-left:6px">Regel „verwaist“ mit diesem Muster anlegen</button></div>`).join("");
-    const ll = p.letzter_lauf;
     // Punkt 54: Risiken dieses Laufs; Punkt 53: Entitäten, die schon am ältesten Tag über der Obergrenze liegen
     const ris = (p.risiken || []).length ? `<div><b>Risiken dieses Laufs:</b><ul style="margin:4px 0 0 18px;padding:0">${p.risiken.map(x =>
       `<li class="risiko${x.schwer ? " schwer" : ""}" title="${esc(x.beispiele.join("\n"))}">${esc(x.text)} <span class="sub">(${esc(x.beispiele.slice(0, 3).join(", "))}${x.anzahl > 3 ? " …" : ""})</span></li>`).join("")}</ul></div>`
@@ -2913,17 +2912,17 @@ async function ladeLoeschen() {
       ${zg}
       ${ris}
       ${p.sperren.map(s => `<div class="sperre">⚠ ${esc(s)}</div>`).join("")}
-      <div><button class="gefahr" id="lStart" ${p.sperren.length ? "disabled" : ""}>Jetzt ausführen</button>
-        ${ll ? `<span class="sub" style="margin-left:10px">Letzter Lauf: ${zeit(ll.start)} · ${esc(ll.status)} · ${zahl(ll.geloescht)} Zeilen gelöscht${ll.nur_regel ? ` (${esc(ll.nur_regel)})` : ""}${ll.backup_warte_s ? ` · ${dauerText(ll.backup_warte_s)} auf Backup gewartet` : ""}
-          – <a href="#" id="lZumProtokoll">Löschprotokolle</a></span>` : ""}</div>`;
+      <div><button class="gefahr" id="lStart" ${p.sperren.length ? "disabled" : ""}
+          title="${esc(`Löscht den ganzen Plan des gewählten Umfangs (${p.nur_regel ? `Regel ${p.nur_regel}` : "alle aktiven Regeln"}: ${su.zeilen ? `ca. ${zahl(su.zeilen)} Zeilen` : "nichts zu löschen"}). Die Filter der Tabelle wirken nur auf die Anzeige.`)}">Jetzt ausführen</button>
+        ${p.nur_regel ? `<span class="sub" style="margin-left:10px">Umfang: nur Regel ${esc(p.nur_regel)} – andere aktive Regeln bleiben in diesem Lauf außen vor.</span>` : ""}</div>`;
+    // Punkt 162 (0.5.3): kein „Letzter Lauf …“ mehr neben dem Knopf (steht im Reiter Löschprotokolle); Punkt 161: Tooltip und Umfang-Hinweis
+
     $("#lStart").onclick = starteLoeschen;
     const ab = $("#lAusnahme"); if (ab) ab.onchange = () => { S.loeschAusnahme = ab.checked; ladeLoeschen(); };
     k.querySelectorAll("[data-vu]").forEach(b => b.onclick = () => {
       const g = p.verwaist_ungedeckt[+b.dataset.vu];
       bearbeiteRegel(-1, { typ: "verwaist", muster: ["alle", ...g.muster], name: `Verwaist: ${g.name}`, kurzzeit: g.kurzzeit || "30d" });
     });
-    const zp = $("#lZumProtokoll");
-    if (zp) zp.onclick = ev => { ev.preventDefault(); document.querySelector('#tabs button[data-tab="protokoll"]').click(); };
     T.loesch.daten(planZeilen(p));
   } catch (e) {
     k.innerHTML = `<div class="fehler">${esc(e.message)}</div>`;
