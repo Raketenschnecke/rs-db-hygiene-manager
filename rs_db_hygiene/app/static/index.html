@@ -37,17 +37,19 @@ a { color: var(--accent); }
 /* Punkt 96 (0.4.6): eine Zeile ohne Umbruch – Überschrift links, Stand und Knopf rechts, alles senkrecht mittig;
    oben und unten gleicher Abstand. Bei schmalen Fenstern wird gekürzt (Überschrift kleiner bzw. „…“, Stand in Kurzform). */
 /* Punkt 98 (0.4.7): unten 10 px mehr Abstand zum Kachelblock; --kopf-h = Höhe der Überschrift (Schrift × 1,2) */
-header { --kopf-h: calc(34px * 1.2); padding: 12px 20px 22px; display: flex; flex-wrap: nowrap; gap: 16px; align-items: center; justify-content: space-between; }
+header { --kopf-h: calc(34px * 1.2); padding: 12px 20px 22px; display: flex; flex-wrap: nowrap; gap: 16px; align-items: flex-start; justify-content: space-between; }
 h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kopf-titel { min-width: 0; display: flex; align-items: center; }
 .kopf-fehler { margin: 0 20px; }   /* nur bei einem Fehler gefüllt; leer ohne Höhe und ohne Abstand */
 .kopf-fehler:not(:empty) { margin-bottom: 10px; }
 /* Punkt 125 (0.5.2): doppelt so breit wie hoch, zweizeilig „Analyse / starten“; mindestens 40 px hoch, damit zwei Zeilen lesbar bleiben */
-#btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h)); height: var(--knopf-h); padding: 2px; flex: none; position: relative;
-  font-size: 12.5px; line-height: 1.15; font-weight: 700; text-align: center;
-  /* Punkt 107: gefüllt im Rot der Kachelzeile „Istzustand“ – bewusst nicht das Gefahr-Rot der Löschknöpfe */
-  background: var(--zf-ist); border-color: var(--zf-ist); color: #fff; }
-#btnAnalyse:hover:not(:disabled), #btnAnalyse:focus-visible { background: color-mix(in srgb, var(--zf-ist) 80%, #000); border-color: color-mix(in srgb, var(--zf-ist) 80%, #000); outline: none; }
+/* Punkt 156 (0.5.3): im Stil der Kacheln (Oberkante in voller Farbe, Fläche getönt), aber kräftiger im Rot der Kachelzeile „Istzustand“;
+   40 px breiter als bisher; oben bündig mit der Überschrift, unten exakt auf der Unterkante des „g“ (--kopf-basis, per Skript gemessen);
+   rechts bündig mit den Kacheln (beide am rechten Seitenrand, 20 px) */
+#btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h) + 40px); height: var(--kopf-basis, var(--knopf-h)); padding: 0 4px; flex: none; position: relative;
+  font-size: 12.5px; line-height: 1.15; font-weight: 700; text-align: center; color: #fff; border-radius: 8px;
+  background: color-mix(in srgb, var(--zf-ist) 62%, var(--panel)); border: 1px solid color-mix(in srgb, var(--bad) 55%, var(--line)); border-top: 3px solid var(--bad); }   /* Rahmen signalrot, wie die Kacheln: oben kräftig, seitlich und unten schmal und gedämpft */
+#btnAnalyse:hover:not(:disabled), #btnAnalyse:focus-visible { background: color-mix(in srgb, var(--zf-ist) 82%, var(--panel)); outline: none; }
 /* Punkt 125: Markierung oben rechts, wenn eine Analyse veraltet ist (Grund im Tooltip) – gelb, damit sie auf dem Rot auffällt */
 #btnAnalyse.alt::after { content: "!"; position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
   background: #f5c400; color: #1d2330; border: 2px solid var(--bg); font-size: 11px; line-height: 16px; font-weight: 800; }
@@ -116,6 +118,8 @@ button.ansicht.an { background: var(--accent); color: #fff; }
 button:disabled { opacity: .5; cursor: default; }
 input[type=number] { width: 72px; }
 .klebend { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-top: 4px; }
+/* 0.5.3 (Punkte 152/153): 8 px deckender Abstand unter den Knöpfen – beim Scrollen wie im Stand */
+.klebend { padding-bottom: 8px; } .klebend > .leiste { margin-bottom: 0; }
 /* Reiter (Punkt 41): eigene Fläche und Rahmen je Tab; der aktive ist mit dem Inhalt verbunden */
 /* Punkt 80 (0.4.4): kein senkrechter Scrollbalken – overflow-y: hidden. Die Grundlinie ist ein innerer Schatten statt eines Rahmens,
    damit nichts über die Leiste hinausragt; der aktive Reiter deckt sie mit seinem unteren Rand in Flächenfarbe ab. */
@@ -150,8 +154,12 @@ input[type=number] { width: 72px; }
 @keyframes hziel { from { background: var(--accent-weak); } to { background: transparent; } }
 .hilfe-rang { font-weight: 700; font-size: 15px; padding: 6px 10px; background: var(--accent-weak); color: var(--accent); border-radius: 8px; display: inline-block; }
 /* „Löschen“ und „Löschprotokoll“ hebt eine rote Linie ab: die einzigen Bereiche, die mit dem Löschen zu tun haben */
-.tabs button.gefahr-reiter { border-top-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-.tabs button.gefahr-reiter.an { color: var(--bad); border-top-color: var(--bad); }
+/* Punkt 157 (0.5.3, Variante C): Oberkante der Reiter in der Farbe ihres Inhalts wie Kacheln und Spaltengruppen –
+   Istzustand rot, Vorhaltezeiten blau, Prognose grün, Löschmenge gelb; aktiv volle Farbe und farbige Schrift; Hilfe bleibt neutral */
+.tabs button.rf-ist { --rf: var(--zf-ist); } .tabs button.rf-vorh { --rf: var(--zf-vorh); }
+.tabs button.rf-prog { --rf: var(--zf-prog); } .tabs button.rf-loesch { --rf: var(--zf-loesch); }
+.tabs button[class*="rf-"] { border-top-color: color-mix(in srgb, var(--rf) 75%, var(--reiter)); }
+.tabs button.an[class*="rf-"] { color: color-mix(in srgb, var(--rf) 70%, var(--text)); border-top-color: var(--rf); }
 /* Eigener Scrollbereich bis zur Fensterhöhe: darin bleibt der Tabellenkopf stehen */
 .tabelle { overflow: auto; max-height: calc(100vh - var(--kleb-h) - 56px); min-height: 240px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 table { border-collapse: separate; border-spacing: 0; width: 100%; }
@@ -182,24 +190,31 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 /* Punkt 132 (0.5.3): jede Gruppe in eigener Farbe (wie die Kachelzeilen: Oberkante voll, Fläche getönt), Name größer als die Spaltentitel;
    die Tönung zieht sich schwächer durch Titel-, Filter- und Summenzeile und ganz schwach durch die Datenzeilen; Trennlinie am Gruppenwechsel */
 .gr-stamm { --gf: var(--zf-stamm); } .gr-vorh { --gf: var(--zf-vorh); } .gr-ist { --gf: var(--zf-ist); } .gr-loesch { --gf: var(--zf-loesch); }
+/* Punkte 144–151 (0.5.3): Prognose grün wie die Kachelzeile; Spalten ohne Gruppe neutral */
+.gr-prog { --gf: var(--zf-prog); } .gr-neutral { --gf: var(--reiter-rand); }
 tr.gruppenzeile th.gruppe { text-align: center; font-size: 16px; font-weight: 700; padding: 5px 9px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   color: color-mix(in srgb, var(--gf) 55%, var(--text)); background: color-mix(in srgb, var(--gf) 22%, var(--panel)); border-top: 3px solid var(--gf); }   /* Punkt 142: 16 → 22 % */
 tr.gruppenzeile th.gruppe-leer { border-top: 3px solid transparent; }
-#tEnt thead tr:not(.gruppenzeile) th.gr { background: color-mix(in srgb, var(--gf) 12%, var(--panel)); }   /* Punkt 142: 7 → 12 % */
+table.gruppiert thead tr:not(.gruppenzeile) th.gr { background: color-mix(in srgb, var(--gf) 12%, var(--panel)); }   /* Punkt 142: 7 → 12 % */
 .tabelle tbody tr:nth-child(odd) td.gr { background: color-mix(in srgb, var(--gf) 4%, var(--zeile-hell)); }
 .tabelle tbody tr:nth-child(even) td.gr { background: color-mix(in srgb, var(--gf) 4%, var(--zeile-dunkel)); }
 .tabelle tbody tr.klick:hover td.gr { background: var(--accent-weak); }
 /* Punkt 140 (0.5.3): Auswahl und Entität links fixiert (Breite der Auswahlspalte fest 40 px); Schattenkante, solange nach rechts gescrollt ist */
-#tEnt thead tr.gruppenzeile th.fix, #tEnt .fix { position: sticky; z-index: 1; }
-#tEnt thead .fix { z-index: 3; }
+table.gruppiert thead tr.gruppenzeile th.fix, table.gruppiert .fix { position: sticky; z-index: 1; }
+table.gruppiert thead .fix { z-index: 3; }
 #tEnt .fix0 { left: 0; } #tEnt .fix1 { left: 40px; }
 #tEnt thead tr.gruppenzeile th.fix0 { left: 0; }
 .tabelle.nach-rechts #tEnt .fix1, .tabelle.nach-rechts #tEnt th.gname-links { box-shadow: 6px 0 6px -4px rgba(0, 0, 0, .45); }
 #tEnt th.gname-links { text-align: left; padding-left: 52px; }
+/* Punkte 144–151: fixierte Spalten im gemeinsamen Baustein – Abstand links aus den Spaltenbreiten (--fx0 …), Schatten an der letzten */
+table.gruppiert th.gname-links { text-align: left; }
+table.gruppiert .fx0 { left: var(--fx0, 0); } table.gruppiert .fx1 { left: var(--fx1, 0); } table.gruppiert .fx2 { left: var(--fx2, 0); }
+table.gruppiert .fx3 { left: var(--fx3, 0); } table.gruppiert .fx4 { left: var(--fx4, 0); }
+.tabelle.nach-rechts table.gruppiert .fixletzt { box-shadow: 6px 0 6px -4px rgba(0, 0, 0, .45); }
 /* Punkt 142 (0.5.3): kräftige Trennlinie in der Gruppenfarbe zwischen Kopf und Daten, Schatten, solange Daten unter dem Kopf durchlaufen */
-#tEnt thead tr.summenzeile th.gr { border-bottom: 1px solid color-mix(in srgb, var(--gf) 60%, var(--panel)); }   /* 1 px, abgedimmt */
-.tabelle.nach-unten #tEnt thead tr.summenzeile th { box-shadow: 0 6px 6px -4px rgba(0, 0, 0, .45); }
-#tEnt th.gstart, #tEnt td.gstart { border-left: 1px solid color-mix(in srgb, var(--gf) 60%, var(--line)); }
+table.gruppiert thead tr.summenzeile th.gr { border-bottom: 1px solid color-mix(in srgb, var(--gf) 60%, var(--panel)); }   /* 1 px, abgedimmt */
+.tabelle.nach-unten table.gruppiert thead tr.summenzeile th { box-shadow: 0 6px 6px -4px rgba(0, 0, 0, .45); }
+table.gruppiert th.gstart, table.gruppiert td.gstart { border-left: 1px solid color-mix(in srgb, var(--gf) 60%, var(--line)); }
 /* Punkt 143 (0.5.3): Regel-Chip öffnet die Regel; Wert kürzen statt Chip abschneiden */
 /* Punkt 141 (0.5.3): HA-Symbol in Schrifthöhe, im HA-Blau */
 .ha-icon { width: 1.15em; height: 1.15em; vertical-align: -0.2em; fill: #18bcf2; flex: none; }
@@ -283,8 +298,8 @@ table.baustein thead tr:first-child th, table.baustein thead tr.titelzeile th { 
 .tz { display: inline-block; }
 table.baustein thead tr:first-child th, table.baustein thead tr.titelzeile th { white-space: normal; overflow-wrap: break-word; hyphens: auto; line-height: 1.25; vertical-align: top; }
 /* Punkt 132 (0.5.3): Spaltenköpfe im Tab Entitäten mit zwei festen Zeilen – oben der Titel, darunter Zusatz bzw. Einheit (klein, grau); je Zeile „…“ statt Umbruch */
-#tEnt thead tr.gruppenzeile th { position: static; padding-right: 9px; }
-#tEnt thead tr.titelzeile th { white-space: nowrap; }
+table.gruppiert thead tr.gruppenzeile th { position: static; padding-right: 9px; }
+table.gruppiert thead tr.titelzeile th { white-space: nowrap; }
 .kz1, .kz2 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kz2 { font-size: 11.5px; font-weight: 400; color: var(--muted); min-height: 1.25em; }
 table.baustein thead th[data-sort] { cursor: pointer; }
@@ -296,6 +311,11 @@ td.mitte, th.mitte { text-align: center; padding-left: 4px; padding-right: 4px; 
 input[type=checkbox].wahl { width: 16px; height: 16px; margin: 0; cursor: pointer; }
 .loeschkasten { display: grid; gap: 8px; margin-bottom: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 .loeschkasten .sperre { color: var(--warn); }
+/* Punkt 155 (0.5.3): Kasten im Tab Löschen klebt unter dem Kopfbereich – oben verschwindet der Text, die Knopfzeile bleibt ganz sichtbar */
+#lKasten { position: sticky; top: calc(var(--kleb-h) - var(--lk-ueber, 0px)); z-index: 4; }
+#tab-loeschen .tabelle { max-height: calc(100vh - var(--kleb-h) - var(--lk-sicht, 0px) - 56px); }
+/* die Seite muss weit genug scrollen können, damit der Kasten oben „einrastet“ */
+#tab-loeschen { min-height: calc(100vh + var(--lk-ueber, 0px) - var(--kleb-h) - 24px); }   /* 24 px = Polster unten von main */
 button.gefahr { background: var(--bad); border-color: var(--bad); color: #fff; }
 button.gefahr:disabled { opacity: .45; }
 #frageText { white-space: pre-line; max-height: 60vh; overflow: auto; overflow-x: hidden; overflow-wrap: anywhere; }   /* Punkt 105 */
@@ -304,6 +324,11 @@ button.gefahr:disabled { opacity: .45; }
 .laeufe-titel { margin: 18px 0 6px; font-size: 14px; }
 .stufeb { font-size: 11px; color: var(--warn); margin-top: 3px; }
 @media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } header { --kopf-h: calc(20px * 1.2); } h1 { font-size: 20px; } .kopf-fehler { margin-left: 16px; margin-right: 16px; } .banner { margin: 0 16px 8px; } .lauf { margin: 0 16px 12px; } }
+/* 0.5.3 (Punkte 140, 144–151): fixierte Zellen sticky – auch gegen „position: relative“ der Titelzeile (Griffe) und der ersten Kopfzeile */
+table.gruppiert thead tr th.fix.fix, table.gruppiert tbody tr td.fix.fix { position: sticky; }
+table.gruppiert thead tr.gruppenzeile th.gruppe.gruppe { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Name der ersten Gruppe über dem fixierten Teil darf in den nicht fixierten Rest ragen (z. B. nur „Regel“ fixiert) */
+table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: visible; text-overflow: clip; }
 </style>
 </head>
 <body>
@@ -324,13 +349,13 @@ button.gefahr:disabled { opacity: .45; }
   </div>
   <div class="klebend" id="klebend">
     <nav class="tabs" id="tabs">
-      <button data-tab="ent" class="an">Entitäten</button>
-      <button data-tab="events">Events</button>
-      <button data-tab="regeln">Regeln</button>
-      <button data-tab="probe">Prognosen je Regel</button>
-      <button data-tab="lts">Statistik ohne Entität</button>
-      <button data-tab="loeschen" class="gefahr-reiter">Löschen</button>
-      <button data-tab="protokoll" class="gefahr-reiter">Löschprotokoll</button>
+      <button data-tab="ent" class="an rf-ist">Entitäten</button>
+      <button data-tab="events" class="rf-ist">Events</button>
+      <button data-tab="regeln" class="rf-vorh">Regeln</button>
+      <button data-tab="probe" class="rf-prog">Prognosen je Regel</button>
+      <button data-tab="lts" class="rf-ist">Statistik ohne Entität</button>
+      <button data-tab="loeschen" class="rf-loesch">Löschen</button>
+      <button data-tab="protokoll" class="rf-loesch">Löschprotokoll</button>
       <button data-tab="hilfe" class="rechts" title="Einstieg, Begriffe, Regel-Rangfolge, FAQ">Hilfe</button>
     </nav>
     <div class="leiste" data-leiste="ent">
@@ -400,7 +425,7 @@ button.gefahr:disabled { opacity: .45; }
   </div>
   <section id="tab-ent">
     <div class="trefferzeile" id="trefferzeile"></div>
-    <div class="tabelle"><table id="tEnt" class="baustein"><colgroup id="tEntSpalten"></colgroup><thead id="tEntKopf"></thead><tbody id="tEntRumpf"></tbody></table></div>
+    <div class="tabelle"><table id="tEnt" class="baustein gruppiert"><colgroup id="tEntSpalten"></colgroup><thead id="tEntKopf"></thead><tbody id="tEntRumpf"></tbody></table></div>
     <div class="blaettern"><button id="zurueck">‹</button><span id="seite"></span><button id="weiter">›</button><span id="aufbau" class="sub"></span></div>
   </section>
   <section id="tab-events" hidden>
@@ -801,6 +826,25 @@ function par() {
 
 // Höhe der klebenden Leiste für den Scrollbereich der Tabellen
 new ResizeObserver(() => document.documentElement.style.setProperty("--kleb-h", $("#klebend").offsetHeight + "px")).observe($("#klebend"));
+// Punkt 156 (0.5.3): Unterkante des Knopfs „Analyse starten“ auf die Unterkante des „g“ der Überschrift – Abstand Oberkante → Grundlinie + Unterlänge
+{ const h1 = $("h1"), miss = () => {
+    const m = document.createElement("span"); m.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
+    h1.appendChild(m); let basis = m.getBoundingClientRect().top - h1.getBoundingClientRect().top; m.remove();
+    // bis zur Unterkante des „g“ (Unterlänge der Schrift), nicht nur bis zur Grundlinie
+    const cs = getComputedStyle(h1), ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    basis += ctx.measureText("g").actualBoundingBoxDescent || 0;
+    if (basis > 0) document.documentElement.style.setProperty("--kopf-basis", Math.round(basis) + "px");
+  };
+  new ResizeObserver(miss).observe(h1); document.fonts?.ready.then(miss); }
+// Punkt 155 (0.5.3): Tab Löschen – der Kasten bleibt beim Scrollen so stehen, dass nur seine letzte Zeile (Knopf „Jetzt ausführen“) sichtbar ist
+new ResizeObserver(() => {
+  const k = $("#lKasten"), z = k.lastElementChild; if (!z || k.offsetParent === null) return;
+  // sichtbar bleiben: Knopfzeile, 8 px Lücke darüber (Zeilenabstand im Kasten), 10 px Polster und 1 px Rand darunter
+  const ueber = Math.max(0, k.offsetHeight - z.offsetHeight - 8 - 10 - 1);
+  document.documentElement.style.setProperty("--lk-ueber", ueber + "px");
+  document.documentElement.style.setProperty("--lk-sicht", (k.offsetHeight - ueber) + "px");
+}).observe($("#lKasten"));
 
 // ================================================ Bausteine für alle Tabellen
 // ---- Spaltenbreiten: Griff ziehen, Doppelklick = Standard, je Tabelle im Browser gemerkt
@@ -917,6 +961,16 @@ class LokaleTabelle {
     }
     this.el = $(o.id); this.treffer = $(o.treffer);
     this.z = ziehbar(this.el, o.schluessel, () => Object.fromEntries(o.spalten.map(s => [s.k, s.breite])));
+    // Punkte 144–151 (0.5.3): Look & Feel des Tabs Entitäten – Gruppen [Name, Farbe, [Spalten]] und fixierte Spalten (fix: [Spalten])
+    this.gruppeVon = {};
+    for (const [name, farbe, ks] of o.gruppen || []) for (const k of ks) this.gruppeVon[k] = { name, farbe };
+    if (o.gruppen) {
+      this.el.classList.add("gruppiert");
+      const setze = this.z.setze;
+      this.z.setze = () => { setze(); this.setzeFix(); };   // nach jedem Ziehen die Abstände der fixierten Spalten neu
+      const box = this.el.closest(".tabelle");
+      if (box) box.addEventListener("scroll", () => { box.classList.toggle("nach-rechts", box.scrollLeft > 0); box.classList.toggle("nach-unten", box.scrollTop > 0); }, { passive: true });
+    }
     // Spaltenauswahl (Punkt 23): je Tabelle im Browser gemerkt; Spalten mit fest:1 sind immer sichtbar
     this.sichtbar = ladeSichtbar(o.schluessel + "_spalten", o.spalten.map(s => s.k));
     this.el.addEventListener("input", ev => {
@@ -944,27 +998,62 @@ class LokaleTabelle {
   daten(zeilen) { this.zeilen = zeilen || []; this.baueKopf(); this.zeige(); }
   spaltenWahl(titel) {
     const alle = this.spalten.map(s => s.k);
-    spaltenDialog(titel, this.spalten.map(s => ({ k: s.k, titel: s.titel, fest: !!s.fest })), this.sichtbar,
+    spaltenDialog(titel, this.spalten.map(s => ({ k: s.k, titel: s.titel, fest: !!s.fest,
+      ...(this.gruppen ? { gruppe: this.gruppeVon[s.k]?.name || "weitere", gid: this.gruppeVon[s.k]?.farbe || "neutral" } : {}) })), this.sichtbar,
       { Standard: this.standardSpalten || alle, Alle: alle }, neu => {
         this.sichtbar = neu; speicher.schreib(this.schluessel + "_spalten", JSON.stringify([...neu]));
         this.baueKopf(); this.zeige();
       });
   }
+  // Punkte 144–151: Klassen je sichtbarer Spalte – Gruppenfarbe, Trennlinie am Gruppenwechsel, fixiert (fx0 …, Schatten an der letzten)
+  klassen(sp) {
+    if (!this.gruppen) return sp.map(() => "");
+    const fixe = [];
+    for (const s of sp) { if ((this.fix || []).includes(s.k)) fixe.push(s.k); else break; }
+    this.fixe = fixe;
+    const g = s => this.gruppeVon[s.k] || { name: "", farbe: "neutral" };
+    return sp.map((s, i) => ` gr gr-${g(s).farbe}` + (i > 0 && (g(sp[i - 1]).name !== g(s).name || g(sp[i - 1]).farbe !== g(s).farbe) ? " gstart" : "") +
+      (i < fixe.length ? ` fix fx${i}${i === fixe.length - 1 ? " fixletzt" : ""}` : ""));
+  }
+  setzeFix() {
+    let links = 0;
+    (this.fixe || []).forEach((k, i) => { this.el.style.setProperty(`--fx${i}`, links + "px"); links += this.z.breite(k); });
+  }
+  gruppenzeile(sp, gk) {
+    const g = s => this.gruppeVon[s.k] || { name: "", farbe: "neutral" };
+    let h = "";
+    for (let i = 0; i < sp.length;) {
+      let n = 1;
+      while (i + n < sp.length && g(sp[i + n]).name === g(sp[i]).name && g(sp[i + n]).farbe === g(sp[i]).farbe) n++;
+      const { name, farbe } = g(sp[i]), tip = name ? ` title="Gruppe ${esc(name)}"` : "";
+      const nf = i === 0 ? Math.min(this.fixe.length, n) : 0;   // der fixierte Teil der ersten Gruppe trägt den Namen
+      if (nf) h += `<th colspan="${nf}" class="gruppe gr gr-${farbe} fix fx0 gname-links"${tip}>${esc(name)}</th>` +
+        (n > nf ? `<th colspan="${n - nf}" class="gruppe gr gr-${farbe}"${tip}></th>` : "");
+      else h += `<th colspan="${n}" class="gruppe${gk[i]}"${tip}>${esc(name)}</th>`;
+      i += n;
+    }
+    return `<tr class="gruppenzeile">${h}</tr>`;
+  }
   baueKopf() {
-    const sp = this.zeigbar();
-    const titel = sp.map(s => `<th class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}" ${s.typ !== "keine" || s.sortierbar ? `data-sort="${s.k}"` : ""}
-      title="${esc(s.hilfe ? `${s.titel}: ${s.hilfe}` : s.titel)}${s.typ !== "keine" || s.sortierbar ? SORT_TIP : ""}">${s.kopf || kopfText(s.titel)}<span class="pfeil"></span>${griff(s.k)}</th>`).join("");
-    const filter = sp.map(s => {
+    const sp = this.zeigbar(), gk = this.klassen(sp);
+    // zweizeiliger Kopf (Punkt 132) nur in gruppierten Tabellen; eigene Köpfe (Auswahl-Kästchen) bleiben
+    const kopf = s => s.kopf ? s.kopf + '<span class="pfeil"></span>' : this.gruppen ? kopfZweizeilig(s.titel) : kopfText(s.titel) + '<span class="pfeil"></span>';
+    const titel = sp.map((s, i) => `<th class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${gk[i]}" ${s.typ !== "keine" || s.sortierbar ? `data-sort="${s.k}"` : ""}
+      title="${esc(s.hilfe ? `${s.titel}: ${s.hilfe}` : s.titel)}${s.typ !== "keine" || s.sortierbar ? SORT_TIP : ""}">${kopf(s)}${griff(s.k)}</th>`).join("");
+    const filterRoh = sp.map(s => {
       const alt = this.f[s.k] || "";
       if (s.typ === "auswahl") return `<th><select data-tf="${s.k}" aria-label="Filter ${esc(s.titel)}"><option value="">alle</option>${(s.optionen ? s.optionen(this.zeilen) : [])
         .map(([w, t]) => `<option value="${esc(w)}" ${w === alt ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></th>`;
       if (s.typ === "keine") return "<th></th>";
       return `<th><input data-tf="${s.k}" value="${esc(alt)}" placeholder="${s.typ === "text" ? "Text, *" : s.typ === "gb" ? ">0,5" : ">0"}"
         title="${s.typ === "text" ? "enthält …; * und ? als Platzhalter" : s.typ === "gb" ? "in GB, z. B. >0,5, <=2, 1-3" : "z. B. >1000, <=10, 100-500, 0"}" ${s.n ? 'style="text-align:right"' : ""}></th>`;
-    }).join("");
-    const summe = sp.map(s => `<th class="${s.n ? "n" : ""}" data-ts="${s.k}"></th>`).join("");
+    });
+    // Punkt 136 auch hier: Auswahlfelder oben, Textfelder unten
+    const ebene = h => h.startsWith("<th><select") ? " fz-auswahl" : h === "<th></th>" ? "" : " fz-text";
+    const filter = filterRoh.map((h, i) => this.gruppen ? mitKlasse(h, (gk[i] + ebene(h)).trim()) : h).join("");
+    const summe = sp.map((s, i) => `<th class="${s.n ? "n" : ""}${gk[i]}" data-ts="${s.k}"></th>`).join("");
     this.el.innerHTML = `<colgroup>${sp.map(s => `<col data-k="${s.k}">`).join("")}</colgroup>
-      <thead><tr>${titel}</tr><tr class="filterzeile">${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt">${summe}</tr></thead><tbody></tbody>`;
+      <thead>${this.gruppen ? this.gruppenzeile(sp, gk) : ""}<tr class="titelzeile">${titel}</tr><tr class="filterzeile">${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt">${summe}</tr></thead><tbody></tbody>`;
     this.z.setze();
   }
   gefiltert() {
@@ -1006,22 +1095,28 @@ class LokaleTabelle {
       e.classList.toggle("gesetzt", !!(this.f[k] || "").trim() && !this.fehler[k]);
       if (this.fehler[k]) e.title = "Ungültig, wird ignoriert: " + this.fehler[k];
     });
+    const gef = l.length !== this.zeilen.length, ohneEinheit = x => String(x).replace(/ (GB|MB|%)$/, "");
     this.el.querySelectorAll("[data-ts]").forEach(th => {
       const s = this.spalte(th.dataset.ts);
-      const [oben, unten] = s.summe ? s.summe(l, this.zeilen) : ["", ""];
-      th.innerHTML = oben === "" ? "" : `<b>${oben}</b><span class="ges">gesamt ${unten}</span>`;
+      const [oben, unten, tip] = s.summe ? s.summe(l, this.zeilen) : ["", ""];
+      if (!this.gruppen) { th.innerHTML = oben === "" ? "" : `<b>${oben}</b><span class="ges">gesamt ${unten}</span>`; return; }
+      // Punkt 139 im gemeinsamen Baustein: ein Wert, „(gesamt)“ nur bei Filter, Erklärung im Tooltip
+      th.innerHTML = oben === "" ? "" : `<b>${ohneEinheit(oben)}</b>${gef && unten !== "–" && unten !== "" ? `<span class="ges">(${ohneEinheit(unten)})</span>` : ""}`;
+      th.title = oben === "" ? "" : (tip || `${s.titel}: Summe bzw. Anzahl – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)`);
     });
-    const sp = this.zeigbar(), sicht = this.seite ? l.slice(0, this.seite) : l;
+    const sp = this.zeigbar(), sicht = this.seite ? l.slice(0, this.seite) : l, gk = this.klassen(sp);
     this.el.querySelector("tbody").innerHTML = l.length
-      ? sicht.map(r => `<tr ${this.zeileAttr ? this.zeileAttr(r) : ""}>${sp.map(s =>
-          `<td class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${s.tdKlasse ? " " + s.tdKlasse : ""}" title="${esc(s.tip ? s.tip(r) : (s.typ === "text" ? s.wert(r) : ""))}">${s.zelle(r)}</td>`).join("")}</tr>`).join("")
+      ? sicht.map(r => `<tr ${this.zeileAttr ? this.zeileAttr(r) : ""}>${sp.map((s, i) =>
+          `<td class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${s.tdKlasse ? " " + s.tdKlasse : ""}${gk[i]}" title="${esc(s.tip ? s.tip(r) : (s.typ === "text" ? s.wert(r) : ""))}">${s.zelle(r)}</td>`).join("")}</tr>`).join("")
       : `<tr><td colspan="${sp.length}" class="leer">${esc(this.leer || "keine Einträge")}</td></tr>`;
     const aus = this.spalten.filter(s => !s.fest && !this.sichtbar.has(s.k) && (this.f[s.k] || "").trim());
-    if (this.treffer) this.treffer.innerHTML = `<span><b>${zahl(l.length)}</b> von ${zahl(this.zeilen.length)} ${this.einheit || "Einträgen"}${l.length !== this.zeilen.length ? " (gefiltert)" : ""}</span>` +
+    // Punkt 153 (0.5.3): Anzahl entfällt (steht in der Summenzeile); bei Tabellen mit Seiten bleibt die Auswahl „Zeilen“ samt Bereich
+    if (this.treffer) this.treffer.innerHTML = "" +
       (this.seiten ? `<span>angezeigt ${zahl(l.length ? 1 : 0)}–${zahl(sicht.length)} von ${zahl(l.length)}</span>
         <label>Zeilen <select data-seite aria-label="angezeigte Zeilen">${this.seiten.map(n => `<option value="${n}" ${n === this.seite ? "selected" : ""}>${n}</option>`).join("")}</select></label>` : "") +
       (aus.length ? `<span class="chip warn" title="${esc(aus.map(s => s.titel).join(", "))}">${aus.length} Filter in ausgeblendeten Spalten wirken nicht</span>` : "") +
       (this.zusatz ? this.zusatz(this) : "");
+    if (this.treffer) this.treffer.hidden = !this.treffer.innerHTML.trim();
     if (this.nachher) this.nachher(this);
   }
   resetFilter() { this.f = {}; this.sortierung = [...this.sortStdListe]; this.merkeSort(); this.baueKopf(); this.zeige(); }
@@ -1407,7 +1502,7 @@ const ANSICHTEN_ENT = {
   // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
   "States & Statistik": ["entity_id", "herkunft", "status", "kurzzeit", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
                          "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts"],
-  Attribute: ["entity_id", "herkunft", "rows", "rows_24h", ...ATTR_SPALTEN],
+  Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
 };
 // Punkt 115 (0.4.10): neue Spalten der Standardansicht auch bei gemerkter Spaltenauswahl einmal einblenden
@@ -1687,10 +1782,11 @@ const unsichtbareFilter = () => Object.keys(S.f).filter(k => S.f[k] && k !== "de
 function zeigeTreffer(r) {
   const bis = S.limit ? Math.min(S.offset + S.limit, r.gesamt) : r.gesamt;
   const gefiltert = r.gesamt !== r.alle, aus = unsichtbareFilter();
-  $("#trefferzeile").innerHTML = `<span><b>${zahl(r.gesamt)}</b> von ${zahl(r.alle)} Entitäten${gefiltert ? " (gefiltert)" : ""}</span>
-    <span>angezeigt ${zahl(r.gesamt ? S.offset + 1 : 0)}–${zahl(bis)}</span>` +
+  // Punkt 153 (0.5.3): Anzahl und Bereich entfallen – Anzahl in der Summenzeile, Bereich unten beim Blättern; die Zeile erscheint nur noch mit Gerätefilter oder Warnung
+  $("#trefferzeile").innerHTML = "" +
     (S.f.device_id ? `<span class="filterchip">Gerät: ${esc(S.geraetName || S.f.device_id)}<button id="geraetWeg" aria-label="Gerätefilter entfernen">✕</button></span>` : "") +
     (aus.length ? `<span class="chip warn" title="${esc(aus.map(k => SPALTE[k === "herkunft_art" ? "herkunft" : k][1]).join(", "))}">${aus.length} Filter in ausgeblendeten Spalten wirken nicht</span>` : "");
+  $("#trefferzeile").hidden = !$("#trefferzeile").innerHTML.trim();
   $("#seite").textContent = `${zahl(r.gesamt ? S.offset + 1 : 0)}–${zahl(bis)} von ${zahl(r.gesamt)}`;
   $("#zurueck").hidden = $("#weiter").hidden = !S.limit;
   $("#zurueck").disabled = S.offset === 0;
@@ -1768,6 +1864,9 @@ const wertSpalte = art => ({
 const T = {};
 T.regeln = new LokaleTabelle({
   id: "#tRegeln", treffer: "#trefferRegeln", schluessel: "dbh_breiten_regeln", einheit: "Regeln", sortStd: { k: "rang" },
+  // Punkt 145 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["treffer"]]],
+  fix: ["wahl", "aktiv", "rang", "id"],
   leer: "keine Regeln",
   spalten: [
     { k: "wahl", titel: "Auswahl", kopf: `<input type="checkbox" class="wahl" id="wahlAlle" title="alle angezeigten Regeln auswählen">`, typ: "keine",
@@ -1776,8 +1875,8 @@ T.regeln = new LokaleTabelle({
     { k: "aktiv", titel: "aktiv", typ: "auswahl", breite: 90, mitte: 1, wert: r => r.aktiv ? "aktiv" : "passiv",
       zelle: r => `<button class="schalter ${r.aktiv ? "an" : "aus"}" data-umschalten="${esc(r.id)}" title="Klick: auf ${r.aktiv ? "passiv" : "aktiv"} schalten${!r.aktiv && r.id.startsWith("E:") ? "\npassiv – für diese Entität gelten wieder Muster-Regeln bzw. der Standard" : ""}">${r.aktiv ? "aktiv" : "passiv"}</button>`,
       csv: r => r.aktiv ? "aktiv" : "passiv", optionen: () => [["aktiv", "aktiv"], ["passiv", "passiv"]],
-      summe: (g, a) => [`${zahl(g.filter(r => r.aktiv).length)} aktiv · ${zahl(g.filter(r => !r.aktiv).length)} passiv`, `${zahl(a.filter(r => r.aktiv).length)} · ${zahl(a.filter(r => !r.aktiv).length)}`] },
-    { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 60, mitte: 1, wert: r => regelIndex(r),
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nangezeigt: aktiv ${zahl(g.filter(r => r.aktiv).length)} · passiv ${zahl(g.filter(r => !r.aktiv).length)}\nalle: aktiv ${zahl(a.filter(r => r.aktiv).length)} · passiv ${zahl(a.filter(r => !r.aktiv).length)}`] },
+    { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 75, mitte: 1, wert: r => regelIndex(r),
       zelle: r => {
         if (r.id.startsWith("E:")) return `<span class="chip regel" title="Eigene Vorhaltezeit: hat immer Vorrang vor allen anderen Regeln, die Position spielt keine Rolle">E</span>`;
         if (r.typ === "ha_standard") return `<span class="chip regel" title="HA-Standard: immer der niedrigste Rang – jede andere Regel geht vor, die Position spielt keine Rolle">HA</span>`;   // Punkt 127
@@ -1785,7 +1884,7 @@ T.regeln = new LokaleTabelle({
         return `<button data-hoch="${i}" ${i && frei ? "" : "disabled"} title="${frei ? "nach oben" : "nur ohne Filter und bei Sortierung nach Rang"}">▲</button>`;
       },
       csv: r => regelIndex(r) + 1 },
-    { k: "id", titel: "ID", typ: "text", fest: 1, breite: 110, wert: r => r.id, zelle: r => `<span class="mono">${esc(r.id)}</span>`, csv: r => r.id, summe: (g, a) => [`${zahl(g.length)} Regeln`, zahl(a.length)] },
+    { k: "id", titel: "ID", typ: "text", fest: 1, breite: 110, wert: r => r.id, zelle: r => `<span class="mono">${esc(r.id)}</span>`, csv: r => r.id, summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "name", titel: "Name", typ: "text", breite: 220, wert: r => r.name, csv: r => r.name,
       zelle: r => {
         const p = (S.probe?.regeln || []).find(x => x.regel === r.id) || {};
@@ -1802,12 +1901,12 @@ T.regeln = new LokaleTabelle({
         : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : r.typ,
       hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
       optionen: () => TYPEN_TABELLE.map(t => [t, t]),
-      summe: (g, a) => [TYPEN_TABELLE.map(t => zahl(g.filter(r => r.typ === t).length)).join(" · "), TYPEN_TABELLE.map(t => zahl(a.filter(r => r.typ === t).length)).join(" · ")] },
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nje Typ: ${TYPEN_TABELLE.map(t => `${t} ${zahl(g.filter(r => r.typ === t).length)}`).join(" · ")}`] },
     { k: "muster", titel: "Muster", typ: "text", breite: 260, wert: r => r.muster.join(" "), tip: r => r.muster.join("\n"),
       zelle: r => `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}`,
       csv: r => r.muster.join(", "), summe: anzahlSumme(r => r.muster.length) },
     wertSpalte("kurzzeit"), wertSpalte("langzeit"),
-    { k: "treffer", titel: "Treffer", typ: "zahl", n: 1, breite: 90, wert: r => trefferVon(r),
+    { k: "treffer", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => trefferVon(r),
       zelle: r => { const t = trefferVon(r); return t == null ? `<span class="sub" title="passiv – mit „passive Regeln mitrechnen“ sichtbar">–</span>` : zahl(t); },
       tip: () => "Entitäten, für die diese Regel mindestens einen Wert bestimmt", csv: r => trefferVon(r) ?? "", summe: anzahlSumme(r => trefferVon(r)) },
     { k: "notiz", titel: "Notiz", typ: "text", breite: 200, wert: r => r.notiz, zelle: r => esc(r.notiz), csv: r => r.notiz },
@@ -1818,36 +1917,41 @@ T.regeln = new LokaleTabelle({
 });
 T.probe = new LokaleTabelle({
   id: "#tProbe", treffer: "#trefferProbe", schluessel: "dbh_breiten_probe", einheit: "Regeln", sortStd: { k: "regel" },
+  // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
+  gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
+    ["Löschmenge sofort", "loesch", ["loesch_summe", "states", "kurz", "lts", "events", "attr_zeilen", "attr_bytes"]],
+    ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]]],
+  fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
   zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)} bearbeiten"` : "",
   leer: "keine Regeln wirksam",
   spalten: [
-    { k: "regel", titel: "Regel", typ: "text", fest: 1, breite: 110, wert: r => r.regel, zelle: r => regelChip(r.regel), csv: r => r.regel, summe: (g, a) => [`${zahl(g.length)} Regeln`, zahl(a.length)] },
+    { k: "regel", titel: "Regel", typ: "text", fest: 1, breite: 110, wert: r => r.regel, zelle: r => regelChip(r.regel), csv: r => r.regel, summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "name", titel: "Name", typ: "text", breite: 220, wert: r => r.name, zelle: r => esc(r.name), csv: r => r.name },
-    ...[["entitaeten", "Entitäten", "Entitäten, für die diese Regel mindestens einen Wert bestimmt (nur wo sie den Vorrang gewinnt)"],
+    ...[["entitaeten", "Entitäten (gesamt)", "Entitäten, für die diese Regel mindestens einen Wert bestimmt (nur wo sie den Vorrang gewinnt)"],
         // Punkt 101 (0.4.8): Anzahl Entitäten, nicht Zeilen – das sagt jetzt der Titel
-        ["kurzzeit", "Entitäten mit Kurzzeit aus dieser Regel", "bei wie vielen Entitäten die Kurzzeit (States, 5-Min-Statistik und Attribute) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"],
-        ["langzeit", "Entitäten mit Langzeit aus dieser Regel", "bei wie vielen Entitäten die Langzeit (Stundenstatistik, 1 h) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"]].map(([k, t, h]) => (
-      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "entitaeten" ? 95 : 200, wert: r => r[k], zelle: r => zahl(r[k]), csv: r => r[k], summe: anzahlSumme(r => r[k]) })),
+        ["kurzzeit", "Kurzzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Kurzzeit (States, 5-Min-Statistik und Attribute) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"],
+        ["langzeit", "Langzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Langzeit (Stundenstatistik, 1 h) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"]].map(([k, t, h]) => (
+      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "entitaeten" ? 100 : 130, wert: r => r[k], zelle: r => zahl(r[k]), csv: r => r[k], summe: anzahlSumme(r => r[k]) })),
     // Punkt 63: Block „Löschmenge sofort“ – Summe, davon je Tabelle, dahinter die Attributzeilen (nicht in der Summe)
-    ...[["loesch_summe", "Löschmenge sofort", HILFE_LOESCH + " Summe aus States, 5-Min-Statistik, Langzeit und Events."],
-        ["states", "davon States", HILFE_LOESCH],
+    ...[["loesch_summe", "Summe (States + 5-Min + Langzeit + Events)", HILFE_LOESCH + " Summe aus States, 5-Min-Statistik, Langzeit und Events."],
+        ["states", "States", HILFE_LOESCH],
         ["kurz", "5-Min-Statistik", HILFE_LOESCH],
         ["lts", "Langzeit", HILFE_LOESCH],
         ["events", "Events", HILFE_LOESCH],
         ["attr_zeilen", "Attributzeilen (mit den States)", "Attributzeilen, die mit den States dieser Regel wegfallen – nicht in der Summe; aus der Attribut-Analyse"]].map(([k, t, h]) => (
-      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "attr_zeilen" ? 150 : 120, wert: r => probeWert(r, k), zelle: r => zahl(probeWert(r, k)), csv: r => probeWert(r, k), summe: anzahlSumme(r => probeWert(r, k)) })),
+      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "attr_zeilen" ? 150 : k === "loesch_summe" ? 200 : k === "kurz" ? 145 : 120, wert: r => probeWert(r, k), zelle: r => zahl(probeWert(r, k)), csv: r => probeWert(r, k), summe: anzahlSumme(r => probeWert(r, k)) })),
     { k: "attr_bytes", titel: "Attribute (GB)", hilfe: "Datenmenge der Attributzeilen, die mit den States wegfallen (inkl. Index)", typ: "gb", n: 1, breite: 120, wert: r => r.attr_bytes,
       zelle: r => S.probe?.stand?.attribut_analyse ? gb(r.attr_bytes) : "–", csv: r => r.attr_bytes, summe: gbSumme(r => r.attr_bytes) },
-    { k: "ersparnis_bytes", titel: "Ersparnis (Dauerbetrieb)", hilfe: HILFE_ERSPARNIS, typ: "gb", n: 1, breite: 160, wert: r => r.ersparnis_bytes,
+    { k: "ersparnis_bytes", titel: "Summe (Dauerbetrieb · GB)", hilfe: HILFE_ERSPARNIS, typ: "gb", n: 1, breite: 160, wert: r => r.ersparnis_bytes,
       zelle: r => gb(r.ersparnis_bytes), csv: r => r.ersparnis_bytes, summe: gbSumme(r => r.ersparnis_bytes) },
-    { k: "ersparnis_states", titel: "davon States", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Rohdaten und 5-Min-Statistik (über die Kurzzeit)",
+    { k: "ersparnis_states", titel: "States (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Rohdaten und 5-Min-Statistik (über die Kurzzeit)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_states, zelle: r => gb(r.ersparnis_states), csv: r => r.ersparnis_states, summe: gbSumme(r => r.ersparnis_states) },
-    { k: "ersparnis_attr", titel: "davon Attribute", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus den Attributen – sie gehören zur Kurzzeit (States, 5-Min, Attribute)",
+    { k: "ersparnis_attr", titel: "Attribute (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus den Attributen – sie gehören zur Kurzzeit (States, 5-Min, Attribute)",
       typ: "gb", n: 1, breite: 130, wert: r => r.ersparnis_attr, zelle: r => gb(r.ersparnis_attr), csv: r => r.ersparnis_attr, summe: gbSumme(r => r.ersparnis_attr) },
-    { k: "ersparnis_lts", titel: "davon Langzeit", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus der Stundenstatistik (über die Langzeit)",
+    { k: "ersparnis_lts", titel: "Langzeit (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus der Stundenstatistik (über die Langzeit)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_lts, zelle: r => gb(r.ersparnis_lts), csv: r => r.ersparnis_lts, summe: gbSumme(r => r.ersparnis_lts) },
-    { k: "ersparnis_events", titel: "davon Events", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Events (über Event-Regeln)",
+    { k: "ersparnis_events", titel: "Events (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Events (über Event-Regeln)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_events || 0, zelle: r => gb(r.ersparnis_events || 0), csv: r => r.ersparnis_events || 0, summe: gbSumme(r => r.ersparnis_events || 0) },
   ],
 });
@@ -1858,20 +1962,27 @@ function probeWert(r, k) {
 }
 T.lts = new LokaleTabelle({
   id: "#tLts", treffer: "#trefferLts", schluessel: "dbh_breiten_lts", einheit: "Statistiken", sortStd: { k: "rows", desc: true },
+  // Punkt 147 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["statistic_id", "source", "in_registry"]], ["Istzustand", "ist", ["rows"]]],
+  fix: ["statistic_id"],
   leer: "keine Langzeitstatistik ohne Entität",
   spalten: [
     { k: "statistic_id", titel: "statistic_id", typ: "text", fest: 1, breite: 360, wert: r => r.statistic_id, zelle: r => `<span class="mono">${esc(r.statistic_id)}</span>`, csv: r => r.statistic_id, summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     { k: "source", titel: "Quelle", typ: "auswahl", breite: 120, wert: r => r.source, zelle: r => esc(r.source), csv: r => r.source,
       optionen: l => [...new Set(l.map(r => r.source))].map(s => [s, s]) },
-    { k: "rows", titel: "Zeilen", typ: "zahl", n: 1, breite: 110, wert: r => r.rows, zelle: r => zahl(r.rows), csv: r => r.rows, summe: anzahlSumme(r => r.rows) },
     { k: "in_registry", titel: "in Registry", typ: "auswahl", breite: 140, wert: r => r.in_registry ? "ja" : "nein",
       zelle: r => r.in_registry ? "ja (deaktiviert)" : "nein", csv: r => r.in_registry ? "ja" : "nein", optionen: () => [["ja", "ja"], ["nein", "nein"]],
-      summe: (g, a) => [`${zahl(g.filter(r => r.in_registry).length)} ja · ${zahl(g.filter(r => !r.in_registry).length)} nein`, zahl(a.length)] },
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Statistiken – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nin Registry: ja ${zahl(g.filter(r => r.in_registry).length)} · nein ${zahl(g.filter(r => !r.in_registry).length)}`] },
+    { k: "rows", titel: "Langzeit (Zeilen)", typ: "zahl", n: 1, breite: 110, wert: r => r.rows, zelle: r => zahl(r.rows), csv: r => r.rows, summe: anzahlSumme(r => r.rows) },
   ],
 });
 // ---- Events je Typ (Punkt 42/48): Vorhaltezeit je Event-Typ, gespeichert in der Regeldatei unter "events"
 T.events = new LokaleTabelle({
   id: "#tEvents", treffer: "#trefferEvents", schluessel: "dbh_breiten_events", einheit: "Event-Typen", sortStd: { k: "zeilen", desc: true },
+  // Punkt 144 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
+  gruppen: [["Stammdaten", "stamm", ["wahl", "event_type", "regel"]], ["Vorhaltezeiten", "vorh", ["anzeige", "tage"]],
+    ["Istzustand", "ist", ["zeilen", "pro_tag", "erster_tag"]], ["Löschmenge sofort", "loesch", ["loeschbar"]], ["Prognose", "prog", ["ersparnis_bytes"]]],
+  fix: ["wahl", "event_type"],
   leer: "keine Events (Analyse ab 0.3.0 nötig)",
   spalten: [
     // Punkt 91: Massenauswahl wie im Tab Regeln
@@ -1883,27 +1994,27 @@ T.events = new LokaleTabelle({
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     { k: "regel", titel: "Regel", typ: "auswahl", breite: 160, wert: r => r.regel || "–",
       hilfe: "Event-Regel aus der Regelliste (Typ event), die für diesen Event-Typ gilt; ohne Regel gilt global",
-      zelle: r => r.regel ? `<span class="chip regel">${esc(r.regel)}</span>${r.ueberstimmt?.length ? ` <span class="chip" title="überstimmt: ${esc(r.ueberstimmt.map(u => u.regel).join(", "))}">+${r.ueberstimmt.length}</span>` : ""}` : `<span class="sub">– (global)</span>`,
+      zelle: r => r.regel ? `${regelChip(r.regel)}${r.ueberstimmt?.length ? ` <span class="chip" title="überstimmt: ${esc(r.ueberstimmt.map(u => u.regel).join(", "))}">+${r.ueberstimmt.length}</span>` : ""}` : `<span class="sub">– (global)</span>`,
       csv: r => r.regel || "", optionen: l => [["–", "ohne Regel"], ...[...new Set(l.map(r => r.regel).filter(Boolean))].sort().map(x => [x, x])],
-      summe: (g, a) => [`${zahl(g.filter(r => r.regel).length)} mit Regel`, zahl(a.filter(r => r.regel).length)] },
+      summe: (g, a) => [zahl(g.filter(r => r.regel).length), zahl(a.filter(r => r.regel).length), "Event-Typen mit eigener Regel – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "anzeige", titel: "Vorhaltezeit", typ: "auswahl", breite: 120, wert: r => r.wert === "global" ? "global" : "eigene",
       zelle: r => r.wert === "global" ? `<span class="sub">global</span>` : esc(wertAnzeige(r.wert)), csv: r => r.wert,
       optionen: () => [["global", "global"], ["eigene", "eigene Zeit"]] },
     { k: "tage", titel: "wirksam (Tage)", typ: "zahl", n: 1, breite: 110, wert: r => r.tage, zelle: r => zahl(r.tage), csv: r => r.tage,
       hilfe: "global = purge_keep_days; eine eigene Zeit wirkt höchstens bis purge_keep_days" },
-    { k: "zeilen", titel: "Events gesamt", typ: "zahl", n: 1, breite: 120, wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
-    { k: "pro_tag", titel: "pro Tag (7 d)", typ: "zahl", n: 1, breite: 110, wert: r => r.pro_tag, zelle: r => zahl(r.pro_tag), csv: r => r.pro_tag, summe: anzahlSumme(r => r.pro_tag),
+    { k: "zeilen", titel: "Bestand (Events)", typ: "zahl", n: 1, breite: 120, wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
+    { k: "pro_tag", titel: "Zuwachs (Events pro Tag, Ø 7 d)", typ: "zahl", n: 1, breite: 155, wert: r => r.pro_tag, zelle: r => zahl(r.pro_tag), csv: r => r.pro_tag, summe: anzahlSumme(r => r.pro_tag),
       hilfe: "Mittel der letzten 7 vollen Tage; 0 bei Typen, die der Recorder ausschließt (z. B. call_service per exclude)" },
-    { k: "erster_tag", titel: "ältestes", typ: "keine", sortierbar: 1, breite: 100, wert: r => r.erster_tag, zelle: r => datum(r.erster_tag * 86400), csv: r => datum(r.erster_tag * 86400) },
-    { k: "loeschbar", titel: "Löschmenge sofort", typ: "zahl", n: 1, breite: 140, hilfe: HILFE_LOESCH, wert: r => r.loeschbar, zelle: r => zahl(r.loeschbar), csv: r => r.loeschbar, summe: anzahlSumme(r => r.loeschbar) },
-    { k: "ersparnis_bytes", titel: "Ersparnis (Dauerbetrieb)", typ: "gb", n: 1, breite: 160, hilfe: HILFE_ERSPARNIS, wert: r => r.ersparnis_bytes,
+    { k: "erster_tag", titel: "ältestes (Event)", typ: "keine", sortierbar: 1, breite: 100, wert: r => r.erster_tag, zelle: r => datum(r.erster_tag * 86400), csv: r => datum(r.erster_tag * 86400) },
+    { k: "loeschbar", titel: "Events (Zeilen)", typ: "zahl", n: 1, breite: 170, hilfe: HILFE_LOESCH, wert: r => r.loeschbar, zelle: r => zahl(r.loeschbar), csv: r => r.loeschbar, summe: anzahlSumme(r => r.loeschbar) },
+    { k: "ersparnis_bytes", titel: "Ersparnis (Dauerbetrieb · GB)", typ: "gb", n: 1, breite: 160, hilfe: HILFE_ERSPARNIS, wert: r => r.ersparnis_bytes,
       zelle: r => gb(r.ersparnis_bytes), csv: r => r.ersparnis_bytes, summe: gbSumme(r => r.ersparnis_bytes) },
   ],
   zeileAttr: r => `class="klick" data-ev="${esc(r.event_type)}"`,
   nachher: () => zeigeAuswahlEv(),
 });
 $("#tEvents").addEventListener("click", ev => {
-  if (ev.target.closest("[data-wahl-ev]") || ev.target.closest("td.mitte")) return;   // Punkt 91: Auswahl öffnet keine Regel
+  if (ev.target.closest("[data-wahl-ev]") || ev.target.closest("td.mitte") || ev.target.closest("[data-regel-edit]")) return;   // Punkt 91; Punkt 144: Regel-Chip öffnet die Regel selbst
   const tr = ev.target.closest("tr[data-ev]"); if (!tr || T.events.z.klickIstZiehen?.(ev)) return;
   // Punkt 51: Event-Vorhaltezeiten sind Regeln vom Typ event – vorhandene öffnen, sonst eine anlegen
   const typ = tr.dataset.ev, e = (S.events || []).find(x => x.event_type === typ);
@@ -2609,30 +2720,34 @@ const blockSpalte = (k, titel, hilfe, breite = 115) => ({ k, titel, hilfe, typ: 
   zelle: r => r[k] == null ? "–" : (k === "attr_zeilen" && r.attr_obergrenze ? "≤ " : "") + zahl(r[k]), csv: r => r[k] ?? "", summe: anzahlSumme(r => r[k]) });
 T.loesch = new LokaleTabelle({
   id: "#tLoesch", treffer: "#trefferLoesch", schluessel: "dbh_breiten_loesch2", einheit: "Entitäten bzw. Event-Typen im Plan", sortStd: { k: "summe", desc: true },
+  // Punkt 148 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["entity_id", "regel", "status"]], ["Vorhaltezeiten", "vorh", ["lauf"]],
+    ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "lts", "events", "attr_zeilen", "faellig"]]],
+  fix: ["entity_id"],
   leer: "nichts zu löschen",
   spalten: [
     { k: "entity_id", titel: "Entität / Event-Typ", typ: "text", fest: 1, breite: 330, wert: r => r.entity_id, zelle: r => `<span class="mono">${esc(r.entity_id)}</span>`, csv: r => r.entity_id,
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     { k: "regel", titel: "Regel", typ: "text", breite: 150, wert: r => r.regel, zelle: r => r.regel.split(", ").map(regelChip).join(" "), csv: r => r.regel },
     // Punkt 114 (0.4.10): Zustand der Entität, nicht der Regel – passive Regeln stehen nie im Plan
-    { k: "status", titel: STATUS_TITEL, typ: "auswahl", breite: 110, wert: r => r.status || "–",
+    { k: "status", titel: STATUS_TITEL, typ: "auswahl", breite: 145, wert: r => r.status || "–",
       hilfe: `${STATUS_HILFE} – passive Regeln stehen nie im Plan. Bei Event-Typen „–“.`,
       zelle: r => `<span class="status-${esc(r.status)}">${esc(STATUS_TEXT[r.status] || r.status || "–")}</span>`, csv: r => r.status,
       tip: r => STATUS_TEXT[r.status] ? `Entität ${STATUS_TEXT[r.status]}` : "Event-Typ",
       optionen: l => [...new Set(l.map(r => r.status || "–"))].map(x => [x, STATUS_TEXT[x] || x]) },
-    { k: "lauf", titel: "Vorhaltung · in diesem Lauf", typ: "auswahl", breite: 230, wert: r => r.lauf,
+    { k: "lauf", titel: "Vorhaltung (in diesem Lauf)", typ: "auswahl", breite: 230, wert: r => r.lauf,
       hilfe: "K = States (keep_days an recorder.purge_entities), 5M = 5-Min-Statistik, L = Langzeit, EV = Events. vollständig: alles außerhalb der Vorhaltezeit · teilweise: nur die ältesten Tage bzw. bis zur Obergrenze · nächster Lauf: passt nicht mehr unter die Obergrenze · übersprungen: Integration fehlt. Einzelheiten je Zeile im Tooltip der Zelle.",
       tip: vorhaltungTip,
       zelle: r => `${esc(r.vorhaltung)} · ${r.lauf === "vollständig" ? r.lauf : `<span class="chip warn">${esc(r.lauf)}</span>`}`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
       optionen: () => Object.keys(LART).map(x => [x, x]),
-      summe: (g, a) => [`${zahl(g.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length)} im Lauf`, zahl(a.length)] },
-    blockSpalte("summe", "Zeilen dieser Lauf", "Summe aus States, 5-Min-Statistik, Langzeit und Events – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
-    blockSpalte("states", "davon States", "Zeilen in states (recorder.purge_entities)"),
-    blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)"),
+      summe: (g, a) => [zahl(g.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), zahl(a.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), "Einträge, die dieser Lauf bearbeitet (ohne „nächster Lauf“ und „übersprungen“) – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
+    blockSpalte("summe", "Summe (dieser Lauf)", "Summe aus States, 5-Min-Statistik, Langzeit und Events – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
+    blockSpalte("states", "States", "Zeilen in states (recorder.purge_entities)"),
+    blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)", 145),
     blockSpalte("lts", "Langzeit", "Stundenstatistik (Integration RS DB Hygiene)"),
     blockSpalte("events", "Events", "Events dieses Typs (Integration RS DB Hygiene)"),
     blockSpalte("attr_zeilen", "Attributzeilen (mit den States)", "Attributzeilen, die mit den States wegfallen – nicht in der Summe; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele (≤)", 150),
-    blockSpalte("faellig", "insgesamt fällig", "alle Zeilen außerhalb der Vorhaltezeiten (= Löschmenge sofort), unabhängig von der Obergrenze", 130),
+    blockSpalte("faellig", "fällig (insgesamt)", "alle Zeilen außerhalb der Vorhaltezeiten (= Löschmenge sofort), unabhängig von der Obergrenze", 130),
     { k: "hinweis", titel: "Hinweis", typ: "text", breite: 200, wert: r => r.hinweis || "", zelle: r => esc(r.hinweis || ""), csv: r => r.hinweis || "" },
   ],
 });
@@ -2642,13 +2757,17 @@ const LSTATUS = { fertig: "fertig", "läuft": "läuft", Fehler: "Fehler", abgebr
 T.laeufe = new LokaleTabelle({
   id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true },
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
+  // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
+    ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_lts", "lauf_events", "lauf_attr"]]],
+  fix: ["start"],
   leer: "noch kein Löschlauf",
   spalten: [
     { k: "start", titel: "Start", typ: "keine", sortierbar: 1, fest: 1, n: 1, breite: 140, wert: r => r.start, zelle: r => zeit(r.start), csv: r => zeit(r.start) },
     { k: "dauer", titel: "Dauer", typ: "keine", sortierbar: 1, n: 1, breite: 80, wert: r => r.ende ? r.ende - r.start : null, zelle: r => r.ende ? dauerText(r.ende - r.start) : "–", csv: r => r.ende ? Math.round(r.ende - r.start) : "",
       tip: r => r.ende ? `Dauer ${dauerText(r.ende - r.start)}${r.backup_warte_s ? `, davon ${backupText(r)}` : ""}` : "" },
     // Punkt 116 (0.4.10): Pause wegen eines HA-Backups (erst ab 0.4.10 gemessen)
-    { k: "backup", titel: "davon Backup-Pause", typ: "keine", sortierbar: 1, n: 1, breite: 95, wert: r => r.backup_warte_s ?? null,
+    { k: "backup", titel: "Backup-Pause (davon)", typ: "keine", sortierbar: 1, n: 1, breite: 125, wert: r => r.backup_warte_s ?? null,
       hilfe: "Zeit, die der Lauf auf ein HA-Backup gewartet hat (das Backup sperrt die Datenbank) – in der Dauer enthalten. Erst ab 0.4.10 gemessen; ältere Läufe „–“.",
       zelle: r => r.backup_warte_s ? dauerText(r.backup_warte_s) : r.backup_warte_s === 0 ? "0" : "–", tip: r => r.backup_warte_s ? `auf Backup gewartet: ${backupText(r)}` : "",
       csv: r => r.backup_warte_s == null ? "" : Math.round(r.backup_warte_s) },
@@ -2662,10 +2781,10 @@ T.laeufe = new LokaleTabelle({
     // Punkt 59: genau gezählt vor jedem Paket bzw. Auftrag = eigentlicher Vergleichswert zu „gelöscht“
     { k: "gezaehlt", titel: "gezählt", typ: "zahl", n: 1, breite: 110, wert: r => gezaehltLauf(r), zelle: r => zahl(gezaehltLauf(r)), csv: r => gezaehltLauf(r), summe: anzahlSumme(r => gezaehltLauf(r)),
       hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“" },
-    { k: "geloescht", titel: "gelöschte Zeilen", typ: "zahl", n: 1, breite: 130, wert: r => r.geloescht, zelle: r => zahl(r.geloescht), csv: r => r.geloescht, summe: anzahlSumme(r => r.geloescht) },
+    { k: "geloescht", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 130, wert: r => r.geloescht, zelle: r => zahl(r.geloescht), csv: r => r.geloescht, summe: anzahlSumme(r => r.geloescht) },
     // Punkt 63: Block wie in der Monatssumme – davon je Tabelle, dahinter die gemessenen Attributzeilen (nicht in der Summe)
-    ...[["states", "davon States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
-      k: "lauf_" + k, titel: t, typ: "zahl", n: 1, breite: 115, wert: r => laufArt(r, k), zelle: r => zahl(laufArt(r, k)), csv: r => laufArt(r, k), summe: anzahlSumme(r => laufArt(r, k)) })),
+    ...[["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
+      k: "lauf_" + k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 115, wert: r => laufArt(r, k), zelle: r => zahl(laufArt(r, k)), csv: r => laufArt(r, k), summe: anzahlSumme(r => laufArt(r, k)) })),
     { k: "lauf_attr", titel: "Attributzeilen (mit den States)", typ: "zahl", n: 1, breite: 150, hilfe: "im Lauf gemessen: Attributzeilen, die HA mit den States gelöscht hat (ab 0.4.0) – nicht in der Summe",
       wert: r => r.attr_geloescht ?? null, zelle: r => r.attr_geloescht == null ? "–" : zahl(r.attr_geloescht), csv: r => r.attr_geloescht ?? "", summe: anzahlSumme(r => r.attr_geloescht || 0) },
     { k: "pakete", titel: "Aufrufe", typ: "zahl", n: 1, breite: 80, wert: r => r.pakete.filter(p => p.gesendet.length).length,
@@ -2707,13 +2826,16 @@ $("#tLaeufe").addEventListener("click", ev => {
   // Punkt 74: auch die Einzelheiten je Lauf über den Tabellenbaustein (Filter, Summen, Mehrfachsortierung)
   T.detail = new LokaleTabelle({
     id: "#tDetail", treffer: "#trefferDetail", schluessel: "dbh_breiten_detail", einheit: "Entitäten bzw. Event-Typen", sortStd: { k: "summe", desc: true },
+    // Punkt 150 (0.5.3): Look & Feel wie Tab Entitäten
+    gruppen: [["Stammdaten", "stamm", ["entity_id", "keep"]], ["Gelöscht", "loesch", ["summe", "states", "kurz", "lts", "events", "attr_zeilen", "rest"]]],
+    fix: ["entity_id"],
     leer: "keine Entität gesendet",
     spalten: [
       { k: "entity_id", titel: "Entität / Typ", typ: "text", fest: 1, breite: 300, wert: x => x.entity_id, zelle: x => `<span class="mono">${esc(x.entity_id)}</span>`, csv: x => x.entity_id,
         summe: (g, a) => [zahl(g.length), zahl(a.length)] },
       { k: "keep", titel: "keep_days", typ: "text", breite: 150, wert: x => x.keep, zelle: x => esc(x.keep), csv: x => x.keep },
-      blockSpalte("summe", "gelöschte Zeilen", "Summe aus States, 5-Min-Statistik, Langzeit und Events", 130),
-      blockSpalte("states", "davon States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term"),
+      blockSpalte("summe", "Summe (Zeilen)", "Summe aus States, 5-Min-Statistik, Langzeit und Events", 130),
+      blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term", 145),
       blockSpalte("lts", "Langzeit", "Stundenstatistik"), blockSpalte("events", "Events", "Events dieses Typs"),
       blockSpalte("attr_zeilen", "Attributzeilen (mit den States)", "im Lauf gemessen – nicht in der Summe", 150),
       blockSpalte("rest", "Rest", "alte Zeilen nach dem Lauf", 90),
@@ -2810,19 +2932,22 @@ const artZeilen = (r, k) => k === "states" ? (r.states ?? r.zeilen - (r.kurz || 
 T.summe = new LokaleTabelle({
   id: "#tSumme", treffer: "#trefferSumme", schluessel: "dbh_breiten_summe", einheit: "Einträgen (Entität × Monat)", sortStd: { k: "zeilen", desc: true },
   seiten: [50, 250, 1000, 2500], seiteStd: 250,   // Punkt 70
+  // Punkt 151 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["entity_id", "monat"]], ["Gelöscht", "loesch", ["zeilen", "states", "kurz", "lts", "events", "attr_zeilen"]]],
+  fix: ["entity_id"],
   leer: "noch nichts gelöscht",
   spalten: [
     { k: "entity_id", titel: "Entität", typ: "text", fest: 1, breite: 360, wert: r => r.entity_id, zelle: r => `<span class="mono">${esc(r.entity_id)}</span>`, csv: r => r.entity_id,
-      summe: (g, a) => [`${zahl(new Set(g.map(r => r.entity_id)).size)} Entitäten`, zahl(new Set(a.map(r => r.entity_id)).size)] },
+      summe: (g, a) => [zahl(new Set(g.map(r => r.entity_id)).size), zahl(new Set(a.map(r => r.entity_id)).size), `Anzahl verschiedener Entitäten bzw. Event-Typen – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nEinträge (Entität × Monat): ${zahl(g.length)}`] },
     { k: "monat", titel: "Monat", typ: "auswahl", breite: 110, wert: r => r.monat, zelle: r => esc(r.monat.split("-").reverse().join(".")), csv: r => r.monat,
       optionen: l => [...new Set(l.map(r => r.monat))].sort().reverse().map(m => [m, m.split("-").reverse().join(".")]) },
-    { k: "zeilen", titel: "gelöschte Zeilen", typ: "zahl", n: 1, breite: 140, hilfe: "Je Entität bzw. Event-Typ. Ab 0.4.4 bei Paketen mit genau einer Entität die tatsächlich gelöschte Zahl; bei größeren Paketen vorher − nachher je Entität – das kann wenige Zeilen unter der Lauf-Summe liegen, weil während des Laufs weitere Zeilen über die Altersgrenze rutschen und mitgelöscht werden.", wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
+    { k: "zeilen", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 140, hilfe: "Je Entität bzw. Event-Typ. Ab 0.4.4 bei Paketen mit genau einer Entität die tatsächlich gelöschte Zahl; bei größeren Paketen vorher − nachher je Entität – das kann wenige Zeilen unter der Lauf-Summe liegen, weil während des Laufs weitere Zeilen über die Altersgrenze rutschen und mitgelöscht werden.", wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
     // je Tabelle (ab 0.3.0); Einträge aus 0.2.x kennen nur States
-    ...[["states", "davon States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
-      k, titel: t, typ: "zahl", n: 1, breite: 120, wert: r => artZeilen(r, k), zelle: r => zahl(artZeilen(r, k)), csv: r => artZeilen(r, k), summe: anzahlSumme(r => artZeilen(r, k)) })),
+    ...[["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
+      k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 120, wert: r => artZeilen(r, k), zelle: r => zahl(artZeilen(r, k)), csv: r => artZeilen(r, k), summe: anzahlSumme(r => artZeilen(r, k)) })),
     { k: "attr_zeilen", titel: "Attributzeilen (mit den States)", typ: "zahl", n: 1, breite: 150, hilfe: "gemessen ab 0.4.0 – nicht in der Summe",
       wert: r => r.attr_zeilen || 0, zelle: r => zahl(r.attr_zeilen || 0), csv: r => r.attr_zeilen || 0, summe: anzahlSumme(r => r.attr_zeilen || 0) },
-    { k: "laeufe", titel: "in Läufen", typ: "zahl", n: 1, breite: 100, wert: r => r.laeufe, zelle: r => zahl(r.laeufe), csv: r => r.laeufe },
+    { k: "laeufe", titel: "Läufe (Anzahl)", typ: "zahl", n: 1, breite: 100, wert: r => r.laeufe, zelle: r => zahl(r.laeufe), csv: r => r.laeufe },
   ],
 });
 async function ladeProtokoll() {

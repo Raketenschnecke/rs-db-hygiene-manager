@@ -4,6 +4,18 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.3b4 (Beta)
+- **Alle Tabellen im Look & Feel des Tabs Entitäten (Punkte 144–151):** Events, Regeln, Prognosen je Regel, Statistik ohne Entität, Löschen, Löschprotokoll (Läufe, Lauf-Details, Monatssumme) haben jetzt farbige Spaltengruppen (Stammdaten/Lauf blau, Vorhaltezeiten/Wirkung/Plan zweites Blau, Istzustand rot, Löschmenge/Gelöscht gelb, Prognose grün), zweizeilige Spaltenköpfe, eine schlanke Summenzeile, Filter in zwei Ebenen, fixierte erste Spalte(n) und einen nach Gruppen geordneten Spaltendialog
+- Kürzere Spaltentitel nach dem Muster „Titel / Zusatz“ (z. B. „States“ statt „davon States“); der CSV-Export übernimmt die neuen Titel
+- Tab Events: Regel-Chip öffnet die Regel
+- Knopf „Analyse starten“ im Stil der Kacheln (rot, Rahmen signalrot), 40 px breiter, unten bündig mit der Unterkante des „g“ der Überschrift und rechts bündig mit den Kacheln (Punkt 156)
+- Reiter: Oberkante in der Farbe ihres Inhalts wie Kacheln und Spaltengruppen (Istzustand rot, Regeln blau, Prognosen grün, Löschen gelb) (Punkt 157)
+- Tab Löschen: Beim Scrollen bleibt der Knopf „Jetzt ausführen“ oben stehen, der Text darüber verschwindet (Punkt 155)
+- Tab Entitäten: Die Ansicht „Attribute“ im Spaltendialog zeigt auch die Kurzzeit (sie gilt für die Attribute) und die Attributzeilen, die mit den States wegfallen (Punkt 154)
+- Zwischen den Knöpfen oben und der Tabelle bleiben immer 8 px Abstand, auch beim Scrollen (Punkte 152/153)
+- Die Zeile mit Anzahl und Bereich über den Tabellen entfällt (die Anzahl steht in der Summenzeile); sie erscheint nur noch für Gerätefilter, Warnungen und die Auswahl „Zeilen“ (Punkt 153)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.3b3 (Beta)
 - **Tab Entitäten:** Summenzeile schlanker – je Spalte nur noch ein Wert, die Gesamtzahl in Klammern nur bei gesetztem Filter, Details im Tooltip (Punkt 139). Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen (Punkt 140). Dezente Trennlinie in der Gruppenfarbe zwischen Kopf und Daten, Kopf etwas kräftiger getönt (Punkt 142)
 - **Regel-Chip:** Ein Klick auf den Chip einer Regel (z. B. „R32“) in Kurzzeit/Langzeit öffnet jetzt die Maske dieser Regel statt der Filtermaske; „Std.“ ist nicht mehr anklickbar; der Chip wird nicht mehr abgeschnitten (Punkt 143)
