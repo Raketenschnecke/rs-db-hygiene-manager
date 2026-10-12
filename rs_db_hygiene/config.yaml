@@ -1,8 +1,9 @@
-name: RS DB Hygiene Manager
+name: RS DB Hygiene Manager (Beta)
 version: "0.5.3b1"
 slug: rs_db_hygiene
+stage: experimental
 description: >-
-  Vorhaltezeiten pro Entität (Kurzzeit samt Attributen, Langzeit) und je Event-Typ für die Recorder-Datenbank.
+  BETA-VERSION zum Testen, nicht für den normalen Betrieb. Vorhaltezeiten pro Entität (Kurzzeit samt Attributen, Langzeit) und je Event-Typ für die Recorder-Datenbank.
   Löschlauf manuell oder aus HA (Automatik), jeweils nur mit Hauptschalter: Kurzzeit-States per recorder.purge_entities, mit der Integration RS DB Hygiene auch 5-Min-Statistik, Langzeit und Events.
 url: https://github.com/Raketenschnecke/rs-db-hygiene-manager
 arch:
@@ -13,7 +14,7 @@ boot: manual
 ingress: true
 ingress_port: 8099
 panel_icon: mdi:database-cog
-panel_title: DB Hygiene
+panel_title: DB Hygiene (Beta)
 homeassistant_api: true
 # Punkt 62: Anmeldung bei HA per Discovery (Dienst rs_db_hygiene) und Abfrage der eigenen Infos beim Supervisor
 hassio_api: true
