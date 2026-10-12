@@ -158,6 +158,14 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .griff { position: absolute; top: 0; right: 0; bottom: 0; width: 8px; cursor: col-resize; touch-action: none; }
 .griff::after { content: ""; position: absolute; top: 25%; bottom: 25%; right: 3px; width: 2px; border-radius: 1px; background: var(--line); }
 .griff:hover::after, .griff.aktiv::after { background: var(--accent); top: 0; bottom: 0; }
+/* Punkt 130 (0.5.3): Gruppenzeile über den Spaltenköpfen – je Gruppe eine Klammer mit Trennlinie, benachbarte Gruppen abwechselnd getönt */
+tr.gruppenzeile th.gruppe { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent);
+  padding: 4px 9px; border-left: 1px solid var(--reiter-rand); border-right: 1px solid var(--reiter-rand); border-bottom: 2px solid var(--accent); }
+tr.gruppenzeile th.g0 { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+tr.gruppenzeile th.g1 { background: color-mix(in srgb, var(--accent) 20%, var(--panel)); }
+tr.gruppenzeile th.gruppe-leer { border-bottom: 2px solid transparent; }
+.chip.wfilter { cursor: pointer; }
+.chip.wfilter:hover { background: var(--accent); color: #fff; }
 tr.summenzeile th { font-weight: 400; padding: 3px 9px 5px; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
 tr.summenzeile th b { font-weight: 600; }
 tr.summenzeile th .ges { display: block; color: var(--muted); font-size: 11px; }
@@ -423,17 +431,19 @@ button.gefahr:disabled { opacity: .45; }
             <tr><td><b>klasse</b></td><td><code>domain|device_class</code></td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
             <tr><td><b>verwaist</b></td><td><code>alle</code>, <code>geloescht</code>, <code>ohne_spur</code> oder Platzhalter</td><td>nur verwaiste</td><td><code>*</code></td></tr>
             <tr><td><b>event</b></td><td>Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
+            <tr><td><b>🏠 HA-Standard</b></td><td>fest <code>*</code></td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage, Langzeit unbegrenzt</td></tr>
           </tbody>
         </table>
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
         <p>Treffen mehrere aktive Regeln dieselbe Entität, gewinnt je Wert (Kurzzeit und Langzeit getrennt) die mit dem höchsten Rang:</p>
-        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › verwaist</p>
+        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › verwaist › HA-Standard</p>
         <p>Innerhalb desselben Typs gewinnt die Regel, die <b>weiter oben in der Liste</b> steht. Die Reihenfolge änderst du im Tab Regeln mit den Pfeilen.</p>
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
           <li><b>Platzhalter nur bei glob (und schutz):</b> Bei entity wird <code>*</code> wörtlich genommen; die Regel trifft dann nichts. Die App warnt beim Speichern.</li>
-          <li><b>Zähler-Schutz:</b> glob- und klasse-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln.</li>
+          <li><b>Zähler-Schutz:</b> glob- und klasse-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
+          <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>, ab 0.5.3):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<code>purge_keep_days: 10</code>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen und nicht ändern, nur passiv schalten. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
           <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob die Regel irgendwo überstimmt wird. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
         </ul>
         <h3 id="h-passiv">Aktiv und passiv</h3>
@@ -446,7 +456,7 @@ button.gefahr:disabled { opacity: .45; }
         <table>
           <thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
           <tbody>
-            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen.</td></tr>
+            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Aktuell, Löschmenge sofort; ab 0.5.3), die Gruppe steht über den Spaltenköpfen. Die Spalte <b>Entität</b> mit aktiv/verwaist zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf das Label (Regel oder „Std.“) die Filtermaske der Spalte, vorbelegt mit diesem Wert; gefiltert wird mit „Filtern“.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
             <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
@@ -615,8 +625,15 @@ const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min, Attribute)", attribute: "Att
 const EV_NAME = "Vorhaltezeit (Events)";
 // Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / verwaist / verwaist_geloescht)
 const STATUS_TEXT = { aktiv: "aktiv", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
+// Punkt 128 (0.5.3): Spalte mit dem Zustand der Entität – in den Tabs Entitäten und Löschen gleich beschriftet
+const STATUS_TITEL = "Entität";
+const STATUS_HILFE = "Zustand der Entität in HA (aktiv / verwaist / verwaist (gelöscht)), nicht der Regel";
 const SONDER = { kurzzeit: ["global", "keine"], attribute: ["wie_kurzzeit", "keine"], langzeit: ["unbegrenzt", "keine"] };
 const REGELTYPEN = ["entity", "glob", "klasse", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111)
+// Punkt 127 (0.5.3): Regel HA-Standard – feste ID, nur aktiv/passiv, nicht löschbar, im Regel-Dialog nicht wählbar
+const HA_STD = "HA:standard";
+const TYPEN_TABELLE = [...REGELTYPEN, "ha_standard"];
+const haStandardAktiv = () => !!S.regeln?.regeln?.some(r => r.id === HA_STD && r.aktiv);
 const HILFE_LOESCH = "Was ein scharfer Lauf sofort löschen würde – auf den Daten, die jetzt in der DB liegen (Bestand). Bei Regeln, die länger als das heutige purge_keep_days aufbewahren, steht 0. Gegenstück: Ersparnis (Dauerbetrieb).";
 const HILFE_ERSPARNIS = "Wie viel kleiner die DB auf Dauer durch diese Regel bleibt, verglichen mit „ohne Regeln“ – Hochrechnung aus der Schreibrate über den Prognosezeitraum (Zufluss). Kann groß sein, auch wenn die Löschmenge sofort 0 ist (z. B. R21). Gegenstück: Löschmenge sofort.";
 const SNAME = { global: "global", wie_kurzzeit: "wie Kurzzeit", unbegrenzt: "unbegrenzt", keine: "keine" };
@@ -1062,7 +1079,7 @@ const HILFE = {
   c_verwaist: ["Verwaist",
     "Istzustand: Entitäten mit Daten in der DB, die weder in der Registry noch als aktueller Zustand existieren, darunter ihre Zeilen. Löschmenge sofort: Zeilen nach Regeln vom Typ „verwaist“. Prognose: Langzeit-Zeilen, die dauerhaft bleiben.",
     "Meist umbenannte oder entfernte Geräte. Ihre States verschwinden nach purge_keep_days, die Langzeitstatistik bleibt für immer. Ist eine Entität beim Löschlauf wieder vorhanden (z. B. Blitz- oder Waldbrand-Meldungen), überspringt der Lauf sie.",
-    "Über den Status-Filter „verwaist“ prüfen; sonst eine Regel vom Typ „verwaist“ anlegen (Vorlage 30 Tage)."],
+    "Im Tab Entitäten beim Zustand der Entität (Auswahlfilter der Spalte „Entität“ mit aktiv/verwaist) „verwaist“ wählen; sonst eine Regel vom Typ „verwaist“ anlegen (Vorlage 30 Tage)."],
   ziel: ["Prognosezeitraum",
     "Für welchen Zeitraum die Prognose rechnet: So groß wird die DB nach diesem Zeitraum, wenn die aktiven Regeln wirken. Auch die Langzeitstatistik rechnet über diesen Zeitraum.",
     "Ändert nichts an Home Assistant; der Wert wird nur in diesem Browser gemerkt. Die Prognose nimmt je Entität ihre wirksame Vorhaltezeit (Regel bzw. global = purge_keep_days), höchstens aber diesen Zeitraum. Die Spalten „wirksam“ und die Löschmenge sofort hängen nicht davon ab – sie rechnen immer mit purge_keep_days, wie der Löschlauf.",
@@ -1179,13 +1196,13 @@ const leerText = e => /keine Analyse/i.test(e.message)
 
 // ================================================ Entitäten (Server filtert und summiert, > 5 000 Zeilen)
 // [Feld für Sortierung/Filter, Überschrift, Zahlenspalte, Filtertyp, Platzhalter, Standardbreite px, Tooltip]
-const SPALTEN = [
+const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRUPPEN fest (Punkt 130)
   ["entity_id", "Entität", 0, "text", "Text, * als Platzhalter", 330],
   ["herkunft", "Gerät / Herkunft", 0, "herkunft", "Text, * als Platzhalter", 250],
   // Punkt 115 (0.4.10): HA-Labels der Entität und ihres Geräts (live aus der Registry)
   ["labels", "Labels", 0, "text", "Text, * als Platzhalter", 170,
     "HA-Labels der Entität und ihres Geräts (Einstellungen → Labels). Tooltip je Label: an Entität oder am Gerät. Klick auf ein Label filtert danach."],
-  ["status", "Status", 0, "status", "", 120],
+  ["status", STATUS_TITEL, 0, "status", "", 120, `${STATUS_HILFE}.`],   // Punkt 128
   ["rows", "Zeilen", 1, "zahl", ">1000", 105],
   ["rows_24h", "/24 h", 1, "zahl", ">0", 85],
   // Punkte 118/120 (0.4.11): über alle Datenarten der Zeile; Aufteilung im Tooltip der Zelle
@@ -1215,7 +1232,17 @@ const SPALTEN = [
   ["attr_anteil", "Anteil Attribute", 1, "zahl", ">50 (%)", 115,
     "Anteil der Attribute am Speicher dieser Entität (Attribute ÷ (Attribute + States))."],
 ];
-const SPALTE = Object.fromEntries(SPALTEN.map(s => [s[0], s]));
+// Punkt 130 (0.5.3): Reihenfolge der Spalten und ihre Gruppen – über den Spaltenköpfen steht je Gruppe eine Klammer
+const SPALTENGRUPPEN = [
+  ["Stammdaten", ["entity_id", "herkunft", "labels", "status"]],
+  ["Vorhaltezeiten", ["kurzzeit", "langzeit"]],
+  ["Aktuell", ["first_ts", "last_ts", "rows", "rows_24h", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
+  ["Löschmenge sofort", ["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen", "attr_loesch"]],
+];
+const SPALTEN = SPALTENGRUPPEN.flatMap(([, ks]) => ks.map(k => SPALTEN_ROH.find(s => s[0] === k)));
+if (SPALTEN.length !== SPALTEN_ROH.length || SPALTEN.includes(undefined)) throw new Error("SPALTENGRUPPEN passt nicht zu SPALTEN_ROH");
+const SPALTENGRUPPE = Object.fromEntries(SPALTENGRUPPEN.flatMap(([g, ks]) => ks.map(k => [k, g])));
+const SPALTE =Object.fromEntries(SPALTEN.map(s => [s[0], s]));
 const SORTIERBAR = new Set(["entity_id", "herkunft", "labels", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
                             "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"]);
 const FILTERHILFE = {
@@ -1278,7 +1305,7 @@ function baueKopf() {
     `<th class="${n ? "n" : ""}" ${SORTIERBAR.has(k) ? `data-sort="${k}"` : ""} title="${esc(tip ? `${t}: ${tip}` : t)}${SORTIERBAR.has(k) ? SORT_TIP : ""}">${kopfText(t)}<span class="pfeil"></span>${griff(k)}</th>`).join("");
   const filter = sp.map(([k, t, n, typ, ph]) => {
     const alt = esc(S.f[k] || "");
-    if (typ === "status") return `<th><select data-f="status" aria-label="Filter Status"><option value="">alle</option>
+    if (typ === "status") return `<th><select data-f="status" title="${esc(STATUS_HILFE)}" aria-label="Filter ${STATUS_TITEL} (Zustand)"><option value="">alle</option>
       ${[["aktiv", "aktiv"], ["verwaist", "verwaist (alle)"], ["verwaist_geloescht", "verwaist (gelöscht)"]].map(([w, l]) => `<option value="${w}" ${S.f.status === w ? "selected" : ""}>${l}</option>`).join("")}</select></th>`;
     if (typ === "wert") return `<th><select data-f="${k}" aria-label="Filter ${esc(t)}"><option value="">alle</option></select></th>`;
     if (typ === "herkunft") return `<th><div class="herkunftfeld"><select data-f="herkunft_art" aria-label="Filter Art der Herkunft">
@@ -1291,7 +1318,15 @@ function baueKopf() {
   const summe = sp.map(([k, , n]) => `<th class="${n ? "n" : ""}" data-summe="${k}"></th>`).join("");
   // Punkt 91: Kästchen im Kopf wählt nur die angezeigte Seite
   const wahl = `<th class="mitte"><input type="checkbox" class="wahl" id="wahlAlleEnt" title="alle Entitäten dieser Seite auswählen bzw. abwählen" aria-label="alle Entitäten dieser Seite auswählen"></th>`;
-  $("#tEntKopf").innerHTML = `<tr>${wahl}${titel}</tr><tr class="filterzeile"><th></th>${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt"><th class="mitte" id="wahlSummeEnt"></th>${summe}</tr>`;
+  // Punkt 130: Gruppenzeile – je Gruppe ein Feld über ihren sichtbaren, nebeneinanderliegenden Spalten
+  let gruppen = "", gi = 0;
+  for (let i = 0; i < sp.length;) {
+    const g = SPALTENGRUPPE[sp[i][0]]; let n = 1;
+    while (i + n < sp.length && SPALTENGRUPPE[sp[i + n][0]] === g) n++;
+    gruppen += `<th colspan="${n}" class="gruppe g${gi++ % 2}" title="Gruppe ${esc(g)}">${esc(g)}</th>`; i += n;
+  }
+  const gruppenzeile = `<tr class="gruppenzeile"><th class="gruppe-leer"></th>${gruppen}</tr>`;
+  $("#tEntKopf").innerHTML = `${gruppenzeile}<tr>${wahl}${titel}</tr><tr class="filterzeile"><th></th>${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt"><th class="mitte" id="wahlSummeEnt"></th>${summe}</tr>`;
   S.optionen = null;   // Auswahlwerte neu füllen
   ZE.setze();
   zeigeSortierung();
@@ -1372,10 +1407,25 @@ $("#filterReset").onclick = () => {
   S.offset = 0; ladeEntitaeten();
 };
 
-function wertZelle(w) {
+// Punkt 129 (0.5.3): Klick auf das Label (Regel bzw. „Std.“) öffnet die Filtermaske dieser Spalte, vorbelegt mit diesem Wert
+function wertZelle(w, art) {
   if (!w) return "–";
-  const quelle = w.regel ? `<span class="chip regel" title="${esc(w.muster)}">${esc(w.regel)}</span>` : `<span class="chip">Std.</span>`;
+  const klick = wert => `data-wfilter="${art}" data-wert="${esc(wert)}"`;
+  const quelle = w.regel ? `<span class="chip regel wfilter" ${klick("regel:" + w.regel)} title="${esc(w.muster)}\nKlick: Filter öffnen">${esc(w.regel)}</span>`
+    : `<span class="chip wfilter" ${klick("std")} title="Standard (keine Regel)\nKlick: Filter öffnen">Std.</span>`;
   return esc(w.anzeige) + quelle;
+}
+// Filtermaske zur Spalte kurzzeit/langzeit: Auswahl wie im Filterfeld der Kopfzeile; gefiltert wird erst mit „Filtern“
+function oeffneWertFilter(art, wert) {
+  const feld = $(`#tEntKopf select[data-f="${art}"]`); if (!feld) return;
+  dialog(`Filter: ${WNAME[art]}`, `
+    <label class="feld">Anzeigen<select id="wfSel">${feld.innerHTML}</select></label>
+    <p class="sub">Vorbelegt mit dem angeklickten Wert. Gefiltert wird erst mit „Filtern“; „alle“ hebt den Filter auf.</p>`, [
+    ["Abbrechen", () => $("#dlg").close()],
+    ["Filtern", () => { const v = $("#wfSel").value; $("#dlg").close(); setzeFilter(art, v, true); }, true]]);
+  const sel = $("#wfSel");
+  sel.value = [...sel.options].some(o => o.value === wert) ? wert : (S.f[art] || "");
+  sel.focus();
 }
 function herkunftZelle(e) {
   if (!e.herkunft_art) return `<td class="sub">–</td>`;
@@ -1408,14 +1458,14 @@ const ZELLEN = {
   },
   herkunft: herkunftZelle,
   labels: labelsZelle,
-  status: e => `<td class="status-${e.status}">${esc(STATUS_TEXT[e.status] || e.status)}</td>`,
+  status: e => `<td class="status-${e.status}" title="Entität ${esc(STATUS_TEXT[e.status] || e.status)}">${esc(STATUS_TEXT[e.status] || e.status)}</td>`,   // Punkt 128
   rows: e => `<td class="n">${zahl(e.rows)}</td>`,
   rows_24h: e => `<td class="n">${zahl(e.rows_24h)}</td>`,
   first_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.first_ts)}</td>`,
   last_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.last_ts)}</td>`,
   lts_rows: e => `<td class="n">${e.lts_rows ? zahl(e.lts_rows) : "–"}</td>`,
-  kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit)}</td>`,
-  langzeit: e => `<td>${wertZelle((e.werte || {}).langzeit)}</td>`,
+  kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit, "kurzzeit")}</td>`,
+  langzeit: e => `<td>${wertZelle((e.werte || {}).langzeit, "langzeit")}</td>`,
   ...Object.fromEntries(["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"].map(k =>
     [k, e => `<td class="n">${e[k] == null ? "–" : zahl(e[k])}</td>`])),
   attr_bytes: e => attrTd(e.attr_bytes, mb),
@@ -1496,6 +1546,8 @@ $("#tEntRumpf").addEventListener("click", ev => {
   if (g) { S.geraetName = g.dataset.gname; return setzeFilter("device_id", g.dataset.geraet, true); }
   const lb = ev.target.closest("[data-label]");   // Punkt 115
   if (lb) return setzeFilter("labels", lb.dataset.label, true);
+  const wf = ev.target.closest("[data-wfilter]");   // Punkt 129
+  if (wf) return oeffneWertFilter(wf.dataset.wfilter, wf.dataset.wert);
   const tr = ev.target.closest("tr[data-eid]");
   if (tr) oeffneEntitaet(S.zeilen[tr.dataset.eid]);
 });
@@ -1506,7 +1558,8 @@ $("#fLimit").addEventListener("change", () => {
 $("#zurueck").onclick = () => { S.offset = Math.max(0, S.offset - S.limit); ladeEntitaeten(); };
 $("#weiter").onclick = () => { S.offset += S.limit; ladeEntitaeten(); };
 function spaltenEnt() {
-  spaltenDialog("Entitäten", SPALTEN.map(s => ({ k: s[0], titel: s[1], fest: s[0] === "entity_id" })), S.sichtbar, ANSICHTEN_ENT, neu => {
+  // Punkt 128/130: zwei Spalten heißen „Entität“ – im Dialog der Zustand mit Zusatz, dazu die Gruppe
+  spaltenDialog("Entitäten", SPALTEN.map(s => ({ k: s[0], titel: (s[0] === "status" ? "Entität (Zustand)" : s[1]) + ` – ${SPALTENGRUPPE[s[0]]}`, fest: s[0] === "entity_id" })), S.sichtbar, ANSICHTEN_ENT, neu => {
     S.sichtbar = neu; speicher.schreib("dbh_spalten_ent", JSON.stringify([...neu]));
     baueKopf(); ladeEntitaeten();
   });
@@ -1540,6 +1593,7 @@ T.regeln = new LokaleTabelle({
     { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 60, mitte: 1, wert: r => regelIndex(r),
       zelle: r => {
         if (r.id.startsWith("E:")) return `<span class="chip regel" title="Eigene Vorhaltezeit: hat immer Vorrang vor allen anderen Regeln, die Position spielt keine Rolle">E</span>`;
+        if (r.typ === "ha_standard") return `<span class="chip regel" title="HA-Standard: immer der niedrigste Rang – jede andere Regel geht vor, die Position spielt keine Rolle">HA</span>`;   // Punkt 127
         const i = regelIndex(r), frei = T.regeln.istUrzustand();
         return `<button data-hoch="${i}" ${i && frei ? "" : "disabled"} title="${frei ? "nach oben" : "nur ohne Filter und bei Sortierung nach Rang"}">▲</button>`;
       },
@@ -1557,10 +1611,11 @@ T.regeln = new LokaleTabelle({
     { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => r.typ, csv: r => r.typ,
       // Punkt 111: Schloss bei Schutz; Punkt 106: Warnung bei Platzhaltern in einer entity-Regel
       zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
+        : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, nur passiv schaltbar">🏠 HA-Standard</span>`   // Punkt 127
         : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : r.typ,
-      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ",
-      optionen: () => REGELTYPEN.map(t => [t, t]),
-      summe: (g, a) => [REGELTYPEN.map(t => zahl(g.filter(r => r.typ === t).length)).join(" · "), REGELTYPEN.map(t => zahl(a.filter(r => r.typ === t).length)).join(" · ")] },
+      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
+      optionen: () => TYPEN_TABELLE.map(t => [t, t]),
+      summe: (g, a) => [TYPEN_TABELLE.map(t => zahl(g.filter(r => r.typ === t).length)).join(" · "), TYPEN_TABELLE.map(t => zahl(a.filter(r => r.typ === t).length)).join(" · ")] },
     { k: "muster", titel: "Muster", typ: "text", breite: 260, wert: r => r.muster.join(" "), tip: r => r.muster.join("\n"),
       zelle: r => `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}`,
       csv: r => r.muster.join(", "), summe: anzahlSumme(r => r.muster.length) },
@@ -1831,10 +1886,13 @@ $("#massenleiste").addEventListener("click", async ev => {
   const liste = ids.length > 12 ? ids.slice(0, 12).join(", ") + ` … (+${ids.length - 12})` : ids.join(", ");
   if (b.dataset.masse === "werte") return massenWerte(ids);   // Punkt 104 (0.4.8)
   if (b.dataset.masse === "entfernen") {   // Punkt 93 (0.4.6)
-    const n = ids.length, wort = n === 1 ? "Regel" : "Regeln";
+    // Punkt 127: HA-Standard ist nicht löschbar – bleibt stehen, die übrigen werden entfernt
+    const weg = ids.filter(id => id !== HA_STD), n = weg.length, wort = n === 1 ? "Regel" : "Regeln";
+    const haHinweis = weg.length < ids.length ? `\n\n${HA_STD} bleibt stehen: Die Regel HA-Standard lässt sich nicht entfernen, nur passiv schalten.` : "";
+    if (!n) return meldung("Nicht entfernbar", `Die Regel ${HA_STD} (HA-Standard) lässt sich nicht entfernen, nur passiv schalten.`);
     if (!await frage(`${zahl(n)} ${wort} entfernen`,
-      `Entfernen: ${liste}. Es ändert sich nur die Regeldatei der App – an HA und den Daten wird nichts gelöscht. Die Vorhaltezeiten dieser Regeln gelten danach nicht mehr (es greift die nächste passende Regel bzw. der Standard).`, "Entfernen")) return;
-    try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.filter(x => !S.auswahl.has(x.id)) }); S.auswahl.clear(); T.regeln.zeige(); }
+      `Entfernen: ${kurzListe(weg)}. Es ändert sich nur die Regeldatei der App – an HA und den Daten wird nichts gelöscht. Die Vorhaltezeiten dieser Regeln gelten danach nicht mehr (es greift die nächste passende Regel bzw. der Standard).${haHinweis}`, "Entfernen")) return;
+    try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.filter(x => !weg.includes(x.id)) }); S.auswahl.clear(); T.regeln.zeige(); }
     catch (e) { meldung("Nicht gespeichert", e.message); }
     return;
   }
@@ -1851,6 +1909,7 @@ const massenWahl = art => wertBlock(art, null, true, "", []).replace('<option va
   '<option value="=" selected>– unverändert lassen –</option><option value="">– nicht setzen –</option>');
 function massenWerteAnwenden(r, kz, lz) {
   if (r.typ === "schutz") return { neu: r, geaendert: false, grund: "Schutz-Regel: Werte fest (global/unbegrenzt)" };   // Punkt 111
+  if (r.typ === "ha_standard") return { neu: r, geaendert: false, grund: "HA-Standard: Werte fest (10 Tage/unbegrenzt), nur passiv schaltbar" };   // Punkt 127
   const neu = { ...r }, gruende = [];
   if (kz !== "=") {
     if (r.typ === "event" && (kz == null || kz === "keine")) gruende.push("Event-Regel braucht eine Vorhaltezeit (global oder Dauer)");
@@ -2057,7 +2116,7 @@ async function ladeRegeln() {
   const ids = new Set(S.regeln.regeln.map(x => x.id));
   [...S.auswahl].forEach(id => ids.has(id) || S.auswahl.delete(id));   // entfernte Regeln aus der Auswahl
   const st = S.regeln.standard;
-  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › verwaist, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
+  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › verwaist › HA-Standard, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
     `Für verwaiste Entitäten gelten E:- und entity-Regeln sowie Regeln vom Typ verwaist. ` +
     `Regeln vom Typ event setzen die ${EV_NAME} (Logbuch) je Event-Typ – genauer Name vor Platzhalter. ` +
     `Standard ohne Regel: ${WNAME.kurzzeit} ${wertAnzeige(st.kurzzeit)}, ${WNAME.langzeit} ${wertAnzeige(st.langzeit)}.`;
@@ -2147,7 +2206,32 @@ const MUSTERHILFE = {
   event: "Event-Typen, auch mit * und ?, z. B. call_service oder script_* – Vorhaltezeit der Events (Logbuch); wirkt nie auf Entitäten.",
   schutz: "Muster mit * und ?, z. B. sensor.rs_meteo_* – diese Entitäten werden nie gekürzt (höchster Rang, auch vor E:-Regeln, auch verwaist).",
 };
+// Punkt 127: Regel HA-Standard – nur Erklärung und Schalter aktiv/passiv, kein Entfernen, keine Werte
+function zeigeHaStandard(r) {
+  dialog(`Regel ${r.id}`, `
+    <p><b>🏠 ${esc(r.name)}</b></p>
+    <p>Diese Regel bildet das Löschverhalten von Home Assistant in der <b>Grundeinstellung</b> ab (Recorder <span class="mono">purge_keep_days: 10</span>):</p>
+    <ul>
+      <li><b>${WNAME.kurzzeit}:</b> 10 Tage</li>
+      <li><b>${WNAME.langzeit}:</b> unbegrenzt – HA löscht die Langzeitstatistik nie</li>
+      <li><b>${EV_NAME}:</b> 10 Tage, alle Event-Typen</li>
+    </ul>
+    <p class="sub">Sie gilt für alles, wofür keine andere Regel einen Wert setzt – auch für verwaiste Entitäten und Zähler, wie bei HA selbst.
+      Sie hat den niedrigsten Rang: Jede andere Regel geht vor. Anders als HA löscht die App bis zur lokalen Mitternacht (volle Kalendertage).</p>
+    <p class="sub">Die Regel lässt sich nicht entfernen und nicht ändern, nur passiv schalten. Passiv gilt ohne Regel wieder „global“ (purge_keep_days).</p>
+    <label><input type="checkbox" id="rAktiv" ${r.aktiv ? "checked" : ""}> aktiv (sonst passiv)</label>
+    <div id="dlgFehler" class="fehler"></div>`, [
+    ["Abbrechen", () => $("#dlg").close()],
+    ["Speichern", async () => {
+      const aktiv = $("#rAktiv").checked;
+      if (aktiv === r.aktiv) return $("#dlg").close();
+      if (aktiv && !await warnPruefung({ ...r, aktiv: true })) return;
+      try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.map(x => x.id === r.id ? { ...x, aktiv } : x) }); $("#dlg").close(); }
+      catch (e) { $("#dlgFehler").textContent = e.message; }
+    }, true]]);
+}
 function bearbeiteRegel(i, vorlage) {
+  if (i >= 0 && S.regeln.regeln[i]?.typ === "ha_standard") return zeigeHaStandard(S.regeln.regeln[i]);   // Punkt 127
   const neu = i < 0;
   const vorschlagId = naechsteId();
   const r = neu ? { id: vorschlagId, name: "", typ: "glob", muster: [], aktiv: true, kurzzeit: null, attribute: null, langzeit: null, notiz: "", ...(vorlage || {}) }
@@ -2344,8 +2428,8 @@ T.loesch = new LokaleTabelle({
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     { k: "regel", titel: "Regel", typ: "text", breite: 150, wert: r => r.regel, zelle: r => r.regel.split(", ").map(regelChip).join(" "), csv: r => r.regel },
     // Punkt 114 (0.4.10): Zustand der Entität, nicht der Regel – passive Regeln stehen nie im Plan
-    { k: "status", titel: "Entität", typ: "auswahl", breite: 110, wert: r => r.status || "–",
-      hilfe: "Zustand der Entität in HA (aktiv / verwaist / verwaist (gelöscht)), nicht der Regel – passive Regeln stehen nie im Plan. Bei Event-Typen „–“.",
+    { k: "status", titel: STATUS_TITEL, typ: "auswahl", breite: 110, wert: r => r.status || "–",
+      hilfe: `${STATUS_HILFE} – passive Regeln stehen nie im Plan. Bei Event-Typen „–“.`,
       zelle: r => `<span class="status-${esc(r.status)}">${esc(STATUS_TEXT[r.status] || r.status || "–")}</span>`, csv: r => r.status,
       tip: r => STATUS_TEXT[r.status] ? `Entität ${STATUS_TEXT[r.status]}` : "Event-Typ",
       optionen: l => [...new Set(l.map(r => r.status || "–"))].map(x => [x, STATUS_TEXT[x] || x]) },
@@ -2573,6 +2657,12 @@ async function ladeProtokoll() {
 $("#pNeu").onclick = ladeProtokoll;
 async function starteLoeschen() {
   const p = S.loeschPlan; if (!p) return;
+  // Punkt 127: Mit aktiver Regel HA-Standard löscht die App wie HA in der Grundeinstellung – vorher deutlich darauf hinweisen
+  if (haStandardAktiv() && !await frage("⚠ Die App läuft im HA-Standard",
+    `Die Regel ${HA_STD} (HA-Standard) ist aktiv. Für alles ohne eigene Regel löscht dieser Lauf wie Home Assistant in der Grundeinstellung:\n\n` +
+    `• ${WNAME.kurzzeit}: alles älter als 10 Tage\n• ${EV_NAME}: alle Event-Typen älter als 10 Tage\n• ${WNAME.langzeit}: bleibt unbegrenzt\n\n` +
+    `Längere Vorhaltezeiten (z. B. purge_keep_days 7300) wirken dann nur dort, wo eine eigene Regel gilt. ` +
+    `Wenn das nicht gewollt ist: abbrechen und die Regel ${HA_STD} im Tab „Regeln“ passiv schalten.\n\nTrotzdem weiter?`, "Weiter")) return;
   const umfang = p.nur_regel ? `Regel ${p.nur_regel}` : "alle aktiven Regeln";
   // Punkt 56: nur nennen, was wirklich gelöscht wird; Knopf „Starten“
   const zb = p.summe.zeilen_b_lauf || p.summe.zeilen_b || {}, b = p.stufe_b ? (p.auftraege_b || []).filter(a => !["nächster Lauf", "übersprungen"].includes(a.art_lauf)) : [];

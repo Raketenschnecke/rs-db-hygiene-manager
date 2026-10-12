@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.3b1 (Beta)
+- **Beta-Version, nur auf dem Branch `beta`:** Normale Nutzer sehen sie nicht; die Integration ist als GitHub-Pre-Release vorgesehen
+- **Neue Startregel HA-Standard (Punkt 127):** Regel `HA:standard` bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (10 Tage für States, 5-Min-Statistik, Attribute und Events, Langzeit unbegrenzt). Sie ist bei einer Neuinstallation aktiv, bei bestehenden Installationen wird sie passiv ergänzt. Name, Muster und Werte sind fest; sie lässt sich nicht entfernen, nur passiv schalten. Niedrigster Rang: Jede andere Regel geht vor. Ist sie aktiv, warnt die App vor einem Löschlauf aus dem Tab Löschen, dass sie im HA-Standard läuft
+- **Lauf aus HA nach Mitternacht (Punkt 126):** Stammt die Analyse von einem früheren Kalendertag, analysiert die App vor dem Lauf neu. Bisher überging der Nachtlauf Regeln, die am Vortag schon bereinigt waren, und holte sie erst in der folgenden Nacht nach
+- **Tab Entitäten:** neue Spaltenreihenfolge in vier Gruppen (Stammdaten, Vorhaltezeiten, Aktuell, Löschmenge sofort) mit Gruppenzeile über den Spaltenköpfen (Punkt 130). Die Statusspalte heißt wie im Tab Löschen „Entität“ und hat einen Tooltip (Punkt 128). Klick auf das Label in Kurzzeit/Langzeit öffnet die Filtermaske der Spalte, vorbelegt mit dem angeklickten Wert (Punkt 129)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.2
 - **Regeln verwalten (Punkte 123, 124):** neuer Knopf im Reiter Regeln. Darüber lassen sich die Regeln als JSON exportieren und importieren (mit Prüfung, Vorschau und Rückfrage), auf die Startregeln zurücksetzen und frühere Stände wiederherstellen. Vor jedem Ersetzen sichert die App die bisherigen Regeln; die letzten 10 Sicherungen bleiben. Solange ein Löschlauf läuft, ist das Ersetzen gesperrt
 - **Knopf „Analyse starten“ (Punkt 125):** doppelt so breit wie hoch. Der Stand-Text daneben entfällt; der Stand steht jetzt im Tooltip und in der Rückfrage. Ist eine Analyse veraltet, zeigt ein gelbes Ausrufezeichen am Knopf das an

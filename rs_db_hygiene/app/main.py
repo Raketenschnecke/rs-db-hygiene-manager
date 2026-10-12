@@ -467,7 +467,13 @@ async def regeln_schreiben(request):
     body = await request.json()
     if float(body.get("version") or 0) != Z.mtime(REGELN):
         return web.json_response({"fehler": "Regeln wurden zwischenzeitlich geändert – bitte neu laden"}, status=409)
-    daten = rg.speichere(REGELN, body["daten"])
+    neu = body["daten"]
+    # Punkt 127: HA-Standard ist nicht löschbar – fehlt sie in der Eingabe, bleibt sie mit ihrem bisherigen Schalter erhalten
+    if all(r.get("id") != rg.HA_STANDARD_ID for r in neu.get("regeln") or []):
+        alt = next((r for r in rg.lade(REGELN, VORLAGE)["regeln"] if r["id"] == rg.HA_STANDARD_ID), None)
+        if alt:
+            neu = {**neu, "regeln": [*(neu.get("regeln") or []), alt]}
+    daten = rg.speichere(REGELN, neu)
     return web.json_response({"daten": daten, "version": Z.mtime(REGELN),
                               "ueberschneidungen": rg.entity_ueberschneidungen(daten)})
 
@@ -667,7 +673,8 @@ async def _loesch_plan(request_or_regel, ausnahme=None):
     p["sperren"] = loeschen.sperren(p, frei, Z.job, os.environ.get("SUPERVISOR_TOKEN"), pkd)
     # Läufe aus HA analysieren bei altem Stand vorher selbst (Punkt 83) – dafür keine Sperre wegen der Analyse
     p["sperren_auto"] = loeschen.sperren(p, frei, Z.job, os.environ.get("SUPERVISOR_TOKEN"), pkd, analyse_pruefen=False)
-    p["analyse_veraltet"] = loeschen.analyse_veraltet(p["analyse_zeit"], p["purge_keep_days"], pkd, loeschen.ANALYSE_FRISCH_S)
+    # Punkt 126: mit Grenze lokale Mitternacht (exakt) gilt auch eine Analyse vom Vortag als veraltet
+    p["analyse_veraltet"] = loeschen.analyse_veraltet(p["analyse_zeit"], p["purge_keep_days"], pkd, loeschen.ANALYSE_FRISCH_S, exakt=p.get("exakt", False))
     # Punkt 110 (0.4.9): während eines Backups startet kein neuer Lauf (manuell und aus HA)
     bk = await asyncio.to_thread(loeschen.backup_laeuft, os.environ.get("SUPERVISOR_TOKEN"))
     uhr("Backup prüfen")
