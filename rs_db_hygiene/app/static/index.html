@@ -223,7 +223,7 @@ table.gruppiert th.gstart, table.gruppiert td.gstart { border-left: 1px solid co
 .chip.rklick:hover { background: var(--accent); color: #fff; }
 .wzelle { display: flex; align-items: center; min-width: 0; }
 .wzelle .wtext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.wzelle .chip { flex: none; }
+.wzelle .chip { flex: none; max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* Punkt 160 */
 tr.summenzeile th { font-weight: 400; padding: 3px 9px 5px; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
 tr.summenzeile th b { font-weight: 600; }
 tr.summenzeile th .ges { display: block; color: var(--muted); font-size: 11px; }
@@ -1699,9 +1699,11 @@ $("#filterReset").onclick = () => {
 
 // Punkt 143 (0.5.3, ersetzt Punkt 129): Klick auf den Regel-Chip öffnet die Maske dieser Regel; „Std.“ ist nicht anklickbar.
 // Der Wert wird bei Platzmangel gekürzt, der Chip bleibt immer ganz sichtbar.
+// Punkt 160 (0.5.3): eigene Regeln (E:<entity_id>) im Chip nur „E“ – die volle ID verdrängte sonst den Wert
+const chipText = id => String(id).startsWith("E:") ? "E" : id;
 function wertZelle(w) {
   if (!w) return "–";
-  const quelle = w.regel ? `<span class="chip regel rklick" data-regel="${esc(w.regel)}" title="${esc(w.muster)}\nKlick: Regel ${esc(w.regel)} öffnen">${esc(w.regel)}</span>`
+  const quelle = w.regel ? `<span class="chip regel rklick" data-regel="${esc(w.regel)}" title="${esc(w.regel.startsWith("E:") ? "eigene Regel " + w.regel : w.muster)}\nKlick: Regel ${esc(w.regel)} öffnen">${esc(chipText(w.regel))}</span>`
     : `<span class="chip" title="Standard (keine Regel)">Std.</span>`;
   return `<span class="wzelle"><span class="wtext" title="${esc(w.anzeige)}">${esc(w.anzeige)}</span>${quelle}</span>`;
 }
@@ -2124,8 +2126,8 @@ $("#massenEv").addEventListener("click", ev => {
 // ---- Punkt 97 (0.4.7): Regeln aus Löschplan und Prognosen je Regel direkt öffnen
 const regelIdx = id => (S.regeln?.regeln || []).findIndex(x => x.id === id);
 const regelChip = id => regelIdx(id) >= 0
-  ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)} bearbeiten" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(id)}</span>`
-  : `<span class="chip regel">${esc(id)}</span>`;
+  ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)} bearbeiten" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(chipText(id))}</span>`
+  : `<span class="chip regel" title="${esc(id)}">${esc(chipText(id))}</span>`;   // Punkt 160: E: kurz
 document.addEventListener("click", ev => {
   const e = ev.target.closest("[data-regel-edit]"); if (!e || T.loesch?.z.klickIstZiehen?.(ev) || T.probe?.z.klickIstZiehen?.(ev)) return;
   const i = regelIdx(e.dataset.regelEdit);

@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.3b6 (Beta)
+- **Behoben (Punkt 160):** Bei eigenen Regeln (E:…) verdrängte die lange Regel-ID im Chip die Vorhaltezeit in den Spalten Kurzzeit/Langzeit. Der Chip zeigt jetzt nur „E“ (volle ID im Tooltip); Chips sind höchstens etwa 8 Zeichen breit
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.3b5 (Beta)
 - **Reiter (Punkt 158):** neue Reihenfolge Entitäten, Events, Statistik ohne Entität, Regeln, Löschen, Löschprotokolle, Prognosen je Regel; „Regeln“ mit gelber Oberkante wie Löschen; „Löschprotokoll“ heißt jetzt „Löschprotokolle“
 - Behoben: In der Überschrift wurden „g“ und „y“ unten abgeschnitten (Punkt 159)
