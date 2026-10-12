@@ -37,17 +37,20 @@ a { color: var(--accent); }
 /* Punkt 96 (0.4.6): eine Zeile ohne Umbruch – Überschrift links, Stand und Knopf rechts, alles senkrecht mittig;
    oben und unten gleicher Abstand. Bei schmalen Fenstern wird gekürzt (Überschrift kleiner bzw. „…“, Stand in Kurzform). */
 /* Punkt 98 (0.4.7): unten 10 px mehr Abstand zum Kachelblock; --kopf-h = Höhe der Überschrift (Schrift × 1,2) */
-header { --kopf-h: calc(34px * 1.2); padding: 12px 20px 22px; display: flex; flex-wrap: nowrap; gap: 16px; align-items: flex-start; justify-content: space-between; }
-h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  padding-bottom: .15em; margin-bottom: -.15em; }   /* 0.5.3: Platz für die Unterlängen (g, y) – overflow: hidden schnitt sie ab; der Abstand nach unten bleibt gleich */
+/* Punkt 165 (0.5.4b3): Logo statt Überschrift; --logo-h = Höhe des Logos, der Knopf „Analyse starten“ ist genauso hoch */
+header { --kopf-h: calc(34px * 1.2); --logo-h: 64px; padding: 12px 20px 22px; display: flex; flex-wrap: nowrap; gap: 16px; align-items: flex-start; justify-content: space-between; }
+h1 { margin: 0; line-height: 0; flex: none; }
+.kopf-logo { height: var(--logo-h); width: auto; display: block; }
+.kopf-logo .lg-t { fill: #b00b0b; }
+@media (prefers-color-scheme: dark) { .kopf-logo .lg-t { fill: #ff7b7b; } }   /* #b00b0b hätte auf dunklem Grund zu wenig Kontrast */
 .kopf-titel { min-width: 0; display: flex; align-items: center; }
 .kopf-fehler { margin: 0 20px; }   /* nur bei einem Fehler gefüllt; leer ohne Höhe und ohne Abstand */
 .kopf-fehler:not(:empty) { margin-bottom: 10px; }
 /* Punkt 125 (0.5.2): doppelt so breit wie hoch, zweizeilig „Analyse / starten“; mindestens 40 px hoch, damit zwei Zeilen lesbar bleiben */
 /* Punkt 156 (0.5.3): im Stil der Kacheln (Oberkante in voller Farbe, Fläche getönt), aber kräftiger im Rot der Kachelzeile „Istzustand“;
-   40 px breiter als bisher; oben bündig mit der Überschrift, unten exakt auf der Unterkante des „g“ (--kopf-basis, per Skript gemessen);
-   rechts bündig mit den Kacheln (beide am rechten Seitenrand, 20 px) */
-#btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h) + 40px); height: var(--kopf-basis, var(--knopf-h)); padding: 0 4px; flex: none; position: relative;
+   40 px breiter als bisher; rechts bündig mit den Kacheln (beide am rechten Seitenrand, 20 px)
+   Punkt 165 (0.5.4b3): oben und unten bündig mit dem Logo (vorher bis zur Unterkante des „g“ der Überschrift, per Skript gemessen) */
+#btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h) + 40px); height: var(--logo-h); padding: 0 4px; flex: none; position: relative;
   font-size: 12.5px; line-height: 1.15; font-weight: 700; text-align: center; color: #fff; border-radius: 8px;
   background: color-mix(in srgb, var(--zf-ist) 62%, var(--panel)); border: 1px solid color-mix(in srgb, var(--bad) 55%, var(--line)); border-top: 3px solid var(--bad); }   /* Rahmen signalrot, wie die Kacheln: oben kräftig, seitlich und unten schmal und gedämpft */
 #btnAnalyse:hover:not(:disabled), #btnAnalyse:focus-visible { background: color-mix(in srgb, var(--zf-ist) 82%, var(--panel)); outline: none; }
@@ -55,7 +58,7 @@ h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spac
 #btnAnalyse.alt::after { content: "!"; position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
   background: #f5c400; color: #1d2330; border: 2px solid var(--bg); font-size: 11px; line-height: 16px; font-weight: 800; }
 .kopf-job { display: flex; align-items: center; gap: 10px; flex: none; }
-@media (max-width: 900px) { header { --kopf-h: calc(26px * 1.2); } h1 { font-size: 26px; } }
+@media (max-width: 900px) { header { --kopf-h: calc(26px * 1.2); --logo-h: 52px; } }
 h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .sub { color: var(--muted); }
 /* Punkt 89: je Hinweis ein eigenes Banner, Titel fett */
@@ -331,7 +334,7 @@ button.gefahr:disabled { opacity: .45; }
 .risiko.schwer { color: var(--bad); font-weight: 600; }
 .laeufe-titel { margin: 18px 0 6px; font-size: 14px; }
 .stufeb { font-size: 11px; color: var(--warn); margin-top: 3px; }
-@media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } header { --kopf-h: calc(20px * 1.2); } h1 { font-size: 20px; } .kopf-fehler { margin-left: 16px; margin-right: 16px; } .banner { margin: 0 16px 8px; } .lauf { margin: 0 16px 12px; } }
+@media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } header { --kopf-h: calc(20px * 1.2); --logo-h: 44px; } .kopf-fehler { margin-left: 16px; margin-right: 16px; } .banner { margin: 0 16px 8px; } .lauf { margin: 0 16px 12px; } }
 /* 0.5.3 (Punkte 140, 144–151): fixierte Zellen sticky – auch gegen „position: relative“ der Titelzeile (Griffe) und der ersten Kopfzeile */
 table.gruppiert thead tr th.fix.fix, table.gruppiert tbody tr td.fix.fix { position: sticky; }
 table.gruppiert thead tr.gruppenzeile th.gruppe.gruppe { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -341,7 +344,17 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
 </head>
 <body>
 <header>
-  <div class="kopf-titel"><h1>RS DB Hygiene Manager</h1><span id="kennung" class="kennung" hidden></span></div>
+  <div class="kopf-titel"><h1><svg class="kopf-logo" viewBox="8 8 484 184" role="img" aria-label="RS DB Hygiene Manager"><title>RS DB Hygiene Manager</title>
+    <rect x="10" y="10" width="180" height="180" rx="36" fill="#5c0000"/>
+    <path d="M40 92 L95 42 L150 92 V160 H40 Z" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M56 102 v38 a20 6 0 0 0 40 0 v-38 z" fill="#fff"/>
+    <path d="M56 121 a20 6 0 0 0 40 0" fill="none" stroke="#5c0000" stroke-width="2.5"/>
+    <ellipse cx="76" cy="102" rx="20" ry="6" fill="#ffd1d1"/>
+    <path d="M112 108 L122 118 L132 108 M112 124 L122 134 L132 124 M112 140 L122 150 L132 140" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="163" y="54" text-anchor="middle" font-weight="600" font-size="24" fill="#fff">RS</text>
+    <text class="lg-t" x="212" y="96" font-weight="600" font-size="50">DB Hygiene</text>
+    <text class="lg-t" x="213" y="152" font-weight="400" font-size="44">Manager</text>
+  </svg></h1><span id="kennung" class="kennung" hidden></span></div>
   <div class="kopf-job"><button id="btnAnalyse" aria-label="Analyse starten">Analyse<br>starten</button></div>
 </header>
 <div class="sub kopf-fehler" id="stand"></div>
@@ -857,17 +870,6 @@ function par() {
 
 // Höhe der klebenden Leiste für den Scrollbereich der Tabellen
 new ResizeObserver(() => document.documentElement.style.setProperty("--kleb-h", $("#klebend").offsetHeight + "px")).observe($("#klebend"));
-// Punkt 156 (0.5.3): Unterkante des Knopfs „Analyse starten“ auf die Unterkante des „g“ der Überschrift – Abstand Oberkante → Grundlinie + Unterlänge
-{ const h1 = $("h1"), miss = () => {
-    const m = document.createElement("span"); m.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
-    h1.appendChild(m); let basis = m.getBoundingClientRect().top - h1.getBoundingClientRect().top; m.remove();
-    // bis zur Unterkante des „g“ (Unterlänge der Schrift), nicht nur bis zur Grundlinie
-    const cs = getComputedStyle(h1), ctx = document.createElement("canvas").getContext("2d");
-    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-    basis += ctx.measureText("g").actualBoundingBoxDescent || 0;
-    if (basis > 0) document.documentElement.style.setProperty("--kopf-basis", Math.round(basis) + "px");
-  };
-  new ResizeObserver(miss).observe(h1); document.fonts?.ready.then(miss); }
 // Punkt 155 (0.5.3): Tab Löschen – der Kasten bleibt beim Scrollen so stehen, dass nur seine letzte Zeile (Knopf „Jetzt ausführen“) sichtbar ist
 new ResizeObserver(() => {
   const k = $("#lKasten"), z = k.lastElementChild; if (!z || k.offsetParent === null) return;

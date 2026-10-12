@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4b3 (Beta)
+- **Logo (Punkt 165):** Die Oberfläche zeigt oben das neue Logo statt der Überschrift, daneben die Version; der Knopf „Analyse starten“ ist genauso hoch wie das Logo
+- **Icons:** App und Integration haben eigene Icons und Logos (im App-Store bzw. ab Home Assistant 2026.3 bei der Integration)
+- Die Integration ändert sich sonst nicht; ihr Update über HACS ist nur für das Icon nötig
+
 ## 0.5.4b2 (Beta)
 - **Verbindungswächter (Punkt 164):** Ist die App nicht erreichbar (gestoppt, Neustart), zeigt die Oberfläche ein rotes Banner und sperrt alle ändernden Knöpfe; Speichern wird abgewiesen. Sobald die App wieder antwortet, verschwindet das Banner und die Daten werden neu geladen
 - **Kennung (Punkt 164):** Neben der Überschrift steht die Version, bei der Beta auffällig als „Beta 0.5.4b2“; der Fenstertitel der Beta endet auf „(Beta)“
