@@ -199,6 +199,42 @@ def _tage_text(n, dativ=False):
     return t
 
 
+PKD_MIN_EINRICHTUNG = 3650   # Punkt 133: mindestens 10 Jahre
+
+
+def einrichtung_pruefung(recorder):
+    """Punkt 133 (0.5.3): Ist der Recorder so eingerichtet, wie die App es voraussetzt?
+
+    (1) Einträge: auto_purge und auto_repack auf false, purge_keep_days gesetzt; db_url darf fehlen (HA nimmt dann
+    home-assistant_v2.db), wenn gesetzt, muss es SQLite auf home-assistant_v2.db sein (!secret wird nicht geprüft).
+    (2) purge_keep_days mindestens 3650 Tage. Liefert eine Warnung {art: "einrichtung", …} oder None.
+    Die GUI zeigt sie mit Link auf die FAQ „Erstinbetriebnahme“ (`hilfe`), sperrt aber nichts.
+    """
+    gesetzt = recorder.get("gesetzt") or []
+    maengel = []
+    if not recorder.get("block"):
+        maengel.append("Abschnitt recorder: nicht gefunden (HA-Standard: alles nach 10 Tagen löschen)")
+    else:
+        for k in ("auto_purge", "auto_repack"):
+            if k not in gesetzt:
+                maengel.append(f"{k} fehlt (HA-Standard: an)")
+            elif recorder.get(k):
+                maengel.append(f"{k} ist an statt false")
+        if "purge_keep_days" not in gesetzt:
+            maengel.append("purge_keep_days fehlt (HA-Standard: 10 Tage)")
+        url = recorder.get("db_url")
+        if url and not url.startswith("!") and not (url.startswith("sqlite:") and url.endswith("/home-assistant_v2.db")):
+            maengel.append(f"db_url zeigt nicht auf die SQLite-Datei home-assistant_v2.db ({url.split('://')[0]})")
+    pkd = int(recorder.get("purge_keep_days") or 10)
+    if pkd < PKD_MIN_EINRICHTUNG and ("purge_keep_days" in gesetzt):
+        maengel.append(f"purge_keep_days {_tage_text(pkd)} statt mindestens {_tage_text(PKD_MIN_EINRICHTUNG)}")
+    if not maengel:
+        return None
+    return {"art": "einrichtung", "titel": "Recorder nicht für die App eingerichtet:", "maengel": maengel,
+            "text": " · ".join(maengel) + ".",
+            "hilfe": "h-faq-erstinbetrieb", "hilfe_text": "Hilfe: Erstinbetriebnahme"}
+
+
 def pkd_pruefung(recorder, option_pkd, regel_daten, beispiele=5):
     """Punkt 85: Ist purge_keep_days in der configuration.yaml kleiner als das, was die App erwartet?
 
@@ -211,6 +247,9 @@ def pkd_pruefung(recorder, option_pkd, regel_daten, beispiele=5):
     wann = ("automatisch (auto_purge ist an)" if auto
             else "bei jedem Aufruf von recorder.purge ohne keep_days (auto_purge ist aus)")
     out = []
+    w = einrichtung_pruefung(recorder)
+    if w:
+        out.append(w)
     opt = int(option_pkd or 0)
     if opt > ha:
         # Punkt 103 (0.4.8): Die configuration.yaml hat Vorrang – ein größerer Wert in der App-Option wird ignoriert

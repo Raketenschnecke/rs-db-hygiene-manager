@@ -35,6 +35,13 @@ Typ „schutz“ (ab 0.4.9, Punkt 111): Daten, die nie gekürzt werden dürfen. 
   setzt fest Kurzzeit „global“ und Langzeit „unbegrenzt“ (andere Werte werden beim Laden ersetzt). Muster wie glob
   (Platzhalter erlaubt), gilt für aktive und verwaiste Entitäten, auch für Zähler. Der Löschplan schließt geschützte
   Entitäten zusätzlich ausdrücklich aus.
+
+Typ „ha_standard“ (ab 0.5.3, Punkt 127): genau eine Regel mit der festen ID HA:standard. Sie bildet das Löschverhalten
+  von Home Assistant in der Grundeinstellung ab (Recorder purge_keep_days 10): Kurzzeit 10 Tage (States, 5-Min-Statistik,
+  Attribute), Langzeit unbegrenzt, Events 10 Tage. Gilt für alle Entitäten – auch verwaiste und Zähler – und alle
+  Event-Typen, mit dem niedrigsten Rang: Jede andere Regel geht vor. Name, Muster, Werte und Notiz sind fest, nur
+  aktiv/passiv lässt sich ändern. Die Regel kann nicht entfernt werden: Fehlt sie, wird sie beim Laden passiv ergänzt
+  (bestehende Installationen, ältere Exporte); die Startregeln enthalten sie aktiv.
 """
 import fnmatch
 import json
@@ -50,8 +57,17 @@ EINHEIT_TAGE = {"d": 1, "w": 7, "m": 30, "j": 365}
 EINHEIT_NAME = {"d": "Tage", "w": "Wochen", "m": "Monate", "j": "Jahre"}
 SONDERWERTE = {"kurzzeit": {"global", "keine"}, "attribute": {"wie_kurzzeit", "keine"}, "langzeit": {"unbegrenzt", "keine"}}
 STANDARD = {"kurzzeit": "global", "attribute": "wie_kurzzeit", "langzeit": "unbegrenzt"}
-TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "verwaist": 4, "event": 5}
+TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "verwaist": 4, "event": 5, "ha_standard": 6}
 SCHUTZ_WERTE = {"kurzzeit": "global", "attribute": None, "langzeit": "unbegrenzt"}   # Punkt 111: fest
+# Punkt 127 (0.5.3): Regel „HA-Standard“ – Werte, Name und Notiz fest, nur aktiv/passiv änderbar
+HA_STANDARD_ID = "HA:standard"
+HA_STANDARD_TAGE = 10           # Voreinstellung des Recorders (purge_keep_days)
+HA_STANDARD = {"id": HA_STANDARD_ID, "typ": "ha_standard", "muster": ["*"],
+               "name": f"HA-Standard: alles {HA_STANDARD_TAGE} Tage, Langzeit unbegrenzt",
+               "notiz": (f"Bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (purge_keep_days {HA_STANDARD_TAGE}): "
+                         f"States, 5-Min-Statistik, Attribute und Events nach {HA_STANDARD_TAGE} Tagen, Langzeitstatistik nie. "
+                         "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur passiv schaltbar."),
+               "kurzzeit": f"{HA_STANDARD_TAGE}d", "attribute": None, "langzeit": "unbegrenzt"}
 VERWAIST_ARTEN = {"alle", "geloescht", "ohne_spur"}
 # Status aus der Analyse → Art-Wort der Regel
 VERWAIST_STATUS = {"verwaist_geloescht": "geloescht", "verwaist": "ohne_spur"}
@@ -106,6 +122,11 @@ def normalisiere(daten):
             raise RegelFehler(f"Regel-ID doppelt: {rid}")
         ids.add(rid)
         typ = r.get("typ")
+        if typ == "ha_standard" or rid == HA_STANDARD_ID:     # Punkt 127: alles fest außer aktiv
+            if typ != "ha_standard" or rid != HA_STANDARD_ID:
+                raise RegelFehler(f"{rid}: Typ ha_standard und ID {HA_STANDARD_ID} gehören fest zusammen (genau eine Regel)")
+            regeln.append({**HA_STANDARD, "aktiv": r.get("aktiv", True) is not False})
+            continue
         if typ not in TYP_RANG:
             raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, verwaist oder event sein")
         roh = r.get("muster") or []
@@ -158,6 +179,9 @@ def normalisiere(daten):
         ids.add(rid)
         regeln.append({"id": rid, "name": f"Events {typ}", "typ": "event", "muster": [typ], "aktiv": True,
                        "notiz": "übernommen aus der Event-Liste (0.3.0)", "kurzzeit": w, "attribute": None, "langzeit": None})
+    # Punkt 127: Die Regel HA-Standard ist nicht löschbar – fehlt sie, wird sie passiv ergänzt
+    if HA_STANDARD_ID not in {r["id"] for r in regeln}:
+        regeln.append({**HA_STANDARD, "aktiv": False})
     # "events" bleibt leer stehen, damit der Startwert nach dem Löschen der Regel nicht wiederkommt
     return {"standard": std, "regeln": regeln, "events": {}}
 
@@ -170,7 +194,10 @@ def event_regel(daten, typ, purge_keep_days, mit_passiven=False):
     """
     treffer = []
     for i, r in enumerate(daten["regeln"]):
-        if r["typ"] != "event" or not (r["aktiv"] or mit_passiven):
+        if r["typ"] not in ("event", "ha_standard") or not (r["aktiv"] or mit_passiven):
+            continue
+        if r["typ"] == "ha_standard":         # Punkt 127: alle Event-Typen, nach allen Event-Regeln
+            treffer.append((2, i, r, "*"))
             continue
         m = next((m for m in r["muster"] if m == typ), None) or next((m for m in r["muster"] if fnmatch.fnmatchcase(typ, m)), None)
         if m:
@@ -295,6 +322,8 @@ class Aufloeser:
             if globs:
                 return next((m for m in globs if fnmatch.fnmatchcase(eid, m)), None)
             return ", ".join(sorted(arten))
+        if r["typ"] == "ha_standard":         # Punkt 127: alles
+            return "*"
         if r["typ"] == "entity":
             return next((m for m in r["muster"] if m == eid), None)
         if r["typ"] in ("glob", "schutz"):
@@ -321,7 +350,8 @@ class Aufloeser:
             m = self._trifft(r, eid, domain, device_class or "", status)
             if not m:
                 continue
-            if zaehler and r["typ"] not in ("entity", "verwaist", "schutz"):
+            # Punkt 127: HA-Standard gilt auch für Zähler (HA löscht deren States ebenso; Langzeit bleibt unbegrenzt)
+            if zaehler and r["typ"] not in ("entity", "verwaist", "schutz", "ha_standard"):
                 geschuetzt.append(r["id"])
                 continue
             if r["typ"] == "schutz" and not ergebnis.get("schutz"):

@@ -73,6 +73,14 @@ Z = Zustand()
 # ---------------------------------------------------------------- Jobs
 
 def _analyse_sync():
+    # Punkt 133 (0.5.3): Schritt 0 – Recorder-Einrichtung frisch prüfen (Ergebnis zeigt die GUI als Banner)
+    try:
+        _PKD["schl"] = None
+        for w in pkd_pruefung()["warnungen"]:
+            if w.get("art") == "einrichtung":
+                _LOG.warning("Analyse: Schritt 0 %s %s", w["titel"], w["text"])
+    except Exception:  # noqa: BLE001 – die Prüfung darf die Analyse nicht verhindern
+        _LOG.exception("Prüfung der Recorder-Einrichtung fehlgeschlagen")
     opt = optionen()
     db = opt.get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
     pkd = _pkd_wirksam()
@@ -239,9 +247,11 @@ _PKD = {"schl": None, "erg": None}
 def pkd_pruefung():
     """Punkt 85: purge_keep_days der configuration.yaml gegen App-Option und aktive Regeln; neu nur bei geänderten Dateien."""
     cfg = f"{HA_CONFIG}/configuration.yaml"
-    schl = (Z.mtime(cfg), Z.mtime(REGELN), Z.mtime(OPTIONEN_PFAD))
+    # Punkt 133: bei `recorder: !include …` zählt auch die eingebundene Datei
+    schl = (Z.mtime(cfg), Z.mtime(_PKD["include"]) if _PKD.get("include") else None, Z.mtime(REGELN), Z.mtime(OPTIONEN_PFAD))
     if _PKD["schl"] != schl:
         rec = analyse.lies_recorder(cfg)
+        _PKD["include"] = rec.get("include")
         try:
             regel_daten = rg.lade(REGELN, VORLAGE)
         except Exception:  # noqa: BLE001 – kaputte Regeldatei meldet der Tab Regeln; die Prüfung nutzt dann nur die Option
@@ -282,7 +292,7 @@ ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
 def summen(liste):
     """Summe bzw. Anzahl je Spalte (Punkt 12)."""
     s = {"entitaeten": len(liste), "geraete": len({e["device_id"] for e in liste if e.get("device_id")}),
-         "aktiv": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "loeschbar": 0,
+         "aktiv": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
          "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None,
          "first_ts": None, "last_ts": None,
          # Punkt 115: Entitäten mit Label und Zahl verschiedener Labels
@@ -301,7 +311,7 @@ def summen(liste):
             s["attr_zeilen"] = (s["attr_zeilen"] or 0) + e["attr_zeilen"]
             gewicht += (e["rows"] or 0) * probelauf.B_STATE
         s["aktiv" if e["status"] == "aktiv" else "verwaist"] += 1
-        for k in ("rows", "rows_24h", "lts_rows"):
+        for k in ("rows", "rows_24h", "lts_rows", "kurz_rows"):   # kurz_rows: Punkt 135 (0.5.3)
             s[k] += e[k] or 0
         s["loeschbar"] += e["loeschbar"]["states"] or 0
         for k in ("loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts"):
@@ -467,7 +477,13 @@ async def regeln_schreiben(request):
     body = await request.json()
     if float(body.get("version") or 0) != Z.mtime(REGELN):
         return web.json_response({"fehler": "Regeln wurden zwischenzeitlich geändert – bitte neu laden"}, status=409)
-    daten = rg.speichere(REGELN, body["daten"])
+    neu = body["daten"]
+    # Punkt 127: HA-Standard ist nicht löschbar – fehlt sie in der Eingabe, bleibt sie mit ihrem bisherigen Schalter erhalten
+    if all(r.get("id") != rg.HA_STANDARD_ID for r in neu.get("regeln") or []):
+        alt = next((r for r in rg.lade(REGELN, VORLAGE)["regeln"] if r["id"] == rg.HA_STANDARD_ID), None)
+        if alt:
+            neu = {**neu, "regeln": [*(neu.get("regeln") or []), alt]}
+    daten = rg.speichere(REGELN, neu)
     return web.json_response({"daten": daten, "version": Z.mtime(REGELN),
                               "ueberschneidungen": rg.entity_ueberschneidungen(daten)})
 
@@ -667,7 +683,8 @@ async def _loesch_plan(request_or_regel, ausnahme=None):
     p["sperren"] = loeschen.sperren(p, frei, Z.job, os.environ.get("SUPERVISOR_TOKEN"), pkd)
     # Läufe aus HA analysieren bei altem Stand vorher selbst (Punkt 83) – dafür keine Sperre wegen der Analyse
     p["sperren_auto"] = loeschen.sperren(p, frei, Z.job, os.environ.get("SUPERVISOR_TOKEN"), pkd, analyse_pruefen=False)
-    p["analyse_veraltet"] = loeschen.analyse_veraltet(p["analyse_zeit"], p["purge_keep_days"], pkd, loeschen.ANALYSE_FRISCH_S)
+    # Punkt 126: mit Grenze lokale Mitternacht (exakt) gilt auch eine Analyse vom Vortag als veraltet
+    p["analyse_veraltet"] = loeschen.analyse_veraltet(p["analyse_zeit"], p["purge_keep_days"], pkd, loeschen.ANALYSE_FRISCH_S, exakt=p.get("exakt", False))
     # Punkt 110 (0.4.9): während eines Backups startet kein neuer Lauf (manuell und aus HA)
     bk = await asyncio.to_thread(loeschen.backup_laeuft, os.environ.get("SUPERVISOR_TOKEN"))
     uhr("Backup prüfen")

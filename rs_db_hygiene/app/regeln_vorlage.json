@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Startliste für neue Installationen: allgemeine Muster, alle Regeln passiv (auch die Event-Regel). Erst im Probelauf prüfen (passive Regeln mitrechnen), dann einzeln aktiv schalten. Werte: n d/w/m/j, global, unbegrenzt, keine.",
+  "_hinweis": "Startliste für neue Installationen: allgemeine Muster, alle Regeln passiv (auch die Event-Regel) – außer HA:standard, die das Löschverhalten von Home Assistant in der Grundeinstellung abbildet (10 Tage, Langzeit unbegrenzt) und aktiv ist. Erst im Probelauf prüfen (passive Regeln mitrechnen), dann einzeln aktiv schalten. Werte: n d/w/m/j, global, unbegrenzt, keine.",
   "standard": {"kurzzeit": "global", "attribute": "wie_kurzzeit", "langzeit": "unbegrenzt"},
   "regeln": [
     {"id": "R01", "name": "Uhrzeit-Sensoren", "typ": "entity", "muster": ["sensor.time", "sensor.date", "sensor.date_time", "sensor.date_time_iso"],
@@ -21,6 +21,9 @@
     {"id": "R09", "name": "Gelöschte Entitäten", "typ": "verwaist", "muster": ["geloescht"],
      "aktiv": false, "kurzzeit": "30d", "attribute": null, "langzeit": null, "notiz": "Entitäten, die es in HA nicht mehr gibt"},
     {"id": "EV:call_service", "name": "Events call_service", "typ": "event", "muster": ["call_service"],
-     "aktiv": false, "kurzzeit": "7d", "attribute": null, "langzeit": null, "notiz": "Dienstaufrufe (call_service)"}
+     "aktiv": false, "kurzzeit": "7d", "attribute": null, "langzeit": null, "notiz": "Dienstaufrufe (call_service)"},
+    {"id": "HA:standard", "name": "HA-Standard: alles 10 Tage, Langzeit unbegrenzt", "typ": "ha_standard", "muster": ["*"],
+     "aktiv": true, "kurzzeit": "10d", "attribute": null, "langzeit": "unbegrenzt",
+     "notiz": "Bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (purge_keep_days 10). Nicht löschbar, nur passiv schaltbar."}
   ]
 }

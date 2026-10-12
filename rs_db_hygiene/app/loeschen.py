@@ -331,16 +331,24 @@ def plan_b(pl, pkd, nur_regel=None, exakt=False):
     return out
 
 
-def analyse_veraltet(analyse_zeit, plan_pkd, aktuell_pkd, max_alter_s=None):
+def analyse_veraltet(analyse_zeit, plan_pkd, aktuell_pkd, max_alter_s=None, exakt=False, jetzt=None):
     """Punkt 83: Grund, warum der Plan nicht mehr zum Stand passt (leer = passt).
 
-    plan_pkd: purge_keep_days der Analyse; aktuell_pkd: Wert jetzt (App-Option bzw. configuration.yaml)."""
+    plan_pkd: purge_keep_days der Analyse; aktuell_pkd: Wert jetzt (App-Option bzw. configuration.yaml).
+    exakt (Punkt 126, 0.5.3): Grenze lokale Mitternacht – stammt die Analyse von einem früheren Kalendertag, rechnet der
+    Plan mit dem Vortag (Entitäten, die gestern schon bereinigt waren, stehen mit 0 Zeilen darin) und der Lauf löscht
+    sie nicht mit. Dann gilt die Analyse als veraltet, auch wenn sie jünger als max_alter_s ist."""
     if not analyse_zeit:
         return "Es gibt noch keine Analyse."
     if aktuell_pkd and plan_pkd and int(aktuell_pkd) != int(plan_pkd):
         return (f"purge_keep_days hat sich seit der Analyse geändert ({int(plan_pkd):,} → {int(aktuell_pkd):,} Tage)".replace(",", ".")
                 + " – der Plan beruht auf dem alten Wert.")
-    alter = time.time() - float(analyse_zeit)
+    jetzt = time.time() if jetzt is None else jetzt
+    if exakt:
+        tag = datetime.date.fromtimestamp(float(analyse_zeit))
+        if tag != datetime.date.fromtimestamp(jetzt):
+            return f"Die Analyse stammt vom {tag.strftime('%d.%m.%Y')} – für die Grenze lokale Mitternacht des heutigen Tages wird neu analysiert."
+    alter = jetzt - float(analyse_zeit)
     if alter > (max_alter_s or ANALYSE_MAX_ALTER_S):
         return f"Die Analyse ist {alter / 3600:.0f} Stunden alt."
     return ""

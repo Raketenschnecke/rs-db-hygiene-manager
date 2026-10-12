@@ -4,6 +4,66 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.3
+Zusammenfassung der Testversionen 0.5.3b1 bis 0.5.3b7 (Einzelheiten darunter).
+- **Neue Startregel HA-Standard:** bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (10 Tage, Langzeit unbegrenzt); bei bestehenden Installationen passiv ergänzt, nicht löschbar
+- **Prüfung der Recorder-Einrichtung:** Banner mit Verweis auf die neue Hilfe-FAQ „Erstinbetriebnahme“, wenn `auto_purge`/`auto_repack` nicht auf false stehen oder `purge_keep_days` unter 10 Jahren liegt
+- **Nachtlauf nach Mitternacht:** Stammt die Analyse vom Vortag, analysiert die App vor dem Lauf neu
+- **Neues Aussehen aller Tabellen:** farbige Spaltengruppen passend zu den Kacheln, zweizeilige Spaltenköpfe, schlanke Summenzeile, fixierte erste Spalte(n), Spaltendialog nach Gruppen mit Ansichten; neue Spalte „5-Min (Zeilen)“
+- **Regel-Chips** öffnen die Regel; eigene Regeln erscheinen als „E“
+- **Bedienung:** Reiter mit farbiger Oberkante in neuer Reihenfolge („Löschprotokolle“), Knopf „Analyse starten“ im Kachel-Stil, im Tab Löschen bleibt „Jetzt ausführen“ beim Scrollen stehen und erklärt im Tooltip den Umfang
+- Kürzere Spaltentitel; der CSV-Export der Tabellen übernimmt sie
+- Die Integration ändert sich nicht, nur ihre Versionsnummer; ihr Update über HACS ist optional
+
+## 0.5.3b7 (Beta)
+- **Tab Löschen:** Der Knopf „Jetzt ausführen“ erklärt im Tooltip, dass er den ganzen Plan des gewählten Umfangs löscht und die Tabellenfilter nur die Anzeige betreffen; ist im Umfang eine einzelne Regel gewählt, steht daneben ein Hinweis (Punkt 161). Der Text „Letzter Lauf …“ neben dem Knopf entfällt (Punkt 162)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.3b6 (Beta)
+- **Behoben (Punkt 160):** Bei eigenen Regeln (E:…) verdrängte die lange Regel-ID im Chip die Vorhaltezeit in den Spalten Kurzzeit/Langzeit. Der Chip zeigt jetzt nur „E“ (volle ID im Tooltip); Chips sind höchstens etwa 8 Zeichen breit
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.3b5 (Beta)
+- **Reiter (Punkt 158):** neue Reihenfolge Entitäten, Events, Statistik ohne Entität, Regeln, Löschen, Löschprotokolle, Prognosen je Regel; „Regeln“ mit gelber Oberkante wie Löschen; „Löschprotokoll“ heißt jetzt „Löschprotokolle“
+- Behoben: In der Überschrift wurden „g“ und „y“ unten abgeschnitten (Punkt 159)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.3b4 (Beta)
+- **Alle Tabellen im Look & Feel des Tabs Entitäten (Punkte 144–151):** Events, Regeln, Prognosen je Regel, Statistik ohne Entität, Löschen, Löschprotokoll (Läufe, Lauf-Details, Monatssumme) haben jetzt farbige Spaltengruppen (Stammdaten/Lauf blau, Vorhaltezeiten/Wirkung/Plan zweites Blau, Istzustand rot, Löschmenge/Gelöscht gelb, Prognose grün), zweizeilige Spaltenköpfe, eine schlanke Summenzeile, Filter in zwei Ebenen, fixierte erste Spalte(n) und einen nach Gruppen geordneten Spaltendialog
+- Kürzere Spaltentitel nach dem Muster „Titel / Zusatz“ (z. B. „States“ statt „davon States“); der CSV-Export übernimmt die neuen Titel
+- Tab Events: Regel-Chip öffnet die Regel
+- Knopf „Analyse starten“ im Stil der Kacheln (rot, Rahmen signalrot), 40 px breiter, unten bündig mit der Unterkante des „g“ der Überschrift und rechts bündig mit den Kacheln (Punkt 156)
+- Reiter: Oberkante in der Farbe ihres Inhalts wie Kacheln und Spaltengruppen (Istzustand rot, Regeln blau, Prognosen grün, Löschen gelb) (Punkt 157)
+- Tab Löschen: Beim Scrollen bleibt der Knopf „Jetzt ausführen“ oben stehen, der Text darüber verschwindet (Punkt 155)
+- Tab Entitäten: Die Ansicht „Attribute“ im Spaltendialog zeigt auch die Kurzzeit (sie gilt für die Attribute) und die Attributzeilen, die mit den States wegfallen (Punkt 154)
+- Zwischen den Knöpfen oben und der Tabelle bleiben immer 8 px Abstand, auch beim Scrollen (Punkte 152/153)
+- Die Zeile mit Anzahl und Bereich über den Tabellen entfällt (die Anzahl steht in der Summenzeile); sie erscheint nur noch für Gerätefilter, Warnungen und die Auswahl „Zeilen“ (Punkt 153)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.3b3 (Beta)
+- **Tab Entitäten:** Summenzeile schlanker – je Spalte nur noch ein Wert, die Gesamtzahl in Klammern nur bei gesetztem Filter, Details im Tooltip (Punkt 139). Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen (Punkt 140). Dezente Trennlinie in der Gruppenfarbe zwischen Kopf und Daten, Kopf etwas kräftiger getönt (Punkt 142)
+- **Regel-Chip:** Ein Klick auf den Chip einer Regel (z. B. „R32“) in Kurzzeit/Langzeit öffnet jetzt die Maske dieser Regel statt der Filtermaske; „Std.“ ist nicht mehr anklickbar; der Chip wird nicht mehr abgeschnitten (Punkt 143)
+- **HA-Standard:** Symbol von Home Assistant (Material Design Icons) im HA-Blau statt Haus-Emoji (Punkt 141)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.3b2 (Beta)
+- **Prüfung der Recorder-Einrichtung (Punkt 133):** Beim Start, bei jeder Änderung der configuration.yaml und vor jeder Analyse prüft die App, ob `auto_purge: false`, `auto_repack: false` und `purge_keep_days` (mindestens 3650 Tage) gesetzt sind und `db_url` – falls vorhanden – auf die SQLite-Datei zeigt. Fehlt etwas, erscheint ein Banner mit Verweis auf die Hilfe. `recorder: !include …` wird mitgelesen
+- **Hilfe:** neue erste FAQ „Erstinbetriebnahme“ mit Beispielen für die configuration.yaml und die beiden Automationen Löschlauf und Verdichten (Punkt 134)
+- **Tab Entitäten (Punkt 132):** jede Spaltengruppe in eigener Farbe (Stammdaten und Vorhaltezeiten blau, Istzustand rot und Löschmenge sofort gelb wie die Kachelzeilen), Gruppennamen größer, Spaltenköpfe zweizeilig (Titel, darunter Zusatz bzw. Einheit). Die Gruppe „Aktuell“ heißt jetzt „Istzustand“. Die Statusspalte heißt „Entitäts-Status“ (Punkt 128)
+- **Tab Entitäten (Punkt 135):** neue Spalte „5-Min (Zeilen)“, neue Ansicht „States & Statistik“ im Spaltendialog; der Dialog ist nach Gruppen geordnet, die Ansichtsknöpfe sind deutlicher und zeigen, welche Ansicht gerade gilt
+- **Tab Entitäten (Punkt 136):** In der Filterzeile stehen Auswahlfelder oben und Textfelder unten, jeweils auf einer Linie
+- **Tab Entitäten (Punkt 137):** Die Auswahlspalte (☐) gehört farblich zum Block Stammdaten
+- **Hilfe (Punkt 138):** In der FAQ sind die Antworten unter jeder Frage eingerückt
+- Behoben: Seit 0.5.3b1 fehlten im Tab Entitäten die Griffe zum Ändern der Spaltenbreite an der richtigen Stelle (die Gruppenzeile war die erste Kopfzeile)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.3b1 (Beta)
+- **Beta-Version, nur auf dem Branch `beta`:** Normale Nutzer sehen sie nicht; die Integration ist als GitHub-Pre-Release vorgesehen
+- **Neue Startregel HA-Standard (Punkt 127):** Regel `HA:standard` bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (10 Tage für States, 5-Min-Statistik, Attribute und Events, Langzeit unbegrenzt). Sie ist bei einer Neuinstallation aktiv, bei bestehenden Installationen wird sie passiv ergänzt. Name, Muster und Werte sind fest; sie lässt sich nicht entfernen, nur passiv schalten. Niedrigster Rang: Jede andere Regel geht vor. Ist sie aktiv, warnt die App vor einem Löschlauf aus dem Tab Löschen, dass sie im HA-Standard läuft
+- **Lauf aus HA nach Mitternacht (Punkt 126):** Stammt die Analyse von einem früheren Kalendertag, analysiert die App vor dem Lauf neu. Bisher überging der Nachtlauf Regeln, die am Vortag schon bereinigt waren, und holte sie erst in der folgenden Nacht nach
+- **Tab Entitäten:** neue Spaltenreihenfolge in vier Gruppen (Stammdaten, Vorhaltezeiten, Aktuell, Löschmenge sofort) mit Gruppenzeile über den Spaltenköpfen (Punkt 130). Die Statusspalte heißt wie im Tab Löschen „Entität“ und hat einen Tooltip (Punkt 128). Klick auf das Label in Kurzzeit/Langzeit öffnet die Filtermaske der Spalte, vorbelegt mit dem angeklickten Wert (Punkt 129)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.2
 - **Regeln verwalten (Punkte 123, 124):** neuer Knopf im Reiter Regeln. Darüber lassen sich die Regeln als JSON exportieren und importieren (mit Prüfung, Vorschau und Rückfrage), auf die Startregeln zurücksetzen und frühere Stände wiederherstellen. Vor jedem Ersetzen sichert die App die bisherigen Regeln; die letzten 10 Sicherungen bleiben. Solange ein Löschlauf läuft, ist das Ersetzen gesperrt
 - **Knopf „Analyse starten“ (Punkt 125):** doppelt so breit wie hoch. Der Stand-Text daneben entfällt; der Stand steht jetzt im Tooltip und in der Rückfrage. Ist eine Analyse veraltet, zeigt ein gelbes Ausrufezeichen am Knopf das an

@@ -114,22 +114,54 @@ def lies_purge_keep_days(config_pfad):
     return lies_recorder(config_pfad)["purge_keep_days"]
 
 
+def _ja(wert):
+    return wert.lower() not in ("false", "no", "off", "0")
+
+
 def lies_recorder(config_pfad):
-    """purge_keep_days und auto_purge aus dem recorder-Block der configuration.yaml (HA-Standard: 10 bzw. an)."""
-    erg = {"purge_keep_days": 10, "auto_purge": True}
+    """Recorder-Einstellungen aus der configuration.yaml; fehlende Einträge = HA-Standard
+    (purge_keep_days 10, auto_purge und auto_repack an, db_url = SQLite home-assistant_v2.db).
+
+    Punkt 133 (0.5.3): zusätzlich auto_repack und db_url, welche Einträge gesetzt sind („gesetzt“), ob ein Block
+    gefunden wurde („block“) und `recorder: !include datei.yaml` (Pfad in „include“, relativ zur configuration.yaml).
+    """
+    erg = {"purge_keep_days": 10, "auto_purge": True, "auto_repack": True, "db_url": None,
+           "gesetzt": [], "block": False, "include": None}
     try:
         with open(config_pfad, encoding="utf-8") as f:
             text = f.read()
     except OSError:
         return erg
-    block = re.search(r"^recorder:\s*\n((?:[ \t]+.*\n|\s*\n)*)", text, re.M)
-    if block:
-        m = re.search(r"^\s+purge_keep_days:\s*(\d+)", block.group(1), re.M)
+    inhalt = None
+    m = re.search(r"^recorder:[ \t]*!include[ \t]+(\S+)[ \t]*$", text, re.M)
+    if m:
+        pfad = os.path.join(os.path.dirname(config_pfad), m.group(1).strip("'\""))
+        erg["include"] = pfad
+        try:
+            with open(pfad, encoding="utf-8") as f:
+                inhalt = re.sub(r"^", "  ", f.read(), flags=re.M) + "\n"   # wie ein eingerückter Block lesen
+        except OSError:
+            return erg
+    else:
+        block = re.search(r"^recorder:[ \t]*(?:#.*)?\n((?:[ \t]+.*\n|\s*\n)*)", text + "\n", re.M)
+        if block:
+            inhalt = block.group(1)
+    if inhalt is None:
+        return erg
+    erg["block"] = True
+    m = re.search(r"^\s+purge_keep_days:\s*(\d+)", inhalt, re.M)
+    if m:
+        erg["purge_keep_days"] = int(m.group(1))
+        erg["gesetzt"].append("purge_keep_days")
+    for k in ("auto_purge", "auto_repack"):
+        m = re.search(rf"^\s+{k}:\s*(\w+)", inhalt, re.M)
         if m:
-            erg["purge_keep_days"] = int(m.group(1))
-        m = re.search(r"^\s+auto_purge:\s*(\w+)", block.group(1), re.M)
-        if m:
-            erg["auto_purge"] = m.group(1).lower() not in ("false", "no", "off", "0")
+            erg[k] = _ja(m.group(1))
+            erg["gesetzt"].append(k)
+    m = re.search(r"^\s+db_url:\s*['\"]?([^'\"\s#]+)", inhalt, re.M)
+    if m:
+        erg["db_url"] = m.group(1)
+        erg["gesetzt"].append("db_url")
     return erg
 
 

@@ -12,6 +12,8 @@
   --kleb-h: 120px; --zeile-hell: #ffffff; --zeile-dunkel: #f2f4f7;
   --reiter: #e3e7ee; --reiter-hover: #d5dbe5; --reiter-rand: #c9d0db;
   --zf-ist: #d98880; --zf-loesch: #d4a72c; --zf-prog: #4fa36a;
+  /* Punkt 132 (0.5.3): Spaltengruppen im Tab Entitäten – zwei Blautöne, dazu Rot/Gelb wie die Kachelzeilen */
+  --zf-stamm: #5fa0d6; --zf-vorh: #6f7fd6;
   /* Punkt 122 (0.5.1): Bedienelemente des Browsers (Checkboxen, Scrollbalken) folgen dem hellen/dunklen Modus
      und den Farben der App, statt im hellen Standardlook (weiß) zu bleiben */
   color-scheme: light dark;
@@ -23,7 +25,8 @@
           --accent: #5b9bff; --accent-weak: #1d2a40; --warn: #e3b341; --warn-bg: #33290f;
           --ok: #3fb950; --bad: #ff6b6b; --chip: #242b35; --zeile-hell: #1f252d; --zeile-dunkel: #161b21;
           --reiter: #232a34; --reiter-hover: #2d3643; --reiter-rand: #3a4452;
-          --zf-ist: #b5615c; --zf-loesch: #b8912a; --zf-prog: #3d8a55; }
+          --zf-ist: #b5615c; --zf-loesch: #b8912a; --zf-prog: #3d8a55;
+          --zf-stamm: #3f80b0; --zf-vorh: #5561b0; }
 }
 * { box-sizing: border-box; }
 /* hidden muss immer gewinnen – sonst heben display-Regeln (z. B. .lauf) es auf (Fehler 0.1.2) */
@@ -34,17 +37,20 @@ a { color: var(--accent); }
 /* Punkt 96 (0.4.6): eine Zeile ohne Umbruch – Überschrift links, Stand und Knopf rechts, alles senkrecht mittig;
    oben und unten gleicher Abstand. Bei schmalen Fenstern wird gekürzt (Überschrift kleiner bzw. „…“, Stand in Kurzform). */
 /* Punkt 98 (0.4.7): unten 10 px mehr Abstand zum Kachelblock; --kopf-h = Höhe der Überschrift (Schrift × 1,2) */
-header { --kopf-h: calc(34px * 1.2); padding: 12px 20px 22px; display: flex; flex-wrap: nowrap; gap: 16px; align-items: center; justify-content: space-between; }
-h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header { --kopf-h: calc(34px * 1.2); padding: 12px 20px 22px; display: flex; flex-wrap: nowrap; gap: 16px; align-items: flex-start; justify-content: space-between; }
+h1 { font-size: 34px; line-height: 1.2; margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-bottom: .15em; margin-bottom: -.15em; }   /* 0.5.3: Platz für die Unterlängen (g, y) – overflow: hidden schnitt sie ab; der Abstand nach unten bleibt gleich */
 .kopf-titel { min-width: 0; display: flex; align-items: center; }
 .kopf-fehler { margin: 0 20px; }   /* nur bei einem Fehler gefüllt; leer ohne Höhe und ohne Abstand */
 .kopf-fehler:not(:empty) { margin-bottom: 10px; }
 /* Punkt 125 (0.5.2): doppelt so breit wie hoch, zweizeilig „Analyse / starten“; mindestens 40 px hoch, damit zwei Zeilen lesbar bleiben */
-#btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h)); height: var(--knopf-h); padding: 2px; flex: none; position: relative;
-  font-size: 12.5px; line-height: 1.15; font-weight: 700; text-align: center;
-  /* Punkt 107: gefüllt im Rot der Kachelzeile „Istzustand“ – bewusst nicht das Gefahr-Rot der Löschknöpfe */
-  background: var(--zf-ist); border-color: var(--zf-ist); color: #fff; }
-#btnAnalyse:hover:not(:disabled), #btnAnalyse:focus-visible { background: color-mix(in srgb, var(--zf-ist) 80%, #000); border-color: color-mix(in srgb, var(--zf-ist) 80%, #000); outline: none; }
+/* Punkt 156 (0.5.3): im Stil der Kacheln (Oberkante in voller Farbe, Fläche getönt), aber kräftiger im Rot der Kachelzeile „Istzustand“;
+   40 px breiter als bisher; oben bündig mit der Überschrift, unten exakt auf der Unterkante des „g“ (--kopf-basis, per Skript gemessen);
+   rechts bündig mit den Kacheln (beide am rechten Seitenrand, 20 px) */
+#btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h) + 40px); height: var(--kopf-basis, var(--knopf-h)); padding: 0 4px; flex: none; position: relative;
+  font-size: 12.5px; line-height: 1.15; font-weight: 700; text-align: center; color: #fff; border-radius: 8px;
+  background: color-mix(in srgb, var(--zf-ist) 62%, var(--panel)); border: 1px solid color-mix(in srgb, var(--bad) 55%, var(--line)); border-top: 3px solid var(--bad); }   /* Rahmen signalrot, wie die Kacheln: oben kräftig, seitlich und unten schmal und gedämpft */
+#btnAnalyse:hover:not(:disabled), #btnAnalyse:focus-visible { background: color-mix(in srgb, var(--zf-ist) 82%, var(--panel)); outline: none; }
 /* Punkt 125: Markierung oben rechts, wenn eine Analyse veraltet ist (Grund im Tooltip) – gelb, damit sie auf dem Rot auffällt */
 #btnAnalyse.alt::after { content: "!"; position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
   background: #f5c400; color: #1d2330; border: 2px solid var(--bg); font-size: 11px; line-height: 16px; font-weight: 800; }
@@ -101,9 +107,20 @@ main { padding: 0 20px 24px; }
 button, select, input, textarea { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
 button { cursor: pointer; }
 button.primaer { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* Punkt 135 (0.5.3): Ansichtsknöpfe im Spaltendialog präsenter; die Ansicht, die genau den Häkchen entspricht, ist gefüllt */
+button.ansicht { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+button.ansicht:hover { background: color-mix(in srgb, var(--accent) 22%, var(--panel)); }
+button.ansicht.an { background: var(--accent); color: #fff; }
+.spgruppe { grid-column: 1 / -1; margin: 8px 0 0; padding: 3px 8px; border-left: 4px solid var(--gf); border-radius: 4px; font-weight: 700;
+  background: color-mix(in srgb, var(--gf) 12%, transparent); color: color-mix(in srgb, var(--gf) 55%, var(--text)); }
+.spgruppe:first-child { margin-top: 0; }
+/* Punkt 133 (0.5.3): Verweis im Banner auf die Hilfe */
+.banner a.hverweis { color: inherit; font-weight: 600; margin-left: 4px; white-space: nowrap; }
 button:disabled { opacity: .5; cursor: default; }
 input[type=number] { width: 72px; }
 .klebend { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-top: 4px; }
+/* 0.5.3 (Punkte 152/153): 8 px deckender Abstand unter den Knöpfen – beim Scrollen wie im Stand */
+.klebend { padding-bottom: 8px; } .klebend > .leiste { margin-bottom: 0; }
 /* Reiter (Punkt 41): eigene Fläche und Rahmen je Tab; der aktive ist mit dem Inhalt verbunden */
 /* Punkt 80 (0.4.4): kein senkrechter Scrollbalken – overflow-y: hidden. Die Grundlinie ist ein innerer Schatten statt eines Rahmens,
    damit nichts über die Leiste hinausragt; der aktive Reiter deckt sie mit seinem unteren Rand in Flächenfarbe ab. */
@@ -126,15 +143,24 @@ input[type=number] { width: 72px; }
 .hilfe th, .hilfe td { white-space: normal; vertical-align: top; border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; }
 .hilfe th { font-size: 12.5px; }
 .hilfe code { font-family: var(--mono); font-size: 12.5px; background: var(--chip); padding: 0 4px; border-radius: 4px; overflow-wrap: anywhere; }
+/* Punkt 138 (0.5.3): in der FAQ die Antworten unter jeder Frage eingerückt, damit sich die Fragenblöcke abheben */
+#h-fragen > :not(summary):not(h3) { margin-left: 22px; }
+#h-fragen > ul { padding-left: 20px; }
+/* Punkt 134 (0.5.3): YAML-Beispiele in der FAQ Erstinbetriebnahme */
+.hilfe pre { font-family: var(--mono); font-size: 12.5px; background: var(--chip); padding: 8px 10px; border-radius: 6px; overflow-x: auto; margin: 4px 0 10px; }
 /* Verweise innerhalb der Hilfe; Sprungziel kurz hervorheben, nicht unter der Kopfzeile verschwinden */
 .hilfe a.hverweis { color: var(--accent); text-decoration: underline dotted; }
 .hilfe [id^="h-"] { scroll-margin-top: 12px; }
 .hilfe .hziel { animation: hziel 2s ease-out; border-radius: 4px; }
 @keyframes hziel { from { background: var(--accent-weak); } to { background: transparent; } }
 .hilfe-rang { font-weight: 700; font-size: 15px; padding: 6px 10px; background: var(--accent-weak); color: var(--accent); border-radius: 8px; display: inline-block; }
-/* „Löschen“ und „Löschprotokoll“ hebt eine rote Linie ab: die einzigen Bereiche, die mit dem Löschen zu tun haben */
-.tabs button.gefahr-reiter { border-top-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-.tabs button.gefahr-reiter.an { color: var(--bad); border-top-color: var(--bad); }
+/* bis 0.5.3b3: „Löschen“ und „Löschprotokoll“ mit roter Linie; seit Punkt 157/158 Farbe je Inhalt (siehe .tabs button.rf-…) */
+/* Punkt 157 (0.5.3, Variante C): Oberkante der Reiter in der Farbe ihres Inhalts wie Kacheln und Spaltengruppen –
+   Istzustand rot, Vorhaltezeiten blau, Prognose grün, Löschmenge gelb; aktiv volle Farbe und farbige Schrift; Hilfe bleibt neutral */
+.tabs button.rf-ist { --rf: var(--zf-ist); } .tabs button.rf-vorh { --rf: var(--zf-vorh); }
+.tabs button.rf-prog { --rf: var(--zf-prog); } .tabs button.rf-loesch { --rf: var(--zf-loesch); }
+.tabs button[class*="rf-"] { border-top-color: color-mix(in srgb, var(--rf) 75%, var(--reiter)); }
+.tabs button.an[class*="rf-"] { color: color-mix(in srgb, var(--rf) 70%, var(--text)); border-top-color: var(--rf); }
 /* Eigener Scrollbereich bis zur Fensterhöhe: darin bleibt der Tabellenkopf stehen */
 .tabelle { overflow: auto; max-height: calc(100vh - var(--kleb-h) - 56px); min-height: 240px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 table { border-collapse: separate; border-spacing: 0; width: 100%; }
@@ -146,6 +172,9 @@ th[data-sort]:hover { color: var(--text); }
 dialog.breit { width: min(1100px, 96vw); }
 .trefferzeile select { padding: 1px 4px; }
 tr.filterzeile th { padding: 4px 6px; font-weight: 400; }
+/* Punkt 136 (0.5.3): Auswahlfelder oben, Freitextfelder unten – auf einer Linie mit den beiden Feldern von „Gerät / Herkunft“ */
+tr.filterzeile th.fz-auswahl { vertical-align: top; }
+tr.filterzeile th.fz-text { vertical-align: bottom; }
 tr.filterzeile input, tr.filterzeile select { width: 100%; min-width: 70px; padding: 3px 6px; font-size: 12.5px; }
 tr.filterzeile input.ungueltig, tr.filterzeile select.ungueltig { border-color: var(--bad); color: var(--bad); }
 tr.filterzeile .gesetzt { border-color: var(--accent); }
@@ -158,6 +187,43 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .griff { position: absolute; top: 0; right: 0; bottom: 0; width: 8px; cursor: col-resize; touch-action: none; }
 .griff::after { content: ""; position: absolute; top: 25%; bottom: 25%; right: 3px; width: 2px; border-radius: 1px; background: var(--line); }
 .griff:hover::after, .griff.aktiv::after { background: var(--accent); top: 0; bottom: 0; }
+/* Punkt 130 (0.5.3): Gruppenzeile über den Spaltenköpfen – je Gruppe eine Klammer über ihren Spalten */
+/* Punkt 132 (0.5.3): jede Gruppe in eigener Farbe (wie die Kachelzeilen: Oberkante voll, Fläche getönt), Name größer als die Spaltentitel;
+   die Tönung zieht sich schwächer durch Titel-, Filter- und Summenzeile und ganz schwach durch die Datenzeilen; Trennlinie am Gruppenwechsel */
+.gr-stamm { --gf: var(--zf-stamm); } .gr-vorh { --gf: var(--zf-vorh); } .gr-ist { --gf: var(--zf-ist); } .gr-loesch { --gf: var(--zf-loesch); }
+/* Punkte 144–151 (0.5.3): Prognose grün wie die Kachelzeile; Spalten ohne Gruppe neutral */
+.gr-prog { --gf: var(--zf-prog); } .gr-neutral { --gf: var(--reiter-rand); }
+tr.gruppenzeile th.gruppe { text-align: center; font-size: 16px; font-weight: 700; padding: 5px 9px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--gf) 55%, var(--text)); background: color-mix(in srgb, var(--gf) 22%, var(--panel)); border-top: 3px solid var(--gf); }   /* Punkt 142: 16 → 22 % */
+tr.gruppenzeile th.gruppe-leer { border-top: 3px solid transparent; }
+table.gruppiert thead tr:not(.gruppenzeile) th.gr { background: color-mix(in srgb, var(--gf) 12%, var(--panel)); }   /* Punkt 142: 7 → 12 % */
+.tabelle tbody tr:nth-child(odd) td.gr { background: color-mix(in srgb, var(--gf) 4%, var(--zeile-hell)); }
+.tabelle tbody tr:nth-child(even) td.gr { background: color-mix(in srgb, var(--gf) 4%, var(--zeile-dunkel)); }
+.tabelle tbody tr.klick:hover td.gr { background: var(--accent-weak); }
+/* Punkt 140 (0.5.3): Auswahl und Entität links fixiert (Breite der Auswahlspalte fest 40 px); Schattenkante, solange nach rechts gescrollt ist */
+table.gruppiert thead tr.gruppenzeile th.fix, table.gruppiert .fix { position: sticky; z-index: 1; }
+table.gruppiert thead .fix { z-index: 3; }
+#tEnt .fix0 { left: 0; } #tEnt .fix1 { left: 40px; }
+#tEnt thead tr.gruppenzeile th.fix0 { left: 0; }
+.tabelle.nach-rechts #tEnt .fix1, .tabelle.nach-rechts #tEnt th.gname-links { box-shadow: 6px 0 6px -4px rgba(0, 0, 0, .45); }
+#tEnt th.gname-links { text-align: left; padding-left: 52px; }
+/* Punkte 144–151: fixierte Spalten im gemeinsamen Baustein – Abstand links aus den Spaltenbreiten (--fx0 …), Schatten an der letzten */
+table.gruppiert th.gname-links { text-align: left; }
+table.gruppiert .fx0 { left: var(--fx0, 0); } table.gruppiert .fx1 { left: var(--fx1, 0); } table.gruppiert .fx2 { left: var(--fx2, 0); }
+table.gruppiert .fx3 { left: var(--fx3, 0); } table.gruppiert .fx4 { left: var(--fx4, 0); }
+.tabelle.nach-rechts table.gruppiert .fixletzt { box-shadow: 6px 0 6px -4px rgba(0, 0, 0, .45); }
+/* Punkt 142 (0.5.3): kräftige Trennlinie in der Gruppenfarbe zwischen Kopf und Daten, Schatten, solange Daten unter dem Kopf durchlaufen */
+table.gruppiert thead tr.summenzeile th.gr { border-bottom: 1px solid color-mix(in srgb, var(--gf) 60%, var(--panel)); }   /* 1 px, abgedimmt */
+.tabelle.nach-unten table.gruppiert thead tr.summenzeile th { box-shadow: 0 6px 6px -4px rgba(0, 0, 0, .45); }
+table.gruppiert th.gstart, table.gruppiert td.gstart { border-left: 1px solid color-mix(in srgb, var(--gf) 60%, var(--line)); }
+/* Punkt 143 (0.5.3): Regel-Chip öffnet die Regel; Wert kürzen statt Chip abschneiden */
+/* Punkt 141 (0.5.3): HA-Symbol in Schrifthöhe, im HA-Blau */
+.ha-icon { width: 1.15em; height: 1.15em; vertical-align: -0.2em; fill: #18bcf2; flex: none; }
+.chip.rklick { cursor: pointer; }
+.chip.rklick:hover { background: var(--accent); color: #fff; }
+.wzelle { display: flex; align-items: center; min-width: 0; }
+.wzelle .wtext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.wzelle .chip { flex: none; max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* Punkt 160 */
 tr.summenzeile th { font-weight: 400; padding: 3px 9px 5px; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
 tr.summenzeile th b { font-weight: 600; }
 tr.summenzeile th .ges { display: block; color: var(--muted); font-size: 11px; }
@@ -223,14 +289,20 @@ textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: 1
 @media (prefers-reduced-motion: reduce) { .spinner, .balken.offen > i { animation: none; } }
 /* 0.1.5: gemeinsamer Tabellen-Baustein für alle Tabellen */
 table.baustein { table-layout: fixed; width: auto; }
-table.baustein td, table.baustein thead tr:first-child th { overflow: hidden; text-overflow: ellipsis; }
-table.baustein thead tr:first-child th { position: relative; padding-right: 14px; }
+/* 0.5.3: Titelzeile auch per Klasse titelzeile – im Tab Entitäten ist die erste Kopfzeile seit Punkt 130 die Gruppenzeile */
+table.baustein td, table.baustein thead tr:first-child th, table.baustein thead tr.titelzeile th { overflow: hidden; text-overflow: ellipsis; }
+table.baustein thead tr:first-child th, table.baustein thead tr.titelzeile th { position: relative; padding-right: 14px; }
 /* Punkt 78 (0.4.4): lange Spaltenköpfe umbrechen statt abschneiden (gilt für alle Tabellen); der volle Text steht weiter im Tooltip */
 /* Punkt 92 (0.4.5): Titel prominent (Textfarbe, fett, größer); ein Klammerteil bleibt klein und grau und rutscht als Ganzes in die nächste Zeile */
 /* Punkt 94 (0.4.6): 14,5 px, Titelzeile oben ausgerichtet */
 .tk { font-size: 14.5px; color: var(--text); font-weight: 700; }
 .tz { display: inline-block; }
-table.baustein thead tr:first-child th { white-space: normal; overflow-wrap: break-word; hyphens: auto; line-height: 1.25; vertical-align: top; }
+table.baustein thead tr:first-child th, table.baustein thead tr.titelzeile th { white-space: normal; overflow-wrap: break-word; hyphens: auto; line-height: 1.25; vertical-align: top; }
+/* Punkt 132 (0.5.3): Spaltenköpfe im Tab Entitäten mit zwei festen Zeilen – oben der Titel, darunter Zusatz bzw. Einheit (klein, grau); je Zeile „…“ statt Umbruch */
+table.gruppiert thead tr.gruppenzeile th { position: static; padding-right: 9px; }
+table.gruppiert thead tr.titelzeile th { white-space: nowrap; }
+.kz1, .kz2 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kz2 { font-size: 11.5px; font-weight: 400; color: var(--muted); min-height: 1.25em; }
 table.baustein thead th[data-sort] { cursor: pointer; }
 .schalter { min-width: 64px; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
 .schalter.an { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
@@ -240,6 +312,11 @@ td.mitte, th.mitte { text-align: center; padding-left: 4px; padding-right: 4px; 
 input[type=checkbox].wahl { width: 16px; height: 16px; margin: 0; cursor: pointer; }
 .loeschkasten { display: grid; gap: 8px; margin-bottom: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 .loeschkasten .sperre { color: var(--warn); }
+/* Punkt 155 (0.5.3): Kasten im Tab Löschen klebt unter dem Kopfbereich – oben verschwindet der Text, die Knopfzeile bleibt ganz sichtbar */
+#lKasten { position: sticky; top: calc(var(--kleb-h) - var(--lk-ueber, 0px)); z-index: 4; }
+#tab-loeschen .tabelle { max-height: calc(100vh - var(--kleb-h) - var(--lk-sicht, 0px) - 56px); }
+/* die Seite muss weit genug scrollen können, damit der Kasten oben „einrastet“ */
+#tab-loeschen { min-height: calc(100vh + var(--lk-ueber, 0px) - var(--kleb-h) - 24px); }   /* 24 px = Polster unten von main */
 button.gefahr { background: var(--bad); border-color: var(--bad); color: #fff; }
 button.gefahr:disabled { opacity: .45; }
 #frageText { white-space: pre-line; max-height: 60vh; overflow: auto; overflow-x: hidden; overflow-wrap: anywhere; }   /* Punkt 105 */
@@ -248,6 +325,11 @@ button.gefahr:disabled { opacity: .45; }
 .laeufe-titel { margin: 18px 0 6px; font-size: 14px; }
 .stufeb { font-size: 11px; color: var(--warn); margin-top: 3px; }
 @media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } header { --kopf-h: calc(20px * 1.2); } h1 { font-size: 20px; } .kopf-fehler { margin-left: 16px; margin-right: 16px; } .banner { margin: 0 16px 8px; } .lauf { margin: 0 16px 12px; } }
+/* 0.5.3 (Punkte 140, 144–151): fixierte Zellen sticky – auch gegen „position: relative“ der Titelzeile (Griffe) und der ersten Kopfzeile */
+table.gruppiert thead tr th.fix.fix, table.gruppiert tbody tr td.fix.fix { position: sticky; }
+table.gruppiert thead tr.gruppenzeile th.gruppe.gruppe { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Name der ersten Gruppe über dem fixierten Teil darf in den nicht fixierten Rest ragen (z. B. nur „Regel“ fixiert) */
+table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: visible; text-overflow: clip; }
 </style>
 </head>
 <body>
@@ -268,13 +350,14 @@ button.gefahr:disabled { opacity: .45; }
   </div>
   <div class="klebend" id="klebend">
     <nav class="tabs" id="tabs">
-      <button data-tab="ent" class="an">Entitäten</button>
-      <button data-tab="events">Events</button>
-      <button data-tab="regeln">Regeln</button>
-      <button data-tab="probe">Prognosen je Regel</button>
-      <button data-tab="lts">Statistik ohne Entität</button>
-      <button data-tab="loeschen" class="gefahr-reiter">Löschen</button>
-      <button data-tab="protokoll" class="gefahr-reiter">Löschprotokoll</button>
+      <!-- Punkt 158 (0.5.3): Reihenfolge Istzustand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
+      <button data-tab="ent" class="an rf-ist">Entitäten</button>
+      <button data-tab="events" class="rf-ist">Events</button>
+      <button data-tab="lts" class="rf-ist">Statistik ohne Entität</button>
+      <button data-tab="regeln" class="rf-loesch">Regeln</button>
+      <button data-tab="loeschen" class="rf-loesch">Löschen</button>
+      <button data-tab="protokoll" class="rf-loesch">Löschprotokolle</button>
+      <button data-tab="probe" class="rf-prog">Prognosen je Regel</button>
       <button data-tab="hilfe" class="rechts" title="Einstieg, Begriffe, Regel-Rangfolge, FAQ">Hilfe</button>
     </nav>
     <div class="leiste" data-leiste="ent">
@@ -344,7 +427,7 @@ button.gefahr:disabled { opacity: .45; }
   </div>
   <section id="tab-ent">
     <div class="trefferzeile" id="trefferzeile"></div>
-    <div class="tabelle"><table id="tEnt" class="baustein"><colgroup id="tEntSpalten"></colgroup><thead id="tEntKopf"></thead><tbody id="tEntRumpf"></tbody></table></div>
+    <div class="tabelle"><table id="tEnt" class="baustein gruppiert"><colgroup id="tEntSpalten"></colgroup><thead id="tEntKopf"></thead><tbody id="tEntRumpf"></tbody></table></div>
     <div class="blaettern"><button id="zurueck">‹</button><span id="seite"></span><button id="weiter">›</button><span id="aufbau" class="sub"></span></div>
   </section>
   <section id="tab-events" hidden>
@@ -370,10 +453,11 @@ button.gefahr:disabled { opacity: .45; }
       </details>
 
       <details open id="h-start"><summary>2. Erste Schritte</summary>
+        <p>Neu hier? Zuerst Home Assistant und die App einrichten: <a class="hverweis" href="#h-faq-erstinbetrieb">FAQ: Erstinbetriebnahme</a>.</p>
         <ol>
           <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 4–10 min). Nachts läuft die Analyse automatisch. Ist eine Analyse veraltet (älter als 26 h bzw. die Attribut-Analyse älter als 7 Tage), trägt der Knopf ein gelbes Ausrufezeichen; sein Tooltip zeigt den Stand beider Analysen.</li>
           <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird).</li>
-          <li><b>Tab Entitäten:</b> nach „/24 h“ sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
+          <li><b>Tab Entitäten:</b> nach „Zuwachs“ (Zeilen / 24 h) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
           <li><b>Regel anlegen</b> (Tab Regeln → „Neue Regel“) und zunächst <b>passiv</b> lassen. Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert.</li>
           <li>Passt die Wirkung, die Regel <b>aktiv</b> schalten.</li>
           <li><b>Tab Löschen:</b> Plan ansehen und „Jetzt ausführen“. Voraussetzung ist der Hauptschalter „Löschen freigegeben“ in der App-Konfiguration.</li>
@@ -423,17 +507,19 @@ button.gefahr:disabled { opacity: .45; }
             <tr><td><b>klasse</b></td><td><code>domain|device_class</code></td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
             <tr><td><b>verwaist</b></td><td><code>alle</code>, <code>geloescht</code>, <code>ohne_spur</code> oder Platzhalter</td><td>nur verwaiste</td><td><code>*</code></td></tr>
             <tr><td><b>event</b></td><td>Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
+            <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>fest <code>*</code></td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage, Langzeit unbegrenzt</td></tr>
           </tbody>
         </table>
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
         <p>Treffen mehrere aktive Regeln dieselbe Entität, gewinnt je Wert (Kurzzeit und Langzeit getrennt) die mit dem höchsten Rang:</p>
-        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › verwaist</p>
+        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › verwaist › HA-Standard</p>
         <p>Innerhalb desselben Typs gewinnt die Regel, die <b>weiter oben in der Liste</b> steht. Die Reihenfolge änderst du im Tab Regeln mit den Pfeilen.</p>
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
           <li><b>Platzhalter nur bei glob (und schutz):</b> Bei entity wird <code>*</code> wörtlich genommen; die Regel trifft dann nichts. Die App warnt beim Speichern.</li>
-          <li><b>Zähler-Schutz:</b> glob- und klasse-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln.</li>
+          <li><b>Zähler-Schutz:</b> glob- und klasse-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
+          <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>, ab 0.5.3):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<code>purge_keep_days: 10</code>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen und nicht ändern, nur passiv schalten. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
           <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob die Regel irgendwo überstimmt wird. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
         </ul>
         <h3 id="h-passiv">Aktiv und passiv</h3>
@@ -446,13 +532,13 @@ button.gefahr:disabled { opacity: .45; }
         <table>
           <thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
           <tbody>
-            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen.</td></tr>
+            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort; ab 0.5.3), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
-            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
-            <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt</td></tr>
+            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“; der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
-            <tr><td><b>Löschprotokoll</b></td><td>alle Läufe mit Einzelheiten (auch die Pause wegen eines Backups) und die Monatssumme je Entität</td></tr>
+            <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Einzelheiten (auch die Pause wegen eines Backups) und die Monatssumme je Entität</td></tr>
+            <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
             <tr><td><b>Hilfe</b></td><td>diese Seite</td></tr>
           </tbody>
         </table>
@@ -482,6 +568,76 @@ button.gefahr:disabled { opacity: .45; }
       </details>
 
       <details id="h-fragen"><summary>9. FAQ</summary>
+        <!-- Punkt 134 (0.5.3): erste FAQ – Ziel des Warnbanners „Recorder nicht für die App eingerichtet“ (Punkt 133) -->
+        <h3 id="h-faq-erstinbetrieb">Wie richte ich die App beim ersten Mal ein? (Erstinbetriebnahme)</h3>
+        <p>Drei Schritte. Schritt 1 und 2 sind Pflicht, Schritt 3 nur, wenn Löschen und Verdichten automatisch laufen sollen.</p>
+        <p><b>1. Home Assistant vorbereiten (<code>configuration.yaml</code>)</b><br>
+          Ohne diese Einträge löscht HA selbst alle Daten nach 10 Tagen, deine Regeln kämen nie zum Zug. Ergänze den Abschnitt <code>recorder:</code> (oder passe ihn an):</p>
+<pre>recorder:
+  purge_keep_days: 7300   # 20 Jahre – so lange bleibt alles, wofür keine Regel gilt
+  auto_purge: false       # HA löscht nicht mehr selbst, das übernimmt die App
+  auto_repack: false      # HA verdichtet nicht mehr selbst, das übernimmt die Automation in Schritt 3</pre>
+        <p>Dann unter Entwicklerwerkzeuge → YAML „Konfiguration prüfen“ und HA neu starten. Die App erwartet mindestens 3650 Tage (10 Jahre); fehlt etwas, zeigt sie oben einen gelben Hinweis.</p>
+        <p><b>2. Die App einstellen</b><br>Einstellungen → Apps → RS DB Hygiene Manager → Konfiguration:</p>
+        <ul>
+          <li><b>Löschen freigegeben (Hauptschalter):</b> einschalten, sobald du wirklich löschen willst. Solange er aus ist, löscht die App nichts.</li>
+          <li><b>Automatik freigegeben:</b> nur einschalten, wenn Löschläufe aus HA starten sollen (Schritt 3).</li>
+          <li><b>Uhrzeit der nächtlichen Analyse:</b> vor den Löschlauf legen, z. B. 02:15 bei einem Löschlauf um 03:00.</li>
+          <li>Alles andere kann so bleiben.</li>
+        </ul>
+        <p>Speichern, App neu starten. Danach weiter mit den <a class="hverweis" href="#h-start">Ersten Schritten</a>: Analyse, Regeln anlegen, Löschplan ansehen.</p>
+        <p><b>3. Optional: automatisch löschen und verdichten</b><br>Wer nur von Hand im Reiter Löschen arbeitet, braucht diesen Schritt nicht.</p>
+        <p><i>a) Integration installieren:</i> HACS → ⋮ → Benutzerdefinierte Repositories → <code>https://github.com/Raketenschnecke/rs-db-hygiene-manager</code>, Typ „Integration“.
+          „RS DB Hygiene“ herunterladen und HA neu starten. HA findet die App selbst: Einstellungen → Geräte &amp; Dienste → „Entdeckt“ → Hinzufügen.</p>
+        <p><i>b) Automation „Löschlauf“</i> – startet jede Nacht um 03:00 einen Löschlauf und meldet das Ergebnis:</p>
+<pre>alias: RS DB Hygiene – Löschlauf
+mode: single
+triggers:
+  - trigger: time
+    at: "03:00:00"
+actions:
+  - if:
+      - condition: state
+        entity_id: sensor.rs_db_hygiene_status
+        state: bereit
+      - condition: numeric_state
+        entity_id: sensor.rs_db_hygiene_geplante_zeilen
+        above: 0
+    then:
+      - action: rs_db_hygiene.loeschlauf_starten
+      - wait_for_trigger:
+          - trigger: event
+            event_type: rs_db_hygiene_lauf_beendet
+        timeout: "03:00:00"
+        continue_on_timeout: true
+      - action: persistent_notification.create
+        data:
+          title: RS DB Hygiene – Löschlauf
+          message: &gt;-
+            {% if wait.trigger %}Löschlauf {{ wait.trigger.event.data.status }}:
+            {{ wait.trigger.event.data.geloescht }} Zeilen,
+            {{ wait.trigger.event.data.attributzeilen or 0 }} Attributzeilen,
+            {{ wait.trigger.event.data.dauer_s }} s.{% else %}Löschlauf nach 3 h nicht beendet.{% endif %}
+    else:
+      - action: persistent_notification.create
+        data:
+          title: RS DB Hygiene – Löschlauf
+          message: "Kein Löschlauf: Status {{ states('sensor.rs_db_hygiene_status') }}"</pre>
+        <p><i>c) Automation „Verdichten“</i> – Löschen allein macht die Datei nicht kleiner (siehe <a class="hverweis" href="#h-faq-repack">FAQ: Warum wird die Datei nach dem Löschen nicht kleiner?</a>). Diese Automation verdichtet sonntags 10 Minuten nach dem Löschlauf:</p>
+<pre>alias: RS DB Hygiene – Verdichten
+mode: single
+triggers:
+  - trigger: event
+    event_type: rs_db_hygiene_lauf_beendet
+conditions:
+  - condition: time
+    weekday: sun
+actions:
+  - delay: "00:10:00"
+  - action: recorder.purge
+    data:
+      keep_days: 7300   # immer derselbe Wert wie purge_keep_days, sonst löscht HA hier Daten!
+      repack: true</pre>
         <h3 id="h-faq-repack">Warum wird die Datei nach dem Löschen nicht kleiner?</h3>
         <p>SQLite gibt freien Platz erst bei einem <b>Repack</b> (<code>recorder.purge</code> mit <code>repack: true</code>) an das Dateisystem zurück. Bis dahin wird der freie Platz für neue Daten wiederverwendet.
           Das Komprimieren der HA-SQLite-DB muss der Anwender selbst in HA einrichten (z. B. per Automation).</p>
@@ -495,7 +651,7 @@ button.gefahr:disabled { opacity: .45; }
         <h3 id="h-faq-menge">Warum ist die Löschmenge 0, obwohl die Regel greift?</h3>
         <p>Die Daten sind noch nicht alt genug: jünger als die Vorhaltezeit, bei „keine“ von heute (siehe <a class="hverweis" href="#h-werte">Werte einer Vorhaltezeit</a>).</p>
         <h3 id="h-faq-passiv">Warum steht in der Löschtabelle nie „passiv“?</h3>
-        <p>Passive Regeln wirken nicht und kommen deshalb gar nicht erst in den Löschplan. Die Spalte „Entität“ im Reiter Löschen zeigt nicht den Zustand der Regel, sondern den der <b>Entität</b> in HA:</p>
+        <p>Passive Regeln wirken nicht und kommen deshalb gar nicht erst in den Löschplan. Die Spalte „Entitäts-Status“ im Reiter Löschen zeigt nicht den Zustand der Regel, sondern den der <b>Entität</b> in HA:</p>
         <ul>
           <li><b>aktiv:</b> die Entität gibt es in HA;</li>
           <li><b>verwaist:</b> sie hat noch Daten in der DB, existiert in HA aber nicht mehr;</li>
@@ -512,7 +668,7 @@ button.gefahr:disabled { opacity: .45; }
           <li>Die App erkennt das nach spätestens etwa einer Minute. Sie schreibt „Backup läuft … es wird gewartet“ ins App-Log, die GUI zeigt „wartet auf Backup seit …“. Die Wartezeit zählt nicht als Stillstand.</li>
           <li>Nach dem Backup geht der Lauf von selbst weiter; im Log steht „Backup beendet nach …, es wird weiter gelöscht“. Gewartet wird höchstens 2 Stunden.</li>
           <li>Das Backup bleibt in Ordnung. Ein neuer Lauf startet erst, wenn das Backup fertig ist.</li>
-          <li>Im Löschprotokoll steht in der Spalte „davon Backup-Pause“, wie lange der Lauf gewartet hat.</li>
+          <li>Im Reiter Löschprotokolle steht in der Spalte „Backup-Pause“, wie lange der Lauf gewartet hat.</li>
         </ul>
         <h3 id="h-faq-global">Was bedeutet „global“ genau?</h3>
         <p><code>purge_keep_days</code> aus der <code>configuration.yaml</code> (derzeit <span data-live="pkd">–</span>). Ändert sich der Wert dort, übernimmt HA ihn erst nach einem Neustart. Siehe auch <a class="hverweis" href="#h-werte">Werte einer Vorhaltezeit</a>.</p>
@@ -615,8 +771,18 @@ const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min, Attribute)", attribute: "Att
 const EV_NAME = "Vorhaltezeit (Events)";
 // Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / verwaist / verwaist_geloescht)
 const STATUS_TEXT = { aktiv: "aktiv", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
+// Punkt 128 (0.5.3): Spalte mit dem Zustand der Entität – in den Tabs Entitäten und Löschen gleich beschriftet
+// Punkt 141 (0.5.3): Symbol „home-assistant“ aus Material Design Icons (Pictogrammers, @mdi/svg 7.4.47, Pictogrammers Free License /
+// Apache 2.0) statt Haus-Emoji – das HA-Logo selbst ist eine geschützte Marke. Farbe: HA-Blau (CSS .ha-icon)
+const HA_ICON = `<svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg>`;
+const STATUS_TITEL = "Entitäts-Status";   // 0.5.3: eindeutig neben der Spalte „Entität“ (entity_id)
+const STATUS_HILFE = "Zustand der Entität in HA (aktiv / verwaist / verwaist (gelöscht)), nicht der Regel";
 const SONDER = { kurzzeit: ["global", "keine"], attribute: ["wie_kurzzeit", "keine"], langzeit: ["unbegrenzt", "keine"] };
 const REGELTYPEN = ["entity", "glob", "klasse", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111)
+// Punkt 127 (0.5.3): Regel HA-Standard – feste ID, nur aktiv/passiv, nicht löschbar, im Regel-Dialog nicht wählbar
+const HA_STD = "HA:standard";
+const TYPEN_TABELLE = [...REGELTYPEN, "ha_standard"];
+const haStandardAktiv = () => !!S.regeln?.regeln?.some(r => r.id === HA_STD && r.aktiv);
 const HILFE_LOESCH = "Was ein scharfer Lauf sofort löschen würde – auf den Daten, die jetzt in der DB liegen (Bestand). Bei Regeln, die länger als das heutige purge_keep_days aufbewahren, steht 0. Gegenstück: Ersparnis (Dauerbetrieb).";
 const HILFE_ERSPARNIS = "Wie viel kleiner die DB auf Dauer durch diese Regel bleibt, verglichen mit „ohne Regeln“ – Hochrechnung aus der Schreibrate über den Prognosezeitraum (Zufluss). Kann groß sein, auch wenn die Löschmenge sofort 0 ist (z. B. R21). Gegenstück: Löschmenge sofort.";
 const SNAME = { global: "global", wie_kurzzeit: "wie Kurzzeit", unbegrenzt: "unbegrenzt", keine: "keine" };
@@ -662,6 +828,25 @@ function par() {
 
 // Höhe der klebenden Leiste für den Scrollbereich der Tabellen
 new ResizeObserver(() => document.documentElement.style.setProperty("--kleb-h", $("#klebend").offsetHeight + "px")).observe($("#klebend"));
+// Punkt 156 (0.5.3): Unterkante des Knopfs „Analyse starten“ auf die Unterkante des „g“ der Überschrift – Abstand Oberkante → Grundlinie + Unterlänge
+{ const h1 = $("h1"), miss = () => {
+    const m = document.createElement("span"); m.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
+    h1.appendChild(m); let basis = m.getBoundingClientRect().top - h1.getBoundingClientRect().top; m.remove();
+    // bis zur Unterkante des „g“ (Unterlänge der Schrift), nicht nur bis zur Grundlinie
+    const cs = getComputedStyle(h1), ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    basis += ctx.measureText("g").actualBoundingBoxDescent || 0;
+    if (basis > 0) document.documentElement.style.setProperty("--kopf-basis", Math.round(basis) + "px");
+  };
+  new ResizeObserver(miss).observe(h1); document.fonts?.ready.then(miss); }
+// Punkt 155 (0.5.3): Tab Löschen – der Kasten bleibt beim Scrollen so stehen, dass nur seine letzte Zeile (Knopf „Jetzt ausführen“) sichtbar ist
+new ResizeObserver(() => {
+  const k = $("#lKasten"), z = k.lastElementChild; if (!z || k.offsetParent === null) return;
+  // sichtbar bleiben: Knopfzeile, 8 px Lücke darüber (Zeilenabstand im Kasten), 10 px Polster und 1 px Rand darunter
+  const ueber = Math.max(0, k.offsetHeight - z.offsetHeight - 8 - 10 - 1);
+  document.documentElement.style.setProperty("--lk-ueber", ueber + "px");
+  document.documentElement.style.setProperty("--lk-sicht", (k.offsetHeight - ueber) + "px");
+}).observe($("#lKasten"));
 
 // ================================================ Bausteine für alle Tabellen
 // ---- Spaltenbreiten: Griff ziehen, Doppelklick = Standard, je Tabelle im Browser gemerkt
@@ -778,6 +963,16 @@ class LokaleTabelle {
     }
     this.el = $(o.id); this.treffer = $(o.treffer);
     this.z = ziehbar(this.el, o.schluessel, () => Object.fromEntries(o.spalten.map(s => [s.k, s.breite])));
+    // Punkte 144–151 (0.5.3): Look & Feel des Tabs Entitäten – Gruppen [Name, Farbe, [Spalten]] und fixierte Spalten (fix: [Spalten])
+    this.gruppeVon = {};
+    for (const [name, farbe, ks] of o.gruppen || []) for (const k of ks) this.gruppeVon[k] = { name, farbe };
+    if (o.gruppen) {
+      this.el.classList.add("gruppiert");
+      const setze = this.z.setze;
+      this.z.setze = () => { setze(); this.setzeFix(); };   // nach jedem Ziehen die Abstände der fixierten Spalten neu
+      const box = this.el.closest(".tabelle");
+      if (box) box.addEventListener("scroll", () => { box.classList.toggle("nach-rechts", box.scrollLeft > 0); box.classList.toggle("nach-unten", box.scrollTop > 0); }, { passive: true });
+    }
     // Spaltenauswahl (Punkt 23): je Tabelle im Browser gemerkt; Spalten mit fest:1 sind immer sichtbar
     this.sichtbar = ladeSichtbar(o.schluessel + "_spalten", o.spalten.map(s => s.k));
     this.el.addEventListener("input", ev => {
@@ -805,27 +1000,62 @@ class LokaleTabelle {
   daten(zeilen) { this.zeilen = zeilen || []; this.baueKopf(); this.zeige(); }
   spaltenWahl(titel) {
     const alle = this.spalten.map(s => s.k);
-    spaltenDialog(titel, this.spalten.map(s => ({ k: s.k, titel: s.titel, fest: !!s.fest })), this.sichtbar,
+    spaltenDialog(titel, this.spalten.map(s => ({ k: s.k, titel: s.titel, fest: !!s.fest,
+      ...(this.gruppen ? { gruppe: this.gruppeVon[s.k]?.name || "weitere", gid: this.gruppeVon[s.k]?.farbe || "neutral" } : {}) })), this.sichtbar,
       { Standard: this.standardSpalten || alle, Alle: alle }, neu => {
         this.sichtbar = neu; speicher.schreib(this.schluessel + "_spalten", JSON.stringify([...neu]));
         this.baueKopf(); this.zeige();
       });
   }
+  // Punkte 144–151: Klassen je sichtbarer Spalte – Gruppenfarbe, Trennlinie am Gruppenwechsel, fixiert (fx0 …, Schatten an der letzten)
+  klassen(sp) {
+    if (!this.gruppen) return sp.map(() => "");
+    const fixe = [];
+    for (const s of sp) { if ((this.fix || []).includes(s.k)) fixe.push(s.k); else break; }
+    this.fixe = fixe;
+    const g = s => this.gruppeVon[s.k] || { name: "", farbe: "neutral" };
+    return sp.map((s, i) => ` gr gr-${g(s).farbe}` + (i > 0 && (g(sp[i - 1]).name !== g(s).name || g(sp[i - 1]).farbe !== g(s).farbe) ? " gstart" : "") +
+      (i < fixe.length ? ` fix fx${i}${i === fixe.length - 1 ? " fixletzt" : ""}` : ""));
+  }
+  setzeFix() {
+    let links = 0;
+    (this.fixe || []).forEach((k, i) => { this.el.style.setProperty(`--fx${i}`, links + "px"); links += this.z.breite(k); });
+  }
+  gruppenzeile(sp, gk) {
+    const g = s => this.gruppeVon[s.k] || { name: "", farbe: "neutral" };
+    let h = "";
+    for (let i = 0; i < sp.length;) {
+      let n = 1;
+      while (i + n < sp.length && g(sp[i + n]).name === g(sp[i]).name && g(sp[i + n]).farbe === g(sp[i]).farbe) n++;
+      const { name, farbe } = g(sp[i]), tip = name ? ` title="Gruppe ${esc(name)}"` : "";
+      const nf = i === 0 ? Math.min(this.fixe.length, n) : 0;   // der fixierte Teil der ersten Gruppe trägt den Namen
+      if (nf) h += `<th colspan="${nf}" class="gruppe gr gr-${farbe} fix fx0 gname-links"${tip}>${esc(name)}</th>` +
+        (n > nf ? `<th colspan="${n - nf}" class="gruppe gr gr-${farbe}"${tip}></th>` : "");
+      else h += `<th colspan="${n}" class="gruppe${gk[i]}"${tip}>${esc(name)}</th>`;
+      i += n;
+    }
+    return `<tr class="gruppenzeile">${h}</tr>`;
+  }
   baueKopf() {
-    const sp = this.zeigbar();
-    const titel = sp.map(s => `<th class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}" ${s.typ !== "keine" || s.sortierbar ? `data-sort="${s.k}"` : ""}
-      title="${esc(s.hilfe ? `${s.titel}: ${s.hilfe}` : s.titel)}${s.typ !== "keine" || s.sortierbar ? SORT_TIP : ""}">${s.kopf || kopfText(s.titel)}<span class="pfeil"></span>${griff(s.k)}</th>`).join("");
-    const filter = sp.map(s => {
+    const sp = this.zeigbar(), gk = this.klassen(sp);
+    // zweizeiliger Kopf (Punkt 132) nur in gruppierten Tabellen; eigene Köpfe (Auswahl-Kästchen) bleiben
+    const kopf = s => s.kopf ? s.kopf + '<span class="pfeil"></span>' : this.gruppen ? kopfZweizeilig(s.titel) : kopfText(s.titel) + '<span class="pfeil"></span>';
+    const titel = sp.map((s, i) => `<th class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${gk[i]}" ${s.typ !== "keine" || s.sortierbar ? `data-sort="${s.k}"` : ""}
+      title="${esc(s.hilfe ? `${s.titel}: ${s.hilfe}` : s.titel)}${s.typ !== "keine" || s.sortierbar ? SORT_TIP : ""}">${kopf(s)}${griff(s.k)}</th>`).join("");
+    const filterRoh = sp.map(s => {
       const alt = this.f[s.k] || "";
       if (s.typ === "auswahl") return `<th><select data-tf="${s.k}" aria-label="Filter ${esc(s.titel)}"><option value="">alle</option>${(s.optionen ? s.optionen(this.zeilen) : [])
         .map(([w, t]) => `<option value="${esc(w)}" ${w === alt ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></th>`;
       if (s.typ === "keine") return "<th></th>";
       return `<th><input data-tf="${s.k}" value="${esc(alt)}" placeholder="${s.typ === "text" ? "Text, *" : s.typ === "gb" ? ">0,5" : ">0"}"
         title="${s.typ === "text" ? "enthält …; * und ? als Platzhalter" : s.typ === "gb" ? "in GB, z. B. >0,5, <=2, 1-3" : "z. B. >1000, <=10, 100-500, 0"}" ${s.n ? 'style="text-align:right"' : ""}></th>`;
-    }).join("");
-    const summe = sp.map(s => `<th class="${s.n ? "n" : ""}" data-ts="${s.k}"></th>`).join("");
+    });
+    // Punkt 136 auch hier: Auswahlfelder oben, Textfelder unten
+    const ebene = h => h.startsWith("<th><select") ? " fz-auswahl" : h === "<th></th>" ? "" : " fz-text";
+    const filter = filterRoh.map((h, i) => this.gruppen ? mitKlasse(h, (gk[i] + ebene(h)).trim()) : h).join("");
+    const summe = sp.map((s, i) => `<th class="${s.n ? "n" : ""}${gk[i]}" data-ts="${s.k}"></th>`).join("");
     this.el.innerHTML = `<colgroup>${sp.map(s => `<col data-k="${s.k}">`).join("")}</colgroup>
-      <thead><tr>${titel}</tr><tr class="filterzeile">${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt">${summe}</tr></thead><tbody></tbody>`;
+      <thead>${this.gruppen ? this.gruppenzeile(sp, gk) : ""}<tr class="titelzeile">${titel}</tr><tr class="filterzeile">${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt">${summe}</tr></thead><tbody></tbody>`;
     this.z.setze();
   }
   gefiltert() {
@@ -867,22 +1097,28 @@ class LokaleTabelle {
       e.classList.toggle("gesetzt", !!(this.f[k] || "").trim() && !this.fehler[k]);
       if (this.fehler[k]) e.title = "Ungültig, wird ignoriert: " + this.fehler[k];
     });
+    const gef = l.length !== this.zeilen.length, ohneEinheit = x => String(x).replace(/ (GB|MB|%)$/, "");
     this.el.querySelectorAll("[data-ts]").forEach(th => {
       const s = this.spalte(th.dataset.ts);
-      const [oben, unten] = s.summe ? s.summe(l, this.zeilen) : ["", ""];
-      th.innerHTML = oben === "" ? "" : `<b>${oben}</b><span class="ges">gesamt ${unten}</span>`;
+      const [oben, unten, tip] = s.summe ? s.summe(l, this.zeilen) : ["", ""];
+      if (!this.gruppen) { th.innerHTML = oben === "" ? "" : `<b>${oben}</b><span class="ges">gesamt ${unten}</span>`; return; }
+      // Punkt 139 im gemeinsamen Baustein: ein Wert, „(gesamt)“ nur bei Filter, Erklärung im Tooltip
+      th.innerHTML = oben === "" ? "" : `<b>${ohneEinheit(oben)}</b>${gef && unten !== "–" && unten !== "" ? `<span class="ges">(${ohneEinheit(unten)})</span>` : ""}`;
+      th.title = oben === "" ? "" : (tip || `${s.titel}: Summe bzw. Anzahl – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)`);
     });
-    const sp = this.zeigbar(), sicht = this.seite ? l.slice(0, this.seite) : l;
+    const sp = this.zeigbar(), sicht = this.seite ? l.slice(0, this.seite) : l, gk = this.klassen(sp);
     this.el.querySelector("tbody").innerHTML = l.length
-      ? sicht.map(r => `<tr ${this.zeileAttr ? this.zeileAttr(r) : ""}>${sp.map(s =>
-          `<td class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${s.tdKlasse ? " " + s.tdKlasse : ""}" title="${esc(s.tip ? s.tip(r) : (s.typ === "text" ? s.wert(r) : ""))}">${s.zelle(r)}</td>`).join("")}</tr>`).join("")
+      ? sicht.map(r => `<tr ${this.zeileAttr ? this.zeileAttr(r) : ""}>${sp.map((s, i) =>
+          `<td class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${s.tdKlasse ? " " + s.tdKlasse : ""}${gk[i]}" title="${esc(s.tip ? s.tip(r) : (s.typ === "text" ? s.wert(r) : ""))}">${s.zelle(r)}</td>`).join("")}</tr>`).join("")
       : `<tr><td colspan="${sp.length}" class="leer">${esc(this.leer || "keine Einträge")}</td></tr>`;
     const aus = this.spalten.filter(s => !s.fest && !this.sichtbar.has(s.k) && (this.f[s.k] || "").trim());
-    if (this.treffer) this.treffer.innerHTML = `<span><b>${zahl(l.length)}</b> von ${zahl(this.zeilen.length)} ${this.einheit || "Einträgen"}${l.length !== this.zeilen.length ? " (gefiltert)" : ""}</span>` +
+    // Punkt 153 (0.5.3): Anzahl entfällt (steht in der Summenzeile); bei Tabellen mit Seiten bleibt die Auswahl „Zeilen“ samt Bereich
+    if (this.treffer) this.treffer.innerHTML = "" +
       (this.seiten ? `<span>angezeigt ${zahl(l.length ? 1 : 0)}–${zahl(sicht.length)} von ${zahl(l.length)}</span>
         <label>Zeilen <select data-seite aria-label="angezeigte Zeilen">${this.seiten.map(n => `<option value="${n}" ${n === this.seite ? "selected" : ""}>${n}</option>`).join("")}</select></label>` : "") +
       (aus.length ? `<span class="chip warn" title="${esc(aus.map(s => s.titel).join(", "))}">${aus.length} Filter in ausgeblendeten Spalten wirken nicht</span>` : "") +
       (this.zusatz ? this.zusatz(this) : "");
+    if (this.treffer) this.treffer.hidden = !this.treffer.innerHTML.trim();
     if (this.nachher) this.nachher(this);
   }
   resetFilter() { this.f = {}; this.sortierung = [...this.sortStdListe]; this.merkeSort(); this.baueKopf(); this.zeige(); }
@@ -930,12 +1166,19 @@ function zeigeBanner(o, pruefung) {
   for (const w of pruefung?.warnungen || []) {
     // ältere App-Antworten ohne Feld titel: Titel bis zum ersten Doppelpunkt
     const m = w.titel ? null : /^([^:]{1,60}:)\s*(.*)$/s.exec(w.text || "");
-    t.push([w.titel || (m ? m[1] : ""), w.titel ? w.text : (m ? m[2] : w.text), PKD_TIP]);
+    t.push([w.titel || (m ? m[1] : ""), w.titel ? w.text : (m ? m[2] : w.text), PKD_TIP, w.hilfe, w.hilfe_text]);
   }
-  $("#banner").innerHTML = t.map(([titel, text, tip]) =>
-    `<div class="banner"${tip ? ` title="${esc(tip)}"` : ""}>${titel ? `<b>${esc(titel)}</b> ` : ""}${esc(text)}</div>`).join("");
+  // Punkt 133 (0.5.3): Warnung mit Verweis auf die Hilfe (z. B. FAQ „Erstinbetriebnahme“)
+  $("#banner").innerHTML = t.map(([titel, text, tip, hilfe, hilfeText]) =>
+    `<div class="banner"${tip ? ` title="${esc(tip)}"` : ""}>${titel ? `<b>${esc(titel)}</b> ` : ""}${esc(text)}` +
+    `${hilfe ? `<a class="hverweis" href="#${esc(hilfe)}">→ ${esc(hilfeText || "Hilfe")}</a>` : ""}</div>`).join("");
   $("#banner").hidden = !t.length;
 }
+$("#banner").addEventListener("click", ev => {
+  const a = ev.target.closest("a[href^='#h-']"); if (!a) return;
+  ev.preventDefault();
+  springeHilfe(a.getAttribute("href").slice(1));
+});
 // Punkt 90 (0.4.5): ein Stand für beide Analysen – Zeitpunkt der zuletzt gelaufenen, Laufzeit = Summe beider.
 // Punkt 125 (0.5.2): kein Stand-Text mehr neben dem Knopf. Veraltet (Analyse älter als 26 h oder Attribut-Analyse älter
 // als 7 Tage) = Markierung am Knopf; der Stand steht im Knopf-Tooltip und in der Rückfrage.
@@ -1038,7 +1281,7 @@ const HILFE = {
   c_db: ["DB-Größe",
     "Istzustand: Größe der Datei home-assistant_v2.db. Löschmenge sofort: Platz der Zeilen, die ein Lauf jetzt löschen würde. Prognose: erwartete Größe im Dauerbetrieb, darunter ohne Regeln.",
     "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile sind Messwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
-    "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „/24 h“ sortieren)."],
+    "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen / 24 h) sortieren)."],
   c_zeilen: ["Datenzeilen gesamt",
     "Summe der Spalten States, 5-Min, Langzeit, Events und Attribute (Zeilen) in dieser Zeile.",
     "Verwaiste sind in den anderen Spalten schon enthalten und zählen nicht doppelt. Ohne Attribut-Analyse fehlen die Attributzeilen in der Summe.",
@@ -1046,7 +1289,7 @@ const HILFE = {
   c_kurz: ["States, 5-Min",
     "Zeilen der Kurzzeit (States, 5-Min, Attribute) ohne die Attribute: Tabellen states und statistics_short_term.",
     "Die Kurzzeit legen Regeln fest; ohne Regel gilt global = purge_keep_days = {pkd} Tage. Die 5-Min-Statistik löscht die App über die Integration RS DB Hygiene (Stufe B).",
-    "Den größten Schreibern (Tab Entitäten, nach „/24 h“ sortieren) eine kürzere Kurzzeit geben."],
+    "Den größten Schreibern (Tab Entitäten, nach „Zuwachs“ (Zeilen / 24 h) sortieren) eine kürzere Kurzzeit geben."],
   c_lts: ["Langzeit",
     "Zeilen der Langzeit (Stundenstatistik, 1 h) in der Tabelle statistics.",
     "Standard ist „unbegrenzt“: HA löscht Langzeitstatistik nie selbst; die Löschmenge sofort ist daher meist 0.",
@@ -1062,7 +1305,7 @@ const HILFE = {
   c_verwaist: ["Verwaist",
     "Istzustand: Entitäten mit Daten in der DB, die weder in der Registry noch als aktueller Zustand existieren, darunter ihre Zeilen. Löschmenge sofort: Zeilen nach Regeln vom Typ „verwaist“. Prognose: Langzeit-Zeilen, die dauerhaft bleiben.",
     "Meist umbenannte oder entfernte Geräte. Ihre States verschwinden nach purge_keep_days, die Langzeitstatistik bleibt für immer. Ist eine Entität beim Löschlauf wieder vorhanden (z. B. Blitz- oder Waldbrand-Meldungen), überspringt der Lauf sie.",
-    "Über den Status-Filter „verwaist“ prüfen; sonst eine Regel vom Typ „verwaist“ anlegen (Vorlage 30 Tage)."],
+    "Im Tab Entitäten beim Zustand der Entität (Auswahlfilter der Spalte „Entitäts-Status“) „verwaist“ wählen; sonst eine Regel vom Typ „verwaist“ anlegen (Vorlage 30 Tage)."],
   ziel: ["Prognosezeitraum",
     "Für welchen Zeitraum die Prognose rechnet: So groß wird die DB nach diesem Zeitraum, wenn die aktiven Regeln wirken. Auch die Langzeitstatistik rechnet über diesen Zeitraum.",
     "Ändert nichts an Home Assistant; der Wert wird nur in diesem Browser gemerkt. Die Prognose nimmt je Entität ihre wirksame Vorhaltezeit (Regel bzw. global = purge_keep_days), höchstens aber diesen Zeitraum. Die Spalten „wirksam“ und die Löschmenge sofort hängen nicht davon ab – sie rechnen immer mit purge_keep_days, wie der Löschlauf.",
@@ -1179,44 +1422,69 @@ const leerText = e => /keine Analyse/i.test(e.message)
 
 // ================================================ Entitäten (Server filtert und summiert, > 5 000 Zeilen)
 // [Feld für Sortierung/Filter, Überschrift, Zahlenspalte, Filtertyp, Platzhalter, Standardbreite px, Tooltip]
-const SPALTEN = [
+const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRUPPEN fest (Punkt 130)
   ["entity_id", "Entität", 0, "text", "Text, * als Platzhalter", 330],
   ["herkunft", "Gerät / Herkunft", 0, "herkunft", "Text, * als Platzhalter", 250],
   // Punkt 115 (0.4.10): HA-Labels der Entität und ihres Geräts (live aus der Registry)
   ["labels", "Labels", 0, "text", "Text, * als Platzhalter", 170,
     "HA-Labels der Entität und ihres Geräts (Einstellungen → Labels). Tooltip je Label: an Entität oder am Gerät. Klick auf ein Label filtert danach."],
-  ["status", "Status", 0, "status", "", 120],
-  ["rows", "Zeilen", 1, "zahl", ">1000", 105],
-  ["rows_24h", "/24 h", 1, "zahl", ">0", 85],
+  ["status", STATUS_TITEL, 0, "status", "", 155, `${STATUS_HILFE}.`],   // Punkt 128
+  // Punkt 132 (0.5.3): Titel „Haupttitel (Zusatz)“ – im Kopf zweizeilig, Zeile 1 unterscheidet die Spalten, Zeile 2 Zusatz bzw. Einheit
+  ["rows", "States (Zeilen)", 1, "zahl", ">1000", 105, "Zeilen in states (Zustandswechsel) dieser Entität"],
+  ["rows_24h", "Zuwachs (Zeilen / 24 h)", 1, "zahl", ">0", 110, "neue Zeilen in states in den letzten 24 Stunden"],
+  // Punkt 135 (0.5.3): Bestand der 5-Min-Statistik je Entität (lag schon in Analyse, API und CSV vor)
+  ["kurz_rows", "5-Min (Zeilen)", 1, "zahl", ">0", 105, "Zeilen in statistics_short_term (5-Min-Statistik) dieser Entität"],
   // Punkte 118/120 (0.4.11): über alle Datenarten der Zeile; Aufteilung im Tooltip der Zelle
-  ["first_ts", "erster (States, 5-Min, Langzeit)", 0, "datum", "<1.9.2026", 125,
+  ["first_ts", "erster (States, 5-Min, Langzeit)", 0, "datum", "<1.9.2026", 150,
     "frühester Zeitstempel über States, 5-Min-Statistik und Langzeit – bei Entitäten mit Langzeit meist deren Beginn. Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
-  ["last_ts", "letzter (States, 5-Min, Langzeit)", 0, "datum", "<8.10.2026", 125,
+  ["last_ts", "letzter (States, 5-Min, Langzeit)", 0, "datum", "<8.10.2026", 150,
     "spätester Zeitstempel über States, 5-Min-Statistik und Langzeit. Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
-  ["lts_rows", "Langzeit-Zeilen", 1, "zahl", ">0", 115],
+  ["lts_rows", "Langzeit (Zeilen)", 1, "zahl", ">0", 110, "Zeilen in statistics (Stundenstatistik, Langzeit) dieser Entität"],
   ["kurzzeit", WNAME.kurzzeit, 0, "wert", "", 200, "wirksame Kurzzeit und ihre Quelle (Regel oder Std.) – gilt für States, 5-Min-Statistik und Attribute"],
   ["langzeit", WNAME.langzeit, 0, "wert", "", 190, "wirksame Langzeit und ihre Quelle (Regel oder Std.) – gilt für die Stundenstatistik"],
   // Punkt 63: Block „Löschmenge sofort“ wie in der Monatssumme – Summe, davon je Tabelle, dahinter die Attributzeilen
-  ["loesch_summe", "Löschmenge sofort", 1, "zahl", ">0", 130,
+  ["loesch_summe", "Summe (States + 5-Min + Langzeit)", 1, "zahl", ">0", 175,
     "Zeilen, die ein Lauf sofort löschen würde (Bestand): States + 5-Min-Statistik + Langzeit. Gegenstück: Ersparnis (Dauerbetrieb) im Tab Prognosen je Regel."],
-  ["loesch_states", "davon States", 1, "zahl", ">0", 110, "Zeilen in states außerhalb der Kurzzeit"],
-  ["loesch_kurz", "5-Min-Statistik", 1, "zahl", ">0", 120, "Zeilen in statistics_short_term außerhalb der Kurzzeit"],
+  ["loesch_states", "States", 1, "zahl", ">0", 100, "Zeilen in states außerhalb der Kurzzeit"],
+  ["loesch_kurz", "5-Min-Statistik", 1, "zahl", ">0", 150, "Zeilen in statistics_short_term außerhalb der Kurzzeit"],
   ["loesch_lts", "Langzeit", 1, "zahl", ">0", 100, "Stundenstatistik außerhalb der Langzeit-Vorhaltezeit"],
   ["loesch_attr_zeilen", "Attributzeilen (mit den States)", 1, "zahl", ">0", 150,
     "Attributzeilen, die mit den States wegfallen (zuletzt vor der Kurzzeit-Grenze benutzt) – nicht in der Summe; aus der Attribut-Analyse"],
-  ["attr_bytes", "Attribute Bestand", 1, "zahl", ">10 (MB)", 130,
+  ["attr_bytes", "Bestand (Attribute · MB)", 1, "zahl", ">10 (MB)", 115,
     "Platz der Attribute dieser Entität heute, inkl. Index (Filter in MB)."],
-  ["attr_zuwachs_tag", "Attribute Zuwachs/Tag", 1, "zahl", ">0,1 (MB)", 150,
+  ["attr_zuwachs_tag", "Zuwachs/Tag (Attribute · MB)", 1, "zahl", ">0,1 (MB)", 140,
     "Neue Attributdaten pro Tag, Mittel der letzten 7 Tage (Filter in MB). Zuwachs × Attribut-Vorhaltezeit ≈ Bestand im Dauerbetrieb."],
-  ["attr_avg", "Ø Attributgröße", 1, "zahl", ">1000 (B)", 125,
+  ["attr_avg", "Ø Größe (Attribute · Byte)", 1, "zahl", ">1000 (B)", 115,
     "Durchschnittliche Größe einer Attributzeile in Bytes – hoch bei „schweren“ Attributen wie Vorhersagen."],
-  ["attr_loesch", "Löschmenge sofort Attribute", 1, "zahl", ">1 (MB)", 170,
+  ["attr_loesch", "Attribute (MB)", 1, "zahl", ">1 (MB)", 110,
     "Attributdaten, die ein scharfer Lauf sofort freigeben würde (Filter in MB)."],
-  ["attr_anteil", "Anteil Attribute", 1, "zahl", ">50 (%)", 115,
+  ["attr_anteil", "Anteil (Attribute · %)", 1, "zahl", ">50 (%)", 105,
     "Anteil der Attribute am Speicher dieser Entität (Attribute ÷ (Attribute + States))."],
 ];
-const SPALTE = Object.fromEntries(SPALTEN.map(s => [s[0], s]));
-const SORTIERBAR = new Set(["entity_id", "herkunft", "labels", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
+// Punkt 130 (0.5.3): Reihenfolge der Spalten und ihre Gruppen – über den Spaltenköpfen steht je Gruppe eine Klammer
+// Punkt 132 (0.5.3): je Gruppe eine Farbe (Klasse gr-<id>); „Aktuell“ heißt wie die Kachelzeile „Istzustand“ und ist rot wie sie
+const SPALTENGRUPPEN = [
+  ["Stammdaten", "stamm", ["entity_id", "herkunft", "labels", "status"]],
+  ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]],
+  ["Istzustand", "ist", ["first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
+  ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen", "attr_loesch"]],
+];
+const SPALTEN = SPALTENGRUPPEN.flatMap(([, , ks]) => ks.map(k => SPALTEN_ROH.find(s => s[0] === k)));
+if (SPALTEN.length !== SPALTEN_ROH.length || SPALTEN.includes(undefined)) throw new Error("SPALTENGRUPPEN passt nicht zu SPALTEN_ROH");
+const SPALTENGRUPPE = Object.fromEntries(SPALTENGRUPPEN.flatMap(([g, , ks]) => ks.map(k => [k, g])));
+const GRUPPEN_ID = Object.fromEntries(SPALTENGRUPPEN.flatMap(([, id, ks]) => ks.map(k => [k, id])));
+// Klassen einer Zelle: Gruppenfarbe, am Gruppenwechsel zusätzlich die Trennlinie (sp = sichtbare Spalten, i = Position)
+const gruppenKlasse = (sp, i) => `gr gr-${GRUPPEN_ID[sp[i][0]]}${i > 0 && GRUPPEN_ID[sp[i - 1][0]] !== GRUPPEN_ID[sp[i][0]] ? " gstart" : ""}` +
+  (sp[i][0] === "entity_id" ? " fix fix1" : "");   // Punkt 140: Spalte Entität bleibt beim Scrollen nach rechts stehen
+// erste <td …> bzw. <th …> eines Zell-HTMLs um Klassen ergänzen
+const mitKlasse = (html, kl) => {
+  const ende = html.indexOf(">"), kopf = html.slice(0, ende);
+  return /\sclass="/.test(kopf) ? kopf.replace(/\sclass="/, ` class="${kl} `) + html.slice(ende) : html.replace(/^<(td|th)/, `<$1 class="${kl}"`);
+};
+// Punkt 132: Spaltenkopf zweizeilig – „Titel (Zusatz)“ → Zeile 1 Titel mit Sortierpfeil, Zeile 2 Zusatz (leer, wenn keiner)
+const kopfZweizeilig = t => { const m = /^(.+?)\s*\(([^()]*)\)$/.exec(t || ""); return `<span class="kz1"><span class="tk">${esc(m ? m[1] : t)}</span><span class="pfeil"></span></span><span class="kz2">${m ? esc(m[2]) : ""}</span>`; };
+const SPALTE =Object.fromEntries(SPALTEN.map(s => [s[0], s]));
+const SORTIERBAR = new Set(["entity_id", "herkunft", "labels", "status", "rows", "rows_24h", "kurz_rows", "first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
                             "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"]);
 const FILTERHILFE = {
   text: "enthält … (Groß/klein egal); * und ? als Platzhalter, z. B. sensor.*_power",
@@ -1233,11 +1501,14 @@ const HERKUNFT_LANG = { geraet: "Gerät", integration: "Integration (UI)", ui_he
 const ATTR_SPALTEN = ["attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"];
 const ANSICHTEN_ENT = {
   Standard: SPALTEN.map(s => s[0]).filter(k => !ATTR_SPALTEN.includes(k)),
-  Attribute: ["entity_id", "herkunft", "rows", "rows_24h", ...ATTR_SPALTEN],
+  // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
+  "States & Statistik": ["entity_id", "herkunft", "status", "kurzzeit", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
+                         "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts"],
+  Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
 };
 // Punkt 115 (0.4.10): neue Spalten der Standardansicht auch bei gemerkter Spaltenauswahl einmal einblenden
-const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels" };
+const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels", kurz_rows: "dbh_spalte_neu_kurz_rows" };
 const ladeSichtbar = (schluessel, standard) => {
   try { const l = JSON.parse(speicher.lies(schluessel, "null")); if (Array.isArray(l) && l.length) return new Set(l); } catch { /* Standard */ }
   return new Set(standard);
@@ -1251,34 +1522,53 @@ for (const [k, merker] of Object.entries(NEUE_SPALTEN_ENT)) {
 }
 const sichtbareSpalten = () => SPALTEN.filter(s => S.sichtbar.has(s[0]));
 function spaltenDialog(titel, spalten, sichtbar, ansichten, uebernehmen) {
-  // spalten: [{k, titel, fest}]; ansichten: {Name: [keys]}
+  // spalten: [{k, titel, fest, gruppe?, gid?}]; ansichten: {Name: [keys]}
+  // Punkt 135 (0.5.3): mit Gruppe je Gruppe eine Überschrift in der Gruppenfarbe
+  const feld = s => `<label><input type="checkbox" data-sp="${esc(s.k)}" ${sichtbar.has(s.k) || s.fest ? "checked" : ""} ${s.fest ? "disabled" : ""}>
+      ${esc(s.titel)}${s.fest ? ' <span class="sub">(immer)</span>' : ""}</label>`;
+  const liste = spalten.map((s, i) => (s.gruppe && s.gruppe !== spalten[i - 1]?.gruppe ? `<div class="spgruppe gr-${esc(s.gid)}">${esc(s.gruppe)}</div>` : "") + feld(s)).join("");
   dialog(`Spalten: ${titel}`, `
-    <div class="leiste">${Object.keys(ansichten).map(n => `<button data-ansicht="${esc(n)}">Ansicht ${esc(n)}</button>`).join("")}</div>
-    <div class="raster3">${spalten.map(s => `<label><input type="checkbox" data-sp="${esc(s.k)}" ${sichtbar.has(s.k) || s.fest ? "checked" : ""} ${s.fest ? "disabled" : ""}>
-      ${esc(s.titel)}${s.fest ? ' <span class="sub">(immer)</span>' : ""}</label>`).join("")}</div>
+    <div class="leiste">${Object.keys(ansichten).map(n => `<button class="ansicht" data-ansicht="${esc(n)}">Ansicht ${esc(n)}</button>`).join("")}</div>
+    <div class="raster3">${liste}</div>
     <p class="sub">Ausgeblendete Spalten behalten Filter und Breite; ihre Filter wirken aber nicht, solange die Spalte unsichtbar ist. Der CSV-Export enthält immer alle Spalten.</p>`,
     [["Abbrechen", () => $("#dlg").close()],
      ["Übernehmen", () => {
        const neu = new Set(spalten.filter(s => s.fest || $(`#dlgInhalt [data-sp="${CSS.escape(s.k)}"]`).checked).map(s => s.k));
        $("#dlg").close(); uebernehmen(neu);
      }, true]]);
+  // Punkt 135: der Knopf der Ansicht, die genau den Häkchen entspricht, ist gefüllt – auch nach Änderungen von Hand
+  const markiere = () => {
+    const an = new Set(spalten.filter(s => s.fest || $(`#dlgInhalt [data-sp="${CSS.escape(s.k)}"]`).checked).map(s => s.k));
+    $("#dlgInhalt").querySelectorAll("[data-ansicht]").forEach(b => {
+      const l = new Set([...ansichten[b.dataset.ansicht], ...spalten.filter(s => s.fest).map(s => s.k)]);
+      b.classList.toggle("an", l.size === an.size && [...l].every(k => an.has(k)));
+    });
+  };
   $("#dlgInhalt").querySelectorAll("[data-ansicht]").forEach(b => b.onclick = () => {
     const l = new Set(ansichten[b.dataset.ansicht]);
     $("#dlgInhalt").querySelectorAll("[data-sp]").forEach(c => { if (!c.disabled) c.checked = l.has(c.dataset.sp); });
+    markiere();
   });
+  $("#dlgInhalt").querySelectorAll("[data-sp]").forEach(c => c.addEventListener("change", markiere));
+  markiere();
 }
 
 const ZE = ziehbar($("#tEnt"), "dbh_breiten_ent", () => ({ wahl: 40, ...Object.fromEntries(SPALTEN.map(s => [s[0], s[5]])) }));
 $("#breitenReset").onclick = () => ZE.reset();
+// Punkte 140/142 (0.5.3): Schatten an der fixierten Spalte bzw. unter dem Kopf nur, wenn wirklich etwas darunter durchläuft
+{ const box = $("#tEnt").closest(".tabelle");
+  box.addEventListener("scroll", () => { box.classList.toggle("nach-rechts", box.scrollLeft > 0); box.classList.toggle("nach-unten", box.scrollTop > 0); }, { passive: true }); }
 
 function baueKopf() {
   const sp = sichtbareSpalten();
   $("#tEntSpalten").innerHTML = `<col data-k="wahl">` + sp.map(([k]) => `<col data-k="${k}">`).join("");
-  const titel = sp.map(([k, t, n, , , , tip]) =>
-    `<th class="${n ? "n" : ""}" ${SORTIERBAR.has(k) ? `data-sort="${k}"` : ""} title="${esc(tip ? `${t}: ${tip}` : t)}${SORTIERBAR.has(k) ? SORT_TIP : ""}">${kopfText(t)}<span class="pfeil"></span>${griff(k)}</th>`).join("");
-  const filter = sp.map(([k, t, n, typ, ph]) => {
+  // Punkt 132 (0.5.3): Kopf zweizeilig, jede Zelle mit Gruppenfarbe (gk), am Gruppenwechsel mit Trennlinie
+  const gk = sp.map((_, i) => gruppenKlasse(sp, i));
+  const titel = sp.map(([k, t, n, , , , tip], i) =>
+    `<th class="${n ? "n " : ""}${gk[i]}" ${SORTIERBAR.has(k) ? `data-sort="${k}"` : ""} title="${esc(tip ? `${t}: ${tip}` : t)}${SORTIERBAR.has(k) ? SORT_TIP : ""}">${kopfZweizeilig(t)}${griff(k)}</th>`).join("");
+  const filterRoh = sp.map(([k, t, n, typ, ph]) => {
     const alt = esc(S.f[k] || "");
-    if (typ === "status") return `<th><select data-f="status" aria-label="Filter Status"><option value="">alle</option>
+    if (typ === "status") return `<th><select data-f="status" title="${esc(STATUS_HILFE)}" aria-label="Filter ${STATUS_TITEL} (Zustand)"><option value="">alle</option>
       ${[["aktiv", "aktiv"], ["verwaist", "verwaist (alle)"], ["verwaist_geloescht", "verwaist (gelöscht)"]].map(([w, l]) => `<option value="${w}" ${S.f.status === w ? "selected" : ""}>${l}</option>`).join("")}</select></th>`;
     if (typ === "wert") return `<th><select data-f="${k}" aria-label="Filter ${esc(t)}"><option value="">alle</option></select></th>`;
     if (typ === "herkunft") return `<th><div class="herkunftfeld"><select data-f="herkunft_art" aria-label="Filter Art der Herkunft">
@@ -1287,11 +1577,28 @@ function baueKopf() {
     const feld = `<input data-f="${k}" value="${alt}" placeholder="${esc(ph)}" title="${esc(FILTERHILFE[typ])}" aria-label="Filter ${esc(t)}" ${n ? 'style="text-align:right"' : ""}>`;
     if (typ === "datum") return `<th><div class="datumfeld">${feld}<button data-kalender="${k}" title="Kalender öffnen" aria-label="Kalender für ${esc(t)}">📅</button></div></th>`;
     return `<th>${feld}</th>`;
-  }).join("");
-  const summe = sp.map(([k, , n]) => `<th class="${n ? "n" : ""}" data-summe="${k}"></th>`).join("");
+  });
+  // Punkt 136 (0.5.3): zwei feste Ebenen – Auswahlfelder oben, Textfelder unten (Herkunft hat beide übereinander)
+  const ebene = h => h.startsWith("<th><select") ? " fz-auswahl" : h.includes("herkunftfeld") ? "" : " fz-text";
+  const filter = filterRoh.map((h, i) => mitKlasse(h, gk[i] + ebene(h))).join("");
+  const summe = sp.map(([k, , n], i) => `<th class="${n ? "n " : ""}${gk[i]}" data-summe="${k}"></th>`).join("");
   // Punkt 91: Kästchen im Kopf wählt nur die angezeigte Seite
-  const wahl = `<th class="mitte"><input type="checkbox" class="wahl" id="wahlAlleEnt" title="alle Entitäten dieser Seite auswählen bzw. abwählen" aria-label="alle Entitäten dieser Seite auswählen"></th>`;
-  $("#tEntKopf").innerHTML = `<tr>${wahl}${titel}</tr><tr class="filterzeile"><th></th>${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt"><th class="mitte" id="wahlSummeEnt"></th>${summe}</tr>`;
+  const wahl = `<th class="mitte gr gr-stamm fix fix0"><input type="checkbox" class="wahl" id="wahlAlleEnt" title="alle Entitäten dieser Seite auswählen bzw. abwählen" aria-label="alle Entitäten dieser Seite auswählen"></th>`;
+  // Punkt 130: Gruppenzeile – je Gruppe ein Feld über ihren sichtbaren, nebeneinanderliegenden Spalten
+  let gruppen = "";
+  for (let i = 0; i < sp.length;) {
+    const g = SPALTENGRUPPE[sp[i][0]]; let n = 1;
+    while (i + n < sp.length && SPALTENGRUPPE[sp[i + n][0]] === g) n++;
+    // Punkt 137 (0.5.3): die Auswahlspalte (☐) gehört farblich zu den Stammdaten (Entität steht immer vorn)
+    // Punkt 140: über Auswahl und Entität ein eigenes, fixiertes Feld mit dem Namen; der Rest der Gruppe scrollt ohne Namen mit
+    if (i === 0 && GRUPPEN_ID[sp[0][0]] === "stamm") {
+      gruppen += `<th colspan="2" class="gruppe gr gr-stamm fix fix0 gname-links" title="Gruppe ${esc(g)}">${esc(g)}</th>` +
+        (n > 1 ? `<th colspan="${n - 1}" class="gruppe gr gr-stamm gruppe-rest" title="Gruppe ${esc(g)}"></th>` : "");
+    } else gruppen += `<th colspan="${n}" class="gruppe ${gk[i]}" title="Gruppe ${esc(g)}">${esc(g)}</th>`;
+    i += n;
+  }
+  const gruppenzeile = `<tr class="gruppenzeile">${GRUPPEN_ID[sp[0][0]] === "stamm" ? "" : `<th class="gruppe-leer"></th>`}${gruppen}</tr>`;
+  $("#tEntKopf").innerHTML = `${gruppenzeile}<tr class="titelzeile">${wahl}${titel}</tr><tr class="filterzeile"><th class="gr gr-stamm fix fix0"></th>${filter}</tr><tr class="summenzeile" title="Summe bzw. Anzahl: gefiltert, darunter gesamt"><th class="mitte gr gr-stamm fix fix0" id="wahlSummeEnt"></th>${summe}</tr>`;
   S.optionen = null;   // Auswahlwerte neu füllen
   ZE.setze();
   zeigeSortierung();
@@ -1300,26 +1607,44 @@ function zeigeSortierung() {
   $("#tEntKopf").querySelectorAll("th[data-sort]").forEach(th => th.querySelector(".pfeil").textContent = pfeilText(S.sortierung, th.dataset.sort));
 }
 const prozent = v => v == null ? "–" : v.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %";
+// Punkt 139 (0.5.3): je Zelle nur ein Wert – oben gefiltert (fett), darunter „(gesamt)“, nur wenn gefiltert ist;
+// Texte und Einheiten entfallen (Einheiten stehen im Spaltenkopf), die Bedeutung und weitere Zahlen nennt der Tooltip
 function zeigeSummen(su) {
   if (!su) return;
-  const g = su.gefiltert, a = su.gesamt;
-  const zelle = (oben, unten) => `<b>${oben}</b><span class="ges">gesamt ${unten}</span>`;
-  const werte = art => [`R ${zahl(g[art].regel)} · Std ${zahl(g[art].std)}`, `R ${zahl(a[art].regel)} · Std ${zahl(a[art].std)}`];
+  const g = su.gefiltert, a = su.gesamt, gefiltert = g.entitaeten !== a.entitaeten;
+  const ohneEinheit = s => s.replace(/\s*(MB|%)$/, "");
+  const zelle = (oben, unten, tip) => ({ html: `<b>${oben}</b>${gefiltert ? `<span class="ges">(${unten})</span>` : ""}`, tip });
+  const zz = (k, tip) => zelle(zahl(g[k] || 0), zahl(a[k] || 0), tip);
+  const anz = tip => zelle(zahl(g.entitaeten), zahl(a.entitaeten), tip);
+  const teil = (x, art) => `aus Regel ${zahl(x[art].regel)} · Standard (Std.) ${zahl(x[art].std)}`;
+  const vgl = (gs, as) => gefiltert ? `\ngefiltert: ${gs}\nalle: ${as}` : `\n${as}`;
+  const GEF = "oben gefiltert, in Klammern alle (nur bei gesetztem Filter)";
+  const mbz = b => b == null ? "–" : ohneEinheit(mb(b)), pz = v => v == null ? "–" : ohneEinheit(prozent(v));
   const inhalt = {
-    entity_id: zelle(`${zahl(g.entitaeten)} Entitäten`, zahl(a.entitaeten)),
-    herkunft: zelle(`${zahl(g.geraete)} Geräte`, zahl(a.geraete)),
-    labels: zelle(`${zahl(g.labels || 0)} mit Label`, `${zahl(a.labels || 0)} · ${zahl(a.label_namen || 0)} Labels`),
-    status: zelle(`${zahl(g.aktiv)} aktiv · ${zahl(g.verwaist)} verw.`, `${zahl(a.aktiv)} · ${zahl(a.verwaist)}`),
-    rows: zelle(zahl(g.rows), zahl(a.rows)), rows_24h: zelle(zahl(g.rows_24h), zahl(a.rows_24h)),
-    first_ts: zelle(`ab ${datum(g.first_ts)}`, datum(a.first_ts)), last_ts: zelle(`bis ${datum(g.last_ts)}`, datum(a.last_ts)),
-    lts_rows: zelle(zahl(g.lts_rows), zahl(a.lts_rows)),
-    kurzzeit: zelle(...werte("kurzzeit")), langzeit: zelle(...werte("langzeit")),
-    ...Object.fromEntries(["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"].map(k => [k, zelle(zahl(g[k]), zahl(a[k]))])),
-    attr_bytes: zelle(mb(g.attr_bytes), mb(a.attr_bytes)), attr_zuwachs_tag: zelle(mb(g.attr_zuwachs_tag), mb(a.attr_zuwachs_tag)),
-    attr_avg: zelle(g.attr_avg == null ? "–" : zahl(g.attr_avg) + " B", a.attr_avg == null ? "–" : zahl(a.attr_avg) + " B"),
-    attr_loesch: zelle(mb(g.attr_loesch), mb(a.attr_loesch)), attr_anteil: zelle(prozent(g.attr_anteil), prozent(a.attr_anteil)),
+    entity_id: anz(`Anzahl Entitäten – ${GEF}`),
+    herkunft: zelle(zahl(g.geraete), zahl(a.geraete), `Anzahl Geräte – ${GEF}`),
+    labels: zelle(zahl(g.labels || 0), zahl(a.labels || 0),
+      `Entitäten mit mindestens einem Label – ${GEF}` + vgl(`${zahl(g.label_namen || 0)} verschiedene Labels`, `${zahl(a.label_namen || 0)} verschiedene Labels`)),
+    status: anz(`Anzahl Entitäten – ${GEF}` + vgl(`aktiv ${zahl(g.aktiv)} · verwaist ${zahl(g.verwaist)}`, `aktiv ${zahl(a.aktiv)} · verwaist ${zahl(a.verwaist)}`)),
+    kurzzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "kurzzeit"), teil(a, "kurzzeit"))),
+    langzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "langzeit"), teil(a, "langzeit"))),
+    first_ts: zelle(datum(g.first_ts), datum(a.first_ts), `frühester Zeitstempel – ${GEF}`),
+    last_ts: zelle(datum(g.last_ts), datum(a.last_ts), `spätester Zeitstempel – ${GEF}`),
+    rows: zz("rows", `Zeilen in states – ${GEF}`), rows_24h: zz("rows_24h", `neue Zeilen in states in 24 h – ${GEF}`),
+    kurz_rows: zz("kurz_rows", `Zeilen 5-Min-Statistik – ${GEF}`), lts_rows: zz("lts_rows", `Zeilen Langzeit – ${GEF}`),
+    loesch_summe: zz("loesch_summe", `Zeilen sofort löschbar (States + 5-Min + Langzeit) – ${GEF}`),
+    loesch_states: zz("loesch_states", `States sofort löschbar – ${GEF}`), loesch_kurz: zz("loesch_kurz", `5-Min-Statistik sofort löschbar – ${GEF}`),
+    loesch_lts: zz("loesch_lts", `Langzeit sofort löschbar – ${GEF}`), loesch_attr_zeilen: zz("loesch_attr_zeilen", `Attributzeilen, die mit den States wegfallen – ${GEF}`),
+    attr_bytes: zelle(mbz(g.attr_bytes), mbz(a.attr_bytes), `Attribute Bestand in MB – ${GEF}`),
+    attr_zuwachs_tag: zelle(mbz(g.attr_zuwachs_tag), mbz(a.attr_zuwachs_tag), `Attribute Zuwachs pro Tag in MB – ${GEF}`),
+    attr_avg: zelle(g.attr_avg == null ? "–" : zahl(g.attr_avg), a.attr_avg == null ? "–" : zahl(a.attr_avg), `Ø Größe einer Attributzeile in Byte – ${GEF}`),
+    attr_loesch: zelle(mbz(g.attr_loesch), mbz(a.attr_loesch), `Attribute sofort löschbar in MB – ${GEF}`),
+    attr_anteil: zelle(pz(g.attr_anteil), pz(a.attr_anteil), `Anteil der Attribute in % – ${GEF}`),
   };
-  $("#tEntKopf").querySelectorAll("[data-summe]").forEach(th => th.innerHTML = inhalt[th.dataset.summe] || "");
+  $("#tEntKopf").querySelectorAll("[data-summe]").forEach(th => {
+    const z = inhalt[th.dataset.summe];
+    th.innerHTML = z ? z.html : ""; th.title = z ? z.tip : "";
+  });
 }
 function fuelleWertOptionen(opt) {
   if (!opt) return;
@@ -1372,10 +1697,19 @@ $("#filterReset").onclick = () => {
   S.offset = 0; ladeEntitaeten();
 };
 
+// Punkt 143 (0.5.3, ersetzt Punkt 129): Klick auf den Regel-Chip öffnet die Maske dieser Regel; „Std.“ ist nicht anklickbar.
+// Der Wert wird bei Platzmangel gekürzt, der Chip bleibt immer ganz sichtbar.
+// Punkt 160 (0.5.3): eigene Regeln (E:<entity_id>) im Chip nur „E“ – die volle ID verdrängte sonst den Wert
+const chipText = id => String(id).startsWith("E:") ? "E" : id;
 function wertZelle(w) {
   if (!w) return "–";
-  const quelle = w.regel ? `<span class="chip regel" title="${esc(w.muster)}">${esc(w.regel)}</span>` : `<span class="chip">Std.</span>`;
-  return esc(w.anzeige) + quelle;
+  const quelle = w.regel ? `<span class="chip regel rklick" data-regel="${esc(w.regel)}" title="${esc(w.regel.startsWith("E:") ? "eigene Regel " + w.regel : w.muster)}\nKlick: Regel ${esc(w.regel)} öffnen">${esc(chipText(w.regel))}</span>`
+    : `<span class="chip" title="Standard (keine Regel)">Std.</span>`;
+  return `<span class="wzelle"><span class="wtext" title="${esc(w.anzeige)}">${esc(w.anzeige)}</span>${quelle}</span>`;
+}
+function oeffneRegel(id) {
+  const i = (S.regeln?.regeln || []).findIndex(r => r.id === id);
+  if (i >= 0) bearbeiteRegel(i);
 }
 function herkunftZelle(e) {
   if (!e.herkunft_art) return `<td class="sub">–</td>`;
@@ -1408,14 +1742,15 @@ const ZELLEN = {
   },
   herkunft: herkunftZelle,
   labels: labelsZelle,
-  status: e => `<td class="status-${e.status}">${esc(STATUS_TEXT[e.status] || e.status)}</td>`,
+  status: e => `<td class="status-${e.status}" title="Entität ${esc(STATUS_TEXT[e.status] || e.status)}">${esc(STATUS_TEXT[e.status] || e.status)}</td>`,   // Punkt 128
   rows: e => `<td class="n">${zahl(e.rows)}</td>`,
   rows_24h: e => `<td class="n">${zahl(e.rows_24h)}</td>`,
   first_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.first_ts)}</td>`,
   last_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.last_ts)}</td>`,
   lts_rows: e => `<td class="n">${e.lts_rows ? zahl(e.lts_rows) : "–"}</td>`,
-  kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit)}</td>`,
-  langzeit: e => `<td>${wertZelle((e.werte || {}).langzeit)}</td>`,
+  kurz_rows: e => `<td class="n">${e.kurz_rows ? zahl(e.kurz_rows) : "–"}</td>`,   // Punkt 135
+  kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit, "kurzzeit")}</td>`,
+  langzeit: e => `<td>${wertZelle((e.werte || {}).langzeit, "langzeit")}</td>`,
   ...Object.fromEntries(["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"].map(k =>
     [k, e => `<td class="n">${e[k] == null ? "–" : zahl(e[k])}</td>`])),
   attr_bytes: e => attrTd(e.attr_bytes, mb),
@@ -1425,8 +1760,9 @@ const ZELLEN = {
   attr_anteil: e => attrTd(e.attr_anteil, prozent),
 };
 function zeileHtml(e) {
-  const w = `<td class="mitte wahlzelle"><input type="checkbox" class="wahl" data-wahl-ent="${esc(e.entity_id)}" ${S.auswahlEnt.has(e.entity_id) ? "checked" : ""} aria-label="${esc(e.entity_id)} auswählen"></td>`;
-  return `<tr class="klick" data-eid="${esc(e.entity_id)}">${w}${sichtbareSpalten().map(s => ZELLEN[s[0]](e)).join("")}</tr>`;
+  const w = `<td class="mitte wahlzelle gr gr-stamm fix fix0"><input type="checkbox" class="wahl" data-wahl-ent="${esc(e.entity_id)}" ${S.auswahlEnt.has(e.entity_id) ? "checked" : ""} aria-label="${esc(e.entity_id)} auswählen"></td>`;
+  const sp = sichtbareSpalten();   // Punkt 132: Gruppenfarbe je Zelle
+  return `<tr class="klick" data-eid="${esc(e.entity_id)}">${w}${sp.map((s, i) => mitKlasse(ZELLEN[s[0]](e), gruppenKlasse(sp, i))).join("")}</tr>`;
 }
 const BLOCK = 500;
 function zeigeZeilen(zeilen) {
@@ -1450,10 +1786,11 @@ const unsichtbareFilter = () => Object.keys(S.f).filter(k => S.f[k] && k !== "de
 function zeigeTreffer(r) {
   const bis = S.limit ? Math.min(S.offset + S.limit, r.gesamt) : r.gesamt;
   const gefiltert = r.gesamt !== r.alle, aus = unsichtbareFilter();
-  $("#trefferzeile").innerHTML = `<span><b>${zahl(r.gesamt)}</b> von ${zahl(r.alle)} Entitäten${gefiltert ? " (gefiltert)" : ""}</span>
-    <span>angezeigt ${zahl(r.gesamt ? S.offset + 1 : 0)}–${zahl(bis)}</span>` +
+  // Punkt 153 (0.5.3): Anzahl und Bereich entfallen – Anzahl in der Summenzeile, Bereich unten beim Blättern; die Zeile erscheint nur noch mit Gerätefilter oder Warnung
+  $("#trefferzeile").innerHTML = "" +
     (S.f.device_id ? `<span class="filterchip">Gerät: ${esc(S.geraetName || S.f.device_id)}<button id="geraetWeg" aria-label="Gerätefilter entfernen">✕</button></span>` : "") +
     (aus.length ? `<span class="chip warn" title="${esc(aus.map(k => SPALTE[k === "herkunft_art" ? "herkunft" : k][1]).join(", "))}">${aus.length} Filter in ausgeblendeten Spalten wirken nicht</span>` : "");
+  $("#trefferzeile").hidden = !$("#trefferzeile").innerHTML.trim();
   $("#seite").textContent = `${zahl(r.gesamt ? S.offset + 1 : 0)}–${zahl(bis)} von ${zahl(r.gesamt)}`;
   $("#zurueck").hidden = $("#weiter").hidden = !S.limit;
   $("#zurueck").disabled = S.offset === 0;
@@ -1496,6 +1833,8 @@ $("#tEntRumpf").addEventListener("click", ev => {
   if (g) { S.geraetName = g.dataset.gname; return setzeFilter("device_id", g.dataset.geraet, true); }
   const lb = ev.target.closest("[data-label]");   // Punkt 115
   if (lb) return setzeFilter("labels", lb.dataset.label, true);
+  const rc = ev.target.closest("[data-regel]");   // Punkt 143
+  if (rc) return oeffneRegel(rc.dataset.regel);
   const tr = ev.target.closest("tr[data-eid]");
   if (tr) oeffneEntitaet(S.zeilen[tr.dataset.eid]);
 });
@@ -1506,7 +1845,8 @@ $("#fLimit").addEventListener("change", () => {
 $("#zurueck").onclick = () => { S.offset = Math.max(0, S.offset - S.limit); ladeEntitaeten(); };
 $("#weiter").onclick = () => { S.offset += S.limit; ladeEntitaeten(); };
 function spaltenEnt() {
-  spaltenDialog("Entitäten", SPALTEN.map(s => ({ k: s[0], titel: s[1], fest: s[0] === "entity_id" })), S.sichtbar, ANSICHTEN_ENT, neu => {
+  // Punkt 135 (0.5.3): nach Gruppen geordnet, Überschrift je Gruppe in ihrer Farbe
+  spaltenDialog("Entitäten", SPALTEN.map(s => ({ k: s[0], titel: s[1], gruppe: SPALTENGRUPPE[s[0]], gid: GRUPPEN_ID[s[0]], fest: s[0] === "entity_id" })), S.sichtbar, ANSICHTEN_ENT, neu => {
     S.sichtbar = neu; speicher.schreib("dbh_spalten_ent", JSON.stringify([...neu]));
     baueKopf(); ladeEntitaeten();
   });
@@ -1528,6 +1868,9 @@ const wertSpalte = art => ({
 const T = {};
 T.regeln = new LokaleTabelle({
   id: "#tRegeln", treffer: "#trefferRegeln", schluessel: "dbh_breiten_regeln", einheit: "Regeln", sortStd: { k: "rang" },
+  // Punkt 145 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["treffer"]]],
+  fix: ["wahl", "aktiv", "rang", "id"],
   leer: "keine Regeln",
   spalten: [
     { k: "wahl", titel: "Auswahl", kopf: `<input type="checkbox" class="wahl" id="wahlAlle" title="alle angezeigten Regeln auswählen">`, typ: "keine",
@@ -1536,15 +1879,16 @@ T.regeln = new LokaleTabelle({
     { k: "aktiv", titel: "aktiv", typ: "auswahl", breite: 90, mitte: 1, wert: r => r.aktiv ? "aktiv" : "passiv",
       zelle: r => `<button class="schalter ${r.aktiv ? "an" : "aus"}" data-umschalten="${esc(r.id)}" title="Klick: auf ${r.aktiv ? "passiv" : "aktiv"} schalten${!r.aktiv && r.id.startsWith("E:") ? "\npassiv – für diese Entität gelten wieder Muster-Regeln bzw. der Standard" : ""}">${r.aktiv ? "aktiv" : "passiv"}</button>`,
       csv: r => r.aktiv ? "aktiv" : "passiv", optionen: () => [["aktiv", "aktiv"], ["passiv", "passiv"]],
-      summe: (g, a) => [`${zahl(g.filter(r => r.aktiv).length)} aktiv · ${zahl(g.filter(r => !r.aktiv).length)} passiv`, `${zahl(a.filter(r => r.aktiv).length)} · ${zahl(a.filter(r => !r.aktiv).length)}`] },
-    { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 60, mitte: 1, wert: r => regelIndex(r),
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nangezeigt: aktiv ${zahl(g.filter(r => r.aktiv).length)} · passiv ${zahl(g.filter(r => !r.aktiv).length)}\nalle: aktiv ${zahl(a.filter(r => r.aktiv).length)} · passiv ${zahl(a.filter(r => !r.aktiv).length)}`] },
+    { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 75, mitte: 1, wert: r => regelIndex(r),
       zelle: r => {
         if (r.id.startsWith("E:")) return `<span class="chip regel" title="Eigene Vorhaltezeit: hat immer Vorrang vor allen anderen Regeln, die Position spielt keine Rolle">E</span>`;
+        if (r.typ === "ha_standard") return `<span class="chip regel" title="HA-Standard: immer der niedrigste Rang – jede andere Regel geht vor, die Position spielt keine Rolle">HA</span>`;   // Punkt 127
         const i = regelIndex(r), frei = T.regeln.istUrzustand();
         return `<button data-hoch="${i}" ${i && frei ? "" : "disabled"} title="${frei ? "nach oben" : "nur ohne Filter und bei Sortierung nach Rang"}">▲</button>`;
       },
       csv: r => regelIndex(r) + 1 },
-    { k: "id", titel: "ID", typ: "text", fest: 1, breite: 110, wert: r => r.id, zelle: r => `<span class="mono">${esc(r.id)}</span>`, csv: r => r.id, summe: (g, a) => [`${zahl(g.length)} Regeln`, zahl(a.length)] },
+    { k: "id", titel: "ID", typ: "text", fest: 1, breite: 110, wert: r => r.id, zelle: r => `<span class="mono">${esc(r.id)}</span>`, csv: r => r.id, summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "name", titel: "Name", typ: "text", breite: 220, wert: r => r.name, csv: r => r.name,
       zelle: r => {
         const p = (S.probe?.regeln || []).find(x => x.regel === r.id) || {};
@@ -1557,15 +1901,16 @@ T.regeln = new LokaleTabelle({
     { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => r.typ, csv: r => r.typ,
       // Punkt 111: Schloss bei Schutz; Punkt 106: Warnung bei Platzhaltern in einer entity-Regel
       zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
+        : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, nur passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
         : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : r.typ,
-      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ",
-      optionen: () => REGELTYPEN.map(t => [t, t]),
-      summe: (g, a) => [REGELTYPEN.map(t => zahl(g.filter(r => r.typ === t).length)).join(" · "), REGELTYPEN.map(t => zahl(a.filter(r => r.typ === t).length)).join(" · ")] },
+      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
+      optionen: () => TYPEN_TABELLE.map(t => [t, t]),
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nje Typ: ${TYPEN_TABELLE.map(t => `${t} ${zahl(g.filter(r => r.typ === t).length)}`).join(" · ")}`] },
     { k: "muster", titel: "Muster", typ: "text", breite: 260, wert: r => r.muster.join(" "), tip: r => r.muster.join("\n"),
       zelle: r => `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}`,
       csv: r => r.muster.join(", "), summe: anzahlSumme(r => r.muster.length) },
     wertSpalte("kurzzeit"), wertSpalte("langzeit"),
-    { k: "treffer", titel: "Treffer", typ: "zahl", n: 1, breite: 90, wert: r => trefferVon(r),
+    { k: "treffer", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => trefferVon(r),
       zelle: r => { const t = trefferVon(r); return t == null ? `<span class="sub" title="passiv – mit „passive Regeln mitrechnen“ sichtbar">–</span>` : zahl(t); },
       tip: () => "Entitäten, für die diese Regel mindestens einen Wert bestimmt", csv: r => trefferVon(r) ?? "", summe: anzahlSumme(r => trefferVon(r)) },
     { k: "notiz", titel: "Notiz", typ: "text", breite: 200, wert: r => r.notiz, zelle: r => esc(r.notiz), csv: r => r.notiz },
@@ -1576,36 +1921,41 @@ T.regeln = new LokaleTabelle({
 });
 T.probe = new LokaleTabelle({
   id: "#tProbe", treffer: "#trefferProbe", schluessel: "dbh_breiten_probe", einheit: "Regeln", sortStd: { k: "regel" },
+  // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
+  gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
+    ["Löschmenge sofort", "loesch", ["loesch_summe", "states", "kurz", "lts", "events", "attr_zeilen", "attr_bytes"]],
+    ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]]],
+  fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
   zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)} bearbeiten"` : "",
   leer: "keine Regeln wirksam",
   spalten: [
-    { k: "regel", titel: "Regel", typ: "text", fest: 1, breite: 110, wert: r => r.regel, zelle: r => regelChip(r.regel), csv: r => r.regel, summe: (g, a) => [`${zahl(g.length)} Regeln`, zahl(a.length)] },
+    { k: "regel", titel: "Regel", typ: "text", fest: 1, breite: 110, wert: r => r.regel, zelle: r => regelChip(r.regel), csv: r => r.regel, summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "name", titel: "Name", typ: "text", breite: 220, wert: r => r.name, zelle: r => esc(r.name), csv: r => r.name },
-    ...[["entitaeten", "Entitäten", "Entitäten, für die diese Regel mindestens einen Wert bestimmt (nur wo sie den Vorrang gewinnt)"],
+    ...[["entitaeten", "Entitäten (gesamt)", "Entitäten, für die diese Regel mindestens einen Wert bestimmt (nur wo sie den Vorrang gewinnt)"],
         // Punkt 101 (0.4.8): Anzahl Entitäten, nicht Zeilen – das sagt jetzt der Titel
-        ["kurzzeit", "Entitäten mit Kurzzeit aus dieser Regel", "bei wie vielen Entitäten die Kurzzeit (States, 5-Min-Statistik und Attribute) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"],
-        ["langzeit", "Entitäten mit Langzeit aus dieser Regel", "bei wie vielen Entitäten die Langzeit (Stundenstatistik, 1 h) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"]].map(([k, t, h]) => (
-      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "entitaeten" ? 95 : 200, wert: r => r[k], zelle: r => zahl(r[k]), csv: r => r[k], summe: anzahlSumme(r => r[k]) })),
+        ["kurzzeit", "Kurzzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Kurzzeit (States, 5-Min-Statistik und Attribute) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"],
+        ["langzeit", "Langzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Langzeit (Stundenstatistik, 1 h) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"]].map(([k, t, h]) => (
+      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "entitaeten" ? 100 : 130, wert: r => r[k], zelle: r => zahl(r[k]), csv: r => r[k], summe: anzahlSumme(r => r[k]) })),
     // Punkt 63: Block „Löschmenge sofort“ – Summe, davon je Tabelle, dahinter die Attributzeilen (nicht in der Summe)
-    ...[["loesch_summe", "Löschmenge sofort", HILFE_LOESCH + " Summe aus States, 5-Min-Statistik, Langzeit und Events."],
-        ["states", "davon States", HILFE_LOESCH],
+    ...[["loesch_summe", "Summe (States + 5-Min + Langzeit + Events)", HILFE_LOESCH + " Summe aus States, 5-Min-Statistik, Langzeit und Events."],
+        ["states", "States", HILFE_LOESCH],
         ["kurz", "5-Min-Statistik", HILFE_LOESCH],
         ["lts", "Langzeit", HILFE_LOESCH],
         ["events", "Events", HILFE_LOESCH],
         ["attr_zeilen", "Attributzeilen (mit den States)", "Attributzeilen, die mit den States dieser Regel wegfallen – nicht in der Summe; aus der Attribut-Analyse"]].map(([k, t, h]) => (
-      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "attr_zeilen" ? 150 : 120, wert: r => probeWert(r, k), zelle: r => zahl(probeWert(r, k)), csv: r => probeWert(r, k), summe: anzahlSumme(r => probeWert(r, k)) })),
+      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "attr_zeilen" ? 150 : k === "loesch_summe" ? 200 : k === "kurz" ? 145 : 120, wert: r => probeWert(r, k), zelle: r => zahl(probeWert(r, k)), csv: r => probeWert(r, k), summe: anzahlSumme(r => probeWert(r, k)) })),
     { k: "attr_bytes", titel: "Attribute (GB)", hilfe: "Datenmenge der Attributzeilen, die mit den States wegfallen (inkl. Index)", typ: "gb", n: 1, breite: 120, wert: r => r.attr_bytes,
       zelle: r => S.probe?.stand?.attribut_analyse ? gb(r.attr_bytes) : "–", csv: r => r.attr_bytes, summe: gbSumme(r => r.attr_bytes) },
-    { k: "ersparnis_bytes", titel: "Ersparnis (Dauerbetrieb)", hilfe: HILFE_ERSPARNIS, typ: "gb", n: 1, breite: 160, wert: r => r.ersparnis_bytes,
+    { k: "ersparnis_bytes", titel: "Summe (Dauerbetrieb · GB)", hilfe: HILFE_ERSPARNIS, typ: "gb", n: 1, breite: 160, wert: r => r.ersparnis_bytes,
       zelle: r => gb(r.ersparnis_bytes), csv: r => r.ersparnis_bytes, summe: gbSumme(r => r.ersparnis_bytes) },
-    { k: "ersparnis_states", titel: "davon States", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Rohdaten und 5-Min-Statistik (über die Kurzzeit)",
+    { k: "ersparnis_states", titel: "States (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Rohdaten und 5-Min-Statistik (über die Kurzzeit)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_states, zelle: r => gb(r.ersparnis_states), csv: r => r.ersparnis_states, summe: gbSumme(r => r.ersparnis_states) },
-    { k: "ersparnis_attr", titel: "davon Attribute", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus den Attributen – sie gehören zur Kurzzeit (States, 5-Min, Attribute)",
+    { k: "ersparnis_attr", titel: "Attribute (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus den Attributen – sie gehören zur Kurzzeit (States, 5-Min, Attribute)",
       typ: "gb", n: 1, breite: 130, wert: r => r.ersparnis_attr, zelle: r => gb(r.ersparnis_attr), csv: r => r.ersparnis_attr, summe: gbSumme(r => r.ersparnis_attr) },
-    { k: "ersparnis_lts", titel: "davon Langzeit", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus der Stundenstatistik (über die Langzeit)",
+    { k: "ersparnis_lts", titel: "Langzeit (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus der Stundenstatistik (über die Langzeit)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_lts, zelle: r => gb(r.ersparnis_lts), csv: r => r.ersparnis_lts, summe: gbSumme(r => r.ersparnis_lts) },
-    { k: "ersparnis_events", titel: "davon Events", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Events (über Event-Regeln)",
+    { k: "ersparnis_events", titel: "Events (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Events (über Event-Regeln)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_events || 0, zelle: r => gb(r.ersparnis_events || 0), csv: r => r.ersparnis_events || 0, summe: gbSumme(r => r.ersparnis_events || 0) },
   ],
 });
@@ -1616,20 +1966,27 @@ function probeWert(r, k) {
 }
 T.lts = new LokaleTabelle({
   id: "#tLts", treffer: "#trefferLts", schluessel: "dbh_breiten_lts", einheit: "Statistiken", sortStd: { k: "rows", desc: true },
+  // Punkt 147 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["statistic_id", "source", "in_registry"]], ["Istzustand", "ist", ["rows"]]],
+  fix: ["statistic_id"],
   leer: "keine Langzeitstatistik ohne Entität",
   spalten: [
     { k: "statistic_id", titel: "statistic_id", typ: "text", fest: 1, breite: 360, wert: r => r.statistic_id, zelle: r => `<span class="mono">${esc(r.statistic_id)}</span>`, csv: r => r.statistic_id, summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     { k: "source", titel: "Quelle", typ: "auswahl", breite: 120, wert: r => r.source, zelle: r => esc(r.source), csv: r => r.source,
       optionen: l => [...new Set(l.map(r => r.source))].map(s => [s, s]) },
-    { k: "rows", titel: "Zeilen", typ: "zahl", n: 1, breite: 110, wert: r => r.rows, zelle: r => zahl(r.rows), csv: r => r.rows, summe: anzahlSumme(r => r.rows) },
     { k: "in_registry", titel: "in Registry", typ: "auswahl", breite: 140, wert: r => r.in_registry ? "ja" : "nein",
       zelle: r => r.in_registry ? "ja (deaktiviert)" : "nein", csv: r => r.in_registry ? "ja" : "nein", optionen: () => [["ja", "ja"], ["nein", "nein"]],
-      summe: (g, a) => [`${zahl(g.filter(r => r.in_registry).length)} ja · ${zahl(g.filter(r => !r.in_registry).length)} nein`, zahl(a.length)] },
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Statistiken – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nin Registry: ja ${zahl(g.filter(r => r.in_registry).length)} · nein ${zahl(g.filter(r => !r.in_registry).length)}`] },
+    { k: "rows", titel: "Langzeit (Zeilen)", typ: "zahl", n: 1, breite: 110, wert: r => r.rows, zelle: r => zahl(r.rows), csv: r => r.rows, summe: anzahlSumme(r => r.rows) },
   ],
 });
 // ---- Events je Typ (Punkt 42/48): Vorhaltezeit je Event-Typ, gespeichert in der Regeldatei unter "events"
 T.events = new LokaleTabelle({
   id: "#tEvents", treffer: "#trefferEvents", schluessel: "dbh_breiten_events", einheit: "Event-Typen", sortStd: { k: "zeilen", desc: true },
+  // Punkt 144 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
+  gruppen: [["Stammdaten", "stamm", ["wahl", "event_type", "regel"]], ["Vorhaltezeiten", "vorh", ["anzeige", "tage"]],
+    ["Istzustand", "ist", ["zeilen", "pro_tag", "erster_tag"]], ["Löschmenge sofort", "loesch", ["loeschbar"]], ["Prognose", "prog", ["ersparnis_bytes"]]],
+  fix: ["wahl", "event_type"],
   leer: "keine Events (Analyse ab 0.3.0 nötig)",
   spalten: [
     // Punkt 91: Massenauswahl wie im Tab Regeln
@@ -1641,27 +1998,27 @@ T.events = new LokaleTabelle({
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     { k: "regel", titel: "Regel", typ: "auswahl", breite: 160, wert: r => r.regel || "–",
       hilfe: "Event-Regel aus der Regelliste (Typ event), die für diesen Event-Typ gilt; ohne Regel gilt global",
-      zelle: r => r.regel ? `<span class="chip regel">${esc(r.regel)}</span>${r.ueberstimmt?.length ? ` <span class="chip" title="überstimmt: ${esc(r.ueberstimmt.map(u => u.regel).join(", "))}">+${r.ueberstimmt.length}</span>` : ""}` : `<span class="sub">– (global)</span>`,
+      zelle: r => r.regel ? `${regelChip(r.regel)}${r.ueberstimmt?.length ? ` <span class="chip" title="überstimmt: ${esc(r.ueberstimmt.map(u => u.regel).join(", "))}">+${r.ueberstimmt.length}</span>` : ""}` : `<span class="sub">– (global)</span>`,
       csv: r => r.regel || "", optionen: l => [["–", "ohne Regel"], ...[...new Set(l.map(r => r.regel).filter(Boolean))].sort().map(x => [x, x])],
-      summe: (g, a) => [`${zahl(g.filter(r => r.regel).length)} mit Regel`, zahl(a.filter(r => r.regel).length)] },
+      summe: (g, a) => [zahl(g.filter(r => r.regel).length), zahl(a.filter(r => r.regel).length), "Event-Typen mit eigener Regel – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "anzeige", titel: "Vorhaltezeit", typ: "auswahl", breite: 120, wert: r => r.wert === "global" ? "global" : "eigene",
       zelle: r => r.wert === "global" ? `<span class="sub">global</span>` : esc(wertAnzeige(r.wert)), csv: r => r.wert,
       optionen: () => [["global", "global"], ["eigene", "eigene Zeit"]] },
     { k: "tage", titel: "wirksam (Tage)", typ: "zahl", n: 1, breite: 110, wert: r => r.tage, zelle: r => zahl(r.tage), csv: r => r.tage,
       hilfe: "global = purge_keep_days; eine eigene Zeit wirkt höchstens bis purge_keep_days" },
-    { k: "zeilen", titel: "Events gesamt", typ: "zahl", n: 1, breite: 120, wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
-    { k: "pro_tag", titel: "pro Tag (7 d)", typ: "zahl", n: 1, breite: 110, wert: r => r.pro_tag, zelle: r => zahl(r.pro_tag), csv: r => r.pro_tag, summe: anzahlSumme(r => r.pro_tag),
+    { k: "zeilen", titel: "Bestand (Events)", typ: "zahl", n: 1, breite: 120, wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
+    { k: "pro_tag", titel: "Zuwachs (Events pro Tag, Ø 7 d)", typ: "zahl", n: 1, breite: 155, wert: r => r.pro_tag, zelle: r => zahl(r.pro_tag), csv: r => r.pro_tag, summe: anzahlSumme(r => r.pro_tag),
       hilfe: "Mittel der letzten 7 vollen Tage; 0 bei Typen, die der Recorder ausschließt (z. B. call_service per exclude)" },
-    { k: "erster_tag", titel: "ältestes", typ: "keine", sortierbar: 1, breite: 100, wert: r => r.erster_tag, zelle: r => datum(r.erster_tag * 86400), csv: r => datum(r.erster_tag * 86400) },
-    { k: "loeschbar", titel: "Löschmenge sofort", typ: "zahl", n: 1, breite: 140, hilfe: HILFE_LOESCH, wert: r => r.loeschbar, zelle: r => zahl(r.loeschbar), csv: r => r.loeschbar, summe: anzahlSumme(r => r.loeschbar) },
-    { k: "ersparnis_bytes", titel: "Ersparnis (Dauerbetrieb)", typ: "gb", n: 1, breite: 160, hilfe: HILFE_ERSPARNIS, wert: r => r.ersparnis_bytes,
+    { k: "erster_tag", titel: "ältestes (Event)", typ: "keine", sortierbar: 1, breite: 100, wert: r => r.erster_tag, zelle: r => datum(r.erster_tag * 86400), csv: r => datum(r.erster_tag * 86400) },
+    { k: "loeschbar", titel: "Events (Zeilen)", typ: "zahl", n: 1, breite: 170, hilfe: HILFE_LOESCH, wert: r => r.loeschbar, zelle: r => zahl(r.loeschbar), csv: r => r.loeschbar, summe: anzahlSumme(r => r.loeschbar) },
+    { k: "ersparnis_bytes", titel: "Ersparnis (Dauerbetrieb · GB)", typ: "gb", n: 1, breite: 160, hilfe: HILFE_ERSPARNIS, wert: r => r.ersparnis_bytes,
       zelle: r => gb(r.ersparnis_bytes), csv: r => r.ersparnis_bytes, summe: gbSumme(r => r.ersparnis_bytes) },
   ],
   zeileAttr: r => `class="klick" data-ev="${esc(r.event_type)}"`,
   nachher: () => zeigeAuswahlEv(),
 });
 $("#tEvents").addEventListener("click", ev => {
-  if (ev.target.closest("[data-wahl-ev]") || ev.target.closest("td.mitte")) return;   // Punkt 91: Auswahl öffnet keine Regel
+  if (ev.target.closest("[data-wahl-ev]") || ev.target.closest("td.mitte") || ev.target.closest("[data-regel-edit]")) return;   // Punkt 91; Punkt 144: Regel-Chip öffnet die Regel selbst
   const tr = ev.target.closest("tr[data-ev]"); if (!tr || T.events.z.klickIstZiehen?.(ev)) return;
   // Punkt 51: Event-Vorhaltezeiten sind Regeln vom Typ event – vorhandene öffnen, sonst eine anlegen
   const typ = tr.dataset.ev, e = (S.events || []).find(x => x.event_type === typ);
@@ -1674,7 +2031,7 @@ document.addEventListener("click", ev => {
   const sw = ev.target.closest("[data-spalten]");
   if (sw) {
     const t = sw.dataset.spalten;
-    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognosen je Regel", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokoll", events: "Events" }[t]);
+    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognosen je Regel", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokolle – Läufe", events: "Events" }[t]);
   }
   const rf = ev.target.closest("[data-reset-filter]"); if (rf) return T[rf.dataset.resetFilter].resetFilter();
   const rb = ev.target.closest("[data-reset-breiten]"); if (rb) return T[rb.dataset.resetBreiten].z.reset();
@@ -1769,8 +2126,8 @@ $("#massenEv").addEventListener("click", ev => {
 // ---- Punkt 97 (0.4.7): Regeln aus Löschplan und Prognosen je Regel direkt öffnen
 const regelIdx = id => (S.regeln?.regeln || []).findIndex(x => x.id === id);
 const regelChip = id => regelIdx(id) >= 0
-  ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)} bearbeiten" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(id)}</span>`
-  : `<span class="chip regel">${esc(id)}</span>`;
+  ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)} bearbeiten" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(chipText(id))}</span>`
+  : `<span class="chip regel" title="${esc(id)}">${esc(chipText(id))}</span>`;   // Punkt 160: E: kurz
 document.addEventListener("click", ev => {
   const e = ev.target.closest("[data-regel-edit]"); if (!e || T.loesch?.z.klickIstZiehen?.(ev) || T.probe?.z.klickIstZiehen?.(ev)) return;
   const i = regelIdx(e.dataset.regelEdit);
@@ -1831,10 +2188,13 @@ $("#massenleiste").addEventListener("click", async ev => {
   const liste = ids.length > 12 ? ids.slice(0, 12).join(", ") + ` … (+${ids.length - 12})` : ids.join(", ");
   if (b.dataset.masse === "werte") return massenWerte(ids);   // Punkt 104 (0.4.8)
   if (b.dataset.masse === "entfernen") {   // Punkt 93 (0.4.6)
-    const n = ids.length, wort = n === 1 ? "Regel" : "Regeln";
+    // Punkt 127: HA-Standard ist nicht löschbar – bleibt stehen, die übrigen werden entfernt
+    const weg = ids.filter(id => id !== HA_STD), n = weg.length, wort = n === 1 ? "Regel" : "Regeln";
+    const haHinweis = weg.length < ids.length ? `\n\n${HA_STD} bleibt stehen: Die Regel HA-Standard lässt sich nicht entfernen, nur passiv schalten.` : "";
+    if (!n) return meldung("Nicht entfernbar", `Die Regel ${HA_STD} (HA-Standard) lässt sich nicht entfernen, nur passiv schalten.`);
     if (!await frage(`${zahl(n)} ${wort} entfernen`,
-      `Entfernen: ${liste}. Es ändert sich nur die Regeldatei der App – an HA und den Daten wird nichts gelöscht. Die Vorhaltezeiten dieser Regeln gelten danach nicht mehr (es greift die nächste passende Regel bzw. der Standard).`, "Entfernen")) return;
-    try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.filter(x => !S.auswahl.has(x.id)) }); S.auswahl.clear(); T.regeln.zeige(); }
+      `Entfernen: ${kurzListe(weg)}. Es ändert sich nur die Regeldatei der App – an HA und den Daten wird nichts gelöscht. Die Vorhaltezeiten dieser Regeln gelten danach nicht mehr (es greift die nächste passende Regel bzw. der Standard).${haHinweis}`, "Entfernen")) return;
+    try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.filter(x => !weg.includes(x.id)) }); S.auswahl.clear(); T.regeln.zeige(); }
     catch (e) { meldung("Nicht gespeichert", e.message); }
     return;
   }
@@ -1851,6 +2211,7 @@ const massenWahl = art => wertBlock(art, null, true, "", []).replace('<option va
   '<option value="=" selected>– unverändert lassen –</option><option value="">– nicht setzen –</option>');
 function massenWerteAnwenden(r, kz, lz) {
   if (r.typ === "schutz") return { neu: r, geaendert: false, grund: "Schutz-Regel: Werte fest (global/unbegrenzt)" };   // Punkt 111
+  if (r.typ === "ha_standard") return { neu: r, geaendert: false, grund: "HA-Standard: Werte fest (10 Tage/unbegrenzt), nur passiv schaltbar" };   // Punkt 127
   const neu = { ...r }, gruende = [];
   if (kz !== "=") {
     if (r.typ === "event" && (kz == null || kz === "keine")) gruende.push("Event-Regel braucht eine Vorhaltezeit (global oder Dauer)");
@@ -2057,7 +2418,7 @@ async function ladeRegeln() {
   const ids = new Set(S.regeln.regeln.map(x => x.id));
   [...S.auswahl].forEach(id => ids.has(id) || S.auswahl.delete(id));   // entfernte Regeln aus der Auswahl
   const st = S.regeln.standard;
-  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › verwaist, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
+  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › verwaist › HA-Standard, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
     `Für verwaiste Entitäten gelten E:- und entity-Regeln sowie Regeln vom Typ verwaist. ` +
     `Regeln vom Typ event setzen die ${EV_NAME} (Logbuch) je Event-Typ – genauer Name vor Platzhalter. ` +
     `Standard ohne Regel: ${WNAME.kurzzeit} ${wertAnzeige(st.kurzzeit)}, ${WNAME.langzeit} ${wertAnzeige(st.langzeit)}.`;
@@ -2147,7 +2508,32 @@ const MUSTERHILFE = {
   event: "Event-Typen, auch mit * und ?, z. B. call_service oder script_* – Vorhaltezeit der Events (Logbuch); wirkt nie auf Entitäten.",
   schutz: "Muster mit * und ?, z. B. sensor.rs_meteo_* – diese Entitäten werden nie gekürzt (höchster Rang, auch vor E:-Regeln, auch verwaist).",
 };
+// Punkt 127: Regel HA-Standard – nur Erklärung und Schalter aktiv/passiv, kein Entfernen, keine Werte
+function zeigeHaStandard(r) {
+  dialog(`Regel ${r.id}`, `
+    <p><b>${HA_ICON} ${esc(r.name)}</b></p>
+    <p>Diese Regel bildet das Löschverhalten von Home Assistant in der <b>Grundeinstellung</b> ab (Recorder <span class="mono">purge_keep_days: 10</span>):</p>
+    <ul>
+      <li><b>${WNAME.kurzzeit}:</b> 10 Tage</li>
+      <li><b>${WNAME.langzeit}:</b> unbegrenzt – HA löscht die Langzeitstatistik nie</li>
+      <li><b>${EV_NAME}:</b> 10 Tage, alle Event-Typen</li>
+    </ul>
+    <p class="sub">Sie gilt für alles, wofür keine andere Regel einen Wert setzt – auch für verwaiste Entitäten und Zähler, wie bei HA selbst.
+      Sie hat den niedrigsten Rang: Jede andere Regel geht vor. Anders als HA löscht die App bis zur lokalen Mitternacht (volle Kalendertage).</p>
+    <p class="sub">Die Regel lässt sich nicht entfernen und nicht ändern, nur passiv schalten. Passiv gilt ohne Regel wieder „global“ (purge_keep_days).</p>
+    <label><input type="checkbox" id="rAktiv" ${r.aktiv ? "checked" : ""}> aktiv (sonst passiv)</label>
+    <div id="dlgFehler" class="fehler"></div>`, [
+    ["Abbrechen", () => $("#dlg").close()],
+    ["Speichern", async () => {
+      const aktiv = $("#rAktiv").checked;
+      if (aktiv === r.aktiv) return $("#dlg").close();
+      if (aktiv && !await warnPruefung({ ...r, aktiv: true })) return;
+      try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.map(x => x.id === r.id ? { ...x, aktiv } : x) }); $("#dlg").close(); }
+      catch (e) { $("#dlgFehler").textContent = e.message; }
+    }, true]]);
+}
 function bearbeiteRegel(i, vorlage) {
+  if (i >= 0 && S.regeln.regeln[i]?.typ === "ha_standard") return zeigeHaStandard(S.regeln.regeln[i]);   // Punkt 127
   const neu = i < 0;
   const vorschlagId = naechsteId();
   const r = neu ? { id: vorschlagId, name: "", typ: "glob", muster: [], aktiv: true, kurzzeit: null, attribute: null, langzeit: null, notiz: "", ...(vorlage || {}) }
@@ -2338,30 +2724,34 @@ const blockSpalte = (k, titel, hilfe, breite = 115) => ({ k, titel, hilfe, typ: 
   zelle: r => r[k] == null ? "–" : (k === "attr_zeilen" && r.attr_obergrenze ? "≤ " : "") + zahl(r[k]), csv: r => r[k] ?? "", summe: anzahlSumme(r => r[k]) });
 T.loesch = new LokaleTabelle({
   id: "#tLoesch", treffer: "#trefferLoesch", schluessel: "dbh_breiten_loesch2", einheit: "Entitäten bzw. Event-Typen im Plan", sortStd: { k: "summe", desc: true },
+  // Punkt 148 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["entity_id", "regel", "status"]], ["Vorhaltezeiten", "vorh", ["lauf"]],
+    ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "lts", "events", "attr_zeilen", "faellig"]]],
+  fix: ["entity_id"],
   leer: "nichts zu löschen",
   spalten: [
     { k: "entity_id", titel: "Entität / Event-Typ", typ: "text", fest: 1, breite: 330, wert: r => r.entity_id, zelle: r => `<span class="mono">${esc(r.entity_id)}</span>`, csv: r => r.entity_id,
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     { k: "regel", titel: "Regel", typ: "text", breite: 150, wert: r => r.regel, zelle: r => r.regel.split(", ").map(regelChip).join(" "), csv: r => r.regel },
     // Punkt 114 (0.4.10): Zustand der Entität, nicht der Regel – passive Regeln stehen nie im Plan
-    { k: "status", titel: "Entität", typ: "auswahl", breite: 110, wert: r => r.status || "–",
-      hilfe: "Zustand der Entität in HA (aktiv / verwaist / verwaist (gelöscht)), nicht der Regel – passive Regeln stehen nie im Plan. Bei Event-Typen „–“.",
+    { k: "status", titel: STATUS_TITEL, typ: "auswahl", breite: 145, wert: r => r.status || "–",
+      hilfe: `${STATUS_HILFE} – passive Regeln stehen nie im Plan. Bei Event-Typen „–“.`,
       zelle: r => `<span class="status-${esc(r.status)}">${esc(STATUS_TEXT[r.status] || r.status || "–")}</span>`, csv: r => r.status,
       tip: r => STATUS_TEXT[r.status] ? `Entität ${STATUS_TEXT[r.status]}` : "Event-Typ",
       optionen: l => [...new Set(l.map(r => r.status || "–"))].map(x => [x, STATUS_TEXT[x] || x]) },
-    { k: "lauf", titel: "Vorhaltung · in diesem Lauf", typ: "auswahl", breite: 230, wert: r => r.lauf,
+    { k: "lauf", titel: "Vorhaltung (in diesem Lauf)", typ: "auswahl", breite: 230, wert: r => r.lauf,
       hilfe: "K = States (keep_days an recorder.purge_entities), 5M = 5-Min-Statistik, L = Langzeit, EV = Events. vollständig: alles außerhalb der Vorhaltezeit · teilweise: nur die ältesten Tage bzw. bis zur Obergrenze · nächster Lauf: passt nicht mehr unter die Obergrenze · übersprungen: Integration fehlt. Einzelheiten je Zeile im Tooltip der Zelle.",
       tip: vorhaltungTip,
       zelle: r => `${esc(r.vorhaltung)} · ${r.lauf === "vollständig" ? r.lauf : `<span class="chip warn">${esc(r.lauf)}</span>`}`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
       optionen: () => Object.keys(LART).map(x => [x, x]),
-      summe: (g, a) => [`${zahl(g.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length)} im Lauf`, zahl(a.length)] },
-    blockSpalte("summe", "Zeilen dieser Lauf", "Summe aus States, 5-Min-Statistik, Langzeit und Events – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
-    blockSpalte("states", "davon States", "Zeilen in states (recorder.purge_entities)"),
-    blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)"),
+      summe: (g, a) => [zahl(g.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), zahl(a.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), "Einträge, die dieser Lauf bearbeitet (ohne „nächster Lauf“ und „übersprungen“) – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
+    blockSpalte("summe", "Summe (dieser Lauf)", "Summe aus States, 5-Min-Statistik, Langzeit und Events – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
+    blockSpalte("states", "States", "Zeilen in states (recorder.purge_entities)"),
+    blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)", 145),
     blockSpalte("lts", "Langzeit", "Stundenstatistik (Integration RS DB Hygiene)"),
     blockSpalte("events", "Events", "Events dieses Typs (Integration RS DB Hygiene)"),
     blockSpalte("attr_zeilen", "Attributzeilen (mit den States)", "Attributzeilen, die mit den States wegfallen – nicht in der Summe; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele (≤)", 150),
-    blockSpalte("faellig", "insgesamt fällig", "alle Zeilen außerhalb der Vorhaltezeiten (= Löschmenge sofort), unabhängig von der Obergrenze", 130),
+    blockSpalte("faellig", "fällig (insgesamt)", "alle Zeilen außerhalb der Vorhaltezeiten (= Löschmenge sofort), unabhängig von der Obergrenze", 130),
     { k: "hinweis", titel: "Hinweis", typ: "text", breite: 200, wert: r => r.hinweis || "", zelle: r => esc(r.hinweis || ""), csv: r => r.hinweis || "" },
   ],
 });
@@ -2371,13 +2761,17 @@ const LSTATUS = { fertig: "fertig", "läuft": "läuft", Fehler: "Fehler", abgebr
 T.laeufe = new LokaleTabelle({
   id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true },
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
+  // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
+    ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_lts", "lauf_events", "lauf_attr"]]],
+  fix: ["start"],
   leer: "noch kein Löschlauf",
   spalten: [
     { k: "start", titel: "Start", typ: "keine", sortierbar: 1, fest: 1, n: 1, breite: 140, wert: r => r.start, zelle: r => zeit(r.start), csv: r => zeit(r.start) },
     { k: "dauer", titel: "Dauer", typ: "keine", sortierbar: 1, n: 1, breite: 80, wert: r => r.ende ? r.ende - r.start : null, zelle: r => r.ende ? dauerText(r.ende - r.start) : "–", csv: r => r.ende ? Math.round(r.ende - r.start) : "",
       tip: r => r.ende ? `Dauer ${dauerText(r.ende - r.start)}${r.backup_warte_s ? `, davon ${backupText(r)}` : ""}` : "" },
     // Punkt 116 (0.4.10): Pause wegen eines HA-Backups (erst ab 0.4.10 gemessen)
-    { k: "backup", titel: "davon Backup-Pause", typ: "keine", sortierbar: 1, n: 1, breite: 95, wert: r => r.backup_warte_s ?? null,
+    { k: "backup", titel: "Backup-Pause (davon)", typ: "keine", sortierbar: 1, n: 1, breite: 125, wert: r => r.backup_warte_s ?? null,
       hilfe: "Zeit, die der Lauf auf ein HA-Backup gewartet hat (das Backup sperrt die Datenbank) – in der Dauer enthalten. Erst ab 0.4.10 gemessen; ältere Läufe „–“.",
       zelle: r => r.backup_warte_s ? dauerText(r.backup_warte_s) : r.backup_warte_s === 0 ? "0" : "–", tip: r => r.backup_warte_s ? `auf Backup gewartet: ${backupText(r)}` : "",
       csv: r => r.backup_warte_s == null ? "" : Math.round(r.backup_warte_s) },
@@ -2391,10 +2785,10 @@ T.laeufe = new LokaleTabelle({
     // Punkt 59: genau gezählt vor jedem Paket bzw. Auftrag = eigentlicher Vergleichswert zu „gelöscht“
     { k: "gezaehlt", titel: "gezählt", typ: "zahl", n: 1, breite: 110, wert: r => gezaehltLauf(r), zelle: r => zahl(gezaehltLauf(r)), csv: r => gezaehltLauf(r), summe: anzahlSumme(r => gezaehltLauf(r)),
       hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“" },
-    { k: "geloescht", titel: "gelöschte Zeilen", typ: "zahl", n: 1, breite: 130, wert: r => r.geloescht, zelle: r => zahl(r.geloescht), csv: r => r.geloescht, summe: anzahlSumme(r => r.geloescht) },
+    { k: "geloescht", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 130, wert: r => r.geloescht, zelle: r => zahl(r.geloescht), csv: r => r.geloescht, summe: anzahlSumme(r => r.geloescht) },
     // Punkt 63: Block wie in der Monatssumme – davon je Tabelle, dahinter die gemessenen Attributzeilen (nicht in der Summe)
-    ...[["states", "davon States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
-      k: "lauf_" + k, titel: t, typ: "zahl", n: 1, breite: 115, wert: r => laufArt(r, k), zelle: r => zahl(laufArt(r, k)), csv: r => laufArt(r, k), summe: anzahlSumme(r => laufArt(r, k)) })),
+    ...[["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
+      k: "lauf_" + k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 115, wert: r => laufArt(r, k), zelle: r => zahl(laufArt(r, k)), csv: r => laufArt(r, k), summe: anzahlSumme(r => laufArt(r, k)) })),
     { k: "lauf_attr", titel: "Attributzeilen (mit den States)", typ: "zahl", n: 1, breite: 150, hilfe: "im Lauf gemessen: Attributzeilen, die HA mit den States gelöscht hat (ab 0.4.0) – nicht in der Summe",
       wert: r => r.attr_geloescht ?? null, zelle: r => r.attr_geloescht == null ? "–" : zahl(r.attr_geloescht), csv: r => r.attr_geloescht ?? "", summe: anzahlSumme(r => r.attr_geloescht || 0) },
     { k: "pakete", titel: "Aufrufe", typ: "zahl", n: 1, breite: 80, wert: r => r.pakete.filter(p => p.gesendet.length).length,
@@ -2436,13 +2830,16 @@ $("#tLaeufe").addEventListener("click", ev => {
   // Punkt 74: auch die Einzelheiten je Lauf über den Tabellenbaustein (Filter, Summen, Mehrfachsortierung)
   T.detail = new LokaleTabelle({
     id: "#tDetail", treffer: "#trefferDetail", schluessel: "dbh_breiten_detail", einheit: "Entitäten bzw. Event-Typen", sortStd: { k: "summe", desc: true },
+    // Punkt 150 (0.5.3): Look & Feel wie Tab Entitäten
+    gruppen: [["Stammdaten", "stamm", ["entity_id", "keep"]], ["Gelöscht", "loesch", ["summe", "states", "kurz", "lts", "events", "attr_zeilen", "rest"]]],
+    fix: ["entity_id"],
     leer: "keine Entität gesendet",
     spalten: [
       { k: "entity_id", titel: "Entität / Typ", typ: "text", fest: 1, breite: 300, wert: x => x.entity_id, zelle: x => `<span class="mono">${esc(x.entity_id)}</span>`, csv: x => x.entity_id,
         summe: (g, a) => [zahl(g.length), zahl(a.length)] },
       { k: "keep", titel: "keep_days", typ: "text", breite: 150, wert: x => x.keep, zelle: x => esc(x.keep), csv: x => x.keep },
-      blockSpalte("summe", "gelöschte Zeilen", "Summe aus States, 5-Min-Statistik, Langzeit und Events", 130),
-      blockSpalte("states", "davon States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term"),
+      blockSpalte("summe", "Summe (Zeilen)", "Summe aus States, 5-Min-Statistik, Langzeit und Events", 130),
+      blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term", 145),
       blockSpalte("lts", "Langzeit", "Stundenstatistik"), blockSpalte("events", "Events", "Events dieses Typs"),
       blockSpalte("attr_zeilen", "Attributzeilen (mit den States)", "im Lauf gemessen – nicht in der Summe", 150),
       blockSpalte("rest", "Rest", "alte Zeilen nach dem Lauf", 90),
@@ -2485,7 +2882,6 @@ async function ladeLoeschen() {
       <span class="mono">${esc(g.muster.join(", "))}</span> aus ${esc(g.regel)}, werden von dieser glob-Regel aber nicht erfasst – glob-Regeln gelten nur für aktive Entitäten.
       <span class="sub" title="${esc(g.beispiele.join("\n"))}">z. B. ${esc(g.beispiele.slice(0, 2).join(", "))}${g.entitaeten > 2 ? " …" : ""}</span>
       <button data-vu="${i}" style="margin-left:6px">Regel „verwaist“ mit diesem Muster anlegen</button></div>`).join("");
-    const ll = p.letzter_lauf;
     // Punkt 54: Risiken dieses Laufs; Punkt 53: Entitäten, die schon am ältesten Tag über der Obergrenze liegen
     const ris = (p.risiken || []).length ? `<div><b>Risiken dieses Laufs:</b><ul style="margin:4px 0 0 18px;padding:0">${p.risiken.map(x =>
       `<li class="risiko${x.schwer ? " schwer" : ""}" title="${esc(x.beispiele.join("\n"))}">${esc(x.text)} <span class="sub">(${esc(x.beispiele.slice(0, 3).join(", "))}${x.anzahl > 3 ? " …" : ""})</span></li>`).join("")}</ul></div>`
@@ -2516,42 +2912,45 @@ async function ladeLoeschen() {
       ${zg}
       ${ris}
       ${p.sperren.map(s => `<div class="sperre">⚠ ${esc(s)}</div>`).join("")}
-      <div><button class="gefahr" id="lStart" ${p.sperren.length ? "disabled" : ""}>Jetzt ausführen</button>
-        ${ll ? `<span class="sub" style="margin-left:10px">Letzter Lauf: ${zeit(ll.start)} · ${esc(ll.status)} · ${zahl(ll.geloescht)} Zeilen gelöscht${ll.nur_regel ? ` (${esc(ll.nur_regel)})` : ""}${ll.backup_warte_s ? ` · ${dauerText(ll.backup_warte_s)} auf Backup gewartet` : ""}
-          – <a href="#" id="lZumProtokoll">Löschprotokoll</a></span>` : ""}</div>`;
+      <div><button class="gefahr" id="lStart" ${p.sperren.length ? "disabled" : ""}
+          title="${esc(`Löscht den ganzen Plan des gewählten Umfangs (${p.nur_regel ? `Regel ${p.nur_regel}` : "alle aktiven Regeln"}: ${su.zeilen ? `ca. ${zahl(su.zeilen)} Zeilen` : "nichts zu löschen"}). Die Filter der Tabelle wirken nur auf die Anzeige.`)}">Jetzt ausführen</button>
+        ${p.nur_regel ? `<span class="sub" style="margin-left:10px">Umfang: nur Regel ${esc(p.nur_regel)} – andere aktive Regeln bleiben in diesem Lauf außen vor.</span>` : ""}</div>`;
+    // Punkt 162 (0.5.3): kein „Letzter Lauf …“ mehr neben dem Knopf (steht im Reiter Löschprotokolle); Punkt 161: Tooltip und Umfang-Hinweis
+
     $("#lStart").onclick = starteLoeschen;
     const ab = $("#lAusnahme"); if (ab) ab.onchange = () => { S.loeschAusnahme = ab.checked; ladeLoeschen(); };
     k.querySelectorAll("[data-vu]").forEach(b => b.onclick = () => {
       const g = p.verwaist_ungedeckt[+b.dataset.vu];
       bearbeiteRegel(-1, { typ: "verwaist", muster: ["alle", ...g.muster], name: `Verwaist: ${g.name}`, kurzzeit: g.kurzzeit || "30d" });
     });
-    const zp = $("#lZumProtokoll");
-    if (zp) zp.onclick = ev => { ev.preventDefault(); document.querySelector('#tabs button[data-tab="protokoll"]').click(); };
     T.loesch.daten(planZeilen(p));
   } catch (e) {
     k.innerHTML = `<div class="fehler">${esc(e.message)}</div>`;
   }
 }
-// ---- Reiter Löschprotokoll (Punkt 45)
+// ---- Reiter Löschprotokolle (Punkt 45; Name seit Punkt 158)
 const gezaehltLauf = r => (r.pakete || []).reduce((s, p) => s + (p.vorher || 0), 0);
 const laufArt = (r, art) => (r.pakete || []).filter(p => (p.art || "states") === art).reduce((s, p) => s + (p.geloescht || 0), 0);
 const artZeilen = (r, k) => k === "states" ? (r.states ?? r.zeilen - (r.kurz || 0) - (r.lts || 0) - (r.events || 0)) : (r[k] || 0);
 T.summe = new LokaleTabelle({
   id: "#tSumme", treffer: "#trefferSumme", schluessel: "dbh_breiten_summe", einheit: "Einträgen (Entität × Monat)", sortStd: { k: "zeilen", desc: true },
   seiten: [50, 250, 1000, 2500], seiteStd: 250,   // Punkt 70
+  // Punkt 151 (0.5.3): Look & Feel wie Tab Entitäten
+  gruppen: [["Stammdaten", "stamm", ["entity_id", "monat"]], ["Gelöscht", "loesch", ["zeilen", "states", "kurz", "lts", "events", "attr_zeilen"]]],
+  fix: ["entity_id"],
   leer: "noch nichts gelöscht",
   spalten: [
     { k: "entity_id", titel: "Entität", typ: "text", fest: 1, breite: 360, wert: r => r.entity_id, zelle: r => `<span class="mono">${esc(r.entity_id)}</span>`, csv: r => r.entity_id,
-      summe: (g, a) => [`${zahl(new Set(g.map(r => r.entity_id)).size)} Entitäten`, zahl(new Set(a.map(r => r.entity_id)).size)] },
+      summe: (g, a) => [zahl(new Set(g.map(r => r.entity_id)).size), zahl(new Set(a.map(r => r.entity_id)).size), `Anzahl verschiedener Entitäten bzw. Event-Typen – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nEinträge (Entität × Monat): ${zahl(g.length)}`] },
     { k: "monat", titel: "Monat", typ: "auswahl", breite: 110, wert: r => r.monat, zelle: r => esc(r.monat.split("-").reverse().join(".")), csv: r => r.monat,
       optionen: l => [...new Set(l.map(r => r.monat))].sort().reverse().map(m => [m, m.split("-").reverse().join(".")]) },
-    { k: "zeilen", titel: "gelöschte Zeilen", typ: "zahl", n: 1, breite: 140, hilfe: "Je Entität bzw. Event-Typ. Ab 0.4.4 bei Paketen mit genau einer Entität die tatsächlich gelöschte Zahl; bei größeren Paketen vorher − nachher je Entität – das kann wenige Zeilen unter der Lauf-Summe liegen, weil während des Laufs weitere Zeilen über die Altersgrenze rutschen und mitgelöscht werden.", wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
+    { k: "zeilen", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 140, hilfe: "Je Entität bzw. Event-Typ. Ab 0.4.4 bei Paketen mit genau einer Entität die tatsächlich gelöschte Zahl; bei größeren Paketen vorher − nachher je Entität – das kann wenige Zeilen unter der Lauf-Summe liegen, weil während des Laufs weitere Zeilen über die Altersgrenze rutschen und mitgelöscht werden.", wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
     // je Tabelle (ab 0.3.0); Einträge aus 0.2.x kennen nur States
-    ...[["states", "davon States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
-      k, titel: t, typ: "zahl", n: 1, breite: 120, wert: r => artZeilen(r, k), zelle: r => zahl(artZeilen(r, k)), csv: r => artZeilen(r, k), summe: anzahlSumme(r => artZeilen(r, k)) })),
+    ...[["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
+      k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 120, wert: r => artZeilen(r, k), zelle: r => zahl(artZeilen(r, k)), csv: r => artZeilen(r, k), summe: anzahlSumme(r => artZeilen(r, k)) })),
     { k: "attr_zeilen", titel: "Attributzeilen (mit den States)", typ: "zahl", n: 1, breite: 150, hilfe: "gemessen ab 0.4.0 – nicht in der Summe",
       wert: r => r.attr_zeilen || 0, zelle: r => zahl(r.attr_zeilen || 0), csv: r => r.attr_zeilen || 0, summe: anzahlSumme(r => r.attr_zeilen || 0) },
-    { k: "laeufe", titel: "in Läufen", typ: "zahl", n: 1, breite: 100, wert: r => r.laeufe, zelle: r => zahl(r.laeufe), csv: r => r.laeufe },
+    { k: "laeufe", titel: "Läufe (Anzahl)", typ: "zahl", n: 1, breite: 100, wert: r => r.laeufe, zelle: r => zahl(r.laeufe), csv: r => r.laeufe },
   ],
 });
 async function ladeProtokoll() {
@@ -2573,6 +2972,12 @@ async function ladeProtokoll() {
 $("#pNeu").onclick = ladeProtokoll;
 async function starteLoeschen() {
   const p = S.loeschPlan; if (!p) return;
+  // Punkt 127: Mit aktiver Regel HA-Standard löscht die App wie HA in der Grundeinstellung – vorher deutlich darauf hinweisen
+  if (haStandardAktiv() && !await frage("⚠ Die App läuft im HA-Standard",
+    `Die Regel ${HA_STD} (HA-Standard) ist aktiv. Für alles ohne eigene Regel löscht dieser Lauf wie Home Assistant in der Grundeinstellung:\n\n` +
+    `• ${WNAME.kurzzeit}: alles älter als 10 Tage\n• ${EV_NAME}: alle Event-Typen älter als 10 Tage\n• ${WNAME.langzeit}: bleibt unbegrenzt\n\n` +
+    `Längere Vorhaltezeiten (z. B. purge_keep_days 7300) wirken dann nur dort, wo eine eigene Regel gilt. ` +
+    `Wenn das nicht gewollt ist: abbrechen und die Regel ${HA_STD} im Tab „Regeln“ passiv schalten.\n\nTrotzdem weiter?`, "Weiter")) return;
   const umfang = p.nur_regel ? `Regel ${p.nur_regel}` : "alle aktiven Regeln";
   // Punkt 56: nur nennen, was wirklich gelöscht wird; Knopf „Starten“
   const zb = p.summe.zeilen_b_lauf || p.summe.zeilen_b || {}, b = p.stufe_b ? (p.auftraege_b || []).filter(a => !["nächster Lauf", "übersprungen"].includes(a.art_lauf)) : [];
@@ -2602,13 +3007,18 @@ $("#lNeu").onclick = ladeLoeschen;
 // ================================================ Steuerung
 // Punkt 112: Inhaltsverzeichnis der Hilfe öffnet den Abschnitt und springt hin;
 // ab 0.4.11 auch Verweise im Text (Ziel kann eine Frage oder ein Unterabschnitt sein) – kurz hervorgehoben
-document.querySelector(".hilfe")?.addEventListener("click", ev => {
-  const a = ev.target.closest("a[href^='#h-']"); if (!a) return;
-  ev.preventDefault();
-  const ziel = document.getElementById(a.getAttribute("href").slice(1)); if (!ziel) return;
+function springeHilfe(id) {
+  const ziel = document.getElementById(id); if (!ziel) return;
+  // Punkt 133 (0.5.3): auch von außerhalb (Banner) – dann zuerst den Reiter Hilfe öffnen
+  if ($("#tab-hilfe").hidden) document.querySelector('#tabs button[data-tab="hilfe"]').click();
   const d = ziel.closest("details"); if (d) d.open = true;
   ziel.scrollIntoView({ behavior: "smooth", block: "start" });
   if (ziel.tagName !== "DETAILS") { ziel.classList.remove("hziel"); void ziel.offsetWidth; ziel.classList.add("hziel"); }
+}
+document.querySelector(".hilfe")?.addEventListener("click", ev => {
+  const a = ev.target.closest("a[href^='#h-']"); if (!a) return;
+  ev.preventDefault();
+  springeHilfe(a.getAttribute("href").slice(1));
 });
 $("#tabs").addEventListener("click", ev => {
   const b = ev.target.closest("button[data-tab]"); if (!b) return;
