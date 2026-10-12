@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4b2 (Beta)
+- **Verbindungswächter (Punkt 164):** Ist die App nicht erreichbar (gestoppt, Neustart), zeigt die Oberfläche ein rotes Banner und sperrt alle ändernden Knöpfe; Speichern wird abgewiesen. Sobald die App wieder antwortet, verschwindet das Banner und die Daten werden neu geladen
+- **Kennung (Punkt 164):** Neben der Überschrift steht die Version, bei der Beta auffällig als „Beta 0.5.4b2“; der Fenstertitel der Beta endet auf „(Beta)“
+- **Tab Löschen (Punkt 163):** „Filter zurücksetzen“, „Spaltenbreiten zurücksetzen“, „Spalten …“ und „CSV“ stehen jetzt direkt über der Tabelle; oben bleiben „Umfang“ und „Plan neu laden“
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.4b1 (Beta)
 - **Beta-Version, nur auf dem Branch `beta`:** Stand wie 0.5.3, Grundlage für die nächsten Testversionen (noch keine neuen Punkte)
 

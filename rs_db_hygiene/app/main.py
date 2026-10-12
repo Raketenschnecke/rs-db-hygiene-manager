@@ -195,6 +195,9 @@ async def nachtlauf():
 ERLAUBT = {INGRESS_IP, "127.0.0.1"} | {ip.strip() for ip in os.environ.get("DBH_ERLAUBT", "").split(",") if ip.strip()}
 
 
+# Punkt 164 (0.5.4): Name und Version dieser App (vom Supervisor; ohne Supervisor aus DBH_APP_NAME/DBH_APP_VERSION) –
+# die Oberfläche zeigt damit, ob sie zur stabilen App oder zur Beta gehört
+APP = {"name": os.environ.get("DBH_APP_NAME"), "version": os.environ.get("DBH_APP_VERSION")}
 SCHLUESSEL = {"wert": None}     # Zugang der Integration (Punkt 62), beim Start aus /data gelesen bzw. erzeugt
 
 
@@ -237,7 +240,7 @@ async def status(_request):
         con.close()
     return web.json_response({"job": Z.job, "letzter_job": Z.letzter_job, "fehler": Z.letzter_fehler,
                               "analyse": info, "attribute": attr, "optionen": optionen(),
-                              "regeln_geaendert": Z.mtime(REGELN),
+                              "regeln_geaendert": Z.mtime(REGELN), "app": APP,
                               "pruefung": await asyncio.to_thread(pkd_pruefung)})
 
 
@@ -962,6 +965,14 @@ def _nicht_ausgefuehrt(pl, regel_daten, stufe_b=False):
             "attr_bytes": su.get("loeschbar_attr_bytes"), "events_zeilen": su.get("loeschbar_events", 0), "stufe_b": stufe_b}
 
 
+def _app_info():
+    try:
+        d = automatik._supervisor("/addons/self/info")["data"]
+        APP.update(name=d.get("name"), version=d.get("version"))
+    except Exception as e:  # noqa: BLE001 – nur Anzeige
+        _LOG.warning("Name und Version der App nicht lesbar: %s", e)
+
+
 async def beim_start(app):
     await asyncio.to_thread(_protokoll_aufraeumen)
     try:   # Punkt 85: Prüfung bei jedem Start (die GUI zeigt sie als Banner)
@@ -970,6 +981,8 @@ async def beim_start(app):
     except Exception:  # noqa: BLE001 – die Prüfung darf den Start nicht verhindern
         _LOG.exception("Prüfung purge_keep_days fehlgeschlagen")
     SCHLUESSEL["wert"] = await asyncio.to_thread(automatik.schluessel, DATA)
+    if os.environ.get("SUPERVISOR_TOKEN"):   # nur im Add-on: Name/Version (Punkt 164)
+        await asyncio.to_thread(_app_info)
     if os.environ.get("SUPERVISOR_TOKEN"):   # nur im Add-on: bei HA anmelden (Discovery)
         app["discovery"] = asyncio.create_task(asyncio.to_thread(automatik.melde_discovery, SCHLUESSEL["wert"]))
     app["nachtlauf"] = asyncio.create_task(nachtlauf())

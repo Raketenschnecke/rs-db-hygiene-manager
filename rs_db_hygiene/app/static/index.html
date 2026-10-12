@@ -61,6 +61,13 @@ h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; color: var(--muted); te
 /* Punkt 89: je Hinweis ein eigenes Banner, Titel fett */
 .banner { margin: 0 20px 8px; padding: 8px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); overflow-wrap: anywhere; }
 .banner b { font-weight: 700; }
+/* Punkt 164 (0.5.4): Verbindungswächter – rotes Banner, ändernde Knöpfe gesperrt; Kennung Beta/Version neben der Überschrift */
+.banner.offline { background: color-mix(in srgb, var(--bad) 22%, var(--panel)); color: var(--text); border: 1px solid var(--bad); }
+body.offline #btnAnalyse, body.offline #lStart, body.offline #dlg button.primaer, body.offline .schalter,
+body.offline [data-hoch], body.offline .massen button { opacity: .45; pointer-events: none; }
+.kennung { margin-left: 10px; padding: 0 6px; border-radius: 9px; font-size: 11px; font-weight: 400; white-space: nowrap; flex: none;   /* Größe wie die Label-Chips */
+  background: var(--chip); color: var(--muted); border: 1px solid var(--line); }
+.kennung.beta { background: color-mix(in srgb, var(--zf-loesch) 25%, var(--panel)); color: var(--text); border-color: var(--zf-loesch); }
 #banner { padding-bottom: 4px; }
 main { padding: 0 20px 24px; }
 /* Punkt 86: Kachelraster – Zeilen Istzustand / Löschmenge sofort / Prognose, Spalten je Tabelle.
@@ -334,10 +341,12 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
 </head>
 <body>
 <header>
-  <div class="kopf-titel"><h1>RS DB Hygiene Manager</h1></div>
+  <div class="kopf-titel"><h1>RS DB Hygiene Manager</h1><span id="kennung" class="kennung" hidden></span></div>
   <div class="kopf-job"><button id="btnAnalyse" aria-label="Analyse starten">Analyse<br>starten</button></div>
 </header>
 <div class="sub kopf-fehler" id="stand"></div>
+<!-- Punkt 164 (0.5.4): Verbindungswächter -->
+<div id="offline" class="banner offline" role="alert" hidden><b>Keine Verbindung zur App</b> – sie ist gestoppt oder startet neu. Änderungen werden nicht gespeichert; die Seite verbindet sich von selbst wieder.</div>
 <div id="banner" role="status" hidden></div>
 <div class="lauf" id="lauf" role="status" aria-live="polite" hidden></div>
 <main>
@@ -403,11 +412,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
     <div class="leiste" data-leiste="loeschen" hidden>
       <label>Umfang <select id="lRegel"><option value="">alle aktiven Regeln</option></select></label>
       <button id="lNeu" title="Plan aus der aktuellen Analyse und den aktiven Regeln neu berechnen">Plan neu laden</button>
-      <button data-reset-filter="loesch">Filter zurücksetzen</button>
-      <button data-reset-breiten="loesch">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="loesch">Spalten …</button>
-      <span style="flex:1"></span>
-      <a href="#" data-csv="loesch">CSV</a>
+      <!-- Punkt 163 (0.5.4): Knöpfe zur Tabelle stehen direkt über der Tabelle (unter dem Kasten) -->
     </div>
     <div class="leiste" data-leiste="protokoll" hidden>
       <button id="pNeu">Neu laden</button>
@@ -695,6 +700,14 @@ actions:
   </section>
   <section id="tab-loeschen" hidden>
     <div class="loeschkasten" id="lKasten">lade …</div>
+    <!-- Punkt 163 (0.5.4): Knöpfe, die sich nur auf die Tabelle beziehen (oben bleiben Umfang und Plan) -->
+    <div class="leiste" id="lTabLeiste">
+      <button data-reset-filter="loesch" title="Spaltenfilter und Sortierung der Tabelle zurücksetzen (der Umfang bleibt)">Filter zurücksetzen</button>
+      <button data-reset-breiten="loesch">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="loesch">Spalten …</button>
+      <span style="flex:1"></span>
+      <a href="#" data-csv="loesch">CSV</a>
+    </div>
     <div class="trefferzeile" id="trefferLoesch"></div>
     <div class="tabelle"><table id="tLoesch" class="baustein"></table></div>
   </section>
@@ -745,11 +758,27 @@ actions:
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
-const api = (p, o) => fetch("api/" + p, o).then(async r => {
-  const j = r.headers.get("content-type")?.includes("json") ? await r.json() : null;
-  if (!r.ok) throw new Error(j?.fehler || r.statusText);
-  return j;
-});
+// Punkt 164 (0.5.4): Verbindungswächter – Netzfehler oder 502/503/504 (App gestoppt, Neustart) = keine Verbindung
+const OFFLINE_TEXT = "Keine Verbindung zur App – nicht gespeichert";
+let verbindungWeg = false;
+function setzeVerbindung(ok) {
+  const war = verbindungWeg; verbindungWeg = !ok;
+  document.body.classList.toggle("offline", !ok);
+  const b = document.getElementById("offline"); if (b) b.hidden = ok;
+  if (ok && war && typeof ladeAlles === "function") ladeAlles(false);   // wieder da: Daten frisch laden
+  if (!ok && !war && typeof pruefe === "function") { clearTimeout(takt); takt = setTimeout(pruefe, 5000); }
+}
+const api = (p, o) => {
+  const schreibt = o?.method && o.method !== "GET";
+  if (schreibt && verbindungWeg) return Promise.reject(new Error(OFFLINE_TEXT));
+  return fetch("api/" + p, o).catch(() => { setzeVerbindung(false); throw new Error(schreibt ? OFFLINE_TEXT : "Keine Verbindung zur App"); })
+    .then(async r => {
+      if ([502, 503, 504].includes(r.status)) { setzeVerbindung(false); throw new Error(schreibt ? OFFLINE_TEXT : "Keine Verbindung zur App"); }
+      const j = r.headers.get("content-type")?.includes("json") ? await r.json() : null;
+      if (!r.ok) throw new Error(j?.fehler || r.statusText);
+      return j;
+    });
+};
 const zahl = n => n == null ? "–" : Number(n).toLocaleString("de-DE");
 // Punkt 79: Tage mit Jahresangabe ab einem Jahr, z. B. „7.300 Tage (20 Jahre)“
 const tageJahre = n => { if (n == null) return "–"; const j = n / 365;
@@ -845,7 +874,8 @@ new ResizeObserver(() => {
   // sichtbar bleiben: Knopfzeile, 8 px Lücke darüber (Zeilenabstand im Kasten), 10 px Polster und 1 px Rand darunter
   const ueber = Math.max(0, k.offsetHeight - z.offsetHeight - 8 - 10 - 1);
   document.documentElement.style.setProperty("--lk-ueber", ueber + "px");
-  document.documentElement.style.setProperty("--lk-sicht", (k.offsetHeight - ueber) + "px");
+  const tl = $("#lTabLeiste");   // Punkt 163: die Tabellen-Leiste liegt zwischen Kasten und Tabelle
+  document.documentElement.style.setProperty("--lk-sicht", (k.offsetHeight - ueber + (tl ? tl.offsetHeight + 10 : 0)) + "px");
 }).observe($("#lKasten"));
 
 // ================================================ Bausteine für alle Tabellen
@@ -1144,6 +1174,8 @@ const alterText = ts => {
 async function ladeStatus() {
   try {
     const s = await api("status"); S.status = s;
+    setzeVerbindung(true);
+    zeigeKennung(s.app);
     // Punkt 85: kein Infotext zu purge_keep_days mehr im Kopf – nur noch eine Warnung im Banner, wenn etwas nicht passt
     $("#stand").textContent = "";
     // Punkt 112: aktuelle Werte in der Hilfe
@@ -1153,12 +1185,21 @@ async function ladeStatus() {
     zeigeStand(s);
     zeigeLauf(s);
     return s;
-  } catch (e) { $("#stand").textContent = "Fehler: " + e.message; }
+  } catch (e) { $("#stand").textContent = verbindungWeg ? "" : "Fehler: " + e.message; }   // Punkt 164: ohne Verbindung steht es im roten Banner
 }
 // Punkt 71: Banner nur, wenn ein Schalter der App aus ist – und nur mit der Sperre, die daraus folgt
 // Punkt 85: dazu die Prüfung von purge_keep_days (configuration.yaml kleiner als App-Option oder als aktive Regeln)
 // Punkt 89 (0.4.4): je Hinweis ein eigenes Banner; Titel fett, Rest normal. [titel, text, tooltip]
 const PKD_TIP = "Die configuration.yaml liest die App beim Start und bei jeder Änderung der Datei. HA selbst übernimmt einen neuen Wert erst beim nächsten Neustart – ob HA schon damit läuft, ist hier nicht erkennbar.";
+// Punkt 164 (0.5.4): Kennung neben der Überschrift – Beta auffällig, stabile App mit Version
+function zeigeKennung(a) {
+  const el = $("#kennung"); if (!el || !a?.version) return;
+  const beta = /\(Beta\)/.test(a.name || "") || /b\d+$/.test(a.version);
+  el.textContent = beta ? `Beta ${a.version}` : a.version;
+  el.title = `${a.name || "RS DB Hygiene Manager"} ${a.version}`;
+  el.classList.toggle("beta", beta); el.hidden = false;
+  document.title = beta ? "RS DB Hygiene Manager (Beta)" : "RS DB Hygiene Manager";
+}
 function zeigeBanner(o, pruefung) {
   const t = [];
   if (!o.loeschen_freigegeben) t.push(["Löschen gesperrt:", `„Löschen freigegeben“ ist aus (${SCHALTER_ORT}).`, ""]);
@@ -1260,7 +1301,7 @@ async function pruefe() {
   if (jobWar && s && !s.job) ladeAlles();
   jobWar = laeuft;
   clearTimeout(takt);
-  takt = setTimeout(pruefe, laeuft ? 2000 : 15000);
+  takt = setTimeout(pruefe, verbindungWeg ? 5000 : laeuft ? 2000 : 15000);   // Punkt 164: ohne Verbindung öfter
 }
 
 // ================================================ Kacheln mit Erläuterung
