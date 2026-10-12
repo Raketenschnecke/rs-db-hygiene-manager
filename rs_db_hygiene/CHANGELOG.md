@@ -4,6 +4,17 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.3b2 (Beta)
+- **Prüfung der Recorder-Einrichtung (Punkt 133):** Beim Start, bei jeder Änderung der configuration.yaml und vor jeder Analyse prüft die App, ob `auto_purge: false`, `auto_repack: false` und `purge_keep_days` (mindestens 3650 Tage) gesetzt sind und `db_url` – falls vorhanden – auf die SQLite-Datei zeigt. Fehlt etwas, erscheint ein Banner mit Verweis auf die Hilfe. `recorder: !include …` wird mitgelesen
+- **Hilfe:** neue erste FAQ „Erstinbetriebnahme“ mit Beispielen für die configuration.yaml und die beiden Automationen Löschlauf und Verdichten (Punkt 134)
+- **Tab Entitäten (Punkt 132):** jede Spaltengruppe in eigener Farbe (Stammdaten und Vorhaltezeiten blau, Istzustand rot und Löschmenge sofort gelb wie die Kachelzeilen), Gruppennamen größer, Spaltenköpfe zweizeilig (Titel, darunter Zusatz bzw. Einheit). Die Gruppe „Aktuell“ heißt jetzt „Istzustand“. Die Statusspalte heißt „Entitäts-Status“ (Punkt 128)
+- **Tab Entitäten (Punkt 135):** neue Spalte „5-Min (Zeilen)“, neue Ansicht „States & Statistik“ im Spaltendialog; der Dialog ist nach Gruppen geordnet, die Ansichtsknöpfe sind deutlicher und zeigen, welche Ansicht gerade gilt
+- **Tab Entitäten (Punkt 136):** In der Filterzeile stehen Auswahlfelder oben und Textfelder unten, jeweils auf einer Linie
+- **Tab Entitäten (Punkt 137):** Die Auswahlspalte (☐) gehört farblich zum Block Stammdaten
+- **Hilfe (Punkt 138):** In der FAQ sind die Antworten unter jeder Frage eingerückt
+- Behoben: Seit 0.5.3b1 fehlten im Tab Entitäten die Griffe zum Ändern der Spaltenbreite an der richtigen Stelle (die Gruppenzeile war die erste Kopfzeile)
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.3b1 (Beta)
 - **Beta-Version, nur auf dem Branch `beta`:** Normale Nutzer sehen sie nicht; die Integration ist als GitHub-Pre-Release vorgesehen
 - **Neue Startregel HA-Standard (Punkt 127):** Regel `HA:standard` bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (10 Tage für States, 5-Min-Statistik, Attribute und Events, Langzeit unbegrenzt). Sie ist bei einer Neuinstallation aktiv, bei bestehenden Installationen wird sie passiv ergänzt. Name, Muster und Werte sind fest; sie lässt sich nicht entfernen, nur passiv schalten. Niedrigster Rang: Jede andere Regel geht vor. Ist sie aktiv, warnt die App vor einem Löschlauf aus dem Tab Löschen, dass sie im HA-Standard läuft
