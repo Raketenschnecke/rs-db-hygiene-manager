@@ -100,13 +100,18 @@ def _analyse_sync():
     db = opt.get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
     pkd = _pkd_wirksam()
     reg, gel = analyse.lies_registry(f"{HA_CONFIG}/.storage/core.entity_registry")
+    try:
+        reg_d = analyse.lies_registry_details(f"{HA_CONFIG}/.storage/core.entity_registry")
+    except Exception:  # noqa: BLE001 – Zusatzinformation (Punkte 185/186), die Analyse soll trotzdem laufen
+        _LOG.exception("Registry-Details konnten nicht gelesen werden")
+        reg_d = {}
     zustaende = analyse.hole_zustaende()
     try:
         hku = herkunft.ermittle(HA_CONFIG, zustaende)
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku)
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d)
 
 
 def _cache_version():
@@ -310,14 +315,14 @@ async def prognose_verlauf(request):
 
 
 async def klassen(_request):
-    """Punkt 166: alle Paare domain|device_class aktiver Entitäten aus der letzten Analyse – Auswahl für klasse-Regeln.
+    """Punkt 166: alle Paare domain|device_class aktiver und deaktivierter Entitäten (Punkt 185) aus der letzten Analyse – Auswahl für klasse-Regeln.
     zaehler = davon Zähler (state_class total/total_increasing), die der Zähler-Schutz von klasse-Regeln ausnimmt."""
     r = await asyncio.to_thread(Z.probelauf, None, False)
     if not r:
         return web.json_response({"klassen": [], "fehler": "Noch keine Analyse vorhanden"})
     zahl = {}
     for e in r["entitaeten"]:
-        if e["status"] != "aktiv" or not e.get("device_class"):
+        if rg.ist_verwaist(e["status"]) or not e.get("device_class"):
             continue
         k = zahl.setdefault(f'{e["domain"]}|{e["device_class"]}', [0, 0])
         k[0] += 1
@@ -335,7 +340,7 @@ ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
 def summen(liste):
     """Summe bzw. Anzahl je Spalte (Punkt 12)."""
     s = {"entitaeten": len(liste), "geraete": len({e["device_id"] for e in liste if e.get("device_id")}),
-         "aktiv": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
+         "aktiv": 0, "deaktiviert": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
          "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None,
          "first_ts": None, "last_ts": None,
          # Punkt 115: Entitäten mit Label und Zahl verschiedener Labels
@@ -353,7 +358,7 @@ def summen(liste):
         if e.get("attr_zeilen") is not None:
             s["attr_zeilen"] = (s["attr_zeilen"] or 0) + e["attr_zeilen"]
             gewicht += (e["rows"] or 0) * probelauf.B_STATE
-        s["aktiv" if e["status"] == "aktiv" else "verwaist"] += 1
+        s["aktiv" if e["status"] == "aktiv" else "deaktiviert" if e["status"] == "deaktiviert" else "verwaist"] += 1
         for k in ("rows", "rows_24h", "lts_rows", "kurz_rows"):   # kurz_rows: Punkt 135 (0.5.3)
             s[k] += e[k] or 0
         s["loeschbar"] += e["loeschbar"]["states"] or 0
@@ -417,12 +422,14 @@ def _gefiltert(r, q, fehler_ziel=None):
             continue
         if status_f == "aktiv" and e["status"] != "aktiv":
             continue
-        if status_f == "verwaist" and e["status"] == "aktiv":
+        if status_f == "verwaist" and not rg.ist_verwaist(e["status"]):
+            continue
+        if status_f == "deaktiviert" and e["status"] != "deaktiviert":
             continue
         regeln_e = {v["regel"] for v in (e["werte"] or {}).values() if v["regel"]}
         if regel_f == "mit" and not regeln_e:
             continue
-        if regel_f == "ohne" and (regeln_e or e["status"] != "aktiv"):
+        if regel_f == "ohne" and (regeln_e or rg.ist_verwaist(e["status"])):
             continue
         if regel_f and regel_f not in ("mit", "ohne") and regel_f not in regeln_e:
             continue
@@ -656,12 +663,12 @@ async def muster_verdichten(request):
 
 async def entitaet_liste(_request):
     """Punkte 172/173: kompakte Liste aller Entitäten für Autovervollständigung und „Regel für …“ –
-    [entity_id, Zeilen je Tag, aktiv (1/0), Zähler (1/0), device_class]."""
+    [entity_id, Zeilen je Tag, nicht verwaist (1/0; glob-Regeln treffen auch Deaktivierte), Zähler (1/0), device_class, Status]."""
     r = await asyncio.to_thread(Z.probelauf, None, False)
     if not r:
         return web.json_response({"e": []})
-    return web.json_response({"e": [[e["entity_id"], e["rows_24h"] or 0, int(e["status"] == "aktiv"),
-                                     int((e.get("state_class") or "").startswith("total")), e.get("device_class") or ""]
+    return web.json_response({"e": [[e["entity_id"], e["rows_24h"] or 0, int(not rg.ist_verwaist(e["status"])),
+                                     int((e.get("state_class") or "").startswith("total")), e.get("device_class") or "", e["status"]]
                                     for e in r["entitaeten"]]})
 
 

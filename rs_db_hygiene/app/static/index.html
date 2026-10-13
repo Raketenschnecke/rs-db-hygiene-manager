@@ -286,6 +286,7 @@ td.geraetklick:hover { text-decoration: underline; }
 .chip.label-geraet { background: transparent; border: 1px dashed var(--accent); }
 .chip[data-label]:hover { background: var(--accent); color: #fff; }
 .status-verwaist, .status-verwaist_geloescht { color: var(--bad); }
+.status-deaktiviert { color: var(--warn); }
 .blaettern { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 0 0; color: var(--muted); }
 dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); width: min(720px, 96vw); padding: 0; }
 dialog::backdrop { background: rgba(0,0,0,.35); }
@@ -604,7 +605,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
             <tr><td><b>entity</b></td><td>exakte Entity-IDs, <b>keine Platzhalter</b></td><td>aktive und verwaiste</td><td><code>sensor.wohnzimmer_temperatur</code></td></tr>
             <tr><td><b>glob</b></td><td>Platzhalter <code>*</code> und <code>?</code></td><td>nur aktive</td><td><code>sensor.*_uptime*</code></td></tr>
             <tr><td><b>klasse</b></td><td><code>domain|device_class</code></td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
-            <tr><td><b>verwaist</b></td><td><code>alle</code>, <code>geloescht</code>, <code>ohne_spur</code> oder Platzhalter</td><td>nur verwaiste</td><td><code>*</code></td></tr>
+            <tr><td><b>verwaist</b></td><td><code>alle</code>, <code>geloescht</code>, <code>ohne_spur</code>, <code>deaktiviert</code> oder Platzhalter</td><td>nur verwaiste und deaktivierte</td><td><code>*</code></td></tr>
             <tr><td><b>event</b></td><td>Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
             <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>fest <code>*</code></td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage, Langzeit unbegrenzt</td></tr>
           </tbody>
@@ -625,6 +626,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         <p><b>Passive</b> Regeln wirken nicht, auch nicht beim Löschen. Mit „passive Regeln mitrechnen“ (unter dem Kachelraster) siehst du, was sie bewirken würden. Siehe auch <a class="hverweis" href="#h-faq-passiv">FAQ: Warum steht in der Löschtabelle nie „passiv“?</a></p>
         <h3 id="h-verwaist">Verwaiste Entitäten</h3>
         <p>Verwaist ist eine Entität, die Daten in der DB hat, in HA aber nicht mehr existiert, meist nach Umbenennen oder Entfernen. Empfehlung: Regel vom Typ <i>verwaist</i> mit <b>30 Tagen</b> statt „keine“. So lässt sich eine versehentlich umbenannte Entität noch zurückholen. Taucht eine Entität beim Löschlauf wieder auf (z. B. Wetterwarnungen), wird sie übersprungen.</p>
+        <p><b>Deaktiviert</b> (ab 0.5.5b5) ist eine Entität, die in der Registry steht, aber abgeschaltet ist und deshalb keinen Zustand mehr hat. Sie gilt nicht als verwaist: Die Art <code>alle</code> trifft sie nicht, dafür gibt es in der Regel vom Typ <i>verwaist</i> die Art <code>deaktiviert</code>. glob- und klasse-Regeln gelten für sie weiter; die Art-Regel steht im Rang dahinter. Ihre Langzeitstatistik bleibt auch bei Langzeit „keine“ mit dem Statistik-Eintrag erhalten, damit nach dem Wiedereinschalten nichts fehlt.</p>
       </details>
 
       <details id="h-reiter"><summary>6. Die Reiter</summary>
@@ -754,6 +756,7 @@ actions:
         <p>Passive Regeln wirken nicht und kommen deshalb gar nicht erst in den Löschplan. Die Spalte „Entitäts-Status“ im Reiter Löschen zeigt nicht den Zustand der Regel, sondern den der <b>Entität</b> in HA:</p>
         <ul>
           <li><b>aktiv:</b> die Entität gibt es in HA;</li>
+          <li><b>deaktiviert:</b> sie steht in der Registry, ist aber abgeschaltet und hat deshalb keinen Zustand; ihre Daten in der DB bleiben bis zur Vorhaltezeit erhalten;</li>
           <li><b>verwaist:</b> sie hat noch Daten in der DB, existiert in HA aber nicht mehr;</li>
           <li><b>verwaist (gelöscht):</b> wie verwaist, die Entität wurde in HA gelöscht.</li>
         </ul>
@@ -907,14 +910,14 @@ const WERTE = ["kurzzeit", "langzeit"];
 // Punkt 67: einheitliche Beschriftung – was Kurzzeit und Langzeit umfassen
 const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min, Attribute)", attribute: "Attribute", langzeit: "Langzeit (Stundenstatistik, 1 h)" };
 const EV_NAME = "Vorhaltezeit (Events)";
-// Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / verwaist / verwaist_geloescht)
-const STATUS_TEXT = { aktiv: "aktiv", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
+// Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / deaktiviert / verwaist / verwaist_geloescht)
+const STATUS_TEXT = { aktiv: "aktiv", deaktiviert: "deaktiviert", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
 // Punkt 128 (0.5.3): Spalte mit dem Zustand der Entität – in den Tabs Entitäten und Löschen gleich beschriftet
 // Punkt 141 (0.5.3): Symbol „home-assistant“ aus Material Design Icons (Pictogrammers, @mdi/svg 7.4.47, Pictogrammers Free License /
 // Apache 2.0) statt Haus-Emoji – das HA-Logo selbst ist eine geschützte Marke. Farbe: HA-Blau (CSS .ha-icon)
 const HA_ICON = `<svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg>`;
 const STATUS_TITEL = "Entitäts-Status";   // 0.5.3: eindeutig neben der Spalte „Entität“ (entity_id)
-const STATUS_HILFE = "Zustand der Entität in HA (aktiv / verwaist / verwaist (gelöscht)), nicht der Regel";
+const STATUS_HILFE = "Zustand der Entität in HA (aktiv / deaktiviert / verwaist / verwaist (gelöscht)), nicht der Regel";
 const SONDER = { kurzzeit: ["global", "keine"], attribute: ["wie_kurzzeit", "keine"], langzeit: ["unbegrenzt", "keine"] };
 const REGELTYPEN = ["entity", "glob", "klasse", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111)
 // Punkt 127 (0.5.3): Regel HA-Standard – feste ID, nur aktiv/passiv, nicht löschbar, im Regel-Dialog nicht wählbar
@@ -1835,7 +1838,7 @@ function baueKopf() {
   const filterRoh = sp.map(([k, t, n, typ, ph]) => {
     const alt = esc(S.f[k] || "");
     if (typ === "status") return `<th><select data-f="status" title="${esc(STATUS_HILFE)}" aria-label="Filter ${STATUS_TITEL} (Zustand)"><option value="">alle</option>
-      ${[["aktiv", "aktiv"], ["verwaist", "verwaist (alle)"], ["verwaist_geloescht", "verwaist (gelöscht)"]].map(([w, l]) => `<option value="${w}" ${S.f.status === w ? "selected" : ""}>${l}</option>`).join("")}</select></th>`;
+      ${[["aktiv", "aktiv"], ["deaktiviert", "deaktiviert"], ["verwaist", "verwaist (alle)"], ["verwaist_geloescht", "verwaist (gelöscht)"]].map(([w, l]) => `<option value="${w}" ${S.f.status === w ? "selected" : ""}>${l}</option>`).join("")}</select></th>`;
     if (typ === "wert" || typ === "klasse") return `<th><select data-f="${k}" aria-label="Filter ${esc(t)}"><option value="">alle</option></select></th>`;
     if (typ === "herkunft") return `<th><div class="herkunftfeld"><select data-f="herkunft_art" aria-label="Filter Art der Herkunft">
       <option value="">alle Arten</option>${Object.entries(HERKUNFT_LANG).map(([a, l]) => `<option value="${a}" ${S.f.herkunft_art === a ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
@@ -1891,7 +1894,7 @@ function zeigeSummen(su) {
     herkunft: zelle(zahl(g.geraete), zahl(a.geraete), `Anzahl Geräte – ${GEF}`),
     labels: zelle(zahl(g.labels || 0), zahl(a.labels || 0),
       `Entitäten mit mindestens einem Label – ${GEF}` + vgl(`${zahl(g.label_namen || 0)} verschiedene Labels`, `${zahl(a.label_namen || 0)} verschiedene Labels`)),
-    status: anz(`Anzahl Entitäten – ${GEF}` + vgl(`aktiv ${zahl(g.aktiv)} · verwaist ${zahl(g.verwaist)}`, `aktiv ${zahl(a.aktiv)} · verwaist ${zahl(a.verwaist)}`)),
+    status: anz(`Anzahl Entitäten – ${GEF}` + vgl(`aktiv ${zahl(g.aktiv)} · deaktiviert ${zahl(g.deaktiviert || 0)} · verwaist ${zahl(g.verwaist)}`, `aktiv ${zahl(a.aktiv)} · deaktiviert ${zahl(a.deaktiviert || 0)} · verwaist ${zahl(a.verwaist)}`)),
     kurzzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "kurzzeit"), teil(a, "kurzzeit"))),
     langzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "langzeit"), teil(a, "langzeit"))),
     first_ts: zelle(datum(g.first_ts), datum(a.first_ts), `frühester Zeitstempel – ${GEF}`),
@@ -2869,9 +2872,11 @@ function oeffneEntitaet(e) {
     ${e.herkunft ? `<div class="sub">Herkunft: ${esc(e.herkunft)}${e.herkunft_info ? " – " + esc(e.herkunft_info) : ""}</div>` : ""}
     ${[...e.hinweise, ...e.geschuetzt.map(g => "Zähler-Schutz: Regel " + g + " greift nicht")].map(h => `<div class="chip warn">${esc(h)}</div>`).join(" ")}`;
   // Verwaiste (Punkt 30): eigene Vorhaltezeiten (E:-Regel) gelten weiter – mit Vorrang vor Regeln vom Typ verwaist
-  const verwaist = e.status !== "aktiv";
+  const verwaist = e.status === "verwaist" || e.status === "verwaist_geloescht";
+  const deaktiviert = e.status === "deaktiviert";   // Punkt 186: in der Registry, abgeschaltet, ohne Zustand
   const hinweisVerwaist = verwaist ? `<p class="chip warn" style="display:block">Entität verwaist – eigene Vorhaltezeiten gelten nur noch für die Altdaten.
-    Was hier nicht gesetzt ist, kommt aus Regeln vom Typ „verwaist“ bzw. dem Standard.</p>` : "";
+    Was hier nicht gesetzt ist, kommt aus Regeln vom Typ „verwaist“ bzw. dem Standard.</p>` : deaktiviert ? `<p class="chip warn" style="display:block">Entität deaktiviert – eigene Vorhaltezeiten gelten für die Altdaten.
+    Was hier nicht gesetzt ist, kommt aus glob-/klasse-Regeln, Regeln vom Typ „verwaist“ mit der Art deaktiviert bzw. dem Standard.</p>` : "";
   dialog(verwaist ? "Eigene Vorhaltezeiten (verwaiste Entität)" : "Eigene Vorhaltezeiten", info + hinweisVerwaist +
     `<p class="sub">Leer lassen = wie bisher (${verwaist ? "verwaist-Regel" : "Muster-Regel"} oder Standard). Gespeichert als Regel <span class="mono">${esc(id)}</span>;
     sie hat immer Vorrang vor allen anderen Regeln.</p>
@@ -2880,6 +2885,8 @@ function oeffneEntitaet(e) {
     <div id="dlgFehler" class="fehler"></div>`, [
     ...(verwaist ? [["Regel „verwaist“ anlegen", () => bearbeiteRegel(-1, {
       typ: "verwaist", muster: [e.entity_id], name: `Verwaist: ${e.entity_id}`, kurzzeit: "30d" })]] : []),
+    ...(deaktiviert ? [["Regel für Deaktivierte anlegen", () => bearbeiteRegel(-1, {
+      typ: "verwaist", muster: ["deaktiviert"], name: "Deaktivierte Entitäten", kurzzeit: "30d" })]] : []),
     ...(eigene ? [["Eigene Regel entfernen", async () => {
       await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.filter(r => r.id !== id) }); $("#dlg").close(); }]] : []),
     ["Abbrechen", () => $("#dlg").close()],
@@ -2942,7 +2949,7 @@ const MUSTERHILFE = {
   entity: "genaue Entity-ID, z. B. sensor.time",
   glob: "Muster mit * und ?, z. B. sensor.*_airq_*",
   klasse: "eine oder mehrere Klassen (domain|device_class) aus der letzten Analyse wählen",
-  verwaist: "Art: alle, geloescht (in der Registry als gelöscht vermerkt) oder ohne_spur – optional zusätzlich ein Entity-Muster wie sensor.windfang_*. Wirkt nur auf verwaiste Entitäten.",
+  verwaist: "Art: alle (alle Verwaisten), geloescht (in der Registry als gelöscht vermerkt), ohne_spur oder deaktiviert (abgeschaltet, ohne Zustand; nicht in alle enthalten) – optional zusätzlich ein Entity-Muster wie sensor.windfang_*. Wirkt nur auf verwaiste und deaktivierte Entitäten.",
   event: "Event-Typen, auch mit * und ?, z. B. call_service oder script_* – Vorhaltezeit der Events (Logbuch); wirkt nie auf Entitäten.",
   schutz: "Muster mit * und ?, z. B. sensor.rs_meteo_* – diese Entitäten werden nie gekürzt (höchster Rang, auch vor E:-Regeln, auch verwaist).",
 };
@@ -3029,13 +3036,13 @@ function zeigeHaStandard(r) {
 }
 // Punkt 175 (0.5.4): Typen mit Klartext; bei neuen Regeln wird der Typ aus den Mustern abgeleitet, solange er nicht von Hand gewählt wurde
 const TYP_TEXT = { entity: "entity – einzelne Entitäten (genaue ID)", glob: "glob – Namensmuster mit * und ?", klasse: "klasse – Geräteklasse (domain|device_class)",
-  verwaist: "verwaist – nur verwaiste Entitäten", event: "event – Vorhaltezeit je Event-Typ", schutz: "schutz – nie kürzen" };
+  verwaist: "verwaist – nur verwaiste und deaktivierte Entitäten", event: "event – Vorhaltezeit je Event-Typ", schutz: "schutz – nie kürzen" };
 // Punkte 172/173: kompakte Liste aller Entitäten (je Analyse-Stand einmal geladen)
 async function entListe() {
   const stand = S.probe?.stand?.analyse_zeit;
   if (!S.entListe || S.entListeStand !== stand) {
     const r = await api("entitaet_liste");
-    S.entListe = r.e.map(([id, n, aktiv, zaehler, dc]) => ({ id, n, aktiv: !!aktiv, zaehler: !!zaehler, dc }));
+    S.entListe = r.e.map(([id, n, aktiv, zaehler, dc, status]) => ({ id, n, aktiv: !!aktiv, zaehler: !!zaehler, dc, status }));
     S.entListeStand = stand;
   }
   return S.entListe;
@@ -3230,7 +3237,7 @@ function bearbeiteRegel(i, vorlage) {
     const t = $("#rTyp").value;
     if (!["entity", "glob", "schutz", "verwaist"].includes(t) || document.activeElement !== ta) { auto.hidden = true; return; }
     const z = zeileAmCursor(), q = z.text.toLowerCase();
-    if (q.length < 2 || (t === "verwaist" && ["alle", "geloescht", "ohne_spur"].includes(q))) { auto.hidden = true; return; }
+    if (q.length < 2 || (t === "verwaist" && ["alle", "geloescht", "ohne_spur", "deaktiviert"].includes(q))) { auto.hidden = true; return; }
     let liste; try { liste = await entListe(); } catch (e) { auto.hidden = true; return; }
     if (/[*?[]/.test(q)) {   // Muster: nur zeigen, was es trifft (glob trifft keine Zähler und keine verwaisten Entitäten)
       const alle = liste.filter(e => globRe(q).test(e.id)).sort((x, y) => y.n - x.n);
@@ -3254,7 +3261,7 @@ function bearbeiteRegel(i, vorlage) {
     autoIds = [];
     const tr = liste.filter(e => e.id.includes(q)).sort((x, y) => (y.id.startsWith(q) - x.id.startsWith(q)) || y.n - x.n).slice(0, 12);
     if (!tr.length || (tr.length === 1 && tr[0].id === q)) { auto.hidden = true; return; }
-    auto.innerHTML = tr.map((e, j) => `<div role="option" data-id="${esc(e.id)}" class="${j ? "" : "an"}">${esc(e.id)}<span class="sub">${e.aktiv ? "" : "verwaist · "}${e.zaehler ? "Zähler · " : ""}${zahl(e.n)}/Tag</span></div>`).join("");
+    auto.innerHTML = tr.map((e, j) => `<div role="option" data-id="${esc(e.id)}" class="${j ? "" : "an"}">${esc(e.id)}<span class="sub">${e.status === "deaktiviert" ? "deaktiviert · " : e.aktiv ? "" : "verwaist · "}${e.zaehler ? "Zähler · " : ""}${zahl(e.n)}/Tag</span></div>`).join("");
     auto.hidden = false;
   }
   function nimmAuto(id) {

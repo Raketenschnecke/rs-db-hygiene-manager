@@ -22,7 +22,9 @@ Je Wert wird neben dem Gewinner auch die Liste der überstimmten Regeln geliefer
 
 Typ „verwaist“ (ab 0.1.6) wirkt ausschließlich auf verwaiste Entitäten. Ab 0.1.7 gelten für Verwaiste zusätzlich
 die entity-Regeln (E: und andere mit genauer Entity-ID) – mit Vorrang; glob und klasse nur für aktive.
-  Muster: Art-Wörter alle | geloescht | ohne_spur (ohne Art-Wort = alle) und optional Entity-Muster (glob).
+  Muster: Art-Wörter alle | geloescht | ohne_spur | deaktiviert (ohne Art-Wort = alle) und optional Entity-Muster (glob).
+  „alle“ umfasst nur die echten Verwaisten; Deaktivierte (Punkt 186, in der Registry mit disabled_by, ohne Zustand) trifft nur das
+  Art-Wort deaktiviert. Für sie gelten glob und klasse weiter (Zähler-Schutz inklusive); die Art-Regel steht im Rang dahinter.
   Nur hier ist Kurzzeit „keine“ erlaubt (sofort alles); empfohlen ist eine Frist wie 30 Tage.
 
 Typ „event“ (ab 0.3.1, Punkt 51): Vorhaltezeit je Event-Typ als Regel in der Regelliste.
@@ -68,9 +70,15 @@ HA_STANDARD = {"id": HA_STANDARD_ID, "typ": "ha_standard", "muster": ["*"],
                          f"States, 5-Min-Statistik, Attribute und Events nach {HA_STANDARD_TAGE} Tagen, Langzeitstatistik nie. "
                          "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur passiv schaltbar."),
                "kurzzeit": f"{HA_STANDARD_TAGE}d", "attribute": None, "langzeit": "unbegrenzt"}
-VERWAIST_ARTEN = {"alle", "geloescht", "ohne_spur"}
-# Status aus der Analyse → Art-Wort der Regel
+VERWAIST_ARTEN = {"alle", "geloescht", "ohne_spur", "deaktiviert"}
+# Status aus der Analyse → Art-Wort der Regel; „alle“ umfasst nur die echten Verwaisten, nicht die Deaktivierten (Punkt 186)
 VERWAIST_STATUS = {"verwaist_geloescht": "geloescht", "verwaist": "ohne_spur"}
+ART_STATUS = {**VERWAIST_STATUS, "deaktiviert": "deaktiviert"}
+
+
+def ist_verwaist(status):
+    """Punkt 186: nur Entitäten, die es in HA nicht mehr gibt – deaktivierte (in der Registry, ohne Zustand) zählen nicht dazu."""
+    return status in VERWAIST_STATUS
 _DAUER = re.compile(r"^(\d{1,5})([dwmj])$")
 # Startwert, wenn die Regeldatei noch keine Events kennt: call_service 7 Tage
 STANDARD_EVENTS = {"call_service": "7d"}
@@ -332,7 +340,7 @@ class Aufloeser:
         if r["typ"] == "verwaist":
             arten = {m for m in r["muster"] if m in VERWAIST_ARTEN} or {"alle"}
             globs = [m for m in r["muster"] if m not in VERWAIST_ARTEN]
-            if "alle" not in arten and VERWAIST_STATUS.get(status) not in arten:
+            if ART_STATUS.get(status) not in arten and not ("alle" in arten and ist_verwaist(status)):
                 return None
             if globs:
                 return next((m for m in globs if fnmatch.fnmatchcase(eid, m)), None)
@@ -349,13 +357,13 @@ class Aufloeser:
         """Je Wert: Gewinner {wert, regel, muster, ueberstimmt: [{wert, regel, muster}, …]} plus geschuetzt."""
         domain = eid.split(".", 1)[0]
         zaehler = (state_class or "").startswith("total")
-        verwaist = status != "aktiv"
+        verwaist = ist_verwaist(status)       # Punkt 186: Deaktivierte bleiben für glob/klasse erreichbar
         ergebnis, ueberstimmt, geschuetzt = {}, {a: [] for a in WERTE}, []
         for r in self.regeln:
             # verwaist-Regeln nur für Verwaiste; glob/klasse nur für Aktive; entity für beide (Punkt 30)
             if r["typ"] == "event":       # Event-Regeln wirken nie auf Entitäten
                 continue
-            if r["typ"] == "verwaist" and not verwaist:
+            if r["typ"] == "verwaist" and status == "aktiv":
                 continue
             if verwaist and r["typ"] in ("glob", "klasse"):
                 continue

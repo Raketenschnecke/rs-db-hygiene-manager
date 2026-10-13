@@ -20,8 +20,9 @@ _LOG = logging.getLogger("analyse")
 TAG = 86400
 # Version des Cache-Aufbaus; ältere Caches werden beim Start neu analysiert (2 = mit Herkunft, ab 0.1.4; 3 = Events je Typ, ab 0.3.0;
 # 4 = exakte erste/letzte Zeitstempel von 5-Min-Statistik und Langzeit, ab 0.4.11, Punkte 118/120;
-# 5 = Tage als lokale Kalendertage statt UTC-Tage, ab 0.4.12, Punkt 121)
-CACHE_VERSION = 5
+# 5 = Tage als lokale Kalendertage statt UTC-Tage, ab 0.4.12, Punkt 121;
+# 6 = Status deaktiviert, Klasse/Einheit deaktivierter Entitäten aus der Registry, ab 0.5.5b5, Punkte 185/186)
+CACHE_VERSION = 6
 
 CACHE_SCHEMA = """
 CREATE TABLE info (schluessel TEXT PRIMARY KEY, wert TEXT);
@@ -99,6 +100,20 @@ def lies_registry(pfad):
     aktiv = {e["entity_id"] for e in daten.get("entities", [])}
     geloescht = {e["entity_id"] for e in daten.get("deleted_entities", [])}
     return aktiv, geloescht
+
+
+def lies_registry_details(pfad):
+    """Punkte 185/186: je Entität in der Registry {deaktiviert, device_class, state_class, unit}.
+
+    Zustandslose Entitäten (deaktivierte) haben keine Attribute; die Klasse kommt dann aus der Registry – die eigene
+    Einstellung device_class vor original_device_class, die state_class aus capabilities."""
+    with open(pfad, encoding="utf-8") as f:
+        daten = json.load(f)["data"]
+    return {e["entity_id"]: {"deaktiviert": bool(e.get("disabled_by")),
+                             "device_class": e.get("device_class") or e.get("original_device_class") or "",
+                             "state_class": (e.get("capabilities") or {}).get("state_class") or "",
+                             "unit": e.get("unit_of_measurement") or ""}
+            for e in daten.get("entities", [])}
 
 
 def hole_zustaende(url="http://supervisor/core/api/states", token=None):
@@ -183,13 +198,15 @@ def _schritt_fertig(name, nr, dauer):
         FORTSCHRITT.update(nr=nr + 1, schritt=ANALYSE_SCHRITTE[nr])
 
 
-def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None):
+def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None):
     """Vollanalyse von states, statistics und statistics_short_term (ohne Attribute).
 
     herkunft: Ergebnis von herkunft.ermittle() – {entity_id: {art, text, info, device_id}}.
+    reg_details: Ergebnis von lies_registry_details() (ab 0.5.5b5): Status deaktiviert und Klasse ohne Zustand.
     Dauer bei 22 GB / 73 Mio. States ca. 1–2 min.
     """
     herkunft = herkunft or {}
+    reg_details = reg_details or {}
     start = time.time()
     jetzt = time.time()
     heute = lokaler_tag(jetzt)        # Punkt 121: lokaler Kalendertag (bis 0.4.11 UTC-Tag)
@@ -274,16 +291,18 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
         n, mn, mx = info.get(mid, (0, None, None))
         in_reg = eid in registry
         hat_state = eid in zust
+        rd = reg_details.get(eid) or {}
         if in_reg or hat_state:
-            status = "aktiv"
+            status = "deaktiviert" if rd.get("deaktiviert") and not hat_state else "aktiv"     # Punkt 186
         elif eid in geloescht:
             status = "verwaist_geloescht"
         else:
             status = "verwaist"
-        a = zust.get(eid, {})
+        a = zust.get(eid) or {"state_class": rd.get("state_class"), "device_class": rd.get("device_class"),   # Punkt 185:
+                              "unit_of_measurement": rd.get("unit")}                                         # ohne Zustand aus der Registry
         lid = lts_id_von.get(eid)
         h = herkunft.get(eid) or ({"art": "verwaist", "text": "verwaist, ohne Spur in der Registry", "info": ""}
-                                  if status != "aktiv" else {"art": "", "text": "", "info": ""})
+                                  if status.startswith("verwaist") else {"art": "", "text": "", "info": ""})
         zeilen.append((
             eid, mid, eid.split(".", 1)[0], n, mn, mx, st_24h.get(mid, 0),
             int(in_reg), int(hat_state), status,

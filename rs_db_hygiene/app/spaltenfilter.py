@@ -2,7 +2,7 @@
 
 Parameter f_<spalte> aus der Abfrage:
   Text   f_entity_id                       enthält; mit * als Platzhalter (fnmatch)
-  Status f_status                          aktiv | verwaist (beide Arten) | verwaist_geloescht
+  Status f_status                          aktiv | deaktiviert | verwaist (beide Arten) | verwaist_geloescht
   Zahl   f_rows f_rows_24h f_lts_rows f_kurz_rows f_loeschbar f_attr_avg f_attr_anteil, in MB: f_attr_bytes f_attr_zuwachs_tag f_attr_loesch
                                            >1000  >=5  <10  <=10  =0  0  100-500  0,5-2  (Tausenderpunkt, Dezimalkomma)
   Datum  f_first_ts f_last_ts              <1.9.2026  >=8.10.2026  8.10.2026  1.9.2026-30.9.2026
@@ -106,10 +106,12 @@ def status_filter(ausdruck):
     if a == "aktiv":
         return lambda s: s == "aktiv"
     if a == "verwaist":
-        return lambda s: s != "aktiv"
+        return lambda s: s in ("verwaist", "verwaist_geloescht")     # Punkt 186: ohne die Deaktivierten
+    if a == "deaktiviert":
+        return lambda s: s == "deaktiviert"
     if a == "verwaist_geloescht":
         return lambda s: s == "verwaist_geloescht"
-    raise FilterFehler("aktiv, verwaist oder verwaist_geloescht erwartet")
+    raise FilterFehler("aktiv, deaktiviert, verwaist oder verwaist_geloescht erwartet")
 
 
 def wert_filter(ausdruck):

@@ -23,6 +23,8 @@ import sqlite3
 import time
 import urllib.request
 
+import regeln as rg
+
 _LOG = logging.getLogger("loeschen")
 
 TAG = 86400
@@ -316,8 +318,8 @@ def plan_b(pl, pkd, nur_regel=None, exakt=False):
             if not alle and lz["tage"] > MAX_KEEP_DAYS_B:
                 continue
             out.append({"art": "lts", "name": e["entity_id"], "regel": lz["regel"], "status": e["status"],
-                        "keep_days": None if alle else lz["tage"], "alle": alle, "mit_meta": alle and e["status"] != "aktiv",
-                        "zeilen": lo_["lts"], "hinweis": ("Langzeit „keine“ – samt statistics_meta" if alle and e["status"] != "aktiv"
+                        "keep_days": None if alle else lz["tage"], "alle": alle, "mit_meta": alle and rg.ist_verwaist(e["status"]),   # Punkt 186: Deaktivierte behalten ihren Statistik-Eintrag
+                        "zeilen": lo_["lts"], "hinweis": ("Langzeit „keine“ – samt statistics_meta" if alle and rg.ist_verwaist(e["status"])
                                                           else "Langzeit „keine“ – alle Stundenwerte" if alle else "")})
     for ev in pl.get("events") or []:
         if ev["wert"] == "global" or ev["tage"] >= pkd or not ev["loeschbar"]:
@@ -1003,7 +1005,7 @@ def verwaist_ungedeckt(pl, regel_daten):
     globs = [r for r in regel_daten["regeln"] if r["typ"] == "glob" and r.get("aktiv", True)]
     out = {}
     for e in pl["entitaeten"]:
-        if e["status"] == "aktiv" or ((e.get("werte") or {}).get("kurzzeit") or {}).get("regel"):
+        if not rg.ist_verwaist(e["status"]) or ((e.get("werte") or {}).get("kurzzeit") or {}).get("regel"):
             continue
         for r in globs:
             m = next((m for m in r["muster"] if fnmatch.fnmatchcase(e["entity_id"], m)), None)

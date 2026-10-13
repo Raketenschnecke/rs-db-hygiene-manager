@@ -376,7 +376,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
 
     # 3. verwaiste Entitäten ohne verwaist-Regel
     if not any(r["typ"] == "verwaist" and r["aktiv"] for r in bestand["regeln"]):
-        alt = [e for e in ents if e["status"] != "aktiv" and not e.get("schutz")]
+        alt = [e for e in ents if rg.ist_verwaist(e["status"]) and not e.get("schutz")]
         menge = sum((e["rows"] or 0) + (e["kurz_rows"] or 0) for e in alt)
         if alt and menge >= VERWAIST_MIN_ZEILEN:
             neu("verwaist:alle", "verwaist", "verwaiste Entitäten", "verwaist", ["alle"], TAGE["verwaist"],
@@ -433,7 +433,7 @@ def verdichte(ids, pl, nur_muster=False):
     ents = pl.get("_ent_index")
     if ents is None:
         ents = pl["_ent_index"] = {e["entity_id"]: e for e in pl.get("entitaeten", [])}
-    glob_ok = lambda e: e and e["status"] == "aktiv" and not (e.get("state_class") or "").startswith("total")  # noqa: E731
+    glob_ok = lambda e: e and not rg.ist_verwaist(e["status"]) and not (e.get("state_class") or "").startswith("total")  # noqa: E731
     wahl = {i for i in ids if glob_ok(ents.get(i))}
     ausserhalb = sorted(set(ids) - wahl)
     if len(wahl) < 2:

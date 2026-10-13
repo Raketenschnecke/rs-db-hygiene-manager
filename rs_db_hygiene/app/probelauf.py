@@ -85,7 +85,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
         d[k] = d.get(k, 0) + v
 
     for e in ents:
-        verwaist = e["status"] != "aktiv"
+        verwaist = e["status"] != "aktiv"     # schreibt nicht mehr: verwaist oder deaktiviert (Punkt 186)
         erg = aufl.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
         # Punkt 102 (0.4.8): „wirksam“ = Regel-Tage, höchstens purge_keep_days („global“ = purge_keep_days). Damit rechnen
         # die Spalten „wirksam“, die Hinweise und die Löschmenge sofort – wie der Löschplan. Bis 0.4.7 stand hier der
@@ -125,10 +125,12 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             prog = {"states": 0, "attribute": 0, "kurz": 0, "lts": behalten_lts * B_LTS}
             basis = {"states": 0, "attribute": 0, "kurz": 0, "lts": lts_jetzt * B_LTS}
             prog_z = {"states": 0, "attribute": 0, "kurz": 0, "lts": behalten_lts or 0}
-            add(summe, "verwaist_entitaeten", 1)
-            add(summe, "verwaist_states", e["rows"])
-            add(summe, "verwaist_loesch_states", loesch["states"])
-            add(summe, "verwaist_prognose_lts", behalten_lts or 0)
+            # Punkt 186: Verwaiste und Deaktivierte getrennt zählen (beide schreiben nicht mehr)
+            wer = "verwaist" if rg.ist_verwaist(e["status"]) else "deaktiviert"
+            add(summe, wer + "_entitaeten", 1)
+            add(summe, wer + "_states", e["rows"])
+            add(summe, wer + "_loesch_states", loesch["states"])
+            add(summe, wer + "_prognose_lts", behalten_lts or 0)
         else:
             prog = {
                 "states": e["rows_24h"] * B_STATE * kp,
@@ -204,7 +206,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 continue
             r = eintrag(rid)
             r["entitaeten"].add(e["entity_id"])
-            if verwaist:
+            if rg.ist_verwaist(e["status"]):
                 r["verwaist"].add(e["entity_id"])
             r[art] += 1
             if art == "kurzzeit":
@@ -228,7 +230,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 r["ersparnis_lts"] += d
             r["ersparnis_bytes"] += d
 
-        zeilen.append({**_basis(e), **attr, "aktion": "verwaist" if verwaist else "regeln",
+        zeilen.append({**_basis(e), **attr, "aktion": ("verwaist" if rg.ist_verwaist(e["status"]) else "deaktiviert") if verwaist else "regeln",
                        "werte": {art: {"wert": erg[art]["wert"], "anzeige": rg.anzeige(erg[art]["wert"]),
                                        "tage": tage[art], "regel": erg[art]["regel"], "muster": erg[art]["muster"],
                                        "ueberstimmt": [{"regel": u["regel"], "anzeige": rg.anzeige(u["wert"])}
@@ -377,7 +379,7 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
                 rate[keep] = rate.get(keep, 0) + v
 
         for e in ents:
-            verwaist = e["status"] != "aktiv"
+            verwaist = e["status"] != "aktiv"     # schreibt nicht mehr: verwaist oder deaktiviert (Punkt 186)
             t_, _h = rg.wirksame_tage(aufl.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"]), pkd)
             k, a, lz = t_["kurzzeit"], t_["attribute"], t_["langzeit"]
             kl, al = max(k, MIN_KEEP_DAYS), max(a, MIN_KEEP_DAYS)
