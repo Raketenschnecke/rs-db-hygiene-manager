@@ -41,8 +41,9 @@ Typ „schutz“ (ab 0.4.9, Punkt 111): Daten, die nie gekürzt werden dürfen. 
 Typ „ha_standard“ (ab 0.5.3, Punkt 127): genau eine Regel mit der festen ID HA:standard. Sie bildet das Löschverhalten
   von Home Assistant in der Grundeinstellung ab (Recorder purge_keep_days 10): Kurzzeit 10 Tage (States, 5-Min-Statistik,
   Attribute), Langzeit unbegrenzt, Events 10 Tage. Gilt für alle Entitäten – auch verwaiste und Zähler – und alle
-  Event-Typen, mit dem niedrigsten Rang: Jede andere Regel geht vor. Name, Muster, Werte und Notiz sind fest, nur
-  aktiv/passiv lässt sich ändern. Die Regel kann nicht entfernt werden: Fehlt sie, wird sie beim Laden passiv ergänzt
+  Event-Typen, mit dem niedrigsten Rang: Jede andere Regel geht vor. Muster und Langzeit sind fest; aktiv/passiv und
+  (ab 0.5.5b7, Punkt 190) die Kurzzeit lassen sich ändern – sie gilt dann auch für die Events, Name und Notiz nennen
+  den Wert. Der Prognose-Verlauf rechnet die Linie „nur HA-Standard“ immer mit 10 Tagen. Die Regel kann nicht entfernt werden: Fehlt sie, wird sie beim Laden passiv ergänzt
   (bestehende Installationen, ältere Exporte); die Startregeln enthalten sie aktiv.
 """
 import fnmatch
@@ -70,6 +71,18 @@ HA_STANDARD = {"id": HA_STANDARD_ID, "typ": "ha_standard", "muster": ["*"],
                          f"States, 5-Min-Statistik, Attribute und Events nach {HA_STANDARD_TAGE} Tagen, Langzeitstatistik nie. "
                          "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur passiv schaltbar."),
                "kurzzeit": f"{HA_STANDARD_TAGE}d", "attribute": None, "langzeit": "unbegrenzt"}
+
+
+def ha_standard(kurzzeit, aktiv):
+    """Punkt 190: Regel HA-Standard mit einstellbarer Kurzzeit (Dauer, gilt auch für Events). Bei 10 Tagen wie HA_STANDARD;
+    sonst Auffangregel nach diesem Vorbild – Name und Notiz nennen den eingestellten Wert. Muster, Typ und Langzeit bleiben fest."""
+    if kurzzeit == HA_STANDARD["kurzzeit"]:
+        return {**HA_STANDARD, "aktiv": aktiv}
+    t = anzeige(kurzzeit)
+    return {**HA_STANDARD, "aktiv": aktiv, "kurzzeit": kurzzeit, "name": f"HA-Standard: alles {t}, Langzeit unbegrenzt",
+            "notiz": (f"Auffangregel nach dem Vorbild von Home Assistant (Grundeinstellung purge_keep_days {HA_STANDARD_TAGE}), Kurzzeit auf {t} gestellt: "
+                      f"States, 5-Min-Statistik, Attribute und Events nach {t}, Langzeitstatistik nie. "
+                      "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur Kurzzeit einstellbar und passiv schaltbar.")}
 VERWAIST_ARTEN = {"alle", "geloescht", "ohne_spur", "deaktiviert"}
 # Status aus der Analyse → Art-Wort der Regel; „alle“ umfasst nur die echten Verwaisten, nicht die Deaktivierten (Punkt 186)
 VERWAIST_STATUS = {"verwaist_geloescht": "geloescht", "verwaist": "ohne_spur"}
@@ -130,10 +143,13 @@ def normalisiere(daten):
             raise RegelFehler(f"Regel-ID doppelt: {rid}")
         ids.add(rid)
         typ = r.get("typ")
-        if typ == "ha_standard" or rid == HA_STANDARD_ID:     # Punkt 127: alles fest außer aktiv
+        if typ == "ha_standard" or rid == HA_STANDARD_ID:     # Punkt 127: alles fest außer aktiv und (Punkt 190) Kurzzeit
             if typ != "ha_standard" or rid != HA_STANDARD_ID:
                 raise RegelFehler(f"{rid}: Typ ha_standard und ID {HA_STANDARD_ID} gehören fest zusammen (genau eine Regel)")
-            regeln.append({**HA_STANDARD, "aktiv": r.get("aktiv", True) is not False})
+            kz = pruefe_wert("kurzzeit", r.get("kurzzeit") or HA_STANDARD["kurzzeit"])
+            if not _DAUER.match(kz):
+                raise RegelFehler(f"{rid}: Kurzzeit braucht eine Dauer (n d/w/m/j), nicht „{kz}“")
+            regeln.append(ha_standard(kz, r.get("aktiv", True) is not False))
             continue
         if typ not in TYP_RANG:
             raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, verwaist oder event sein")

@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b7 (Beta)
+- **HA-Standard als Auffangregel (Punkt 190):** Die Kurzzeit der Regel HA:standard ist einstellbar (Klick auf die Regel, nur Dauer; gilt auch für die Events, Langzeit bleibt unbegrenzt). Mit z. B. 90 Tagen fängt sie alles ohne eigene Regel auf – mit niedrigstem Rang und auch für Zähler, anders als eine glob-Regel `*`, die alle klasse-Regeln überstimmt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet weiter mit 10 Tagen
+- **GUI hängt nach Wechsel des Prognosezeitraums (Punkt 189):** Gleichzeitige Anfragen rechnen denselben Probelauf nicht mehr mehrfach parallel; Rechnungen laufen nacheinander, wartende Anfragen übernehmen das Ergebnis
+
 ## 0.5.5b6 (Beta)
 - **Prognose-Chart mit Vergangenheit (Punkt 188):** Links von „heute“ zeigt eine rote, durchgezogene Linie die bisherige DB-Größe aus der Langzeitstatistik des Integrations-Sensors „DB-Größe“ (Tagesmittel, höchstens 2 Jahre); eigener Legendeneintrag, per Klick ausblendbar, Tooltip je Tag. Die Prognoselinien sind gestrichelt und 1 px dick, „ohne Regeln“ ist violett statt rot
 

@@ -9,6 +9,7 @@ import io
 import json
 import logging
 import os
+import threading
 import time
 
 from aiohttp import web
@@ -57,6 +58,7 @@ class Zustand:
         self._vl_cache = {}        # Punkt 179: Prognose-Verlauf (Popup an den DB-Größe-Kacheln)
         self._hist = (None, None)  # Punkt 188: (Stunde, bisherige DB-Größe)
         self.lauf = None           # laufender Löschlauf (loeschen.Lauf)
+        self._rechnen = threading.Lock()   # Punkt 189: Probelauf/Verlauf nacheinander rechnen
 
     def mtime(self, pfad):
         return os.path.getmtime(pfad) if os.path.exists(pfad) else 0
@@ -65,22 +67,31 @@ class Zustand:
         if not os.path.exists(CACHE):
             return None
         schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
-        if schluessel not in self._pl_cache:
-            # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Empfehlungen rechnen teils mit
-            # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
-            alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
-            while len(alt) >= 3:
-                alt.pop(next(iter(alt)))
-            self._pl_cache = {**alt, schluessel: probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)}
-        return self._pl_cache[schluessel]
+        if schluessel in self._pl_cache:           # Treffer ohne Warten, auch während eine andere Rechnung läuft
+            return self._pl_cache[schluessel]
+        # Punkt 189: Rechnungen nacheinander – gleichzeitige Anfragen (Kacheln, Entitäten, Plan der Integration) rechnen
+        # denselben Probelauf nicht mehrfach parallel; wer wartet, findet danach das Ergebnis im Cache
+        with self._rechnen:
+            if schluessel not in self._pl_cache:
+                erg = probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)
+                # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Empfehlungen rechnen teils mit
+                # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
+                alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
+                while len(alt) >= 3:
+                    alt.pop(next(iter(alt)))
+                self._pl_cache = {**alt, schluessel: erg}
+            return self._pl_cache[schluessel]
 
     def verlauf(self, ziel, passiv):
         if not os.path.exists(CACHE):
             return None
         schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
-        if schluessel not in self._vl_cache:
-            self._vl_cache = {schluessel: probelauf.verlauf(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, passiv)}
-        return self._vl_cache[schluessel]
+        if schluessel in self._vl_cache:
+            return self._vl_cache[schluessel]
+        with self._rechnen:                         # Punkt 189: wie probelauf
+            if schluessel not in self._vl_cache:
+                self._vl_cache = {schluessel: probelauf.verlauf(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, passiv)}
+            return self._vl_cache[schluessel]
 
     def historie(self):
         """Punkt 188: bisherige DB-Größe (Sensor der Integration, max. 2 Jahre) – höchstens einmal je Stunde aus der HA-DB."""
