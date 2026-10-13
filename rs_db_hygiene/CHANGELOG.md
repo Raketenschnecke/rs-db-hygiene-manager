@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4b7 (Beta)
+- **Neuer Reiter „Optimierungen“ (Punkt 176):** Regelvorschläge aus der letzten Analyse – Gruppen gleichartiger Entitäten als ein Muster, Vielschreiber, große Attribute, nirgends verwendete und deaktivierte Entitäten, verwaiste ohne Regel, Event-Typen ohne Event-Regel. Je Vorschlag Treffer, Zuwachs, Löschmenge sofort und Ersparnis im Prognosezeitraum; Hinweis, wenn eine passive Regel die Daten schon abdeckt. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv, „ignorieren“ merkt sich die App. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern; die Langzeit bleibt unverändert
+- **Live-Vorschau in der Regelmaske (Punkt 170):** Treffer, Überstimmungen, zusätzliche Löschmenge sofort und Ersparnis erscheinen beim Eingeben; der Knopf „Treffer anzeigen“ entfällt
+- **Auswahl zu Mustern verdichten (Punkt 171):** Bei vielen einzelnen IDs schlägt die Maske Muster mit Platzhaltern vor, die genau dieselben Entitäten treffen
+- **„Regel für gleichartige“ (Punkt 172):** Im Entitäts-Dialog Knöpfe für gleiches Präfix, gleiche Endung und gleiche Klasse, je mit Trefferzahl
+- **Autovervollständigung (Punkt 173)** im Musterfeld, **Schnellknöpfe (Punkt 174)** für Kurzzeit und Langzeit, **Regeltypen im Klartext (Punkt 175)**; bei neuen Regeln ergibt sich der Typ aus den Mustern
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.4b6 (Beta)
 - **Auswahl gilt nur für den aktuellen Filter (Punkt 169):** Ändert sich ein Filter im Tab Entitäten (Spaltenfilter, Domain, Regel-Filter, „nur mit Hinweis/Schutz“, Gerät), werden ausgewählte Entitäten abgewählt, die nicht mehr passen; die Leiste meldet, wie viele. Sortieren und Blättern lassen die Auswahl unverändert. „Regel/Schutz aus Auswahl anlegen“ und „Auswahl als CSV“ nehmen damit keine ausgefilterten Entitäten mehr mit
 - Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer

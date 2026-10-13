@@ -17,6 +17,7 @@ import analyse
 import automatik
 import herkunft
 import loeschen
+import optimierung
 import probelauf
 import regeln as rg
 import spaltenfilter
@@ -63,7 +64,12 @@ class Zustand:
             return None
         schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
         if schluessel not in self._pl_cache:
-            self._pl_cache = {schluessel: probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)}
+            # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Optimierungen rechnen teils mit
+            # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
+            alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
+            while len(alt) >= 3:
+                alt.pop(next(iter(alt)))
+            self._pl_cache = {**alt, schluessel: probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)}
         return self._pl_cache[schluessel]
 
 
@@ -576,43 +582,66 @@ async def regeln_import(request):
 
 
 async def regel_vorschau(request):
-    """Welche Entitäten träfe diese Regel – und wo wird sie im Regelwerk überstimmt (Punkt 29)?
+    """Welche Entitäten träfe diese Regel – wo wird sie überstimmt (Punkt 29) und was bewirkt sie (Punkt 170)?
 
     Treffer: die Regel allein betrachtet (mit Zähler-Schutz). Überstimmt: im vollständigen Regelwerk, in das die
     Regel an ihrer Stelle eingesetzt wird (bestehende ID ersetzt, neue am Ende), gewinnt bei mindestens einem Wert,
-    den sie setzt, eine andere Regel.
+    den sie setzt, eine andere Regel. Wirkung: zusätzliche Löschmenge sofort und Ersparnis im Prognosezeitraum
+    gegenüber den heutigen Regeln (optimierung.wirkung).
     """
     body = await request.json()
     regel = rg.normalisiere({"regeln": [body], "events": {}})["regeln"][0]
-    regel["aktiv"] = True
-    if regel["typ"] == "event":
-        return web.json_response(await _event_vorschau(regel))
-    allein = rg.Aufloeser({"standard": rg.STANDARD, "regeln": [regel]})
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"anzahl": 0, "treffer": [], "fehler": "Noch keine Analyse vorhanden"})
     bestand = rg.lade(REGELN, VORLAGE)
-    liste = [regel if x["id"] == regel["id"] else x for x in bestand["regeln"]]
-    if all(x["id"] != regel["id"] for x in bestand["regeln"]):
-        liste.append(regel)
-    gesamt = rg.Aufloeser({"standard": bestand["standard"], "regeln": liste})
+    hist = await asyncio.to_thread(optimierung.histogramme, CACHE)
+    fn = optimierung.event_wirkung if regel["typ"] == "event" else optimierung.wirkung
+    return web.json_response(await asyncio.to_thread(fn, regel, r, bestand, hist, ziel))
+
+
+async def optimierungen(request):
+    """Punkt 176: Regelvorschläge aus der letzten Analyse."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"vorschlaege": [], "fehler": "Noch keine Analyse vorhanden"})
+
+    def rechne():
+        hist = optimierung.histogramme(CACHE)
+        ktx = warnungen.kontext(HA_CONFIG)
+        return optimierung.vorschlaege(r, rg.lade(REGELN, VORLAGE), hist, ktx, HA_CONFIG,
+                                       optimierung.lies_ignoriert(DATA), ziel)
+    t0 = time.time()
+    liste = await asyncio.to_thread(rechne)
+    return web.json_response({"vorschlaege": liste, "stand": r["stand"], "dauer_s": round(time.time() - t0, 2)})
+
+
+async def optimierung_ignorieren(request):
+    body = await request.json()
+    s = await asyncio.to_thread(optimierung.setze_ignoriert, DATA, str(body.get("id") or ""), bool(body.get("ignorieren", True)))
+    return web.json_response({"ignoriert": sorted(s)})
+
+
+async def muster_verdichten(request):
+    """Punkt 171: Platzhalter-Muster für eine Auswahl von Entity-IDs."""
+    body = await request.json()
     r = await asyncio.to_thread(Z.probelauf, None, False)
-    treffer, geschuetzt, ueberstimmt, von = [], [], 0, {}
-    for e in (r or {}).get("entitaeten", []):
-        x = allein.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
-        if x["geschuetzt"]:
-            geschuetzt.append(e["entity_id"])
-            continue
-        if not any(x[a]["regel"] for a in rg.WERTE):
-            continue
-        treffer.append({"entity_id": e["entity_id"], "rows_24h": e["rows_24h"]})
-        g = gesamt.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
-        sieger = {g[a]["regel"] for a in rg.WERTE if regel[a] and g[a]["regel"] != regel["id"]}
-        if sieger:
-            ueberstimmt += 1
-            for s in sieger:
-                von[s or "Standard"] = von.get(s or "Standard", 0) + 1
-    treffer.sort(key=lambda t: -t["rows_24h"])
-    return web.json_response({"anzahl": len(treffer), "treffer": treffer[:200], "geschuetzt": geschuetzt[:200],
-                              "anzahl_geschuetzt": len(geschuetzt), "anzahl_ueberstimmt": ueberstimmt,
-                              "ueberstimmt_von": dict(sorted(von.items(), key=lambda kv: -kv[1]))})
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response(await asyncio.to_thread(optimierung.verdichte, list(body.get("ids") or []), r))
+
+
+async def entitaet_liste(_request):
+    """Punkte 172/173: kompakte Liste aller Entitäten für Autovervollständigung und „Regel für …“ –
+    [entity_id, Zeilen je Tag, aktiv (1/0), Zähler (1/0), device_class]."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return web.json_response({"e": []})
+    return web.json_response({"e": [[e["entity_id"], e["rows_24h"] or 0, int(e["status"] == "aktiv"),
+                                     int((e.get("state_class") or "").startswith("total")), e.get("device_class") or ""]
+                                    for e in r["entitaeten"]]})
 
 
 async def regel_pruefen(request):
@@ -624,31 +653,6 @@ async def regel_pruefen(request):
         return web.json_response({"warnungen": []})
     ktx = await asyncio.to_thread(warnungen.kontext, HA_CONFIG)
     return web.json_response({"warnungen": await asyncio.to_thread(warnungen.pruefe_regel, regel, pl, ktx)})
-
-
-async def _event_vorschau(regel):
-    """Vorschau einer Event-Regel (Punkt 51): Treffer sind Event-Typen; überstimmt, wo eine andere Event-Regel gewinnt."""
-    bestand = rg.lade(REGELN, VORLAGE)
-    liste = [regel if x["id"] == regel["id"] else x for x in bestand["regeln"]]
-    if all(x["id"] != regel["id"] for x in bestand["regeln"]):
-        liste.append(regel)
-    gesamt = {"standard": bestand["standard"], "regeln": liste}
-    r = await asyncio.to_thread(Z.probelauf, None, False)
-    pkd = (r or {}).get("stand", {}).get("purge_keep_days") or _aktuelle_pkd()   # Punkt 102: kein fester Rückfall 365 mehr
-    treffer, ueberstimmt, von = [], 0, {}
-    for ev in (r or {}).get("events", []):
-        allein = rg.event_regel({"regeln": [regel]}, ev["event_type"], pkd)
-        if not allein["regel"]:
-            continue
-        treffer.append({"entity_id": ev["event_type"], "rows_24h": ev["zeilen_24h"]})
-        sieger = rg.event_regel(gesamt, ev["event_type"], pkd)["regel"]
-        if sieger != regel["id"]:
-            ueberstimmt += 1
-            von[sieger or "Standard"] = von.get(sieger or "Standard", 0) + 1
-    treffer.sort(key=lambda t: -t["rows_24h"])
-    return {"anzahl": len(treffer), "treffer": treffer[:200], "geschuetzt": [], "anzahl_geschuetzt": 0,
-            "anzahl_ueberstimmt": ueberstimmt, "ueberstimmt_von": dict(sorted(von.items(), key=lambda kv: -kv[1])),
-            "einheit": "Event-Typen"}
 
 
 async def lts_ohne(_request):
@@ -1019,6 +1023,10 @@ def erstelle_app():
         web.put("/api/regeln", regeln_schreiben),
         web.post("/api/regeln/vorschau", regel_vorschau),
         web.post("/api/regeln/pruefen", regel_pruefen),
+        web.get("/api/optimierungen", optimierungen),
+        web.post("/api/optimierungen/ignorieren", optimierung_ignorieren),
+        web.post("/api/muster/verdichten", muster_verdichten),
+        web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),
         web.post("/api/regeln/zuruecksetzen", regeln_zuruecksetzen),
         web.post("/api/regeln/wiederherstellen", regeln_wiederherstellen),

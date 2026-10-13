@@ -302,6 +302,35 @@ textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: 1
 .kwahl .kwahl-liste .mono { font-family: var(--mono); font-size: 12.5px; }
 .kwahl .kwahl-liste .sub { margin-left: auto; white-space: nowrap; }
 .kwahl .kwahl-liste .fremd .mono { color: var(--warn); }
+/* Punkt 170 (0.5.4): Live-Vorschau der Regelmaske – gelb wie Löschmenge/Regeln */
+.vorschau { padding: 8px 10px; border: 1px solid var(--line); border-left: 4px solid var(--zf-loesch); border-radius: 6px;
+  background: color-mix(in srgb, var(--zf-loesch) 7%, var(--panel)); display: grid; gap: 3px; font-size: 13px; min-width: 0; }
+.vorschau .kz { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+.vorschau .kz b { font-variant-numeric: tabular-nums; }
+.vorschau .bsp { color: var(--muted); font-family: var(--mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vorschau.laed { opacity: .6; }
+/* Punkt 174: Schnellknöpfe unter den Werten */
+.schnell { display: flex; flex-wrap: wrap; gap: 4px; }
+.schnell button { padding: 0 7px; font-size: 12px; border-radius: 10px; background: var(--chip); line-height: 1.6; }
+.schnell button:hover, .schnell button.an { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+/* Punkt 173: Autovervollständigung im Musterfeld */
+.autoliste { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); max-height: 230px; overflow: auto; min-width: 0; }
+.autoliste div { padding: 2px 9px; cursor: pointer; display: flex; gap: 8px; align-items: baseline; font-family: var(--mono); font-size: 12.5px; }
+.autoliste div.an, .autoliste div:hover { background: var(--accent-weak); }
+.autoliste .sub { margin-left: auto; font-family: inherit; white-space: nowrap; font-size: 11.5px; }
+/* Punkt 171: Vorschlag „Muster verdichten“; Punkt 172: „Regel für …“ */
+.hinweisbox { padding: 6px 10px; border-radius: 6px; background: var(--accent-weak); border: 1px solid var(--accent); display: grid; gap: 4px; min-width: 0; }
+.hinweisbox .mono { overflow-wrap: anywhere; }
+.knopfreihe { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.knopfreihe button { font-size: 12.5px; padding: 2px 8px; }
+.typauto { font-size: 11px; color: var(--accent); min-height: 1.2em; }
+/* Punkt 175: lange Klartexte der Typen dürfen die Maske nicht verbreitern (vgl. Punkt 168) */
+#rMaske label.feld { min-width: 0; } #rTyp { width: 100%; min-width: 0; text-overflow: ellipsis; }
+/* Punkt 176: Tab Optimierungen */
+#tOpt td.gruende { white-space: normal; font-size: 12.5px; line-height: 1.35; }
+#tOpt tr.ignoriert td { opacity: .5; }
+#tOpt .aktion { display: flex; gap: 4px; flex-wrap: wrap; }
+#tOpt .aktion button { padding: 1px 7px; font-size: 12px; }
 .lauf { margin: 0 20px 12px; padding: 10px 14px; border-radius: 8px; background: var(--accent-weak); border: 1px solid var(--accent); display: grid; gap: 6px; }
 .lauf.fehlerbox { background: var(--warn-bg); border-color: var(--bad); color: var(--bad); }
 .lauf b { font-weight: 600; }
@@ -391,6 +420,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       <button data-tab="ent" class="an rf-ist">Entitäten</button>
       <button data-tab="events" class="rf-ist">Events</button>
       <button data-tab="lts" class="rf-ist">Statistik ohne Entität</button>
+      <button data-tab="opt" class="rf-loesch" title="Regelvorschläge aus der letzten Analyse">Optimierungen</button>
       <button data-tab="regeln" class="rf-loesch">Regeln</button>
       <button data-tab="loeschen" class="rf-loesch">Löschen</button>
       <button data-tab="protokoll" class="rf-loesch">Löschprotokolle</button>
@@ -449,6 +479,17 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       <button data-spalten="laeufe">Spalten …</button>
       <span style="flex:1"></span>
       <a href="#" data-csv="laeufe">CSV</a>
+    </div>
+    <!-- Punkt 176 (0.5.4): Regelvorschläge aus der letzten Analyse -->
+    <div class="leiste" data-leiste="opt" hidden>
+      <button id="oNeu" title="Vorschläge mit den aktuellen Regeln und dem Prognosezeitraum neu berechnen">Neu berechnen</button>
+      <label><input type="checkbox" id="oIgnoriert"> ignorierte zeigen</label>
+      <button data-reset-filter="opt">Filter zurücksetzen</button>
+      <button data-reset-breiten="opt">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="opt">Spalten …</button>
+      <button class="hilfeknopf" data-hilfe="optimierungen" aria-label="Erläuterung: Optimierungen">ⓘ Was zeigt dieser Tab?</button>
+      <span style="flex:1"></span>
+      <a href="#" data-csv="opt">CSV</a>
     </div>
     <div class="leiste" data-leiste="lts" hidden>
       <button data-reset-filter="lts">Filter zurücksetzen</button>
@@ -715,6 +756,13 @@ actions:
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>
       </details>
     </div>
+  </section>
+  <section id="tab-opt" hidden>
+    <div class="trefferzeile" id="trefferOpt"></div>
+    <div class="tabelle"><table id="tOpt" class="baustein"></table></div>
+    <p class="sub" id="optText">Vorschläge aus der letzten Analyse – nur für Daten ohne eigene Kurzzeit (Standard bzw. HA-Standard), nie für Zähler, geschützte Entitäten,
+      Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen; die Langzeit bleibt unverändert. „Übernehmen …“ öffnet die Regelmaske
+      ausgefüllt und <b>passiv</b> – erst nach dem Speichern und Einschalten wirkt die Regel.</p>
   </section>
   <section id="tab-regeln" hidden>
     <div class="trefferzeile" id="trefferRegeln"></div>
@@ -1372,6 +1420,10 @@ const HILFE = {
     "Wirkungsbilanz jeder Regel – ohne dass etwas gelöscht wird. Löschmenge sofort betrifft den Bestand: Was ist heute zu viel? Ersparnis (Dauerbetrieb) betrifft den Zufluss: Was sammelt sich ohne Regel künftig an?",
     "Entitäten: wie viele Entitäten diese Regel tatsächlich bestimmt (nur wo sie den Vorrang gewinnt) · Entitäten mit Kurzzeit bzw. Langzeit aus dieser Regel: bei wie vielen Entitäten der Wert aus dieser Regel stammt (Anzahl, keine Zeilen) · Löschmenge sofort: was ein scharfer Lauf jetzt löschen würde (bei Regeln länger als purge_keep_days = {pkd} Tage steht 0) · Ersparnis (Dauerbetrieb): wie viel kleiner die DB über den Prognosezeitraum von {ziel} bleibt, aufgeteilt in States und Attribute. Beispiel R21: 0 Zeilen sofort, trotzdem Ersparnis auf Dauer.",
     "Nach „Ersparnis (Dauerbetrieb)“ sortieren, um die Hebel zu sehen; Regeln mit 0 Entitäten treffen nichts oder werden überstimmt."],
+  optimierungen: ["Optimierungen",
+    "Regelvorschläge, die die App aus der letzten Analyse ableitet – ohne neue Abfrage der Datenbank und ohne dass etwas gelöscht wird. Vorgeschlagen wird nur eine kürzere Kurzzeit für Daten, für die heute keine eigene Regel gilt; die Langzeit bleibt unverändert.",
+    "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt –, in HA deaktiviert) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
+    "Nach Ersparnis sortiert von oben abarbeiten: „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; Treffer und Wirkung zeigt die Vorschau dort. Was nicht passt, „ignorieren“ – die App merkt es sich."],
   passiv: ["Passive Regeln mitrechnen",
     "Rechnet passive Regeln (z. B. R23 Einzelfallprüfung) so, als wären sie aktiv.",
     "Wirkt auf Kacheln, Tabellen, Probelauf und CSV – nur in dieser Ansicht. An den Regeln selbst ändert sich nichts.",
@@ -2069,6 +2121,81 @@ T.lts = new LokaleTabelle({
     { k: "rows", titel: "Langzeit (Zeilen)", typ: "zahl", n: 1, breite: 110, wert: r => r.rows, zelle: r => zahl(r.rows), csv: r => r.rows, summe: anzahlSumme(r => r.rows) },
   ],
 });
+// ---- Punkt 176 (0.5.4): Optimierungen – Regelvorschläge aus der letzten Analyse
+const OPT_ART = { gruppe: "Gruppe", entitaet: "Entität", verwaist: "Verwaiste", event: "Events" };
+const optStatus = v => v.vorhanden ? `<span class="chip regel regelklick" data-regel-edit="${esc(v.vorhanden.id)}" title="Regel mit genau diesem Muster gibt es schon (${v.vorhanden.aktiv ? "aktiv" : "passiv"}) – Klick öffnet sie">${esc(v.vorhanden.id)} ${v.vorhanden.aktiv ? "" : "passiv"}</span>`
+  : (v.passiv || []).map(p => `<span class="chip warn regelklick" data-regel-edit="${esc(p.id)}" title="Die passive Regel ${esc(p.id)} (Kurzzeit ${esc(wertAnzeige(p.kurzzeit))}) trifft schon ${zahl(p.anzahl)} von ${zahl(v.anzahl)} dieser Entitäten – einschalten genügt vielleicht. Klick öffnet sie.">passiv: ${esc(p.id)} (${zahl(p.anzahl)})</span>`).join(" ");
+T.opt = new LokaleTabelle({
+  id: "#tOpt", treffer: "#trefferOpt", schluessel: "dbh_breiten_opt", einheit: "Vorschläge", sortStd: { k: "ersparnis", desc: true },
+  gruppen: [["Vorschlag", "stamm", ["art", "titel", "typ", "muster"]], ["Vorhaltezeit", "vorh", ["kurzzeit"]], ["Istzustand", "ist", ["anzahl", "zuwachs_tag"]],
+    ["Löschmenge sofort", "loesch", ["loesch_zeilen", "loesch_mb"]], ["Prognose", "prog", ["ersparnis"]]],
+  fix: ["art", "titel"],
+  leer: "keine Vorschläge – entweder ist alles geregelt, oder es fehlt noch eine Analyse",
+  spalten: [
+    { k: "art", titel: "Art", typ: "auswahl", breite: 90, wert: r => OPT_ART[r.art] || r.art, zelle: r => esc(OPT_ART[r.art] || r.art), csv: r => r.art,
+      optionen: () => Object.values(OPT_ART).map(a => [a, a]), summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Vorschläge – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
+    { k: "titel", titel: "Vorschlag", typ: "text", fest: 1, breite: 330, wert: r => r.titel, zelle: r => `<span class="mono">${esc(r.titel)}</span>`, csv: r => r.titel },
+    { k: "typ", titel: "Regeltyp", typ: "auswahl", breite: 85, wert: r => r.regel.typ, zelle: r => esc(r.regel.typ), csv: r => r.regel.typ,
+      optionen: l => [...new Set(l.map(r => r.regel.typ))].map(t => [t, t]) },
+    { k: "muster", titel: "Muster", typ: "text", breite: 220, wert: r => r.regel.muster.join(" "), tip: r => r.regel.muster.join("\n"),
+      zelle: r => `<span class="mono">${esc(r.regel.muster.join(", "))}</span>`, csv: r => r.regel.muster.join(", ") },
+    { k: "kurzzeit", titel: "Kurzzeit (Vorschlag)", typ: "auswahl", breite: 120, wert: r => wertAnzeige(r.regel.kurzzeit), zelle: r => esc(wertAnzeige(r.regel.kurzzeit)),
+      csv: r => r.regel.kurzzeit, optionen: l => [...new Set(l.map(r => wertAnzeige(r.regel.kurzzeit)))].map(v => [v, v]),
+      hilfe: "vorgeschlagene Kurzzeit (States, 5-Min-Statistik, Attribute bzw. Events); die Langzeit bleibt unverändert" },
+    { k: "anzahl", titel: "Treffer", typ: "zahl", n: 1, breite: 80, wert: r => r.anzahl, zelle: r => zahl(r.anzahl), csv: r => r.anzahl, summe: anzahlSumme(r => r.anzahl),
+      hilfe: "Entitäten bzw. Event-Typen, die das Muster trifft (Zähler sind bei glob und klasse ausgenommen)" },
+    { k: "zuwachs_tag", titel: "Zuwachs (Zeilen pro Tag)", typ: "zahl", n: 1, breite: 120, wert: r => r.zuwachs_tag, zelle: r => zahl(r.zuwachs_tag), csv: r => r.zuwachs_tag, summe: anzahlSumme(r => r.zuwachs_tag) },
+    { k: "loesch_zeilen", titel: "Zeilen", typ: "zahl", n: 1, breite: 110, hilfe: "zusätzlich zu den heutigen Regeln sofort löschbar (States, 5-Min-Statistik bzw. Events)",
+      wert: r => r.loesch_zeilen, zelle: r => zahl(r.loesch_zeilen), csv: r => r.loesch_zeilen, summe: anzahlSumme(r => r.loesch_zeilen) },
+    { k: "loesch_mb", titel: "Platz (MB)", typ: "zahl", n: 1, breite: 100, hilfe: "Platz der zusätzlichen Löschmenge sofort (wird nach einem Repack frei)",
+      wert: r => Math.round(r.loesch_bytes / 1e6), zelle: r => mb(r.loesch_bytes), csv: r => Math.round(r.loesch_bytes), summe: (g, a) => [mb(g.reduce((x, r) => x + r.loesch_bytes, 0)), mb(a.reduce((x, r) => x + r.loesch_bytes, 0))] },
+    { k: "ersparnis", titel: "Ersparnis (Prognosezeitraum · GB)", typ: "gb", n: 1, breite: 150, hilfe: "wie viel kleiner die DB im Prognosezeitraum bleibt, verglichen mit den heutigen Regeln",
+      wert: r => r.ersparnis_bytes, zelle: r => gb(r.ersparnis_bytes), csv: r => Math.round(r.ersparnis_bytes), summe: gbSumme(r => r.ersparnis_bytes) },
+    { k: "gruende", titel: "Begründung", typ: "text", breite: 380, wert: r => r.gruende.join(" · "), tdKlasse: "gruende",
+      zelle: r => esc(r.gruende.join(" · ")), csv: r => r.gruende.join(" | "), tip: r => r.gruende.join("\n") + (r.beispiele?.length ? `\n\nBeispiele: ${r.beispiele.join(", ")}` : "") },
+    { k: "aktion", titel: "Aktion", typ: "keine", breite: 250, wert: () => 0,
+      zelle: r => `<div class="aktion">${optStatus(r)}<button data-opt="nehmen" data-vid="${esc(r.id)}" title="Regelmaske ausgefüllt öffnen (passiv)">Übernehmen …</button>` +
+        (r.regel.typ === "event" ? "" : `<button data-opt="ansehen" data-vid="${esc(r.id)}" title="Treffer im Tab Entitäten zeigen">Ansehen</button>`) +
+        `<button data-opt="${r.ignoriert ? "zeigen" : "ignorieren"}" data-vid="${esc(r.id)}">${r.ignoriert ? "wieder zeigen" : "ignorieren"}</button></div>` },
+  ],
+  zeileAttr: r => `data-vid="${esc(r.id)}"${r.ignoriert ? ' class="ignoriert"' : ""}`,
+  zusatz: () => S.optInfo || "",
+});
+async function ladeOpt() {
+  T.opt.leer = "berechne Vorschläge …"; T.opt.daten([]);
+  try {
+    const r = await api("optimierungen?" + par());
+    S.opt = r.vorschlaege || [];
+    const ign = S.opt.filter(v => v.ignoriert).length;
+    S.optInfo = ign ? `<span class="sub">${mzahl(ign, "Vorschlag", "Vorschläge")} ignoriert${$("#oIgnoriert").checked ? "" : " (ausgeblendet)"}</span>` : "";
+    T.opt.leer = r.fehler || "keine Vorschläge – alles mit eigener Kurzzeit geregelt";
+    T.opt.daten(S.opt.filter(v => $("#oIgnoriert").checked || !v.ignoriert));
+  } catch (e) { T.opt.leer = e.message; T.opt.daten([]); }
+}
+$("#oNeu").onclick = ladeOpt;
+$("#oIgnoriert").onchange = () => T.opt.daten((S.opt || []).filter(v => $("#oIgnoriert").checked || !v.ignoriert));
+$("#tOpt").addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-opt]");
+  if (!b) return;
+  const v = (S.opt || []).find(x => x.id === b.dataset.vid); if (!v) return;
+  const was = b.dataset.opt;
+  if (was === "nehmen") {
+    const id = v.regel.typ === "event" && !S.regeln.regeln.some(x => x.id === `EV:${v.regel.muster[0]}`) ? `EV:${v.regel.muster[0]}` : naechsteId();
+    return bearbeiteRegel(-1, { ...v.regel, id, aktiv: false, typManuell: true });
+  }
+  if (was === "ansehen") {
+    document.querySelector('#tabs button[data-tab="ent"]').click();
+    if (v.regel.typ === "verwaist") { setzeFilter("entity_id", "", false); return setzeFilter("status", "verwaist", true); }
+    return setzeFilter("entity_id", v.regel.muster.length === 1 ? v.regel.muster[0] : "", true);
+  }
+  try {
+    await postJson("optimierungen/ignorieren", { id: v.id, ignorieren: was === "ignorieren" });
+    v.ignoriert = was === "ignorieren";
+    const ign = S.opt.filter(x => x.ignoriert).length;
+    S.optInfo = ign ? `<span class="sub">${mzahl(ign, "Vorschlag", "Vorschläge")} ignoriert${$("#oIgnoriert").checked ? "" : " (ausgeblendet)"}</span>` : "";
+    T.opt.daten(S.opt.filter(x => $("#oIgnoriert").checked || !x.ignoriert));
+  } catch (e) { meldung("Optimierungen", e.message); }
+});
 // ---- Events je Typ (Punkt 42/48): Vorhaltezeit je Event-Typ, gespeichert in der Regeldatei unter "events"
 T.events = new LokaleTabelle({
   id: "#tEvents", treffer: "#trefferEvents", schluessel: "dbh_breiten_events", einheit: "Event-Typen", sortStd: { k: "zeilen", desc: true },
@@ -2120,7 +2247,7 @@ document.addEventListener("click", ev => {
   const sw = ev.target.closest("[data-spalten]");
   if (sw) {
     const t = sw.dataset.spalten;
-    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognosen je Regel", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokolle – Läufe", events: "Events" }[t]);
+    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognosen je Regel", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokolle – Läufe", events: "Events", opt: "Optimierungen" }[t]);
   }
   const rf = ev.target.closest("[data-reset-filter]"); if (rf) return T[rf.dataset.resetFilter].resetFilter();
   const rb = ev.target.closest("[data-reset-breiten]"); if (rb) return T[rb.dataset.resetBreiten].z.reset();
@@ -2449,11 +2576,34 @@ function wertWahl(art, wert, mitNull, ohne = []) {
     </div></div>`;
 }
 // Block je Wert: Beschriftung mit fester Höhe (Name, darunter klein „wirksam …“), dann die beiden Eingabezeilen
-function wertBlock(art, wert, mitNull, unter, ohne) {
+// Punkt 174 (0.5.4): Schnellknöpfe je Wert (schnell = true)
+const SCHNELL = { kurzzeit: [["7d", "7 T"], ["14d", "14 T"], ["30d", "30 T"], ["90d", "90 T"], ["1j", "1 J"], ["global", "global"]],
+                  langzeit: [["1j", "1 J"], ["2j", "2 J"], ["5j", "5 J"], ["unbegrenzt", "unbegrenzt"]] };
+function wertBlock(art, wert, mitNull, unter, ohne, schnell) {
   // Punkt 61: Attribute haben keinen eigenen Wert mehr – Hinweis an der Kurzzeit
   const hinweis = art !== "kurzzeit" ? "" : `<div class="sub kzHinweis" style="font-size:11px;margin-top:3px">gilt für States, 5-Min-Statistik und Attribute</div>`;
-  return `<div class="wertblock"><div class="wertkopf"><b>${WNAME[art]}</b>${unter ? `<span>${unter}</span>` : ""}</div>${wertWahl(art, wert, mitNull, ohne)}${hinweis}</div>`;
+  const knoepfe = schnell && SCHNELL[art] ? `<div class="schnell">${SCHNELL[art].map(([w, t]) =>
+    `<button type="button" data-w="${w}" class="${w === wert ? "an" : ""}" title="${esc(wertAnzeige(w))}">${t}</button>`).join("")}</div>` : "";
+  return `<div class="wertblock"><div class="wertkopf"><b>${WNAME[art]}</b>${unter ? `<span>${unter}</span>` : ""}</div>${wertWahl(art, wert, mitNull, ohne)}${knoepfe}${hinweis}</div>`;
 }
+// Wert in eine Wertauswahl schreiben (Sonderwert oder Dauer wie 30d) und die Änderung melden
+function setzeWert(el, w) {
+  const m = /^(\d+)([dwmj])$/.exec(w || "");
+  el.querySelector(".wModus").value = m ? "dauer" : (w || "");
+  if (m) { el.querySelector(".wZahl").value = m[1]; el.querySelector(".wEinheit").value = m[2]; }
+  setzeDauerAktiv(el, !!m);
+  markiereSchnell(el);
+  el.querySelector(".wModus").dispatchEvent(new Event("change", { bubbles: true }));
+}
+function markiereSchnell(el) {
+  const w = wertLesen(el);
+  el.closest(".wertblock")?.querySelectorAll(".schnell button").forEach(b => b.classList.toggle("an", b.dataset.w === w));
+}
+document.addEventListener("click", ev => {
+  const b = ev.target.closest(".schnell button[data-w]"); if (!b) return;
+  const el = b.closest(".wertblock")?.querySelector(".wertwahl"); if (el) setzeWert(el, b.dataset.w);
+});
+document.addEventListener("input", ev => { const el = ev.target.closest(".wertwahl"); if (el) markiereSchnell(el); });
 function setzeDauerAktiv(w, an) { w.querySelector(".wZahl").disabled = w.querySelector(".wEinheit").disabled = !an; }
 function wertLesen(el) {
   const modus = el.querySelector(".wModus").value;
@@ -2462,6 +2612,7 @@ function wertLesen(el) {
   return el.querySelector(".wZahl").value + el.querySelector(".wEinheit").value;
 }
 document.addEventListener("change", ev => {
+  const w = ev.target.closest(".wertwahl"); if (w) markiereSchnell(w);
   if (!ev.target.classList.contains("wModus")) return;
   setzeDauerAktiv(ev.target.closest(".wertwahl"), ev.target.value === "dauer");
 });
@@ -2550,7 +2701,7 @@ function oeffneEntitaet(e) {
       (u.length ? `<br><span title="${esc(u.map(v => `${v.regel}: ${v.anzeige}`).join("\n"))}">überstimmt: ${esc(u.map(v => `${v.regel} ${v.anzeige}`).join(" · "))}</span>` : "");
   };
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
-  const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "kurzzeit" ? ["keine"] : []);
+  const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "kurzzeit" ? ["keine"] : [], true);   // Punkt 174: Schnellknöpfe
   const info = `<div class="mono">${esc(e.entity_id)}</div>
     <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/24 h · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
       Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
@@ -2563,7 +2714,9 @@ function oeffneEntitaet(e) {
   dialog(verwaist ? "Eigene Vorhaltezeiten (verwaiste Entität)" : "Eigene Vorhaltezeiten", info + hinweisVerwaist +
     `<p class="sub">Leer lassen = wie bisher (${verwaist ? "verwaist-Regel" : "Muster-Regel"} oder Standard). Gespeichert als Regel <span class="mono">${esc(id)}</span>;
     sie hat immer Vorrang vor allen anderen Regeln.</p>
-    <div class="raster3">${WERTE.map(zeile).join("")}</div><div id="dlgFehler" class="fehler"></div>`, [
+    <div class="raster3">${WERTE.map(zeile).join("")}</div>
+    ${verwaist ? "" : `<div class="knopfreihe" id="eRegelFuer"><span class="sub">Regel für gleichartige Entitäten …</span></div>`}
+    <div id="dlgFehler" class="fehler"></div>`, [
     ...(verwaist ? [["Regel „verwaist“ anlegen", () => bearbeiteRegel(-1, {
       typ: "verwaist", muster: [e.entity_id], name: `Verwaist: ${e.entity_id}`, kurzzeit: "30d" })]] : []),
     ...(eigene ? [["Eigene Regel entfernen", async () => {
@@ -2579,6 +2732,35 @@ function oeffneEntitaet(e) {
       }
       try { await speichereRegeln({ ...S.regeln, regeln }); $("#dlg").close(); } catch (x) { $("#dlgFehler").textContent = x.message; }
     }, true]]);
+  if (!verwaist) regelFuer(e);
+}
+// Punkt 172 (0.5.4): aus einer Entität heraus eine Regel für gleichartige anlegen – gleiches Präfix, gleiche Endung, gleiche Klasse
+async function regelFuer(e) {
+  const box = $("#eRegelFuer"); if (!box) return;
+  let liste; try { liste = await entListe(); } catch (x) { box.remove(); return; }
+  if (!$("#eRegelFuer")) return;
+  const [dom, name] = e.entity_id.split("."), teile = name.split("_"), angebote = [];
+  // längstes Präfix und kürzeste Endung, die mindestens zwei Entitäten treffen (ohne Zähler, nur aktive – wie glob)
+  for (let k = teile.length - 1; k >= 1; k--) {
+    const m = `${dom}.${teile.slice(0, k).join("_")}_*`, n = globTreffer(liste, m).length;
+    if (n >= 2) { angebote.push(["gleiches Präfix", m, n, "glob"]); break; }
+  }
+  for (let k = teile.length - 1; k >= 1; k--) {
+    const m = `${dom}.*_${teile.slice(k).join("_")}`, n = globTreffer(liste, m).length;
+    if (n >= 2) { angebote.push(["gleiche Endung", m, n, "glob"]); break; }
+  }
+  if (e.device_class) {
+    const m = `${dom}|${e.device_class}`, n = liste.filter(x => x.aktiv && !x.zaehler && x.dc === e.device_class && x.id.startsWith(dom + ".")).length;
+    if (n >= 2) angebote.push(["gleiche Klasse", m, n, "klasse"]);
+  }
+  if (!angebote.length) { box.remove(); return; }
+  box.innerHTML = `<span class="sub">Regel für gleichartige:</span>` + angebote.map(([t, m, n, typ]) =>
+    `<button type="button" data-rf-muster="${esc(m)}" data-rf-typ="${typ}" title="${esc(`${t}: ${m} – trifft ${zahl(n)} Entitäten (ohne Zähler). Öffnet die Regelmaske ausgefüllt.`)}">${esc(t)}: <span class="mono">${esc(m)}</span> (${zahl(n)})</button>`).join("");
+  box.onclick = ev => {
+    const b = ev.target.closest("[data-rf-muster]"); if (!b) return;
+    const kz = e.werte?.kurzzeit?.regel ? null : "30d";
+    bearbeiteRegel(-1, { typ: b.dataset.rfTyp, muster: [b.dataset.rfMuster], name: b.dataset.rfMuster, kurzzeit: kz, typManuell: true });
+  };
 }
 
 // Punkt 54: Warnungen vor dem Speichern (Energie-Dashboard, Zähler, kurze Kurzzeit, Helfer-Quellen, breite Event-Muster)
@@ -2684,32 +2866,53 @@ function zeigeHaStandard(r) {
       catch (e) { $("#dlgFehler").textContent = e.message; }
     }, true]]);
 }
+// Punkt 175 (0.5.4): Typen mit Klartext; bei neuen Regeln wird der Typ aus den Mustern abgeleitet, solange er nicht von Hand gewählt wurde
+const TYP_TEXT = { entity: "entity – einzelne Entitäten (genaue ID)", glob: "glob – Namensmuster mit * und ?", klasse: "klasse – Geräteklasse (domain|device_class)",
+  verwaist: "verwaist – nur verwaiste Entitäten", event: "event – Vorhaltezeit je Event-Typ", schutz: "schutz – nie kürzen" };
+// Punkte 172/173: kompakte Liste aller Entitäten (je Analyse-Stand einmal geladen)
+async function entListe() {
+  const stand = S.probe?.stand?.analyse_zeit;
+  if (!S.entListe || S.entListeStand !== stand) {
+    const r = await api("entitaet_liste");
+    S.entListe = r.e.map(([id, n, aktiv, zaehler, dc]) => ({ id, n, aktiv: !!aktiv, zaehler: !!zaehler, dc }));
+    S.entListeStand = stand;
+  }
+  return S.entListe;
+}
+const globRe = g => new RegExp("^" + g.replace(/[.+^${}()|\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+// glob und klasse treffen nur aktive Entitäten ohne Zähler (Zähler-Schutz) – wie im Aufloeser
+const globTreffer = (liste, muster) => { const re = globRe(muster); return liste.filter(e => e.aktiv && !e.zaehler && re.test(e.id)); };
 function bearbeiteRegel(i, vorlage) {
   if (i >= 0 && S.regeln.regeln[i]?.typ === "ha_standard") return zeigeHaStandard(S.regeln.regeln[i]);   // Punkt 127
   const neu = i < 0;
   const vorschlagId = naechsteId();
   const r = neu ? { id: vorschlagId, name: "", typ: "glob", muster: [], aktiv: true, kurzzeit: null, attribute: null, langzeit: null, notiz: "", ...(vorlage || {}) }
                 : S.regeln.regeln[i];
-  dialog(neu ? "Neue Regel" : "Regel " + r.id, `
+  // Punkt 175: Typ-Automatik nur bei neuen Regeln, deren Typ nicht vorgegeben oder von Hand gewählt ist
+  let typManuell = !neu || !!r.typManuell || ["verwaist", "event", "schutz"].includes(r.typ);
+  dialog(neu ? "Neue Regel" : "Regel " + r.id, `<div id="rMaske" style="display:contents">
     <div class="raster3">
       <label class="feld">ID${neu ? " (Vorschlag, änderbar)" : ""}<input id="rId" value="${esc(r.id)}" placeholder="z. B. R24"></label>
       <label class="feld">Name<input id="rName" value="${esc(r.name)}"></label>
-      <label class="feld">Typ<select id="rTyp">${REGELTYPEN.map(t => `<option ${r.typ === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label class="feld">Typ<select id="rTyp">${REGELTYPEN.map(t => `<option value="${t}" ${r.typ === t ? "selected" : ""}>${esc(TYP_TEXT[t])}</option>`).join("")}</select>
+        <span class="typauto" id="rTypAuto"></span></label>
     </div>
     <label class="feld"><span>Muster<span id="rProZeile" ${r.typ === "klasse" ? "hidden" : ""}> (eines pro Zeile)</span> –</span> <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
-      <textarea id="rMuster" ${r.typ === "klasse" ? "hidden" : ""}>${esc(r.muster.join("\n"))}</textarea></label>
+      <textarea id="rMuster" ${r.typ === "klasse" ? "hidden" : ""} autocomplete="off" spellcheck="false">${esc(r.muster.join("\n"))}</textarea></label>
+    <div id="rAuto" class="autoliste" role="listbox" hidden></div>
     <div id="rKlassen" ${r.typ === "klasse" ? "" : "hidden"}></div>
+    <div id="rVerdichten" class="hinweisbox" hidden></div>
     <div class="sub" id="rVerwaistHinweis" ${r.typ === "verwaist" ? "" : "hidden"}>Empfehlung: Kurzzeit mit Frist (z. B. 30 Tage) statt „keine“ – eine verwaiste Entität schreibt nichts mehr,
       nach der Frist ist alles weg, und bis dahin lässt sich eine versehentlich umbenannte Entität wiederherstellen.
       Langzeit „keine“ entfernt auch die Stundenstatistik, die HA sonst für immer behält.</div>
     <div class="sub" id="rEventHinweis" ${r.typ === "event" ? "" : "hidden"}>Event-Regeln setzen nur die <b>Vorhaltezeit der Events</b> (Feld „${EV_NAME}“). Events braucht nur das Logbuch („Aktivität“);
       Verlauf, Statistik und Energie-Dashboard sind nicht betroffen. Bei mehreren passenden Event-Regeln gilt der genaue Name vor Platzhaltern, dann die Reihenfolge.</div>
     <div class="sub" id="rSchutzHinweis" ${r.typ === "schutz" ? "" : "hidden"}>🔒 <b>Schutz:</b> Kurzzeit „global“ und Langzeit „unbegrenzt“ sind fest. Höchster Rang – vor allen anderen Regeln, auch vor E:-Regeln –, gilt auch für verwaiste Entitäten und Zähler. Der Löschplan schließt diese Entitäten zusätzlich aus. „global“ heißt purge_keep_days: HA selbst löscht nach dieser Zeit.</div>
-    <div class="raster3">${WERTE.map(a => wertBlock(a, r[a], true, "")).join("")}</div>
+    <div class="raster3">${WERTE.map(a => wertBlock(a, r[a], true, "", undefined, true)).join("")}</div>
     <label><input type="checkbox" id="rAktiv" ${r.aktiv ? "checked" : ""}> aktiv (sonst passiv)</label>
     <label class="feld">Notiz<input id="rNotiz" value="${esc(r.notiz)}"></label>
-    <div><button id="rVorschau">Treffer anzeigen</button> <span id="rTreffer" class="sub"></span></div>
-    <div id="dlgFehler" class="fehler"></div>`, [
+    <div id="rVorschau" class="vorschau" aria-live="polite"><span class="sub">Vorschau …</span></div>
+    <div id="dlgFehler" class="fehler"></div></div>`, [
     ...(neu ? [] : [["Regel entfernen", async () => {
       if (!await frage("Regel entfernen", `Regel ${r.id} „${r.name}“ entfernen? Es werden dabei keine Daten gelöscht.`, "Entfernen")) return;
       try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.filter((_, j) => j !== i) }); $("#dlg").close(); }
@@ -2772,8 +2975,7 @@ function bearbeiteRegel(i, vorlage) {
     const kh = block?.querySelector(".kzHinweis"); if (kh) kh.hidden = t === "event";
   };
   eventModus(r.typ);
-  $("#rTyp").onchange = () => {
-    const t = $("#rTyp").value;
+  function typGewechselt(t) {
     if (neu) {   // Punkt 58: ID-Vorschlag je Typ (EV:… für Event-Regeln, sonst nächste R-Nummer), solange nicht von Hand geändert
       const id = $("#rId").value.trim();
       if (t === "event" && (id === vorschlagId || !id)) $("#rId").value = "EV:";
@@ -2785,31 +2987,144 @@ function bearbeiteRegel(i, vorlage) {
     klassenModus(t, true);
     if (t === "event" && neu) {   // Vorlage für neue Event-Regeln: 7 Tage
       const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
-      if (kz && !wertLesen(kz)) {
-        kz.querySelector(".wModus").value = "dauer"; kz.querySelector(".wZahl").value = 7; kz.querySelector(".wEinheit").value = "d";
-        setzeDauerAktiv(kz, true);
-      }
+      if (kz && !wertLesen(kz)) setzeWert(kz, "7d");
     }
     if (t === "verwaist" && neu) {   // Vorlage für neue verwaist-Regeln: Art „alle“, Kurzzeit 30 Tage
       if (!$("#rMuster").value.trim()) $("#rMuster").value = "alle";
       const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
-      if (kz && !wertLesen(kz)) {
-        kz.querySelector(".wModus").value = "dauer"; kz.querySelector(".wZahl").value = 30; kz.querySelector(".wEinheit").value = "d";
-        setzeDauerAktiv(kz, true);
-      }
+      if (kz && !wertLesen(kz)) setzeWert(kz, "30d");
     }
-  };
+    pruefeVerdichten(); vorschau();
+  }
+  $("#rTyp").onchange = () => { typManuell = true; $("#rTypAuto").textContent = ""; typGewechselt($("#rTyp").value); };
   klassenModus(r.typ);
-  $("#rVorschau").onclick = async () => {
-    try {
-      const v = await api("regeln/vorschau", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...lies(), id: lies().id || "VORSCHAU" }) });
-      const von = Object.entries(v.ueberstimmt_von || {}).map(([r, n]) => `${r} (${zahl(n)})`).join(", ");
-      $("#rTreffer").innerHTML = `${zahl(v.anzahl)} ${v.einheit || "Entitäten"}${v.anzahl_geschuetzt ? `, ${v.anzahl_geschuetzt} Zähler geschützt` : ""}` +
-        (v.anzahl_ueberstimmt ? `, davon <b>${zahl(v.anzahl_ueberstimmt)} überstimmt</b> von ${esc(von)}` : "") + ": " +
-        `<span class="mono">${esc(v.treffer.slice(0, 12).map(t => t.entity_id).join(", "))}${v.anzahl > 12 ? " …" : ""}</span>`;
-      $("#dlgFehler").textContent = "";
-    } catch (e) { $("#dlgFehler").textContent = e.message; }
+  // Punkt 175: Typ aus den Mustern ableiten (| → klasse, * ? [ → glob, sonst entity)
+  function typAuto() {
+    if (typManuell) return;
+    const m = $("#rMuster").value.split("\n").map(s => s.trim()).filter(Boolean);
+    if (!m.length) return;
+    const [t, grund] = m.some(x => x.includes("|")) ? ["klasse", "| erkannt"] : platzhalter(m) ? ["glob", "Platzhalter erkannt"] : ["entity", "genaue IDs"];
+    $("#rTypAuto").textContent = `Typ automatisch: ${t} (${grund}) – von Hand wählbar`;
+    if ($("#rTyp").value !== t) { $("#rTyp").value = t; typGewechselt(t); }
+  }
+  // ---- Punkt 170: Live-Vorschau – bei jeder Änderung, 0,4 s verzögert; ältere Antworten werden verworfen
+  let vNr = 0, vTimer = null;
+  function vorschau() {
+    clearTimeout(vTimer);
+    vTimer = setTimeout(async () => {
+      const box = $("#rVorschau"); if (!box || !$("#dlg").open) return;
+      const x = lies(), nr = ++vNr;
+      if (!x.muster.length) { box.innerHTML = `<span class="sub">Vorschau: noch kein Muster eingetragen</span>`; return; }
+      const ohneWert = x.typ !== "schutz" && !WERTE.some(a => x[a]);
+      box.classList.add("laed");
+      try {
+        const v = await api("regeln/vorschau?" + par(), { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...x, id: x.id || "VORSCHAU", ...(ohneWert ? { kurzzeit: "global" } : {}) }) });
+        if (nr !== vNr || !$("#rVorschau")) return;
+        box.innerHTML = vorschauHtml(v, ohneWert, x);
+      } catch (e) { if (nr === vNr) box.innerHTML = `<span class="fehler">Vorschau nicht möglich: ${esc(e.message)}</span>`; }
+      box.classList.remove("laed");
+    }, 400);
+  }
+  // ---- Punkt 171: viele genaue IDs → Muster mit Platzhaltern vorschlagen
+  let dTimer = null, dNr = 0;
+  function pruefeVerdichten() {
+    clearTimeout(dTimer);
+    const box = $("#rVerdichten");
+    const m = $("#rMuster").value.split("\n").map(s => s.trim()).filter(Boolean);
+    if ($("#rTyp").value !== "entity" || m.length < 3 || platzhalter(m)) { box.hidden = true; return; }
+    dTimer = setTimeout(async () => {
+      const nr = ++dNr;
+      try {
+        const v = await postJson("muster/verdichten", { ids: m });
+        if (nr !== dNr || !$("#rVerdichten")) return;
+        const muster = v.muster.filter(x => /[*?[]/.test(x));
+        if (!muster.length || v.nachher >= v.vorher) { box.hidden = true; return; }
+        const rest = v.muster.length - muster.length;
+        box.innerHTML = `<div><b>Kürzer als Muster:</b> ${zahl(v.vorher)} IDs lassen sich als ${mzahl(v.nachher, "Eintrag", "Einträge")} schreiben
+            (${mzahl(muster.length, "Muster", "Muster")}${rest ? ` + ${zahl(rest)} einzelne IDs` : ""}) –
+            ${v.genau ? "trifft <b>genau dieselben</b> Entitäten" : `weicht ab: ${v.zusaetzlich.length ? `+${zahl(v.zusaetzlich.length)} zusätzlich` : ""} ${v.fehlend.length ? `−${zahl(v.fehlend.length)} fehlen` : ""}`}.
+            Neue Entitäten mit gleichem Namensschema fallen dann automatisch darunter.</div>
+          <div class="mono">${esc(muster.slice(0, 8).join(", "))}${muster.length > 8 ? " …" : ""}</div>
+          ${v.ausserhalb.length ? `<div class="risiko">${mzahl(v.ausserhalb.length, "Entität ist", "Entitäten sind")} Zähler oder verwaist – die trifft eine glob-Regel nicht; sie fallen bei der Übernahme heraus (${esc(kurzListe(v.ausserhalb))}).</div>` : ""}
+          <div class="knopfreihe"><button type="button" id="rVerdichtenJa">Muster übernehmen (Typ glob)</button></div>`;
+        box.hidden = false;
+        $("#rVerdichtenJa").onclick = () => {
+          $("#rMuster").value = v.muster.join("\n");
+          typManuell = true; $("#rTyp").value = "glob"; $("#rTypAuto").textContent = "";
+          if (/^Auswahl \d/.test($("#rName").value)) $("#rName").value = muster.length === 1 ? muster[0] : `${muster[0]} u. a.`;
+          typGewechselt("glob");
+        };
+      } catch (e) { box.hidden = true; }
+    }, 500);
+  }
+  // ---- Punkt 173: Autovervollständigung – Vorschläge zur Zeile unter dem Cursor
+  const ta = $("#rMuster"), auto = $("#rAuto");
+  const zeileAmCursor = () => {
+    const p = ta.selectionStart, v = ta.value, a = v.lastIndexOf("\n", p - 1) + 1, b = v.indexOf("\n", p);
+    return { a, b: b < 0 ? v.length : b, text: v.slice(a, b < 0 ? v.length : b).trim() };
   };
+  async function zeigeAuto() {
+    const t = $("#rTyp").value;
+    if (!["entity", "glob", "schutz", "verwaist"].includes(t) || document.activeElement !== ta) { auto.hidden = true; return; }
+    const z = zeileAmCursor(), q = z.text.toLowerCase();
+    if (q.length < 2 || (t === "verwaist" && ["alle", "geloescht", "ohne_spur"].includes(q))) { auto.hidden = true; return; }
+    let liste; try { liste = await entListe(); } catch (e) { auto.hidden = true; return; }
+    if (/[*?[]/.test(q)) {   // Muster: nur zeigen, was es trifft (glob trifft keine Zähler und keine verwaisten Entitäten)
+      const tr = (t === "glob" ? globTreffer(liste, q) : liste.filter(e => globRe(q).test(e.id))).sort((x, y) => y.n - x.n);
+      auto.innerHTML = `<div class="sub" style="font-family:inherit">${tr.length ? `trifft ${mzahl(tr.length, "Entität", "Entitäten")}` : "trifft keine Entität"}${t === "glob" ? " (ohne Zähler und verwaiste)" : ""}</div>` +
+        tr.slice(0, 8).map(e => `<div class="sub" style="cursor:default">${esc(e.id)}<span class="sub">${zahl(e.n)}/Tag</span></div>`).join("");
+      auto.hidden = false; return;
+    }
+    const tr = liste.filter(e => e.id.includes(q)).sort((x, y) => (y.id.startsWith(q) - x.id.startsWith(q)) || y.n - x.n).slice(0, 12);
+    if (!tr.length || (tr.length === 1 && tr[0].id === q)) { auto.hidden = true; return; }
+    auto.innerHTML = tr.map((e, j) => `<div role="option" data-id="${esc(e.id)}" class="${j ? "" : "an"}">${esc(e.id)}<span class="sub">${e.aktiv ? "" : "verwaist · "}${e.zaehler ? "Zähler · " : ""}${zahl(e.n)}/Tag</span></div>`).join("");
+    auto.hidden = false;
+  }
+  function nimmAuto(id) {
+    const z = zeileAmCursor();
+    ta.value = ta.value.slice(0, z.a) + id + ta.value.slice(z.b);
+    const p = z.a + id.length; ta.focus(); ta.setSelectionRange(p, p);
+    auto.hidden = true; ta.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  ta.addEventListener("keydown", ev => {
+    if (auto.hidden) return;
+    const opt = [...auto.querySelectorAll("[data-id]")], j = opt.findIndex(o => o.classList.contains("an"));
+    if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+      if (!opt.length) return; ev.preventDefault();
+      const k = (j + (ev.key === "ArrowDown" ? 1 : -1) + opt.length) % opt.length;
+      opt.forEach((o, x) => o.classList.toggle("an", x === k)); opt[k].scrollIntoView({ block: "nearest" });
+    } else if ((ev.key === "Enter" || ev.key === "Tab") && j >= 0) { ev.preventDefault(); nimmAuto(opt[j].dataset.id); }
+    else if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); auto.hidden = true; }
+  });
+  auto.addEventListener("mousedown", ev => { const o = ev.target.closest("[data-id]"); if (o) { ev.preventDefault(); nimmAuto(o.dataset.id); } });
+  ta.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== ta) auto.hidden = true; }, 150));
+  ["click", "keyup"].forEach(e => ta.addEventListener(e, ev => { if (!["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab"].includes(ev.key)) zeigeAuto(); }));
+  ta.addEventListener("input", () => { typAuto(); zeigeAuto(); pruefeVerdichten(); });
+  // jede Änderung in der Maske aktualisiert die Vorschau (Muster, Klassen-Häkchen, Werte, Schnellknöpfe)
+  $("#rMaske").addEventListener("input", vorschau);
+  $("#rMaske").addEventListener("change", vorschau);
+  typAuto(); pruefeVerdichten(); vorschau();
+}
+// Punkt 170: Text der Live-Vorschau
+function vorschauHtml(v, ohneWert, x) {
+  const ev = v.einheit === "Event-Typen", einheit = v.einheit || "Entitäten";
+  const von = Object.entries(v.ueberstimmt_von || {}).map(([r, n]) => `${r} (${zahl(n)})`).join(", ");
+  const z1 = `<div class="kz"><span><b>${zahl(v.anzahl)}</b> ${einheit} getroffen</span>` +
+    (v.anzahl_geschuetzt ? `<span title="state_class total/total_increasing: glob- und klasse-Regeln greifen dort nicht">${zahl(v.anzahl_geschuetzt)} Zähler geschützt</span>` : "") +
+    (v.anzahl_ueberstimmt ? `<span title="${esc(von)}">bei <b>${zahl(v.anzahl_ueberstimmt)}</b> überstimmt von ${esc(von.length > 60 ? von.slice(0, 60) + " …" : von)}</span>` : "") +
+    (v.anzahl ? `<span>Zuwachs <b>${zahl(v.zuwachs_tag)}</b> ${ev ? "Events" : "Zeilen"}/Tag</span>` : "") + `</div>`;
+  const loesch = (v.loesch_states || 0) + (v.loesch_kurz || 0) + (v.loesch_lts || 0) + (v.loesch_events || 0);
+  const ersp = v.ersparnis_bytes || 0;
+  const z2 = ohneWert ? `<div class="sub">Noch kein Wert gesetzt – Wirkung erscheint, sobald Kurzzeit oder Langzeit gewählt ist.</div>`
+    : x.typ === "schutz" ? `<div class="sub">Schutz-Regel: diese Daten werden nie gekürzt.</div>`
+    : v.anzahl ? `<div class="kz"><span>wirkt bei <b>${zahl(v.gewinnt)}</b></span><span>sofort zusätzlich löschbar <b>${zahl(loesch)}</b> Zeilen (${mb(v.loesch_bytes)})</span>` +
+      `<span>${ersp >= 0 ? "Ersparnis" : "Mehrbedarf"} im Prognosezeitraum (${jahreText(zielJahre())}) <b>${gb(Math.abs(ersp))}</b></span></div>` +
+      (v.verlaengert ? `<div class="risiko">Bei ${mzahl(v.verlaengert, "Entität", "Entitäten")} bewahrt die Regel länger auf als heute.</div>` : "") +
+      (!x.aktiv ? `<div class="sub">Regel ist passiv – die Werte zeigen, was sie aktiv bewirken würde.</div>` : "")
+    : "";
+  const bsp = (v.treffer || []).map(t => t.entity_id);
+  return z1 + z2 + (bsp.length ? `<div class="bsp" title="${esc(bsp.join("\n"))}">${esc(bsp.join(", "))}${v.anzahl > bsp.length ? " …" : ""}</div>` : "");
 }
 
 async function ladeLts() {
@@ -3178,10 +3493,11 @@ document.querySelector(".hilfe")?.addEventListener("click", ev => {
 $("#tabs").addEventListener("click", ev => {
   const b = ev.target.closest("button[data-tab]"); if (!b) return;
   document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("an", x === b));
-  ["ent", "events", "regeln", "probe", "lts", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
+  ["ent", "events", "opt", "regeln", "probe", "lts", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
   document.querySelectorAll("[data-leiste]").forEach(l => l.hidden = l.dataset.leiste !== b.dataset.tab);
   zeigeAuswahl(); zeigeAuswahlEnt(); zeigeAuswahlEv();
   if (b.dataset.tab === "lts") ladeLts();
+  if (b.dataset.tab === "opt") ladeOpt();   // Punkt 176
   if (b.dataset.tab === "loeschen") ladeLoeschen();
   if (b.dataset.tab === "protokoll") ladeProtokoll();
 });
@@ -3206,8 +3522,9 @@ async function ladeAlles(regelnAuch = true) {
   await Promise.all([ladeKacheln(), ladeEntitaeten()]);
   if (!$("#tab-loeschen").hidden) ladeLoeschen();
   if (!$("#tab-protokoll").hidden) ladeProtokoll();
+  if (!$("#tab-opt").hidden) ladeOpt();   // Punkt 176: nach Regeländerung, Prognosezeitraum, Analyse
 }
-T.probe.daten([]); T.lts.daten([]); T.events.daten([]); T.loesch.daten([]); T.laeufe.daten([]); T.summe.daten([]);
+T.opt.daten([]); T.probe.daten([]); T.lts.daten([]); T.events.daten([]); T.loesch.daten([]); T.laeufe.daten([]); T.summe.daten([]);
 ladeStatus().then(s => { jobWar = !!(s && (s.job || !s.analyse?.analyse_zeit)); ladeAlles(); pruefe(); });
 </script>
 </body>
