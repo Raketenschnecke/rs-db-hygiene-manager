@@ -35,13 +35,12 @@ def _aelter(h, schluessel, grenze_tag):
     return sum(n for tag, n in h.get(schluessel, ()) if tag < grenze_tag)
 
 
-def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=False):
+def _lade(cache_pfad, attr_pfad):
+    """Analyse-Cache und Attribut-Analyse einlesen (gemeinsam für rechne und verlauf)."""
     con = sqlite3.connect(f"file:{cache_pfad}?mode=ro", uri=True)
     info = dict(con.execute("SELECT schluessel, wert FROM info"))
     heute = int(info["heute_tag"])
     pkd = int(info["purge_keep_days"])
-    ziel = int(ziel_tage or pkd)
-    zb = min(pkd, ziel)    # Punkt 102: ohne Regeln bleibt höchstens purge_keep_days, im Prognosezeitraum höchstens ziel
     st = _histogramm(con, "SELECT metadata_id, tag, n FROM st_tage")
     lts = _histogramm(con, "SELECT lts_id, tag, n FROM lts_tage")
     kurz = _histogramm(con, "SELECT lts_id, tag, n FROM kurz_tage")
@@ -64,6 +63,16 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 attr_zuwachs[mid] = attr_zuwachs.get(mid, 0) + b / 7
                 attr_zuwachs_z[mid] = attr_zuwachs_z.get(mid, 0) + z / 7    # Punkt 86: Attributzeilen je Tag
         ac.close()
+    return {"info": info, "heute": heute, "pkd": pkd, "st": st, "lts": lts, "kurz": kurz, "ents": ents, "ev": ev,
+            "attr_letzt": attr_letzt, "attr_zuwachs": attr_zuwachs, "attr_zuwachs_z": attr_zuwachs_z, "attr_stand": attr_stand}
+
+
+def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=False):
+    d = _lade(cache_pfad, attr_pfad)
+    info, heute, pkd, st, lts, kurz, ents, ev = (d[k] for k in ("info", "heute", "pkd", "st", "lts", "kurz", "ents", "ev"))
+    attr_letzt, attr_zuwachs, attr_zuwachs_z, attr_stand = (d[k] for k in ("attr_letzt", "attr_zuwachs", "attr_zuwachs_z", "attr_stand"))
+    ziel = int(ziel_tage or pkd)
+    zb = min(pkd, ziel)    # Punkt 102: ohne Regeln bleibt höchstens purge_keep_days, im Prognosezeitraum höchstens ziel
     mit_attr = bool(attr_letzt)
 
     aufl = rg.Aufloeser(regel_daten, mit_vorgemerkten)
@@ -318,3 +327,87 @@ def _basis(e):
     end = [t for t in (b["st_last_ts"], b["kurz_last_ts"], b["lts_last_ts"]) if t is not None]
     b["first_ts"], b["last_ts"] = (min(anf) if anf else None), (max(end) if end else None)
     return b
+
+
+MONAT = 365 / 12   # Tage je Monat für den Verlauf (1 Jahr = 365 Tage wie bei den Regeln)
+
+
+def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=False):
+    """Prognose-Verlauf der DB-Größe in Monatsschritten über den Prognosezeitraum, vier Varianten.
+
+    Anders als die Kachel-Prognose (eingeschwungener Zustand) startet der Verlauf beim heutigen Bestand: Je Monat
+    bleibt vom Bestand, was nach der jeweiligen Vorhaltezeit noch nicht fällig ist, dazu kommt der Zufluss
+    (Schreibrate × höchstens Vorhaltezeit). Fällige Daten fallen im ersten Monat weg (wie ein Löschlauf).
+    Abgleich mit der Datei: Die Differenz Dateigröße − geschätzter Bestand (andere Tabellen, freier Platz, Abweichung der
+    Zeilengrößen; kann negativ sein) bleibt als fester Betrag stehen, damit der Startwert der Dateigröße entspricht.
+    Varianten: ohne = keine Regeln (alles purge_keep_days, Langzeit unbegrenzt), ha = nur Regel HA:standard,
+    aktiv = aktive Regeln (passive nur mit mit_passiven, wie Haken „passive Regeln mitrechnen“), alle = aktive und passive Regeln.
+    """
+    from bisect import bisect_right
+    from math import ceil
+    d = _lade(cache_pfad, attr_pfad)
+    info, heute, pkd, st, lts, kurz, ents, ev = (d[k] for k in ("info", "heute", "pkd", "st", "lts", "kurz", "ents", "ev"))
+    attr_letzt, attr_zuwachs = d["attr_letzt"], d["attr_zuwachs"]
+    mit_attr = bool(attr_letzt)
+    ziel = int(ziel_tage or pkd)
+    monate = max(1, ceil(ziel / MONAT - 1e-9))
+    tage = [0] + [min(round(m * MONAT), ziel) for m in range(1, monate + 1)]
+    ohne = {"standard": dict(rg.STANDARD), "regeln": []}
+    varianten = {"ohne": (ohne, False), "ha": ({**ohne, "regeln": [{**rg.HA_STANDARD, "aktiv": True}]}, False),
+                 "aktiv": (regel_daten, mit_passiven), "alle": (regel_daten, True)}
+    werte, bestand = {}, 0
+    for name, (daten, passiv) in varianten.items():
+        aufl = rg.Aufloeser(daten, passiv)
+        abgang = [0.0] * (monate + 2)     # Bytes, die im Monat m fällig werden (Index monate+1 = nie im Zeitraum)
+        rate = {}                         # Vorhaltezeit (None = unbegrenzt) → Zufluss in Bytes je Tag
+        best = 0.0
+
+        def bestand_add(h, b, keep):
+            nonlocal best
+            for tag, n, *_ in h:
+                v = n * b
+                best += v
+                if keep is not None:
+                    abgang[bisect_right(tage, tag + keep - heute, 1)] += v
+
+        def zufluss(keep, v):
+            if v:
+                rate[keep] = rate.get(keep, 0) + v
+
+        for e in ents:
+            verwaist = e["status"] != "aktiv"
+            t_, _h = rg.wirksame_tage(aufl.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"]), pkd)
+            k, a, lz = t_["kurzzeit"], t_["attribute"], t_["langzeit"]
+            kl, al = max(k, MIN_KEEP_DAYS), max(a, MIN_KEEP_DAYS)
+            mid, lid = e["metadata_id"], e["lts_id"]
+            bestand_add(st.get(mid, ()), B_STATE, kl)
+            if mit_attr:
+                bestand_add([(t, b) for t, b, _z in attr_letzt.get(mid, ())], B_ATTR_FAKTOR, al)
+            if lid:
+                bestand_add(kurz.get(lid, ()), B_KURZ, kl)
+                bestand_add(lts.get(lid, ()), B_LTS, lz)
+            if verwaist:
+                continue
+            zufluss(k, (e["rows_24h"] or 0) * B_STATE)
+            if e["rows_24h"]:
+                zufluss(a, (attr_zuwachs.get(mid, 0) if mit_attr else e["rows_24h"] * B_ATTR_FALLBACK) * B_ATTR_FAKTOR)
+            if lid:
+                zufluss(k, KURZ_PRO_TAG * B_KURZ)
+                zufluss(lz, LTS_PRO_TAG * B_LTS)
+        if ev is not None:
+            for typ, h in ev.items():
+                k = rg.event_regel(daten, typ, pkd, passiv)["tage"]
+                bestand_add(h, B_EVENT, max(k, MIN_KEEP_DAYS))
+                zufluss(k, sum(n for t, n in h if heute - 8 <= t < heute - 1) / 7 * B_EVENT)
+        else:
+            zufluss(pkd, int(info.get("events_pro_tag", 0)) * B_EVENT)
+        bestand = best
+        reihe, weg = [], 0.0
+        for m, t in enumerate(tage):
+            weg += abgang[m] if m else 0
+            reihe.append(best - weg + sum(v * (t if kp is None else min(t, kp)) for kp, v in rate.items()))
+        werte[name] = reihe
+    rest = int(info["db_bytes"]) - bestand
+    return {"stand": {"analyse_zeit": float(info["analyse_zeit"]), "db_bytes": int(info["db_bytes"]), "purge_keep_days": pkd,
+                      "ziel_tage": ziel, "mit_passiven": mit_passiven, "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand},
+            "tage": tage, "werte": {k: [round(rest + v) for v in r] for k, r in werte.items()}}

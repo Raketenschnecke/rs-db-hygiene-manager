@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b2 (Beta)
+- **Prognose-Chart:** Klick auf eine Kachel der Spalte „DB-Größe“ zeigt die erwartete Entwicklung der DB in Monatsschritten über den Prognosezeitraum – ohne Regeln, nur HA-Standard, eigene aktive Regeln (passive mit Haken „passive Regeln mitrechnen“) und eigene Regeln aktiv + passiv; Monatswerte beim Überfahren, Linien per Legende ausblendbar
+
 ## 0.5.5b1 (Beta)
 - **Beta-Version, nur auf dem Branch `beta`:** Stand wie 0.5.4, Grundlage für die nächsten Testversionen (noch keine neuen Punkte)
 

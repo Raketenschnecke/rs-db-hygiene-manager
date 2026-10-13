@@ -54,6 +54,7 @@ class Zustand:
         self.letzter_fehler = None
         self.letzter_job = None
         self._pl_cache = {}
+        self._vl_cache = {}        # Punkt 179: Prognose-Verlauf (Popup an den DB-Größe-Kacheln)
         self.lauf = None           # laufender Löschlauf (loeschen.Lauf)
 
     def mtime(self, pfad):
@@ -71,6 +72,14 @@ class Zustand:
                 alt.pop(next(iter(alt)))
             self._pl_cache = {**alt, schluessel: probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)}
         return self._pl_cache[schluessel]
+
+    def verlauf(self, ziel, passiv):
+        if not os.path.exists(CACHE):
+            return None
+        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
+        if schluessel not in self._vl_cache:
+            self._vl_cache = {schluessel: probelauf.verlauf(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, passiv)}
+        return self._vl_cache[schluessel]
 
 
 Z = Zustand()
@@ -289,6 +298,15 @@ async def probelauf_summe(request):
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
     return web.json_response({"stand": r["stand"], "summe": r["summe"], "regeln": r["regeln"], "events": r.get("events", [])})
+
+
+async def prognose_verlauf(request):
+    """Punkt 179: DB-Größe je Monat über den Prognosezeitraum – ohne Regeln, nur HA:standard, aktive (passive nur mit Haken), aktive + passive Regeln."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.verlauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response(r)
 
 
 async def klassen(_request):
@@ -1015,6 +1033,7 @@ def erstelle_app():
         web.get("/api/status", status),
         web.post("/api/job/{art}", job_starten),
         web.get("/api/probelauf", probelauf_summe),
+        web.get("/api/prognose_verlauf", prognose_verlauf),
         web.get("/api/entitaeten", entitaeten),
         web.get("/api/klassen", klassen),
         web.get("/api/export.csv", export_csv),
