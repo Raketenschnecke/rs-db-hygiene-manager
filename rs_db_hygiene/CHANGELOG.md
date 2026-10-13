@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b1 (Beta)
+- **Beta-Version, nur auf dem Branch `beta`:** Stand wie 0.5.4, Grundlage für die nächsten Testversionen (noch keine neuen Punkte)
+
 ## 0.5.4
 Zusammenfassung der Testversionen 0.5.4b1 bis 0.5.4b7 und des Nachtrags (Einzelheiten darunter).
 - **Neuer Reiter „Empfehlungen“:** Regelvorschläge aus der letzten Analyse – gleichartige Entitäten als ein Muster, Vielschreiber, große Attribute, nirgends verwendete und deaktivierte Entitäten, verwaiste ohne Regel, Event-Typen ohne Event-Regel; je mit Treffern, Löschmenge sofort und Ersparnis, Hinweis auf passende passive Regeln. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv, „ignorieren“ merkt sich die App. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert
