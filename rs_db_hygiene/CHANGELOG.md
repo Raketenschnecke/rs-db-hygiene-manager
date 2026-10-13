@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4b6 (Beta)
+- **Auswahl gilt nur für den aktuellen Filter (Punkt 169):** Ändert sich ein Filter im Tab Entitäten (Spaltenfilter, Domain, Regel-Filter, „nur mit Hinweis/Schutz“, Gerät), werden ausgewählte Entitäten abgewählt, die nicht mehr passen; die Leiste meldet, wie viele. Sortieren und Blättern lassen die Auswahl unverändert. „Regel/Schutz aus Auswahl anlegen“ und „Auswahl als CSV“ nehmen damit keine ausgefilterten Entitäten mehr mit
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.4b5 (Beta)
 - **Regelmaske, Typ klasse (Punkt 168, Korrektur zu 166):** Eine lange Klassen-Auswahl macht die Maske nicht mehr breiter als das Fenster (ID, Name und Typ blieben sonst unerreichbar). Beim Wechsel auf „klasse“ werden Entity-IDs (z. B. aus „Regel aus Auswahl anlegen“) in ihre Klassen umgesetzt statt als ungültige Muster übernommen; beim Wechsel zurück stehen die vorherigen Muster wieder da
 - Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer

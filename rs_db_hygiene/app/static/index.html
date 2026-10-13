@@ -1878,8 +1878,14 @@ async function ladeEntitaeten() {
   const csv = new URLSearchParams(p); csv.delete("offset"); csv.delete("limit");
   $("#csv").href = "api/export.csv?" + csv;
   S.entFilter = csv.toString();   // Punkt 91: für „alle N gefilterten auswählen“
+  // Punkt 169 (0.5.4b6): die Auswahl gilt nur für den aktuellen Filter – Sortieren und Blättern ändern ihn nicht
+  const fk = new URLSearchParams(csv); fk.delete("sort");
+  const filterKey = fk.toString(), neuerFilter = S.entFilterKey !== undefined && filterKey !== S.entFilterKey;
+  S.entFilterKey = filterKey;
+  if (neuerFilter) S.auswahlWeg = 0;
   try {
     const r = await api("entitaeten?" + p);
+    if (neuerFilter && S.auswahlEnt.size) await beschneideAuswahl(r, filterKey);
     if (!$("#tEntKopf").rows.length) baueKopf();
     const sel = $("#fDomain");
     if (sel.options.length === 1) r.domains.forEach(d => sel.add(new Option(d, d)));
@@ -1896,6 +1902,19 @@ async function ladeEntitaeten() {
     $("#tEntRumpf").innerHTML = `<tr><td colspan="${sichtbareSpalten().length + 1}" class="leer">${esc(leerText(e))}</td></tr>`;
     $("#seite").textContent = ""; $("#trefferzeile").innerHTML = "";
   }
+}
+// Punkt 169: nach einem Filterwechsel ausgewählte Entitäten abwählen, die nicht zum neuen Filter passen
+async function beschneideAuswahl(r, filterKey) {
+  let passt;
+  if (r.gesamt <= r.zeilen.length) passt = new Set(r.zeilen.map(e => e.entity_id));   // alles auf einer Seite
+  else {
+    try { passt = new Set((await api("entitaeten?" + S.entFilter + "&nur_ids=1")).ids); }
+    catch (e) { return; }   // im Zweifel nichts abwählen
+  }
+  if (S.entFilterKey !== filterKey) return;   // inzwischen erneut gefiltert
+  let weg = 0;
+  for (const id of [...S.auswahlEnt]) if (!passt.has(id)) { S.auswahlEnt.delete(id); weg++; }
+  S.auswahlWeg = weg;
 }
 $("#tEntRumpf").addEventListener("click", ev => {
   if (ev.target.closest(".wahlzelle")) return;   // Punkt 91: Auswahl öffnet nicht die Entität
@@ -2117,22 +2136,27 @@ function zeigeAuswahlEnt() {
   if (alle) { alle.checked = seite.length > 0 && gewaehlt === seite.length; alle.indeterminate = gewaehlt > 0 && gewaehlt < seite.length; }
   const su = $("#wahlSummeEnt"); if (su) su.innerHTML = S.auswahlEnt.size ? `<b>${zahl(S.auswahlEnt.size)} ✓</b>` : "";
   const n = S.auswahlEnt.size, anderswo = n - gewaehlt, leiste = $("#massenEnt");
-  const auf = !$("#tab-ent").hidden && n > 0;
+  // Punkt 169: Hinweis, wenn der letzte Filterwechsel ausgewählte Entitäten abgewählt hat (auch wenn danach nichts mehr ausgewählt ist)
+  const weg = S.auswahlWeg ? `<span class="sub">${mzahl(S.auswahlWeg, "ausgewählte Entität passte", "ausgewählte Entitäten passten")} nicht mehr zum Filter und ${S.auswahlWeg === 1 ? "wurde" : "wurden"} abgewählt</span>` : "";
+  const auf = !$("#tab-ent").hidden && (n > 0 || !!weg);
   leiste.hidden = !auf;
   if (!auf) return;
-  leiste.innerHTML = `<b>${mzahl(n, "Entität", "Entitäten")} ausgewählt</b>${anderswo ? `, davon ${zahl(anderswo)} auf anderen Seiten` : ""}
+  if (!n) { leiste.innerHTML = weg; return; }
+  leiste.innerHTML = `<b>${mzahl(n, "Entität", "Entitäten")} ausgewählt</b>${anderswo ? `, davon ${zahl(anderswo)} auf anderen Seiten` : ""}${weg ? ` · ${weg}` : ""}
     <button data-masse-ent="regel">Regel aus Auswahl anlegen</button><button data-masse-ent="schutz" title="Diese Entitäten nie kürzen (Regeltyp schutz)">🔒 Schutz aus Auswahl anlegen</button><button data-masse-ent="csv">Auswahl als CSV</button>
     ${S.entGesamt > seite.length && n < S.entGesamt ? `<button data-masse-ent="alle">alle ${zahl(S.entGesamt)} gefilterten auswählen</button>` : ""}
     ${anderswo ? `<button data-masse-ent="weg">Auswahl aufheben</button>` : ""}`;
 }
 $("#tEntKopf").addEventListener("change", ev => {
   if (ev.target.id !== "wahlAlleEnt") return;
+  S.auswahlWeg = 0;
   Object.keys(S.zeilen || {}).forEach(id => ev.target.checked ? S.auswahlEnt.add(id) : S.auswahlEnt.delete(id));
   $("#tEntRumpf").querySelectorAll("[data-wahl-ent]").forEach(c => c.checked = S.auswahlEnt.has(c.dataset.wahlEnt));
   zeigeAuswahlEnt();
 });
 $("#tEntRumpf").addEventListener("change", ev => {
   const w = ev.target.closest("[data-wahl-ent]"); if (!w) return;
+  S.auswahlWeg = 0;
   w.checked ? S.auswahlEnt.add(w.dataset.wahlEnt) : S.auswahlEnt.delete(w.dataset.wahlEnt);
   zeigeAuswahlEnt();
 });
@@ -2146,6 +2170,7 @@ function ladeText(name, text) {
 $("#massenEnt").addEventListener("click", async ev => {
   const b = ev.target.closest("[data-masse-ent]"); if (!b) return;
   const ids = [...S.auswahlEnt].sort();
+  if (b.dataset.masseEnt === "weg" || b.dataset.masseEnt === "alle") S.auswahlWeg = 0;   // Punkt 169
   if (b.dataset.masseEnt === "weg") { S.auswahlEnt.clear(); $("#tEntRumpf").querySelectorAll("[data-wahl-ent]").forEach(c => c.checked = false); return zeigeAuswahlEnt(); }
   if (b.dataset.masseEnt === "alle") {
     try {
