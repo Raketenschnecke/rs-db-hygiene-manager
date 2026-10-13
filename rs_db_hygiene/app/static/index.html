@@ -42,7 +42,7 @@ header { --kopf-h: calc(34px * 1.2); --logo-h: 64px; padding: 12px 20px 22px; di
 h1 { margin: 0; line-height: 0; flex: none; }
 .kopf-logo { height: var(--logo-h); width: auto; display: block; }
 .kopf-logo .lg-t { fill: #5c0000; }   /* 0.5.4: Schrift im Rot des Piktogramms (vorher #b00b0b) */
-@media (prefers-color-scheme: dark) { .kopf-logo .lg-t { fill: #ff7b7b; } }   /* #5c0000 hätte auf dunklem Grund zu wenig Kontrast */
+@media (prefers-color-scheme: dark) { .kopf-logo .lg-t { fill: #d32f2f; } }   /* Punkt 187: kräftiges Dunkelrot (ca. 3,7 : 1 auf #111418); #5c0000 hätte nur ca. 1,3 : 1, bis dahin #ff7b7b */
 .kopf-titel { min-width: 0; display: flex; align-items: center; }
 .kopf-fehler { margin: 0 20px; }   /* nur bei einem Fehler gefüllt; leer ohne Höhe und ohne Abstand */
 .kopf-fehler:not(:empty) { margin-bottom: 10px; }
