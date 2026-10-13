@@ -1571,9 +1571,9 @@ async function ladeKacheln() {
 // [Schlüssel, Name, Erläuterung, Linienbreite]
 const VL_LINIEN = [["ohne", "ohne Regeln", "nichts gekürzt außer purge_keep_days, Langzeit unbegrenzt", 1],
   ["ha", "nur HA-Standard", "Regel HA:standard: alles 10 Tage, Langzeit unbegrenzt", 1],
-  // Punkt 180: eigene Regeln ohne HA:standard – Entitäten ohne eigene Regel bleiben purge_keep_days
-  ["aktiv", "eigene Regeln (aktiv)", "die aktiven eigenen Regeln ohne HA-Standard; mit Haken „passive Regeln mitrechnen“ auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 1],
-  ["alle", "eigene Regeln (aktiv + passiv)", "alle eigenen Regeln ohne HA-Standard, auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 1]];
+  // Punkt 191 (ersetzt 180): eigene Regeln mit HA:standard in der eingestellten Kurzzeit (Gelb nur, wenn aktiv oder mit Haken)
+  ["aktiv", "eigene Regeln (aktiv)", "die aktiven Regeln, HA-Standard mit seiner eingestellten Kurzzeit, wenn er aktiv ist; mit Haken „passive Regeln mitrechnen“ auch die passiven. Was keine Regel hat, bleibt purge_keep_days.", 1],
+  ["alle", "eigene Regeln (aktiv + passiv)", "alle Regeln, auch die passiven und HA-Standard mit seiner eingestellten Kurzzeit.", 1]];
 const VL_AUS = new Set();   // per Klick auf die Legende ausgeblendete Linien (Achse skaliert neu)
 const VL_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const VL_MASS = { W: 1000, H: 380, L: 62, R: 16, O: 14, U: 34 };
@@ -1681,8 +1681,9 @@ Klick: Linie ein-/ausblenden">bisher (seit ${vlTagDatum(st, alleH[0][0])})<b>${g
       <div class="vl-tip" id="vlTip" hidden></div></div>
     <div class="vl-leg">${legH}${leg}</div>
     <p class="sub">Rechnung: Vom heutigen Bestand bleibt je Monat, was nach der wirksamen Vorhaltezeit noch nicht fällig ist (Überfälliges fällt im ersten Monat weg);
-      dazu kommt der Zufluss aus der Schreibrate (letzte 24 h, Attribute und Events 7 Tage). Gelb und Grün rechnen ohne die Regel HA-Standard:
-      Was keine eigene Regel hat, bleibt purge_keep_days (${zahl(st.purge_keep_days)} Tage).
+      dazu kommt der Zufluss aus der Schreibrate (letzte 24 h, Attribute und Events 7 Tage). Grau rechnet fest mit HA-Standard 10 Tage (Grundeinstellung von HA).
+      Gelb und Grün rechnen mit HA-Standard in der eingestellten Kurzzeit (${esc(wertAnzeige(st.ha_kurzzeit || "10d"))}) – Grün immer, Gelb nur, wenn die Regel aktiv ist
+      (${st.ha_aktiv ? "ist sie" : "ist sie nicht"}${!st.ha_aktiv && st.mit_passiven ? ", Haken „passive Regeln mitrechnen“ gesetzt" : ""}); ohne HA-Standard bleibt, was keine Regel hat, purge_keep_days (${zahl(st.purge_keep_days)} Tage).
       ${st.rest_bytes >= 0 ? `${gb(st.rest_bytes)} der Datei ordnet die Analyse keiner Zeile zu (andere Tabellen, freier Platz) – als fester Betrag angenommen.`
         : `Die Zeilenschätzung liegt ${gb(-st.rest_bytes)} über der Datei; der Verlauf ist um diesen festen Betrag korrigiert.`} Anders als die Kachel „Prognose“ (eingeschwungener Zustand) startet
       der Verlauf beim heutigen Bestand; die Endwerte können deshalb abweichen.${st.mit_attribute ? "" : " Attribute ohne Attribut-Analyse nur geschätzt."}</p>

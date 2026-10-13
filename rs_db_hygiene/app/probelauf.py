@@ -344,7 +344,8 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     Zeilengrößen; kann negativ sein) bleibt als fester Betrag stehen, damit der Startwert der Dateigröße entspricht.
     Varianten: ohne = keine Regeln (alles purge_keep_days, Langzeit unbegrenzt), ha = nur Regel HA:standard,
     aktiv = aktive Regeln (passive nur mit mit_passiven, wie Haken „passive Regeln mitrechnen“), alle = aktive und passive Regeln.
-    Punkt 180: aktiv und alle ohne die Regel HA:standard – was keine eigene Regel hat, bleibt purge_keep_days (wie „ohne“).
+    Punkt 191 (ersetzt Punkt 180): aktiv und alle mit der Regel HA:standard in ihrer eingestellten Kurzzeit – aktiv nur, wenn
+    sie aktiv ist (oder mit mit_passiven), alle immer; ha bleibt fest bei 10 Tagen (Vergleich mit HA in der Grundeinstellung).
     """
     from bisect import bisect_right
     from math import ceil
@@ -356,9 +357,9 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     monate = max(1, ceil(ziel / MONAT - 1e-9))
     tage = [0] + [min(round(m * MONAT), ziel) for m in range(1, monate + 1)]
     ohne = {"standard": dict(rg.STANDARD), "regeln": []}
-    eigene = {**regel_daten, "regeln": [r for r in regel_daten["regeln"] if r["typ"] != "ha_standard"]}
     varianten = {"ohne": (ohne, False), "ha": ({**ohne, "regeln": [{**rg.HA_STANDARD, "aktiv": True}]}, False),
-                 "aktiv": (eigene, mit_passiven), "alle": (eigene, True)}
+                 "aktiv": (regel_daten, mit_passiven), "alle": (regel_daten, True)}
+    ha_regel = next((r for r in regel_daten["regeln"] if r["typ"] == "ha_standard"), rg.HA_STANDARD)
     werte, bestand = {}, 0
     for name, (daten, passiv) in varianten.items():
         aufl = rg.Aufloeser(daten, passiv)
@@ -413,5 +414,6 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
         werte[name] = reihe
     rest = int(info["db_bytes"]) - bestand
     return {"stand": {"analyse_zeit": float(info["analyse_zeit"]), "db_bytes": int(info["db_bytes"]), "purge_keep_days": pkd,
-                      "ziel_tage": ziel, "mit_passiven": mit_passiven, "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand},
+                      "ziel_tage": ziel, "mit_passiven": mit_passiven,
+                      "ha_kurzzeit": ha_regel["kurzzeit"], "ha_aktiv": bool(ha_regel.get("aktiv")), "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand},
             "tage": tage, "werte": {k: [round(rest + v) for v in r] for k, r in werte.items()}}

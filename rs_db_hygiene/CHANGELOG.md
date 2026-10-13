@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b8 (Beta)
+- **Prognose-Chart mit HA-Standard (Punkt 191, ersetzt Punkt 180):** Gelb und Grün rechnen die Regel HA:standard in ihrer eingestellten Kurzzeit mit – Grün immer, Gelb nur, wenn sie aktiv ist (oder mit Haken „passive Regeln mitrechnen“). Grau („nur HA-Standard“) bleibt fest bei 10 Tagen als Vergleich mit HA in der Grundeinstellung
+
 ## 0.5.5b7 (Beta)
 - **HA-Standard als Auffangregel (Punkt 190):** Die Kurzzeit der Regel HA:standard ist einstellbar (Klick auf die Regel, nur Dauer; gilt auch für die Events, Langzeit bleibt unbegrenzt). Mit z. B. 90 Tagen fängt sie alles ohne eigene Regel auf – mit niedrigstem Rang und auch für Zähler, anders als eine glob-Regel `*`, die alle klasse-Regeln überstimmt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet weiter mit 10 Tagen
 - **GUI hängt nach Wechsel des Prognosezeitraums (Punkt 189):** Gleichzeitige Anfragen rechnen denselben Probelauf nicht mehr mehrfach parallel; Rechnungen laufen nacheinander, wartende Anfragen übernehmen das Ergebnis
