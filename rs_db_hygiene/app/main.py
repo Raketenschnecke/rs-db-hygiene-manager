@@ -55,6 +55,7 @@ class Zustand:
         self.letzter_job = None
         self._pl_cache = {}
         self._vl_cache = {}        # Punkt 179: Prognose-Verlauf (Popup an den DB-Größe-Kacheln)
+        self._hist = (None, None)  # Punkt 188: (Stunde, bisherige DB-Größe)
         self.lauf = None           # laufender Löschlauf (loeschen.Lauf)
 
     def mtime(self, pfad):
@@ -80,6 +81,19 @@ class Zustand:
         if schluessel not in self._vl_cache:
             self._vl_cache = {schluessel: probelauf.verlauf(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, passiv)}
         return self._vl_cache[schluessel]
+
+    def historie(self):
+        """Punkt 188: bisherige DB-Größe (Sensor der Integration, max. 2 Jahre) – höchstens einmal je Stunde aus der HA-DB."""
+        stunde = int(time.time() // 3600)
+        if self._hist[0] != stunde:
+            try:
+                h = analyse.historie_groesse(optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db"),
+                                             f"{HA_CONFIG}/.storage/core.entity_registry")
+            except Exception as e:  # noqa: BLE001 – ohne Historie zeigt das Chart nur die Prognose
+                _LOG.exception("Historie der DB-Größe nicht lesbar")
+                h = {"entity_id": None, "punkte": [], "grund": str(e)}
+            self._hist = (stunde, h)
+        return self._hist[1]
 
 
 Z = Zustand()
@@ -311,7 +325,7 @@ async def prognose_verlauf(request):
     r = await asyncio.to_thread(Z.verlauf, ziel, vm)
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
-    return web.json_response(r)
+    return web.json_response({**r, "historie": await asyncio.to_thread(Z.historie)})
 
 
 async def klassen(_request):

@@ -94,12 +94,16 @@ main { padding: 0 20px 24px; }
 .raster .kachel[data-zelle$=".db"] { cursor: pointer; }
 .raster .kachel[data-zelle$=".db"]:hover, .raster .kachel[data-zelle$=".db"]:focus-visible { border-color: var(--zf); outline: none;
   background: color-mix(in srgb, var(--zf) 14%, var(--panel)); }
-.vl { --vl-ohne: var(--bad); --vl-ha: #8a919c; --vl-aktiv: #d4a72c; --vl-alle: #3f9a5c; display: grid; gap: 10px; }
-@media (prefers-color-scheme: dark) { .vl { --vl-ha: #8b93a0; --vl-aktiv: #d9b13a; --vl-alle: #4fb873; } }
+/* Punkt 188: Rot gehört dem bisherigen Verlauf; „ohne Regeln“ wird violett */
+.vl { --vl-hist: #c62828; --vl-ohne: #8e5bc4; --vl-ha: #8a919c; --vl-aktiv: #d4a72c; --vl-alle: #3f9a5c; display: grid; gap: 10px; }
+@media (prefers-color-scheme: dark) { .vl { --vl-hist: #ef5350; --vl-ohne: #a985e0; --vl-ha: #8b93a0; --vl-aktiv: #d9b13a; --vl-alle: #4fb873; } }
+.vl .linie.prog { stroke-linecap: butt; }   /* Prognosen gestrichelt (Muster je Breite im Inline-Stil) */
+.vl .heute { stroke: var(--muted); stroke-width: 1; }
+.vl-leg > button.prog { border-left-style: dashed; }
 .vl svg { width: 100%; height: auto; display: block; font-variant-numeric: tabular-nums; }
 .vl .achse { stroke: var(--line); } .vl .gitter { stroke: var(--line); stroke-dasharray: 2 3; }
 .vl text { fill: var(--muted); font-size: 11px; }
-.vl .linie { fill: none; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(1px 3px 2px rgba(0,0,0,.35)); }   /* Breiten je Linie: Deckungsgleiche bleiben als Streifen sichtbar */
+.vl .linie { fill: none; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(1px 3px 2px rgba(0,0,0,.35)); }   /* Breiten je Linie in VL_LINIEN (Punkt 188: Prognosen 1 px; Deckungsgleiche nennt die Legende) */
 #dlg.vl-dlg #dlgTitel { font-size: 28px; line-height: 1.2; }   /* Punkt 179: Überschrift doppelt so groß */
 .vl .kreuz { stroke: var(--muted); stroke-dasharray: 3 3; }
 .vl-leg { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
@@ -1565,14 +1569,15 @@ async function ladeKacheln() {
 // ---- Punkt 179: Prognose-Verlauf als Popup an den drei Kacheln der Spalte DB-Größe
 // [Schlüssel, Name, Erläuterung]; Zeichenreihenfolge = Reihenfolge hier (Grün zuletzt, liegt oben)
 // [Schlüssel, Name, Erläuterung, Linienbreite]
-const VL_LINIEN = [["ohne", "ohne Regeln", "nichts gekürzt außer purge_keep_days, Langzeit unbegrenzt", 2.4],
-  ["ha", "nur HA-Standard", "Regel HA:standard: alles 10 Tage, Langzeit unbegrenzt", 6],
+const VL_LINIEN = [["ohne", "ohne Regeln", "nichts gekürzt außer purge_keep_days, Langzeit unbegrenzt", 1],
+  ["ha", "nur HA-Standard", "Regel HA:standard: alles 10 Tage, Langzeit unbegrenzt", 1],
   // Punkt 180: eigene Regeln ohne HA:standard – Entitäten ohne eigene Regel bleiben purge_keep_days
-  ["aktiv", "eigene Regeln (aktiv)", "die aktiven eigenen Regeln ohne HA-Standard; mit Haken „passive Regeln mitrechnen“ auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 3.6],
-  ["alle", "eigene Regeln (aktiv + passiv)", "alle eigenen Regeln ohne HA-Standard, auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 1.8]];
+  ["aktiv", "eigene Regeln (aktiv)", "die aktiven eigenen Regeln ohne HA-Standard; mit Haken „passive Regeln mitrechnen“ auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 1],
+  ["alle", "eigene Regeln (aktiv + passiv)", "alle eigenen Regeln ohne HA-Standard, auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 1]];
 const VL_AUS = new Set();   // per Klick auf die Legende ausgeblendete Linien (Achse skaliert neu)
 const VL_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const VL_MASS = { W: 1000, H: 380, L: 62, R: 16, O: 14, U: 34 };
+const MONAT = 365 / 12;      // Tage je Monat wie probelauf.MONAT
 document.addEventListener("click", ev => {
   const k = ev.target.closest('#raster .kachel[data-zelle$=".db"]');
   if (k && !ev.target.closest("[data-hilfe]")) zeigeVerlauf();
@@ -1602,8 +1607,8 @@ function verlaufZeichnen(r) {
   $("#dlgInhalt").innerHTML = verlaufHtml(r);
   verlaufHover(r);
   $("#dlgInhalt").querySelectorAll("[data-vl]").forEach(b => b.onclick = () => {
-    const k = b.dataset.vl;
-    if (VL_AUS.has(k)) VL_AUS.delete(k); else if (VL_AUS.size < VL_LINIEN.length - 1) VL_AUS.add(k);
+    const k = b.dataset.vl, progAus = [...VL_AUS].filter(j => j !== "hist").length;
+    if (VL_AUS.has(k)) VL_AUS.delete(k); else if (k === "hist" || progAus < VL_LINIEN.length - 1) VL_AUS.add(k);
     verlaufZeichnen(r);
   });
 }
@@ -1612,29 +1617,43 @@ function verlaufDatum(st, tag) {
   const d = new Date(st.analyse_zeit * 1000 + tag * 864e5);
   return `${VL_MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
 }
-const vlX = (t, i) => VL_MASS.L + (VL_MASS.W - VL_MASS.L - VL_MASS.R) * (t[t.length - 1] ? t[i] / t[t.length - 1] : 0);
+// Punkt 188: bisherige DB-Größe (Sensor der Integration, max. 2 Jahre) als [Tag relativ zur Analyse (≤ 0), Bytes]
+const vlHist = r => (r.historie?.punkte || []).map(([ts, b]) => [(ts - r.stand.analyse_zeit) / 86400, b]).filter(([tag]) => tag <= 0);
+// Zeitachse in Tagen relativ zur Analyse: links Beginn der Historie (falls eingeblendet), rechts Ende des Prognosezeitraums
+function vlAchse(r) {
+  const h = VL_AUS.has("hist") ? [] : vlHist(r), t = r.tage, von = h.length ? Math.min(h[0][0], 0) : 0, bis = t[t.length - 1] || 1;
+  return { h, von, bis, x: tag => VL_MASS.L + (VL_MASS.W - VL_MASS.L - VL_MASS.R) * (tag - von) / (bis - von) };
+}
+const vlTagDatum = (st, tag) => new Date(st.analyse_zeit * 1000 + tag * 864e5).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 
 function verlaufHtml(r) {
   const st = r.stand, t = r.tage, n = t.length - 1, { W, H, L, R, O, U } = VL_MASS;
   const sicht = VL_LINIEN.filter(([k]) => !VL_AUS.has(k));
-  const max = Math.max(...sicht.flatMap(([k]) => r.werte[k]));
+  const { h, von, x: xt } = vlAchse(r), alleH = vlHist(r);
+  const max = Math.max(...sicht.flatMap(([k]) => r.werte[k]), ...h.map(p => p[1]));
   // Achse in glatten GB-Schritten ab 0
   const schritt = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500].map(v => v * 1e9).find(v => max / v <= 6) || 1e12;
   const oben = Math.ceil(max / schritt) * schritt || schritt;
-  const x = i => vlX(t, i), y = v => O + (H - O - U) * (1 - v / oben);
+  const x = i => xt(t[i]), y = v => O + (H - O - U) * (1 - v / oben);
   let svg = "";
   for (let v = 0; v <= oben + 1; v += schritt) {
     svg += `<line class="${v ? "gitter" : "achse"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>
       <text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${(v / 1e9).toLocaleString("de-DE")} GB</text>`;
   }
-  const jede = Math.max(1, Math.ceil(n / 12));      // höchstens ~12 Monatsbeschriftungen
-  for (let i = 0; i <= n; i += jede) {
-    svg += `<line class="achse" x1="${x(i)}" x2="${x(i)}" y1="${H - U}" y2="${H - U + 4}"/>
-      <text x="${x(i)}" y="${H - U + 18}" text-anchor="middle">${i ? verlaufDatum(st, t[i]) : "heute"}</text>`;
+  // Monatsmarken: Vergangenheit in Monatsschritten rückwärts, Zukunft auf den Prognosepunkten; „heute“ immer beschriftet
+  const zurueck = Math.floor(-von / MONAT + 1e-9), jede = Math.max(1, Math.ceil((n + zurueck) / 12));   // höchstens ~12 Beschriftungen
+  for (let i = -zurueck; i <= n; i++) {
+    if (i % jede) continue;
+    const tag = i < 0 ? i * MONAT : t[i], px = xt(tag);
+    svg += `<line class="achse" x1="${px}" x2="${px}" y1="${H - U}" y2="${H - U + 4}"/>
+      <text x="${px}" y="${H - U + 18}" text-anchor="middle">${i ? verlaufDatum(st, tag) : "heute"}</text>`;
   }
-  for (const [k, , , breite] of sicht) {
-    svg += `<polyline class="linie" style="stroke: var(--vl-${k}); stroke-width: ${breite}" points="${r.werte[k].map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}"/>`;
+  if (von < 0) svg += `<line class="heute" x1="${xt(0)}" x2="${xt(0)}" y1="${O}" y2="${H - U}"/>`;
+  for (const [k, , , breite] of sicht) {   // Prognosen gestrichelt (Punkt 188)
+    svg += `<polyline class="linie prog" style="stroke: var(--vl-${k}); stroke-width: ${breite}; stroke-dasharray: ${Math.max(8, breite * 2.5)} ${Math.max(5, breite * 1.2)}"
+      points="${r.werte[k].map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}"/>`;
   }
+  if (h.length) svg += `<polyline class="linie" style="stroke: var(--vl-hist); stroke-width: 2.4" points="${h.map(([tag, v]) => `${xt(tag).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}"/>`;
   svg += `<line class="kreuz" id="vlKreuz" y1="${O}" y2="${H - U}" visibility="hidden"/>`;
   const gleich = (a, b) => r.werte[a].every((v, i) => Math.abs(v - r.werte[b][i]) < 1e6);
   const vlName = (k, name) => k === "aktiv" && st.mit_passiven ? "eigene Regeln (aktiv + passiv, Haken gesetzt)" : name;
@@ -1642,17 +1661,25 @@ function verlaufHtml(r) {
     name = vlName(k, name);
     const ende = r.werte[k][n], diff = ende - st.db_bytes;
     const wie = VL_LINIEN.filter(([j]) => j !== k && gleich(j, k)).map(([j, nm]) => vlName(j, nm));
-    return `<button type="button" data-vl="${k}" class="${VL_AUS.has(k) ? "aus" : ""}" style="--c: var(--vl-${k})"
+    return `<button type="button" data-vl="${k}" class="prog${VL_AUS.has(k) ? " aus" : ""}" style="--c: var(--vl-${k})"
       title="${esc(erl)}
 Klick: Linie ein-/ausblenden">${esc(name)}<b>${gb(ende)}</b>
       <span class="sub">${diff >= 0 ? "+" : "−"}${gb(Math.abs(diff))} gegenüber heute${wie.length ? ` · deckungsgleich mit ${esc(wie.join(", "))}` : ""}</span></button>`;
   }).join("");
+  // Punkt 188: Legende der bisherigen DB-Größe (Startwert vor bis zu 2 Jahren, Zuwachs bis heute)
+  const hg = r.historie || {}, legH = alleH.length
+    ? `<button type="button" data-vl="hist" class="${VL_AUS.has("hist") ? "aus" : ""}" style="--c: var(--vl-hist)"
+      title="Tagesmittel der Langzeitstatistik von ${esc(hg.entity_id)} (Sensor der Integration), höchstens 2 Jahre zurück.
+Klick: Linie ein-/ausblenden">bisher (seit ${vlTagDatum(st, alleH[0][0])})<b>${gb(alleH[0][1])}</b>
+      <span class="sub">${st.db_bytes >= alleH[0][1] ? "+" : "−"}${gb(Math.abs(st.db_bytes - alleH[0][1]))} bis heute</span></button>` : "";
   return `<div class="vl">
-    <p class="sub">Erwartete Dateigröße (nach Verdichten/Repack) je Monat über ${esc(jahreText(zielJahre()))}, Start = Datei heute ${gb(st.db_bytes)}.
-      Maus über das Diagramm: Werte je Monat. Klick auf eine Legende blendet die Linie aus oder ein.</p>
+    <p class="sub">Erwartete Dateigröße (nach Verdichten/Repack) je Monat über ${esc(jahreText(zielJahre()))}, Start = Datei heute ${gb(st.db_bytes)}
+      (gestrichelt)${alleH.length ? `; davor in Rot die bisherige Größe laut Sensor ${esc(hg.entity_id)} (durchgezogen, höchstens 2 Jahre)` : ""}.
+      Maus über das Diagramm: Werte je Tag bzw. Monat. Klick auf eine Legende blendet die Linie aus oder ein.
+      ${alleH.length ? "" : `<br>Kein bisheriger Verlauf: ${esc(hg.grund || "keine Daten")}.`}</p>
     <div style="position:relative"><svg id="vlSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prognose-Verlauf der DB-Größe">${svg}</svg>
       <div class="vl-tip" id="vlTip" hidden></div></div>
-    <div class="vl-leg">${leg}</div>
+    <div class="vl-leg">${legH}${leg}</div>
     <p class="sub">Rechnung: Vom heutigen Bestand bleibt je Monat, was nach der wirksamen Vorhaltezeit noch nicht fällig ist (Überfälliges fällt im ersten Monat weg);
       dazu kommt der Zufluss aus der Schreibrate (letzte 24 h, Attribute und Events 7 Tage). Gelb und Grün rechnen ohne die Regel HA-Standard:
       Was keine eigene Regel hat, bleibt purge_keep_days (${zahl(st.purge_keep_days)} Tage).
@@ -1664,15 +1691,18 @@ Klick: Linie ein-/ausblenden">${esc(name)}<b>${gb(ende)}</b>
 
 function verlaufHover(r) {
   const svg = $("#vlSvg"), tip = $("#vlTip"), kreuz = $("#vlKreuz"); if (!svg) return;
-  const t = r.tage, n = t.length - 1, { W, L, R } = VL_MASS;
+  const t = r.tage, { W, L, R } = VL_MASS, { h, von, bis, x } = vlAchse(r);
+  // Punkt 188: Fangpunkte = Tageswerte der Vergangenheit und Monatspunkte der Prognose
+  const punkte = [...h.filter(([tag]) => tag < 0).map(([tag, v]) => ({ tag, hist: v })), ...t.map((tag, i) => ({ tag, i }))];
   svg.addEventListener("mousemove", ev => {
     const box = svg.getBoundingClientRect(), fx = (ev.clientX - box.left) * W / box.width;
-    const ziel = Math.max(0, Math.min(1, (fx - L) / (W - L - R))) * t[n];
-    let i = 0; t.forEach((v, j) => { if (Math.abs(v - ziel) < Math.abs(t[i] - ziel)) i = j; });
-    const px = vlX(t, i);
+    const ziel = von + Math.max(0, Math.min(1, (fx - L) / (W - L - R))) * (bis - von);
+    const p = punkte.reduce((a, b) => Math.abs(b.tag - ziel) < Math.abs(a.tag - ziel) ? b : a), px = x(p.tag);
     kreuz.setAttribute("x1", px); kreuz.setAttribute("x2", px); kreuz.setAttribute("visibility", "visible");
-    tip.innerHTML = `<b>${i ? `${verlaufDatum(r.stand, t[i])} (Monat ${i})` : "heute"}</b><br>` + VL_LINIEN.filter(([k]) => !VL_AUS.has(k)).reverse()
-      .map(([k, name]) => `<i style="--c: var(--vl-${k})"></i>${esc(k === "aktiv" && r.stand.mit_passiven ? "eigene Regeln (aktiv + passiv)" : name)}: <b>${gb(r.werte[k][i])}</b>`).join("<br>");
+    tip.innerHTML = p.i == null
+      ? `<b>${vlTagDatum(r.stand, p.tag)}</b><br><i style="--c: var(--vl-hist)"></i>bisher: <b>${gb(p.hist)}</b>`
+      : `<b>${p.i ? `${verlaufDatum(r.stand, t[p.i])} (Monat ${p.i})` : "heute"}</b><br>` + VL_LINIEN.filter(([k]) => !VL_AUS.has(k)).reverse()
+        .map(([k, name]) => `<i style="--c: var(--vl-${k})"></i>${esc(k === "aktiv" && r.stand.mit_passiven ? "eigene Regeln (aktiv + passiv)" : name)}: <b>${gb(r.werte[k][p.i])}</b>`).join("<br>");
     tip.hidden = false;
     const links = px * box.width / W;
     tip.style.top = "8px";

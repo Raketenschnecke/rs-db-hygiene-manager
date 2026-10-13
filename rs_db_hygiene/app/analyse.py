@@ -116,6 +116,40 @@ def lies_registry_details(pfad):
             for e in daten.get("entities", [])}
 
 
+# Punkt 188: Einheiten der device_class data_size → Bytes
+_BYTES_JE = {"B": 1, "kB": 1e3, "KB": 1e3, "MB": 1e6, "GB": 1e9, "TB": 1e12, "PB": 1e15,
+             "KiB": 2**10, "MiB": 2**20, "GiB": 2**30, "TiB": 2**40, "PiB": 2**50,
+             "bit": 1 / 8, "kbit": 1e3 / 8, "Mbit": 1e6 / 8, "Gbit": 1e9 / 8}
+
+
+def historie_groesse(db_pfad, registry_pfad, tage=730):
+    """Punkt 188: bisherige DB-Größe aus der Langzeitstatistik des eigenen Sensors „DB-Größe“ (unique_id
+    rs_db_hygiene_db_groesse), ein Wert je Tag (Mittel der Stundenwerte) über höchstens `tage` Tage.
+
+    Liefert {entity_id, punkte: [[Tagesbeginn UTC in s, Bytes], …]} oder {entity_id, punkte: [], grund}."""
+    with open(registry_pfad, encoding="utf-8") as f:
+        ents = json.load(f)["data"].get("entities", [])
+    eid = next((e["entity_id"] for e in ents if e.get("platform") == "rs_db_hygiene"
+                and e.get("unique_id") == "rs_db_hygiene_db_groesse"), None)
+    if not eid:
+        return {"entity_id": None, "punkte": [], "grund": "Sensor „DB-Größe“ der Integration nicht gefunden"}
+    con = oeffne_ha_db(db_pfad)
+    try:
+        meta = con.execute("SELECT id, unit_of_measurement FROM statistics_meta WHERE statistic_id = ?", (eid,)).fetchone()
+        if not meta:
+            return {"entity_id": eid, "punkte": [], "grund": "keine Langzeitstatistik"}
+        faktor = _BYTES_JE.get(meta[1] or "GB")
+        if not faktor:
+            return {"entity_id": eid, "punkte": [], "grund": f"unbekannte Einheit {meta[1]}"}
+        ab = time.time() - tage * 86400
+        zeilen = con.execute("SELECT CAST(start_ts / 86400 AS INTEGER) AS tag, AVG(mean) FROM statistics "
+                             "WHERE metadata_id = ? AND start_ts >= ? AND mean IS NOT NULL GROUP BY tag ORDER BY tag",
+                             (meta[0], ab)).fetchall()
+    finally:
+        con.close()
+    return {"entity_id": eid, "punkte": [[t * 86400, round(m * faktor)] for t, m in zeilen if m and m > 0]}
+
+
 def hole_zustaende(url="http://supervisor/core/api/states", token=None):
     """Aktuelle Zustände über die HA-API (im Add-on mit SUPERVISOR_TOKEN)."""
     token = token or os.environ.get("SUPERVISOR_TOKEN")

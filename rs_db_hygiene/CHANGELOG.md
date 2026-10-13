@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b6 (Beta)
+- **Prognose-Chart mit Vergangenheit (Punkt 188):** Links von „heute“ zeigt eine rote, durchgezogene Linie die bisherige DB-Größe aus der Langzeitstatistik des Integrations-Sensors „DB-Größe“ (Tagesmittel, höchstens 2 Jahre); eigener Legendeneintrag, per Klick ausblendbar, Tooltip je Tag. Die Prognoselinien sind gestrichelt und 1 px dick, „ohne Regeln“ ist violett statt rot
+
 ## 0.5.5b5 (Beta)
 - **Deaktivierte Entitäten (Punkte 185/186):** Eigener Entitäts-Status „deaktiviert“ (in der Registry abgeschaltet, ohne Zustand) statt „aktiv“; Filter, Summenzeile und Hilfe kennen ihn. Die Regelart `deaktiviert` im Typ verwaist trifft sie (`alle` gilt nur für echte Verwaiste). Ihr Statistik-Eintrag bleibt auch bei Langzeit „keine“ erhalten; die Prognose rechnet keinen Zuwachs mehr für sie
 - **Klasse und Einheit ohne Zustand (185):** Bei Entitäten ohne Zustand (deaktivierte) kommen device_class, state_class und Einheit aus der Registry – die Spalte Klasse ist gefüllt, klasse-Regeln und der Zähler-Schutz greifen. Die erste Analyse nach dem Update läuft automatisch (Cache-Aufbau 6)
