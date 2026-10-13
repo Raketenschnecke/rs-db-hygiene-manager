@@ -555,9 +555,12 @@ def _vorlage():
 
 
 async def regeln_verwalten(_request):
-    """Kennzahlen für die Rückfragen: aktuelle Regeln, Startregeln und die Liste der Sicherungen."""
-    return web.json_response({"aktuell": rg.kennzahlen(rg.lade(REGELN, VORLAGE)), "vorlage": rg.kennzahlen(_vorlage()),
-                              "sicherungen": rg.liste_sicherungen(SICHERUNGEN), "behalten": rg.SICHERUNGEN_BEHALTEN,
+    """Kennzahlen für die Rückfragen: aktuelle Regeln, Startregeln und die Liste der Sicherungen.
+    Punkt 182: startvorlage markiert Stände mit genau dem Inhalt der Startregeln."""
+    vorlage = _vorlage()
+    fp = rg.fingerabdruck(vorlage)
+    return web.json_response({"aktuell": rg.kennzahlen(rg.lade(REGELN, VORLAGE), fp), "vorlage": rg.kennzahlen(vorlage),
+                              "sicherungen": rg.liste_sicherungen(SICHERUNGEN, fp), "behalten": rg.SICHERUNGEN_BEHALTEN,
                               "gesperrt": bool(Z.job and Z.job.get("art") == "loeschen")})
 
 

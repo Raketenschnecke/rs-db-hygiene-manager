@@ -339,6 +339,10 @@ textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: 1
 .autoliste div { padding: 2px 9px; cursor: pointer; display: flex; gap: 8px; align-items: baseline; font-family: var(--mono); font-size: 12.5px; }
 .autoliste div.an, .autoliste div:hover { background: var(--accent-weak); }
 .autoliste .sub { margin-left: auto; font-family: inherit; white-space: nowrap; font-size: 11.5px; }
+/* Punkte 183/184: Knopfzeile in der Vorschlagsliste */
+.autoliste div.autoknopf { cursor: default; flex-wrap: wrap; gap: 6px; padding: 4px 9px; font-family: inherit; }
+.autoliste div.autoknopf:hover { background: none; }
+.autoliste div.autoknopf button { font-size: 12.5px; padding: 2px 8px; }
 /* Punkt 171: Vorschlag „Muster verdichten“; Punkt 172: „Regel für …“ */
 .hinweisbox { padding: 6px 10px; border-radius: 6px; background: var(--accent-weak); border: 1px solid var(--accent); display: grid; gap: 4px; min-width: 0; }
 .hinweisbox .mono { overflow-wrap: anywhere; }
@@ -739,7 +743,7 @@ actions:
           Das Komprimieren der HA-SQLite-DB muss der Anwender selbst in HA einrichten (z. B. per Automation).</p>
         <h3 id="h-faq-treffer">Warum zeigt eine Regel 0 Treffer?</h3>
         <ul>
-          <li>Platzhalter in einer entity-Regel (Typ auf glob ändern). Beispiel: Eine Regel vom Typ <i>entity</i> mit dem Muster <code>switch.adaptive_lighting_*</code> sucht wörtlich eine Entität dieses Namens und trifft deshalb nichts. Als Typ <i>glob</i> trifft dasselbe Muster alle 47 Adaptive-Lighting-Schalter;</li>
+          <li>Platzhalter in einer entity-Regel (Typ auf glob ändern). Beispiel: Eine Regel vom Typ <i>entity</i> mit dem Muster <code>switch.adaptive_lighting_*</code> sucht wörtlich eine Entität dieses Namens und trifft deshalb nichts. Als Typ <i>glob</i> trifft dasselbe Muster alle 47 Adaptive-Lighting-Schalter. Die Vorschlagsliste unter dem Musterfeld zeigt das schon beim Tippen und bietet „Typ auf glob ändern“ oder „alle … als Entity-IDs übernehmen“ (so gelten auch Zähler);</li>
           <li>die Regel ist passiv;</li>
           <li>eine höher stehende Regel gewinnt (Vorschau: „überstimmt“, siehe <a class="hverweis" href="#h-rang">Rangfolge</a>);</li>
           <li>es handelt sich um Zähler (<a class="hverweis" href="#h-wichtig">Zähler-Schutz</a>) oder um geschützte Entitäten (🔒).</li>
@@ -773,13 +777,20 @@ actions:
         <h3 id="h-faq-attribute">Was ist mit Attributen, die ich lange brauche?</h3>
         <p>Attribute folgen der Kurzzeit. Wichtige Werte daraus in eigene Entitäten überführen (z. B. Template-Sensoren). Dann kann die Kurzzeit der Quelle kurz bleiben.</p>
         <h3 id="h-faq-vorn">Wie fange ich mit den Regeln von vorn an?</h3>
-        <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Auf Startregeln zurücksetzen</b>. Alle Regeln werden durch die Startliste ersetzt (alle passiv). Vorher sichert die App die bisherigen Regeln; unter „Sicherungen“ lässt sich jeder Stand wiederherstellen (die letzten 10 bleiben). Gesperrt, solange ein Löschlauf läuft.</p>
+        <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Auf Startregeln zurücksetzen</b>. Alle Regeln werden durch die Startliste ersetzt (alle passiv außer <a class="hverweis" href="#h-ha-standard">HA-Standard</a>). Vorher sichert die App die bisherigen Regeln; unter „Sicherungen“ lässt sich jeder Stand wiederherstellen (die letzten 10 bleiben). Ein Stand mit genau dem Inhalt der Startliste trägt den Vermerk „= Startregeln“ – wer zweimal hintereinander zurücksetzt, findet die eigenen Regeln in der älteren Sicherung. Gesperrt, solange ein Löschlauf läuft.</p>
+        <h3 id="h-faq-empfehlungen">Nach dem Zurücksetzen sind die Empfehlungen fast leer – warum?</h3>
+        <p>In den Startregeln ist <a class="hverweis" href="#h-ha-standard">HA-Standard</a> aktiv: Alles ohne eigene Regel behält seine Daten nur 10 Tage. Der Reiter Empfehlungen schlägt nur Vorhaltezeiten vor, die kürzer sind als die heute wirksame. Vielschreiber, große Attribute, nirgends verwendete, deaktivierte und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage) entfallen deshalb; übrig bleiben die Diagnose-Gruppen (7 Tage). Der Reiter weist darauf hin, solange HA-Standard aktiv ist. Ist die Regel <code>HA:standard</code> passiv, gilt wieder „global“ (purge_keep_days), und die Vorschläge erscheinen nach „Neu berechnen“ wieder.</p>
         <h3 id="h-faq-export">Wie nehme ich meine Regeln auf eine andere Installation mit?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>
       </details>
     </div>
   </section>
   <section id="tab-opt" hidden>
+    <!-- Punkt 181: Mit aktivem HA-Standard (10 Tage) entfallen alle Vorschläge, die länger als 10 Tage sind -->
+    <div class="banner" id="optHaStd" style="margin:0 0 8px" hidden><b>HA-Standard aktiv (10 Tage):</b> Entitäten und Event-Typen ohne eigene Regel
+      behalten ihre Daten nur 10 Tage. Vorgeschlagen wird nur, was kürzer ist – Vielschreiber, große Attribute, nirgends verwendete, deaktivierte
+      und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage) entfallen deshalb, übrig bleiben die Diagnose-Gruppen (7 Tage).
+      Ist <code>HA:standard</code> im Reiter Regeln passiv, gilt wieder „global“ (purge_keep_days).<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a></div>
     <div class="trefferzeile" id="trefferOpt"></div>
     <div class="tabelle"><table id="tOpt" class="baustein"></table></div>
     <p class="sub" id="optText">Vorschläge aus der letzten Analyse – nur für Daten ohne eigene Kurzzeit (Standard bzw. HA-Standard), nie für Zähler, geschützte Entitäten,
@@ -1553,8 +1564,9 @@ async function ladeKacheln() {
 // [Schlüssel, Name, Erläuterung, Linienbreite]
 const VL_LINIEN = [["ohne", "ohne Regeln", "nichts gekürzt außer purge_keep_days, Langzeit unbegrenzt", 2.4],
   ["ha", "nur HA-Standard", "Regel HA:standard: alles 10 Tage, Langzeit unbegrenzt", 6],
-  ["aktiv", "eigene Regeln (aktiv)", "die aktiven Regeln, wie der Löschlauf; mit Haken „passive Regeln mitrechnen“ auch die passiven", 3.6],
-  ["alle", "eigene Regeln (aktiv + passiv)", "wenn auch die passiven Regeln eingeschaltet wären", 1.8]];
+  // Punkt 180: eigene Regeln ohne HA:standard – Entitäten ohne eigene Regel bleiben purge_keep_days
+  ["aktiv", "eigene Regeln (aktiv)", "die aktiven eigenen Regeln ohne HA-Standard; mit Haken „passive Regeln mitrechnen“ auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 3.6],
+  ["alle", "eigene Regeln (aktiv + passiv)", "alle eigenen Regeln ohne HA-Standard, auch die passiven. Was keine eigene Regel hat, bleibt purge_keep_days.", 1.8]];
 const VL_AUS = new Set();   // per Klick auf die Legende ausgeblendete Linien (Achse skaliert neu)
 const VL_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const VL_MASS = { W: 1000, H: 380, L: 62, R: 16, O: 14, U: 34 };
@@ -1639,7 +1651,8 @@ Klick: Linie ein-/ausblenden">${esc(name)}<b>${gb(ende)}</b>
       <div class="vl-tip" id="vlTip" hidden></div></div>
     <div class="vl-leg">${leg}</div>
     <p class="sub">Rechnung: Vom heutigen Bestand bleibt je Monat, was nach der wirksamen Vorhaltezeit noch nicht fällig ist (Überfälliges fällt im ersten Monat weg);
-      dazu kommt der Zufluss aus der Schreibrate (letzte 24 h, Attribute und Events 7 Tage).
+      dazu kommt der Zufluss aus der Schreibrate (letzte 24 h, Attribute und Events 7 Tage). Gelb und Grün rechnen ohne die Regel HA-Standard:
+      Was keine eigene Regel hat, bleibt purge_keep_days (${zahl(st.purge_keep_days)} Tage).
       ${st.rest_bytes >= 0 ? `${gb(st.rest_bytes)} der Datei ordnet die Analyse keiner Zeile zu (andere Tabellen, freier Platz) – als fester Betrag angenommen.`
         : `Die Zeilenschätzung liegt ${gb(-st.rest_bytes)} über der Datei; der Verlauf ist um diesen festen Betrag korrigiert.`} Anders als die Kachel „Prognose“ (eingeschwungener Zustand) startet
       der Verlauf beim heutigen Bestand; die Endwerte können deshalb abweichen.${st.mit_attribute ? "" : " Attribute ohne Attribut-Analyse nur geschätzt."}</p>
@@ -2302,6 +2315,7 @@ T.opt = new LokaleTabelle({
   zusatz: () => S.optInfo || "",
 });
 async function ladeOpt() {
+  $("#optHaStd").hidden = !haStandardAktiv();   // Punkt 181
   T.opt.leer = "berechne Vorschläge …"; T.opt.daten([]);
   try {
     const r = await api("optimierungen?" + par());
@@ -2313,6 +2327,11 @@ async function ladeOpt() {
   } catch (e) { T.opt.leer = e.message; T.opt.daten([]); }
 }
 $("#oNeu").onclick = ladeOpt;
+$("#optHaStd").addEventListener("click", ev => {
+  const a = ev.target.closest("a[href^='#h-']"); if (!a) return;
+  ev.preventDefault();
+  springeHilfe(a.getAttribute("href").slice(1));
+});
 $("#oIgnoriert").onchange = () => T.opt.daten((S.opt || []).filter(v => $("#oIgnoriert").checked || !v.ignoriert));
 $("#tOpt").addEventListener("click", async ev => {
   const b = ev.target.closest("[data-opt]");
@@ -2621,6 +2640,8 @@ $("#btnNeu").onclick = () => bearbeiteRegel(-1);
 // Punkte 123/124 (0.5.2): Regeln verwalten – Export, Import, Zurücksetzen auf die Startregeln, Sicherungen.
 // Jede Ersetzung legt in der App vorher eine Sicherung an; gesperrt, solange ein Löschlauf läuft.
 const regelZahl = k => `${mzahl(k.anzahl, "Regel", "Regeln")}, davon ${zahl(k.aktiv)} aktiv`;
+// Punkt 182: Stände mit genau dem Inhalt der Startregeln kennzeichnen (z. B. zweimal hintereinander zurückgesetzt)
+const startChip = k => k.startvorlage ? ' <span class="chip warn" title="Gleicher Inhalt wie die Startregeln – keine eigenen Regeln. Zum Wiederherstellen der eigenen Regeln einen älteren Stand wählen.">= Startregeln</span>' : "";
 const postJson = (p, body) => api(p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 function regelnErsetzt(r, was) {
   S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
@@ -2633,14 +2654,14 @@ async function verwalteRegeln() {
   try { v = await api("regeln/verwalten"); } catch (e) { return meldung("Regeln verwalten", e.message); }
   const sperre = v.gesperrt ? " disabled title=\"gesperrt, solange der Löschlauf läuft\"" : "";
   const zeilen = v.sicherungen.map(s => `<tr><td>${esc(zeit(s.zeit))}</td><td>${esc(s.grund || "–")}</td>
-    <td>${s.fehler ? `<span class="fehler" title="${esc(s.fehler)}">nicht lesbar</span>` : esc(regelZahl(s))}</td>
+    <td>${s.fehler ? `<span class="fehler" title="${esc(s.fehler)}">nicht lesbar</span>` : esc(regelZahl(s)) + startChip(s)}</td>
     <td>${s.fehler ? "" : `<button data-wiederherstellen="${esc(s.name)}"${sperre}>Wiederherstellen</button>`}</td></tr>`).join("");
   dialog("Regeln verwalten", `
-    <p>Aktuell: <b>${esc(regelZahl(v.aktuell))}</b>.${v.gesperrt ? ' <span class="chip warn">Ein Löschlauf läuft – Ersetzen ist bis zum Ende gesperrt.</span>' : ""}</p>
+    <p>Aktuell: <b>${esc(regelZahl(v.aktuell))}</b>${startChip(v.aktuell)}.${v.gesperrt ? ' <span class="chip warn">Ein Löschlauf läuft – Ersetzen ist bis zum Ende gesperrt.</span>' : ""}</p>
     <div class="leiste" style="margin:0">
       <button id="vExport" title="lädt die aktuellen Regeln als JSON-Datei herunter">Exportieren</button>
       <button id="vImport"${sperre} title="Regeln aus einer exportierten JSON-Datei übernehmen – mit Vorschau und Rückfrage">Importieren …</button>
-      <button id="vReset" class="gefahr"${sperre} title="ersetzt alle Regeln durch die Startliste (alle passiv)">Auf Startregeln zurücksetzen …</button>
+      <button id="vReset" class="gefahr"${sperre} title="ersetzt alle Regeln durch die Startliste (alle passiv außer HA-Standard)">Auf Startregeln zurücksetzen …</button>
       <input type="file" id="vDatei" accept=".json,application/json" hidden>
     </div>
     <p class="sub">Vor jedem Zurücksetzen, Wiederherstellen und Import sichert die App die bisherigen Regeln; die letzten ${zahl(v.behalten)} Sicherungen bleiben.</p>
@@ -2661,7 +2682,7 @@ async function verwalteRegeln() {
   };
   $("#vReset").onclick = async () => {
     if (!await frage("Auf Startregeln zurücksetzen",
-      `${regelZahl(v.aktuell)} werden ersetzt durch ${mzahl(v.vorlage.anzahl, "Startregel", "Startregeln")} (alle passiv). ` +
+      `${regelZahl(v.aktuell)} werden ersetzt durch ${mzahl(v.vorlage.anzahl, "Startregel", "Startregeln")} (${v.vorlage.aktiv ? `davon ${zahl(v.vorlage.aktiv)} aktiv: ${HA_STD} – alles 10 Tage` : "alle passiv"}). ` +
       "Vorher wird eine Sicherung angelegt, die sich hier wiederherstellen lässt. Zurücksetzen?", "Zurücksetzen")) return;
     try { await regelnErsetzt(await postJson("regeln/zuruecksetzen", { version: S.version }), "Startregeln geladen"); $("#dlg").close(); }
     catch (e) { fehler(e); }
@@ -3200,6 +3221,7 @@ function bearbeiteRegel(i, vorlage) {
   }
   // ---- Punkt 173: Autovervollständigung – Vorschläge zur Zeile unter dem Cursor
   const ta = $("#rMuster"), auto = $("#rAuto");
+  let autoIds = [];
   const zeileAmCursor = () => {
     const p = ta.selectionStart, v = ta.value, a = v.lastIndexOf("\n", p - 1) + 1, b = v.indexOf("\n", p);
     return { a, b: b < 0 ? v.length : b, text: v.slice(a, b < 0 ? v.length : b).trim() };
@@ -3211,11 +3233,25 @@ function bearbeiteRegel(i, vorlage) {
     if (q.length < 2 || (t === "verwaist" && ["alle", "geloescht", "ohne_spur"].includes(q))) { auto.hidden = true; return; }
     let liste; try { liste = await entListe(); } catch (e) { auto.hidden = true; return; }
     if (/[*?[]/.test(q)) {   // Muster: nur zeigen, was es trifft (glob trifft keine Zähler und keine verwaisten Entitäten)
-      const tr = (t === "glob" ? globTreffer(liste, q) : liste.filter(e => globRe(q).test(e.id))).sort((x, y) => y.n - x.n);
-      auto.innerHTML = `<div class="sub" style="font-family:inherit">${tr.length ? `trifft ${mzahl(tr.length, "Entität", "Entitäten")}` : "trifft keine Entität"}${t === "glob" ? " (ohne Zähler und verwaiste)" : ""}</div>` +
-        tr.slice(0, 8).map(e => `<div class="sub" style="cursor:default">${esc(e.id)}<span class="sub">${zahl(e.n)}/Tag</span></div>`).join("");
+      const alle = liste.filter(e => globRe(q).test(e.id)).sort((x, y) => y.n - x.n);
+      // Punkt 183: Bei entity ist * wörtlich – die Regel trifft nichts; die Liste zeigt dann, was das Muster als glob träfe
+      const wortlich = t === "entity";
+      const tr = t === "glob" || wortlich ? globTreffer(liste, q).sort((x, y) => y.n - x.n) : alle;
+      // Punkt 184: alle aktiven Treffer (auch Zähler) als genaue IDs übernehmen – Typ entity
+      autoIds = ["glob", "entity"].includes(t) ? alle.filter(e => e.aktiv).map(e => e.id) : [];
+      const nZ = alle.filter(e => e.aktiv && e.zaehler).length;
+      const kopf = wortlich
+        ? `<div class="risiko" style="font-family:inherit;cursor:default">trifft keine Entität – beim Typ entity gilt * wörtlich${tr.length ? `; als glob: ${mzahl(tr.length, "Entität", "Entitäten")} (ohne Zähler und verwaiste)` : ""}</div>`
+        : `<div class="sub" style="font-family:inherit">${tr.length ? `trifft ${mzahl(tr.length, "Entität", "Entitäten")}` : "trifft keine Entität"}${t === "glob" ? " (ohne Zähler und verwaiste)" : ""}</div>`;
+      const knoepfe = [
+        wortlich && tr.length ? `<button type="button" data-auto="glob" title="Platzhalter wirken nur beim Typ glob (ohne Zähler und verwaiste)">Typ auf glob ändern</button>` : "",
+        autoIds.length ? `<button type="button" data-auto="ids" title="Ersetzt diese Zeile durch die einzelnen Entity-IDs (eine pro Zeile) und stellt den Typ auf entity – so gelten auch Zähler; verwaiste bleiben außen vor">alle ${zahl(autoIds.length)} als Entity-IDs übernehmen${nZ ? ` (inkl. ${mzahl(nZ, "Zähler", "Zähler")})` : ""}</button>` : "",
+      ].filter(Boolean).join("");
+      auto.innerHTML = kopf + (knoepfe ? `<div class="autoknopf">${knoepfe}</div>` : "") +
+        (wortlich ? alle.filter(e => e.aktiv) : tr).slice(0, 8).map(e => `<div class="sub" style="cursor:default">${esc(e.id)}<span class="sub">${e.zaehler ? "Zähler · " : ""}${zahl(e.n)}/Tag</span></div>`).join("");
       auto.hidden = false; return;
     }
+    autoIds = [];
     const tr = liste.filter(e => e.id.includes(q)).sort((x, y) => (y.id.startsWith(q) - x.id.startsWith(q)) || y.n - x.n).slice(0, 12);
     if (!tr.length || (tr.length === 1 && tr[0].id === q)) { auto.hidden = true; return; }
     auto.innerHTML = tr.map((e, j) => `<div role="option" data-id="${esc(e.id)}" class="${j ? "" : "an"}">${esc(e.id)}<span class="sub">${e.aktiv ? "" : "verwaist · "}${e.zaehler ? "Zähler · " : ""}${zahl(e.n)}/Tag</span></div>`).join("");
@@ -3237,7 +3273,25 @@ function bearbeiteRegel(i, vorlage) {
     } else if ((ev.key === "Enter" || ev.key === "Tab") && j >= 0) { ev.preventDefault(); nimmAuto(opt[j].dataset.id); }
     else if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); auto.hidden = true; }
   });
-  auto.addEventListener("mousedown", ev => { const o = ev.target.closest("[data-id]"); if (o) { ev.preventDefault(); nimmAuto(o.dataset.id); } });
+  // Punkte 183/184: Knöpfe in der Liste – Typ auf glob bzw. alle Treffer als genaue IDs
+  function autoAktion(was) {
+    if (was === "glob") {
+      typManuell = true; $("#rTyp").value = "glob"; $("#rTypAuto").textContent = "";
+      typGewechselt("glob"); zeigeAuto(); return;
+    }
+    const z = zeileAmCursor();
+    const andere = new Set((ta.value.slice(0, z.a) + ta.value.slice(z.b)).split("\n").map(s => s.trim()).filter(Boolean));
+    const neuIds = autoIds.filter(id => !andere.has(id)).join("\n");
+    ta.value = ta.value.slice(0, z.a) + neuIds + ta.value.slice(z.b);
+    const p = z.a + neuIds.length; ta.focus(); ta.setSelectionRange(p, p);
+    typManuell = true; $("#rTyp").value = "entity"; $("#rTypAuto").textContent = "";
+    auto.hidden = true; typGewechselt("entity");
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  auto.addEventListener("mousedown", ev => {
+    const k = ev.target.closest("[data-auto]"); if (k) { ev.preventDefault(); return autoAktion(k.dataset.auto); }
+    const o = ev.target.closest("[data-id]"); if (o) { ev.preventDefault(); nimmAuto(o.dataset.id); }
+  });
   ta.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== ta) auto.hidden = true; }, 150));
   ["click", "keyup"].forEach(e => ta.addEventListener(e, ev => { if (!["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab"].includes(ev.key)) zeigeAuto(); }));
   ta.addEventListener("input", () => { typAuto(); zeigeAuto(); pruefeVerdichten(); });

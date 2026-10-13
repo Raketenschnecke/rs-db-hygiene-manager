@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b3 (Beta)
+- **Prognose-Chart:** Die Linien „eigene Regeln“ (gelb, grün) rechnen ohne die Regel HA-Standard – sie zeigen, was die eigenen Regeln allein bewirken
+- **Empfehlungen:** Hinweis, solange HA-Standard aktiv ist – dann entfallen alle Vorschläge mit mehr als 10 Tagen; neue FAQ dazu im Reiter Hilfe
+- **Regeln verwalten:** Stände mit genau dem Inhalt der Startregeln tragen den Vermerk „= Startregeln“ (aktuell und in der Sicherungsliste)
+- **Regelmaske:** Beim Typ entity zeigt die Vorschlagsliste bei Platzhaltern „trifft keine Entität“ mit Knopf „Typ auf glob ändern“; neuer Knopf „alle … als Entity-IDs übernehmen“ übernimmt alle Treffer eines Musters als genaue IDs – auch Zähler
+
 ## 0.5.5b2 (Beta)
 - **Prognose-Chart:** Klick auf eine Kachel der Spalte „DB-Größe“ zeigt die erwartete Entwicklung der DB in Monatsschritten über den Prognosezeitraum – ohne Regeln, nur HA-Standard, eigene aktive Regeln (passive mit Haken „passive Regeln mitrechnen“) und eigene Regeln aktiv + passiv; Monatswerte beim Überfahren, Linien per Legende ausblendbar
 

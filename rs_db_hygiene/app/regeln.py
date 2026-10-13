@@ -243,10 +243,24 @@ _SICHERUNG = re.compile(r"^regeln_\d{8}_\d{6}_([a-z]+?)(\d*)\.json$")
 GRUENDE = {"zuruecksetzen": "vor Zurücksetzen", "wiederherstellen": "vor Wiederherstellen", "import": "vor Import"}
 
 
-def kennzahlen(daten):
-    """Anzahl Regeln und davon aktive – für Rückfragen und die Sicherungsliste."""
+def kennzahlen(daten, vorlage=None):
+    """Anzahl Regeln und davon aktive – für Rückfragen und die Sicherungsliste.
+    Mit vorlage (Fingerabdruck der Startregeln) zusätzlich startvorlage: gleicher Inhalt wie die Startregeln (Punkt 182)."""
     r = daten.get("regeln") or []
-    return {"anzahl": len(r), "aktiv": sum(1 for x in r if x.get("aktiv", True) is not False)}
+    k = {"anzahl": len(r), "aktiv": sum(1 for x in r if x.get("aktiv", True) is not False)}
+    if vorlage is not None:
+        k["startvorlage"] = fingerabdruck(daten) == vorlage
+    return k
+
+
+def fingerabdruck(daten):
+    """Inhalt einer Regeldatei unabhängig von Reihenfolge und Formatierung; None, wenn sie nicht lesbar ist."""
+    try:
+        d = lies_import(daten)
+    except ValueError:
+        return None
+    return json.dumps({"standard": d["standard"], "regeln": sorted(d["regeln"], key=lambda x: x["id"])},
+                      sort_keys=True, ensure_ascii=False)
 
 
 def lies_import(roh):
@@ -273,8 +287,9 @@ def sichere(pfad, ordner, grund):
     return name
 
 
-def liste_sicherungen(ordner):
-    """Sicherungen, neueste zuerst: [{name, zeit, grund, anzahl, aktiv}] – unlesbare Dateien mit fehler."""
+def liste_sicherungen(ordner, vorlage=None):
+    """Sicherungen, neueste zuerst: [{name, zeit, grund, anzahl, aktiv[, startvorlage]}] – unlesbare Dateien mit fehler.
+    vorlage: Fingerabdruck der Startregeln (siehe kennzahlen)."""
     if not os.path.isdir(ordner):
         return []
     aus = []
@@ -286,7 +301,7 @@ def liste_sicherungen(ordner):
         e = {"name": name, "zeit": os.path.getmtime(p), "grund": GRUENDE.get(m.group(1), m.group(1))}
         try:
             with open(p, encoding="utf-8") as f:
-                e.update(kennzahlen(json.load(f)))
+                e.update(kennzahlen(json.load(f), vorlage))
         except (OSError, ValueError) as x:
             e["fehler"] = str(x)
         aus.append(e)

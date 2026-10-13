@@ -342,6 +342,7 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     Zeilengrößen; kann negativ sein) bleibt als fester Betrag stehen, damit der Startwert der Dateigröße entspricht.
     Varianten: ohne = keine Regeln (alles purge_keep_days, Langzeit unbegrenzt), ha = nur Regel HA:standard,
     aktiv = aktive Regeln (passive nur mit mit_passiven, wie Haken „passive Regeln mitrechnen“), alle = aktive und passive Regeln.
+    Punkt 180: aktiv und alle ohne die Regel HA:standard – was keine eigene Regel hat, bleibt purge_keep_days (wie „ohne“).
     """
     from bisect import bisect_right
     from math import ceil
@@ -353,8 +354,9 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     monate = max(1, ceil(ziel / MONAT - 1e-9))
     tage = [0] + [min(round(m * MONAT), ziel) for m in range(1, monate + 1)]
     ohne = {"standard": dict(rg.STANDARD), "regeln": []}
+    eigene = {**regel_daten, "regeln": [r for r in regel_daten["regeln"] if r["typ"] != "ha_standard"]}
     varianten = {"ohne": (ohne, False), "ha": ({**ohne, "regeln": [{**rg.HA_STANDARD, "aktiv": True}]}, False),
-                 "aktiv": (regel_daten, mit_passiven), "alle": (regel_daten, True)}
+                 "aktiv": (eigene, mit_passiven), "alle": (eigene, True)}
     werte, bestand = {}, 0
     for name, (daten, passiv) in varianten.items():
         aufl = rg.Aufloeser(daten, passiv)
