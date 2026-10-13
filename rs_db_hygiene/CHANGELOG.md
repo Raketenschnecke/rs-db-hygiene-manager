@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b4 (Beta)
+- **Logo:** Der Schriftzug „DB Hygiene Manager“ im Kopf ist im dunklen Modus jetzt kräftig dunkelrot statt hellrot
+
 ## 0.5.5b3 (Beta)
 - **Prognose-Chart:** Die Linien „eigene Regeln“ (gelb, grün) rechnen ohne die Regel HA-Standard – sie zeigen, was die eigenen Regeln allein bewirken
 - **Empfehlungen:** Hinweis, solange HA-Standard aktiv ist – dann entfallen alle Vorschläge mit mehr als 10 Tagen; neue FAQ dazu im Reiter Hilfe
