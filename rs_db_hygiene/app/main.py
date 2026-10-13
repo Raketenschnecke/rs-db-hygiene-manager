@@ -285,8 +285,24 @@ async def probelauf_summe(request):
     return web.json_response({"stand": r["stand"], "summe": r["summe"], "regeln": r["regeln"], "events": r.get("events", [])})
 
 
+async def klassen(_request):
+    """Punkt 166: alle Paare domain|device_class aktiver Entitäten aus der letzten Analyse – Auswahl für klasse-Regeln.
+    zaehler = davon Zähler (state_class total/total_increasing), die der Zähler-Schutz von klasse-Regeln ausnimmt."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return web.json_response({"klassen": [], "fehler": "Noch keine Analyse vorhanden"})
+    zahl = {}
+    for e in r["entitaeten"]:
+        if e["status"] != "aktiv" or not e.get("device_class"):
+            continue
+        k = zahl.setdefault(f'{e["domain"]}|{e["device_class"]}', [0, 0])
+        k[0] += 1
+        k[1] += (e.get("state_class") or "").startswith("total")
+    return web.json_response({"klassen": [{"muster": m, "anzahl": a, "zaehler": z} for m, (a, z) in sorted(zahl.items())]})
+
+
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
-              "loeschbar", "prognose_bytes", "herkunft", "labels",
+              "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
               "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"}
 ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
@@ -407,8 +423,8 @@ def sortierung(q):
 def _sortwert(k):
     if k == "loeschbar":
         return lambda e: e["loeschbar"]["states"]
-    if k == "labels":      # Punkt 115: ohne Label hinten (aufsteigend)
-        return lambda e: (not e.get("labels"), (e.get("labels") or "").lower())
+    if k in ("labels", "device_class"):      # Punkte 115/167: ohne Label bzw. Klasse hinten (aufsteigend)
+        return lambda e: (not e.get(k), (e.get(k) or "").lower())
     if k in ("entity_id", "status", "herkunft"):
         return lambda e: (e.get(k) or "").lower()
     return lambda e: e[k] if e[k] is not None else -1
@@ -441,7 +457,7 @@ async def export_csv(request):
         raise web.HTTPNotFound()
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";")
-    w.writerow(["entity_id", "herkunft_art", "herkunft", "herkunft_info", "labels", "status", "rows", "rows_24h", "state_class", "lts_rows", "kurz_rows",
+    w.writerow(["entity_id", "herkunft_art", "herkunft", "herkunft_info", "labels", "status", "rows", "rows_24h", "state_class", "device_class", "lts_rows", "kurz_rows",
                 "kurzzeit", "kurzzeit_regel", "langzeit", "langzeit_regel",
                 "loeschmenge_sofort_states", "loeschmenge_sofort_kurz", "loeschmenge_sofort_lts",
                 "attr_bestand_bytes", "attr_zeilen", "attr_zuwachs_tag_bytes", "attr_avg_bytes",
@@ -458,7 +474,7 @@ async def export_csv(request):
         wv = e["werte"] or {}
         zelle = lambda a, k: (wv.get(a) or {}).get(k) or ""  # noqa: E731
         w.writerow([e["entity_id"], e.get("herkunft_art", ""), e.get("herkunft", ""), e.get("herkunft_info", ""),
-                    e.get("labels", ""), e["status"], e["rows"], e["rows_24h"], e["state_class"], e["lts_rows"], e["kurz_rows"],
+                    e.get("labels", ""), e["status"], e["rows"], e["rows_24h"], e["state_class"], e.get("device_class") or "", e["lts_rows"], e["kurz_rows"],
                     zelle("kurzzeit", "anzeige"), zelle("kurzzeit", "regel"), zelle("langzeit", "anzeige"), zelle("langzeit", "regel"),
                     e["loeschbar"]["states"], e["loeschbar"]["kurz"], e["loeschbar"]["lts"],
                     *[("" if e.get(k) is None else (round(e[k]) if isinstance(e[k], float) and k != "attr_anteil" else e[k]))
@@ -996,6 +1012,7 @@ def erstelle_app():
         web.post("/api/job/{art}", job_starten),
         web.get("/api/probelauf", probelauf_summe),
         web.get("/api/entitaeten", entitaeten),
+        web.get("/api/klassen", klassen),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),

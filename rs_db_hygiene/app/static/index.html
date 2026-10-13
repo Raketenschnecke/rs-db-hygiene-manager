@@ -287,6 +287,20 @@ label.feld > * { font-size: 14px; color: var(--text); }
 .fehler { color: var(--bad); }
 .leer { padding: 24px; color: var(--muted); text-align: center; }
 textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: 12.5px; }
+/* Punkt 166: Klassen-Auswahl der Regelmaske (Typ klasse) – aufklappbare Liste mit Mehrfachauswahl */
+.kwahl { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); font-size: 13px; }
+.kwahl > summary { cursor: pointer; padding: 5px 9px; list-style: none; display: flex; gap: 6px; align-items: baseline; }
+.kwahl > summary::-webkit-details-marker { display: none; }
+.kwahl > summary::after { content: "▾"; margin-left: auto; color: var(--muted); }
+.kwahl[open] > summary::after { content: "▴"; }
+.kwahl .kwahl-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
+.kwahl .kwahl-suche { margin: 0 8px 6px; width: calc(100% - 16px); box-sizing: border-box; }
+.kwahl .kwahl-liste { max-height: 260px; overflow-y: auto; border-top: 1px solid var(--line); padding: 4px 0; }
+.kwahl .kwahl-liste label { display: flex; gap: 8px; align-items: baseline; padding: 3px 10px; cursor: pointer; }
+.kwahl .kwahl-liste label:hover { background: var(--accent-weak); }
+.kwahl .kwahl-liste .mono { font-family: var(--mono); font-size: 12.5px; }
+.kwahl .kwahl-liste .sub { margin-left: auto; white-space: nowrap; }
+.kwahl .kwahl-liste .fremd .mono { color: var(--warn); }
 .lauf { margin: 0 20px 12px; padding: 10px 14px; border-radius: 8px; background: var(--accent-weak); border: 1px solid var(--accent); display: grid; gap: 6px; }
 .lauf.fehlerbox { background: var(--warn-bg); border-color: var(--bad); color: var(--bad); }
 .lauf b { font-weight: 600; }
@@ -1468,6 +1482,9 @@ const leerText = e => /keine Analyse/i.test(e.message)
 const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRUPPEN fest (Punkt 130)
   ["entity_id", "Entität", 0, "text", "Text, * als Platzhalter", 330],
   ["herkunft", "Gerät / Herkunft", 0, "herkunft", "Text, * als Platzhalter", 250],
+  // Punkt 167 (0.5.4): device_class der Entität – Grundlage der klasse-Regeln (domain|device_class)
+  ["device_class", "Klasse", 0, "klasse", "", 130,
+    "device_class der Entität in Home Assistant (z. B. power, temperature) – darauf wirken die klasse-Regeln (domain|device_class). „–“: keine Klasse."],
   // Punkt 115 (0.4.10): HA-Labels der Entität und ihres Geräts (live aus der Registry)
   ["labels", "Labels", 0, "text", "Text, * als Platzhalter", 170,
     "HA-Labels der Entität und ihres Geräts (Einstellungen → Labels). Tooltip je Label: an Entität oder am Gerät. Klick auf ein Label filtert danach."],
@@ -1507,7 +1524,7 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
 // Punkt 130 (0.5.3): Reihenfolge der Spalten und ihre Gruppen – über den Spaltenköpfen steht je Gruppe eine Klammer
 // Punkt 132 (0.5.3): je Gruppe eine Farbe (Klasse gr-<id>); „Aktuell“ heißt wie die Kachelzeile „Istzustand“ und ist rot wie sie
 const SPALTENGRUPPEN = [
-  ["Stammdaten", "stamm", ["entity_id", "herkunft", "labels", "status"]],
+  ["Stammdaten", "stamm", ["entity_id", "herkunft", "device_class", "labels", "status"]],
   ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]],
   ["Istzustand", "ist", ["first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
   ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen", "attr_loesch"]],
@@ -1527,7 +1544,7 @@ const mitKlasse = (html, kl) => {
 // Punkt 132: Spaltenkopf zweizeilig – „Titel (Zusatz)“ → Zeile 1 Titel mit Sortierpfeil, Zeile 2 Zusatz (leer, wenn keiner)
 const kopfZweizeilig = t => { const m = /^(.+?)\s*\(([^()]*)\)$/.exec(t || ""); return `<span class="kz1"><span class="tk">${esc(m ? m[1] : t)}</span><span class="pfeil"></span></span><span class="kz2">${m ? esc(m[2]) : ""}</span>`; };
 const SPALTE =Object.fromEntries(SPALTEN.map(s => [s[0], s]));
-const SORTIERBAR = new Set(["entity_id", "herkunft", "labels", "status", "rows", "rows_24h", "kurz_rows", "first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
+const SORTIERBAR = new Set(["entity_id", "herkunft", "device_class", "labels", "status", "rows", "rows_24h", "kurz_rows", "first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
                             "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"]);
 const FILTERHILFE = {
   text: "enthält … (Groß/klein egal); * und ? als Platzhalter, z. B. sensor.*_power",
@@ -1545,13 +1562,13 @@ const ATTR_SPALTEN = ["attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch
 const ANSICHTEN_ENT = {
   Standard: SPALTEN.map(s => s[0]).filter(k => !ATTR_SPALTEN.includes(k)),
   // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
-  "States & Statistik": ["entity_id", "herkunft", "status", "kurzzeit", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
+  "States & Statistik": ["entity_id", "herkunft", "device_class", "status", "kurzzeit", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
                          "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts"],
   Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
 };
 // Punkt 115 (0.4.10): neue Spalten der Standardansicht auch bei gemerkter Spaltenauswahl einmal einblenden
-const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels", kurz_rows: "dbh_spalte_neu_kurz_rows" };
+const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels", kurz_rows: "dbh_spalte_neu_kurz_rows", device_class: "dbh_spalte_neu_device_class" };   // Punkt 167
 const ladeSichtbar = (schluessel, standard) => {
   try { const l = JSON.parse(speicher.lies(schluessel, "null")); if (Array.isArray(l) && l.length) return new Set(l); } catch { /* Standard */ }
   return new Set(standard);
@@ -1613,7 +1630,7 @@ function baueKopf() {
     const alt = esc(S.f[k] || "");
     if (typ === "status") return `<th><select data-f="status" title="${esc(STATUS_HILFE)}" aria-label="Filter ${STATUS_TITEL} (Zustand)"><option value="">alle</option>
       ${[["aktiv", "aktiv"], ["verwaist", "verwaist (alle)"], ["verwaist_geloescht", "verwaist (gelöscht)"]].map(([w, l]) => `<option value="${w}" ${S.f.status === w ? "selected" : ""}>${l}</option>`).join("")}</select></th>`;
-    if (typ === "wert") return `<th><select data-f="${k}" aria-label="Filter ${esc(t)}"><option value="">alle</option></select></th>`;
+    if (typ === "wert" || typ === "klasse") return `<th><select data-f="${k}" aria-label="Filter ${esc(t)}"><option value="">alle</option></select></th>`;
     if (typ === "herkunft") return `<th><div class="herkunftfeld"><select data-f="herkunft_art" aria-label="Filter Art der Herkunft">
       <option value="">alle Arten</option>${Object.entries(HERKUNFT_LANG).map(([a, l]) => `<option value="${a}" ${S.f.herkunft_art === a ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
       <input data-f="herkunft" value="${esc(S.f.herkunft || "")}" placeholder="${esc(ph)}" title="${esc(FILTERHILFE.herkunft)}" aria-label="Filter Herkunft"></div></th>`;
@@ -1699,8 +1716,16 @@ function fuelleWertOptionen(opt) {
       `<optgroup label="Wert">${opt[art].werte.map(w => `<option value="wert:${esc(w)}">${esc(w)}</option>`).join("")}</optgroup>`;
     sel.value = [...sel.options].some(o => o.value === alt) ? alt : "";
   }
+  // Punkt 167: Auswahl der vorkommenden Klassen
+  const sel = $(`#tEntKopf select[data-f="device_class"]`);
+  if (sel) {
+    const alt = S.f.device_class || "";
+    sel.innerHTML = `<option value="">alle</option><option value="__ohne">ohne Klasse</option>` +
+      (opt.device_class || []).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
+    sel.value = [...sel.options].some(o => o.value === alt) ? alt : "";
+  }
 }
-const filterTyp = f => f === "herkunft_art" ? "auswahl" : (SPALTE[f] || [])[3];
+const filterTyp = f => f === "herkunft_art" || f === "device_class" ? "auswahl" : (SPALTE[f] || [])[3];
 function zeigeFilterStatus(fehler) {
   $("#tEntKopf").querySelectorAll("[data-f]").forEach(el => {
     const f = el.dataset.f, typ = filterTyp(f);
@@ -1727,7 +1752,7 @@ $("#tEntKopf").addEventListener("click", ev => {
   const th = ev.target.closest("th[data-sort]"); if (!th) return;
   // Punkt 74: Mehrfachsortierung, der Server sortiert (sort=status,-rows); ohne Stufe gilt wieder „Zeilen ↓“
   const k = th.dataset.sort;
-  S.sortierung = sortKlick(S.sortierung, k, ev.shiftKey, !["entity_id", "status", "herkunft", "labels"].includes(k));
+  S.sortierung = sortKlick(S.sortierung, k, ev.shiftKey, !["entity_id", "status", "herkunft", "device_class", "labels"].includes(k));
   if (!S.sortierung.length) S.sortierung = [...SORT_STD_ENT];
   speicher.schreib("dbh_sort_ent", JSON.stringify(S.sortierung));
   S.offset = 0; zeigeSortierung(); ladeEntitaeten();
@@ -1784,6 +1809,7 @@ const ZELLEN = {
     return `<td class="mono" title="${esc(e.entity_id)}">${esc(e.entity_id)}${schloss}${hinweis.length ? `<span class="chip warn" title="${esc(hinweis.join("\n"))}">!</span>` : ""}</td>`;
   },
   herkunft: herkunftZelle,
+  device_class: e => e.device_class ? `<td title="${esc(`device_class: ${e.device_class}\nklasse-Muster: ${e.domain}|${e.device_class}`)}">${esc(e.device_class)}</td>` : `<td class="sub">–</td>`,   // Punkt 167
   labels: labelsZelle,
   status: e => `<td class="status-${e.status}" title="Entität ${esc(STATUS_TEXT[e.status] || e.status)}">${esc(STATUS_TEXT[e.status] || e.status)}</td>`,   // Punkt 128
   rows: e => `<td class="n">${zahl(e.rows)}</td>`,
@@ -2500,7 +2526,7 @@ function oeffneEntitaet(e) {
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
   const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "kurzzeit" ? ["keine"] : []);
   const info = `<div class="mono">${esc(e.entity_id)}</div>
-    <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/24 h · state_class: ${esc(e.state_class || "–")} ·
+    <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/24 h · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
       Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
     ${e.herkunft ? `<div class="sub">Herkunft: ${esc(e.herkunft)}${e.herkunft_info ? " – " + esc(e.herkunft_info) : ""}</div>` : ""}
     ${[...e.hinweise, ...e.geschuetzt.map(g => "Zähler-Schutz: Regel " + g + " greift nicht")].map(h => `<div class="chip warn">${esc(h)}</div>`).join(" ")}`;
@@ -2546,11 +2572,57 @@ function naechsteId() {
 const MUSTERHILFE = {
   entity: "genaue Entity-ID, z. B. sensor.time",
   glob: "Muster mit * und ?, z. B. sensor.*_airq_*",
-  klasse: "domain|device_class, z. B. sensor|power",
+  klasse: "eine oder mehrere Klassen (domain|device_class) aus der letzten Analyse wählen",
   verwaist: "Art: alle, geloescht (in der Registry als gelöscht vermerkt) oder ohne_spur – optional zusätzlich ein Entity-Muster wie sensor.windfang_*. Wirkt nur auf verwaiste Entitäten.",
   event: "Event-Typen, auch mit * und ?, z. B. call_service oder script_* – Vorhaltezeit der Events (Logbuch); wirkt nie auf Entitäten.",
   schutz: "Muster mit * und ?, z. B. sensor.rs_meteo_* – diese Entitäten werden nie gekürzt (höchster Rang, auch vor E:-Regeln, auch verwaist).",
 };
+// Punkt 166 (0.5.4): Typ klasse – statt Freitext eine aufklappbare Liste aller Klassen (domain|device_class) aus der letzten
+// Analyse, Mehrfachauswahl; je Klasse Anzahl aktiver Entitäten, davon Zähler (vom Zähler-Schutz ausgenommen). Gespeicherte
+// Klassen, die die Analyse nicht (mehr) kennt, bleiben markiert in der Liste. Das (verborgene) Textfeld #rMuster bleibt die Quelle.
+function klassenModus(t) {
+  const box = $("#rKlassen"), ta = $("#rMuster");
+  if (!box || !ta) return;
+  const an = t === "klasse";
+  box.hidden = !an; ta.hidden = an; $("#rProZeile").hidden = an;
+  if (an) baueKlassenWahl(box, ta);
+}
+async function baueKlassenWahl(box, ta) {
+  box.innerHTML = `<div class="sub">lade Klassen …</div>`;
+  let liste = [], fehler = "";
+  try { const k = await api("klassen"); liste = k.klassen || []; fehler = k.fehler || ""; }
+  catch (e) { fehler = e.message; }
+  if (box.hidden) return;   // inzwischen anderer Typ gewählt
+  const gewaehlt = () => ta.value.split("\n").map(s => s.trim()).filter(Boolean);
+  const bekannt = new Set(liste.map(k => k.muster));
+  const fremd = gewaehlt().filter(m => !bekannt.has(m)).map(m => ({ muster: m, fremd: true }));
+  const start = new Set(gewaehlt());   // beim Öffnen gewählte Klassen stehen oben
+  const alle = [...fremd, ...liste.filter(k => start.has(k.muster)), ...liste.filter(k => !start.has(k.muster))];
+  const info = k => k.fremd ? "nicht in der Analyse"
+    : `${zahl(k.anzahl)} ${k.anzahl === 1 ? "Entität" : "Entitäten"}${k.zaehler ? `, davon ${zahl(k.zaehler)} Zähler – geschützt` : ""}`;
+  const tip = k => k.fremd ? "Diese Klasse kommt in der letzten Analyse bei keiner aktiven Entität vor – die Regel trifft damit derzeit nichts."
+    : k.zaehler ? `Zähler (state_class total/total_increasing) sind vom Zähler-Schutz ausgenommen: die Regel wirkt auf ${zahl(k.anzahl - k.zaehler)} von ${zahl(k.anzahl)} Entitäten.` : "";
+  const text = () => { const g = gewaehlt(); return g.length ? `${g.length} gewählt: ${g.join(", ")}` : "keine Klasse gewählt"; };
+  box.innerHTML = `<details class="kwahl">
+      <summary><span class="kwahl-text">${esc(text())}</span></summary>
+      <input type="search" class="kwahl-suche" placeholder="Klassen durchsuchen, z. B. power" aria-label="Klassen durchsuchen">
+      <div class="kwahl-liste">${alle.length ? alle.map(k => `<label class="${k.fremd ? "fremd" : ""}" title="${esc(tip(k))}" data-m="${esc(k.muster)}">
+        <input type="checkbox" value="${esc(k.muster)}" ${gewaehlt().includes(k.muster) ? "checked" : ""}><span class="mono">${esc(k.muster)}</span><span class="sub">${esc(info(k))}</span></label>`).join("")
+        : `<div class="sub" style="padding:4px 10px">${esc(fehler || "keine Klassen gefunden")}</div>`}</div>
+    </details>${fehler && alle.length ? `<div class="sub">${esc(fehler)}</div>` : ""}`;
+  const d = box.querySelector("details");
+  d.querySelector(".kwahl-liste").addEventListener("change", () => {
+    // Reihenfolge wie in der Liste; Muster anderer Form (ohne |) bleiben erhalten, die Prüfung beim Speichern meldet sie
+    const an = [...d.querySelectorAll(".kwahl-liste input:checked")].map(c => c.value);
+    const rest = gewaehlt().filter(m => !alle.some(k => k.muster === m));
+    ta.value = [...rest, ...an].join("\n");
+    d.querySelector(".kwahl-text").textContent = text();
+  });
+  d.querySelector(".kwahl-suche").addEventListener("input", ev => {
+    const q = ev.target.value.trim().toLowerCase();
+    d.querySelectorAll(".kwahl-liste label").forEach(l => l.hidden = !!q && !l.dataset.m.toLowerCase().includes(q));
+  });
+}
 // Punkt 127: Regel HA-Standard – nur Erklärung und Schalter aktiv/passiv, kein Entfernen, keine Werte
 function zeigeHaStandard(r) {
   dialog(`Regel ${r.id}`, `
@@ -2587,8 +2659,9 @@ function bearbeiteRegel(i, vorlage) {
       <label class="feld">Name<input id="rName" value="${esc(r.name)}"></label>
       <label class="feld">Typ<select id="rTyp">${REGELTYPEN.map(t => `<option ${r.typ === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
     </div>
-    <label class="feld">Muster (eines pro Zeile) – <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
-      <textarea id="rMuster">${esc(r.muster.join("\n"))}</textarea></label>
+    <label class="feld">Muster<span id="rProZeile" ${r.typ === "klasse" ? "hidden" : ""}> (eines pro Zeile)</span> – <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
+      <textarea id="rMuster" ${r.typ === "klasse" ? "hidden" : ""}>${esc(r.muster.join("\n"))}</textarea></label>
+    <div id="rKlassen" ${r.typ === "klasse" ? "" : "hidden"}></div>
     <div class="sub" id="rVerwaistHinweis" ${r.typ === "verwaist" ? "" : "hidden"}>Empfehlung: Kurzzeit mit Frist (z. B. 30 Tage) statt „keine“ – eine verwaiste Entität schreibt nichts mehr,
       nach der Frist ist alles weg, und bis dahin lässt sich eine versehentlich umbenannte Entität wiederherstellen.
       Langzeit „keine“ entfernt auch die Stundenstatistik, die HA sonst für immer behält.</div>
@@ -2672,6 +2745,7 @@ function bearbeiteRegel(i, vorlage) {
     $("#rMusterHilfe").textContent = MUSTERHILFE[t];
     $("#rVerwaistHinweis").hidden = t !== "verwaist";
     eventModus(t);
+    klassenModus(t);
     if (t === "event" && neu) {   // Vorlage für neue Event-Regeln: 7 Tage
       const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
       if (kz && !wertLesen(kz)) {
@@ -2688,6 +2762,7 @@ function bearbeiteRegel(i, vorlage) {
       }
     }
   };
+  klassenModus(r.typ);
   $("#rVorschau").onclick = async () => {
     try {
       const v = await api("regeln/vorschau", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...lies(), id: lies().id || "VORSCHAU" }) });

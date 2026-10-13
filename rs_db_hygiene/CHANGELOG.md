@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4b4 (Beta)
+- **Neue Spalte „Klasse“ (Punkt 167):** Tab Entitäten, Gruppe Stammdaten, hinter „Gerät / Herkunft“: die `device_class` der Entität. Sortierbar, Filter als Auswahl (alle vorkommenden Klassen oder „ohne Klasse“); sichtbar in den Ansichten Standard und States & Statistik. Auch im CSV-Export und im Regel-Dialog der Entität
+- **Klassen-Auswahl in der Regelmaske (Punkt 166):** Beim Typ „klasse“ werden die Klassen nicht mehr eingetippt, sondern aus einer aufklappbaren Liste gewählt (Mehrfachauswahl, mit Suche). Je Klasse steht die Anzahl aktiver Entitäten, davon Zähler (vom Zähler-Schutz ausgenommen). Gespeicherte Klassen, die die Analyse nicht mehr kennt, bleiben markiert in der Liste
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.4b3 (Beta)
 - **Logo (Punkt 165):** Die Oberfläche zeigt oben das neue Logo statt der Überschrift, daneben die Version; der Knopf „Analyse starten“ ist genauso hoch wie das Logo
 - **Icons:** App und Integration haben eigene Icons und Logos (im App-Store bzw. ab Home Assistant 2026.3 bei der Integration)

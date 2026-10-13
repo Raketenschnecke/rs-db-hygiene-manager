@@ -9,6 +9,7 @@ Parameter f_<spalte> aus der Abfrage:
   Wert   f_kurzzeit f_attribute f_langzeit regel:R14 | std | wert:30 Tage
   Herkunft f_herkunft (Text in Name/Datei und Tooltip), f_herkunft_art (geraet, yaml, …), f_device_id (genau)
   Labels f_labels                          enthält bzw. * und ? in der Liste „A, B“ (Labels an Entität und Gerät, ab 0.4.10)
+  Klasse f_device_class                    genau (z. B. power) | __ohne (keine device_class), ab 0.5.4 (Punkt 167)
 Ungültige Eingaben werden ignoriert und als Fehler je Spalte zurückgegeben.
 """
 import datetime
@@ -129,6 +130,11 @@ def gleich_filter(ausdruck):
     return lambda v: (v or "") == a
 
 
+def klasse_filter(ausdruck):
+    a = ausdruck.strip()
+    return gleich_filter("" if a == "__ohne" else a)
+
+
 def _wert_der_spalte(e, spalte):
     if spalte == "herkunft":
         return f"{e.get('herkunft') or ''} {e.get('herkunft_info') or ''}"
@@ -154,6 +160,8 @@ def baue(parameter):
                 f = text_filter(roh)
             elif spalte in ("herkunft_art", "device_id"):
                 f = gleich_filter(roh)
+            elif spalte == "device_class":
+                f = klasse_filter(roh)
             elif spalte == "status":
                 f = status_filter(roh)
             elif spalte in ZAHL_SPALTEN:
@@ -189,6 +197,8 @@ def optionen(entitaeten):
                 regeln.add(w["regel"])
             werte.add(w.get("anzeige"))
         out[art] = {"regeln": sorted(regeln, key=lambda r: (r.startswith("E:"), r)), "werte": sorted(werte, key=_sortwert)}
+    # Punkt 167: vorkommende Klassen (device_class) für die Auswahl im Spaltenfilter
+    out["device_class"] = sorted({e.get("device_class") for e in entitaeten if e.get("device_class")})
     return out
 
 
