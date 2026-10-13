@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 500 200" width="__W__" height="__H__">
+<g transform="translate(10,10)">
+<rect x="0" y="0" width="180" height="180" rx="36" fill="#5c0000"/>
+<path d="M30 82 L85 32 L140 82 V150 H30 Z" fill="none" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"/>
+<path d="M46 92 v38 a20 6 0 0 0 40 0 v-38 z" fill="#ffffff"/>
+<path d="M46 111 a20 6 0 0 0 40 0" fill="none" stroke="#5c0000" stroke-width="2.5"/>
+<ellipse cx="66" cy="92" rx="20" ry="6" fill="#ffd1d1"/>
+<path d="M102 98 L112 108 L122 98 M102 114 L112 124 L122 114 M102 130 L112 140 L122 130" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="153" y="44" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="600" font-size="24" fill="#ffffff">RS</text>
+</g>
+<text x="212" y="96" font-family="Segoe UI, Arial, sans-serif" font-weight="600" font-size="50" fill="#5c0000">DB Hygiene</text>
+<text x="213" y="152" font-family="Segoe UI, Arial, sans-serif" font-weight="400" font-size="44" fill="#5c0000">Manager</text>
+</svg>

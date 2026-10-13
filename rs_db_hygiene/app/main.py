@@ -17,6 +17,7 @@ import analyse
 import automatik
 import herkunft
 import loeschen
+import optimierung
 import probelauf
 import regeln as rg
 import spaltenfilter
@@ -63,7 +64,12 @@ class Zustand:
             return None
         schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
         if schluessel not in self._pl_cache:
-            self._pl_cache = {schluessel: probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)}
+            # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Empfehlungen rechnen teils mit
+            # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
+            alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
+            while len(alt) >= 3:
+                alt.pop(next(iter(alt)))
+            self._pl_cache = {**alt, schluessel: probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)}
         return self._pl_cache[schluessel]
 
 
@@ -195,6 +201,9 @@ async def nachtlauf():
 ERLAUBT = {INGRESS_IP, "127.0.0.1"} | {ip.strip() for ip in os.environ.get("DBH_ERLAUBT", "").split(",") if ip.strip()}
 
 
+# Punkt 164 (0.5.4): Name und Version dieser App (vom Supervisor; ohne Supervisor aus DBH_APP_NAME/DBH_APP_VERSION) –
+# die Oberfläche zeigt damit, ob sie zur stabilen App oder zur Beta gehört
+APP = {"name": os.environ.get("DBH_APP_NAME"), "version": os.environ.get("DBH_APP_VERSION")}
 SCHLUESSEL = {"wert": None}     # Zugang der Integration (Punkt 62), beim Start aus /data gelesen bzw. erzeugt
 
 
@@ -237,7 +246,7 @@ async def status(_request):
         con.close()
     return web.json_response({"job": Z.job, "letzter_job": Z.letzter_job, "fehler": Z.letzter_fehler,
                               "analyse": info, "attribute": attr, "optionen": optionen(),
-                              "regeln_geaendert": Z.mtime(REGELN),
+                              "regeln_geaendert": Z.mtime(REGELN), "app": APP,
                               "pruefung": await asyncio.to_thread(pkd_pruefung)})
 
 
@@ -282,8 +291,24 @@ async def probelauf_summe(request):
     return web.json_response({"stand": r["stand"], "summe": r["summe"], "regeln": r["regeln"], "events": r.get("events", [])})
 
 
+async def klassen(_request):
+    """Punkt 166: alle Paare domain|device_class aktiver Entitäten aus der letzten Analyse – Auswahl für klasse-Regeln.
+    zaehler = davon Zähler (state_class total/total_increasing), die der Zähler-Schutz von klasse-Regeln ausnimmt."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return web.json_response({"klassen": [], "fehler": "Noch keine Analyse vorhanden"})
+    zahl = {}
+    for e in r["entitaeten"]:
+        if e["status"] != "aktiv" or not e.get("device_class"):
+            continue
+        k = zahl.setdefault(f'{e["domain"]}|{e["device_class"]}', [0, 0])
+        k[0] += 1
+        k[1] += (e.get("state_class") or "").startswith("total")
+    return web.json_response({"klassen": [{"muster": m, "anzahl": a, "zaehler": z} for m, (a, z) in sorted(zahl.items())]})
+
+
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
-              "loeschbar", "prognose_bytes", "herkunft", "labels",
+              "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
               "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"}
 ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
@@ -404,8 +429,8 @@ def sortierung(q):
 def _sortwert(k):
     if k == "loeschbar":
         return lambda e: e["loeschbar"]["states"]
-    if k == "labels":      # Punkt 115: ohne Label hinten (aufsteigend)
-        return lambda e: (not e.get("labels"), (e.get("labels") or "").lower())
+    if k in ("labels", "device_class"):      # Punkte 115/167: ohne Label bzw. Klasse hinten (aufsteigend)
+        return lambda e: (not e.get(k), (e.get(k) or "").lower())
     if k in ("entity_id", "status", "herkunft"):
         return lambda e: (e.get(k) or "").lower()
     return lambda e: e[k] if e[k] is not None else -1
@@ -438,7 +463,7 @@ async def export_csv(request):
         raise web.HTTPNotFound()
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";")
-    w.writerow(["entity_id", "herkunft_art", "herkunft", "herkunft_info", "labels", "status", "rows", "rows_24h", "state_class", "lts_rows", "kurz_rows",
+    w.writerow(["entity_id", "herkunft_art", "herkunft", "herkunft_info", "labels", "status", "rows", "rows_24h", "state_class", "device_class", "lts_rows", "kurz_rows",
                 "kurzzeit", "kurzzeit_regel", "langzeit", "langzeit_regel",
                 "loeschmenge_sofort_states", "loeschmenge_sofort_kurz", "loeschmenge_sofort_lts",
                 "attr_bestand_bytes", "attr_zeilen", "attr_zuwachs_tag_bytes", "attr_avg_bytes",
@@ -455,7 +480,7 @@ async def export_csv(request):
         wv = e["werte"] or {}
         zelle = lambda a, k: (wv.get(a) or {}).get(k) or ""  # noqa: E731
         w.writerow([e["entity_id"], e.get("herkunft_art", ""), e.get("herkunft", ""), e.get("herkunft_info", ""),
-                    e.get("labels", ""), e["status"], e["rows"], e["rows_24h"], e["state_class"], e["lts_rows"], e["kurz_rows"],
+                    e.get("labels", ""), e["status"], e["rows"], e["rows_24h"], e["state_class"], e.get("device_class") or "", e["lts_rows"], e["kurz_rows"],
                     zelle("kurzzeit", "anzeige"), zelle("kurzzeit", "regel"), zelle("langzeit", "anzeige"), zelle("langzeit", "regel"),
                     e["loeschbar"]["states"], e["loeschbar"]["kurz"], e["loeschbar"]["lts"],
                     *[("" if e.get(k) is None else (round(e[k]) if isinstance(e[k], float) and k != "attr_anteil" else e[k]))
@@ -557,43 +582,66 @@ async def regeln_import(request):
 
 
 async def regel_vorschau(request):
-    """Welche Entitäten träfe diese Regel – und wo wird sie im Regelwerk überstimmt (Punkt 29)?
+    """Welche Entitäten träfe diese Regel – wo wird sie überstimmt (Punkt 29) und was bewirkt sie (Punkt 170)?
 
     Treffer: die Regel allein betrachtet (mit Zähler-Schutz). Überstimmt: im vollständigen Regelwerk, in das die
     Regel an ihrer Stelle eingesetzt wird (bestehende ID ersetzt, neue am Ende), gewinnt bei mindestens einem Wert,
-    den sie setzt, eine andere Regel.
+    den sie setzt, eine andere Regel. Wirkung: zusätzliche Löschmenge sofort und Ersparnis im Prognosezeitraum
+    gegenüber den heutigen Regeln (optimierung.wirkung).
     """
     body = await request.json()
     regel = rg.normalisiere({"regeln": [body], "events": {}})["regeln"][0]
-    regel["aktiv"] = True
-    if regel["typ"] == "event":
-        return web.json_response(await _event_vorschau(regel))
-    allein = rg.Aufloeser({"standard": rg.STANDARD, "regeln": [regel]})
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"anzahl": 0, "treffer": [], "fehler": "Noch keine Analyse vorhanden"})
     bestand = rg.lade(REGELN, VORLAGE)
-    liste = [regel if x["id"] == regel["id"] else x for x in bestand["regeln"]]
-    if all(x["id"] != regel["id"] for x in bestand["regeln"]):
-        liste.append(regel)
-    gesamt = rg.Aufloeser({"standard": bestand["standard"], "regeln": liste})
+    hist = await asyncio.to_thread(optimierung.histogramme, CACHE)
+    fn = optimierung.event_wirkung if regel["typ"] == "event" else optimierung.wirkung
+    return web.json_response(await asyncio.to_thread(fn, regel, r, bestand, hist, ziel))
+
+
+async def optimierungen(request):
+    """Punkt 176: Regelvorschläge aus der letzten Analyse."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"vorschlaege": [], "fehler": "Noch keine Analyse vorhanden"})
+
+    def rechne():
+        hist = optimierung.histogramme(CACHE)
+        ktx = warnungen.kontext(HA_CONFIG)
+        return optimierung.vorschlaege(r, rg.lade(REGELN, VORLAGE), hist, ktx, HA_CONFIG,
+                                       optimierung.lies_ignoriert(DATA), ziel)
+    t0 = time.time()
+    liste = await asyncio.to_thread(rechne)
+    return web.json_response({"vorschlaege": liste, "stand": r["stand"], "dauer_s": round(time.time() - t0, 2)})
+
+
+async def optimierung_ignorieren(request):
+    body = await request.json()
+    s = await asyncio.to_thread(optimierung.setze_ignoriert, DATA, str(body.get("id") or ""), bool(body.get("ignorieren", True)))
+    return web.json_response({"ignoriert": sorted(s)})
+
+
+async def muster_verdichten(request):
+    """Punkt 171: Platzhalter-Muster für eine Auswahl von Entity-IDs."""
+    body = await request.json()
     r = await asyncio.to_thread(Z.probelauf, None, False)
-    treffer, geschuetzt, ueberstimmt, von = [], [], 0, {}
-    for e in (r or {}).get("entitaeten", []):
-        x = allein.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
-        if x["geschuetzt"]:
-            geschuetzt.append(e["entity_id"])
-            continue
-        if not any(x[a]["regel"] for a in rg.WERTE):
-            continue
-        treffer.append({"entity_id": e["entity_id"], "rows_24h": e["rows_24h"]})
-        g = gesamt.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
-        sieger = {g[a]["regel"] for a in rg.WERTE if regel[a] and g[a]["regel"] != regel["id"]}
-        if sieger:
-            ueberstimmt += 1
-            for s in sieger:
-                von[s or "Standard"] = von.get(s or "Standard", 0) + 1
-    treffer.sort(key=lambda t: -t["rows_24h"])
-    return web.json_response({"anzahl": len(treffer), "treffer": treffer[:200], "geschuetzt": geschuetzt[:200],
-                              "anzahl_geschuetzt": len(geschuetzt), "anzahl_ueberstimmt": ueberstimmt,
-                              "ueberstimmt_von": dict(sorted(von.items(), key=lambda kv: -kv[1]))})
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response(await asyncio.to_thread(optimierung.verdichte, list(body.get("ids") or []), r))
+
+
+async def entitaet_liste(_request):
+    """Punkte 172/173: kompakte Liste aller Entitäten für Autovervollständigung und „Regel für …“ –
+    [entity_id, Zeilen je Tag, aktiv (1/0), Zähler (1/0), device_class]."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return web.json_response({"e": []})
+    return web.json_response({"e": [[e["entity_id"], e["rows_24h"] or 0, int(e["status"] == "aktiv"),
+                                     int((e.get("state_class") or "").startswith("total")), e.get("device_class") or ""]
+                                    for e in r["entitaeten"]]})
 
 
 async def regel_pruefen(request):
@@ -605,31 +653,6 @@ async def regel_pruefen(request):
         return web.json_response({"warnungen": []})
     ktx = await asyncio.to_thread(warnungen.kontext, HA_CONFIG)
     return web.json_response({"warnungen": await asyncio.to_thread(warnungen.pruefe_regel, regel, pl, ktx)})
-
-
-async def _event_vorschau(regel):
-    """Vorschau einer Event-Regel (Punkt 51): Treffer sind Event-Typen; überstimmt, wo eine andere Event-Regel gewinnt."""
-    bestand = rg.lade(REGELN, VORLAGE)
-    liste = [regel if x["id"] == regel["id"] else x for x in bestand["regeln"]]
-    if all(x["id"] != regel["id"] for x in bestand["regeln"]):
-        liste.append(regel)
-    gesamt = {"standard": bestand["standard"], "regeln": liste}
-    r = await asyncio.to_thread(Z.probelauf, None, False)
-    pkd = (r or {}).get("stand", {}).get("purge_keep_days") or _aktuelle_pkd()   # Punkt 102: kein fester Rückfall 365 mehr
-    treffer, ueberstimmt, von = [], 0, {}
-    for ev in (r or {}).get("events", []):
-        allein = rg.event_regel({"regeln": [regel]}, ev["event_type"], pkd)
-        if not allein["regel"]:
-            continue
-        treffer.append({"entity_id": ev["event_type"], "rows_24h": ev["zeilen_24h"]})
-        sieger = rg.event_regel(gesamt, ev["event_type"], pkd)["regel"]
-        if sieger != regel["id"]:
-            ueberstimmt += 1
-            von[sieger or "Standard"] = von.get(sieger or "Standard", 0) + 1
-    treffer.sort(key=lambda t: -t["rows_24h"])
-    return {"anzahl": len(treffer), "treffer": treffer[:200], "geschuetzt": [], "anzahl_geschuetzt": 0,
-            "anzahl_ueberstimmt": ueberstimmt, "ueberstimmt_von": dict(sorted(von.items(), key=lambda kv: -kv[1])),
-            "einheit": "Event-Typen"}
 
 
 async def lts_ohne(_request):
@@ -962,6 +985,14 @@ def _nicht_ausgefuehrt(pl, regel_daten, stufe_b=False):
             "attr_bytes": su.get("loeschbar_attr_bytes"), "events_zeilen": su.get("loeschbar_events", 0), "stufe_b": stufe_b}
 
 
+def _app_info():
+    try:
+        d = automatik._supervisor("/addons/self/info")["data"]
+        APP.update(name=d.get("name"), version=d.get("version"))
+    except Exception as e:  # noqa: BLE001 – nur Anzeige
+        _LOG.warning("Name und Version der App nicht lesbar: %s", e)
+
+
 async def beim_start(app):
     await asyncio.to_thread(_protokoll_aufraeumen)
     try:   # Punkt 85: Prüfung bei jedem Start (die GUI zeigt sie als Banner)
@@ -970,6 +1001,8 @@ async def beim_start(app):
     except Exception:  # noqa: BLE001 – die Prüfung darf den Start nicht verhindern
         _LOG.exception("Prüfung purge_keep_days fehlgeschlagen")
     SCHLUESSEL["wert"] = await asyncio.to_thread(automatik.schluessel, DATA)
+    if os.environ.get("SUPERVISOR_TOKEN"):   # nur im Add-on: Name/Version (Punkt 164)
+        await asyncio.to_thread(_app_info)
     if os.environ.get("SUPERVISOR_TOKEN"):   # nur im Add-on: bei HA anmelden (Discovery)
         app["discovery"] = asyncio.create_task(asyncio.to_thread(automatik.melde_discovery, SCHLUESSEL["wert"]))
     app["nachtlauf"] = asyncio.create_task(nachtlauf())
@@ -983,12 +1016,17 @@ def erstelle_app():
         web.post("/api/job/{art}", job_starten),
         web.get("/api/probelauf", probelauf_summe),
         web.get("/api/entitaeten", entitaeten),
+        web.get("/api/klassen", klassen),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),
         web.put("/api/regeln", regeln_schreiben),
         web.post("/api/regeln/vorschau", regel_vorschau),
         web.post("/api/regeln/pruefen", regel_pruefen),
+        web.get("/api/optimierungen", optimierungen),
+        web.post("/api/optimierungen/ignorieren", optimierung_ignorieren),
+        web.post("/api/muster/verdichten", muster_verdichten),
+        web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),
         web.post("/api/regeln/zuruecksetzen", regeln_zuruecksetzen),
         web.post("/api/regeln/wiederherstellen", regeln_wiederherstellen),

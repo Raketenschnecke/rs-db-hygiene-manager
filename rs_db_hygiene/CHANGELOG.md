@@ -4,6 +4,55 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4
+Zusammenfassung der Testversionen 0.5.4b1 bis 0.5.4b7 und des Nachtrags (Einzelheiten darunter).
+- **Neuer Reiter „Empfehlungen“:** Regelvorschläge aus der letzten Analyse – gleichartige Entitäten als ein Muster, Vielschreiber, große Attribute, nirgends verwendete und deaktivierte Entitäten, verwaiste ohne Regel, Event-Typen ohne Event-Regel; je mit Treffern, Löschmenge sofort und Ersparnis, Hinweis auf passende passive Regeln. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv, „ignorieren“ merkt sich die App. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert
+- **Einfachere Regelanlage:** Live-Vorschau mit Treffern, Löschmenge sofort und Ersparnis; viele einzelne IDs werden zu Mustern verdichtet; „Regel für gleichartige“ im Entitäts-Dialog; Autovervollständigung im Musterfeld; Schnellknöpfe für die Werte; Regeltypen im Klartext, der Typ ergibt sich aus den Mustern; beim Typ „klasse“ Auswahl aus allen vorhandenen Klassen
+- **Neue Spalte „Klasse“** (device_class) im Tab Entitäten, auch im CSV-Export
+- **Auswahl im Tab Entitäten** gilt nur für den aktuellen Filter
+- **Verbindungswächter:** Ist die App nicht erreichbar, zeigt die Oberfläche ein rotes Banner und sperrt ändernde Knöpfe; neben dem Logo steht die Version
+- **Logo und Icons:** neues Logo in der Oberfläche (Schrift im Rot des Piktogramms), eigene Icons für App und Integration (bei der Integration ab Home Assistant 2026.3)
+- Tab Löschen: die Knöpfe zur Tabelle stehen direkt über der Tabelle
+- Die Integration ändert sich nur bei Icons und Logo; ihr Update über HACS ist dafür nötig, sonst optional
+
+## Nachtrag zu 0.5.4 (nach 0.5.4b7, ohne eigene Beta)
+- Logo: Schrift „DB Hygiene Manager“ im Rot des Piktogramms (#5c0000; im dunklen Modus bleibt das hellere Rot); Reiter „Optimierungen“ heißt jetzt „Empfehlungen“
+
+## 0.5.4b7 (Beta)
+- **Neuer Reiter „Optimierungen“ (Punkt 176):** Regelvorschläge aus der letzten Analyse – Gruppen gleichartiger Entitäten als ein Muster, Vielschreiber, große Attribute, nirgends verwendete und deaktivierte Entitäten, verwaiste ohne Regel, Event-Typen ohne Event-Regel. Je Vorschlag Treffer, Zuwachs, Löschmenge sofort und Ersparnis im Prognosezeitraum; Hinweis, wenn eine passive Regel die Daten schon abdeckt. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv, „ignorieren“ merkt sich die App. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern; die Langzeit bleibt unverändert
+- **Live-Vorschau in der Regelmaske (Punkt 170):** Treffer, Überstimmungen, zusätzliche Löschmenge sofort und Ersparnis erscheinen beim Eingeben; der Knopf „Treffer anzeigen“ entfällt
+- **Auswahl zu Mustern verdichten (Punkt 171):** Bei vielen einzelnen IDs schlägt die Maske Muster mit Platzhaltern vor, die genau dieselben Entitäten treffen
+- **„Regel für gleichartige“ (Punkt 172):** Im Entitäts-Dialog Knöpfe für gleiches Präfix, gleiche Endung und gleiche Klasse, je mit Trefferzahl
+- **Autovervollständigung (Punkt 173)** im Musterfeld, **Schnellknöpfe (Punkt 174)** für Kurzzeit und Langzeit, **Regeltypen im Klartext (Punkt 175)**; bei neuen Regeln ergibt sich der Typ aus den Mustern
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.4b6 (Beta)
+- **Auswahl gilt nur für den aktuellen Filter (Punkt 169):** Ändert sich ein Filter im Tab Entitäten (Spaltenfilter, Domain, Regel-Filter, „nur mit Hinweis/Schutz“, Gerät), werden ausgewählte Entitäten abgewählt, die nicht mehr passen; die Leiste meldet, wie viele. Sortieren und Blättern lassen die Auswahl unverändert. „Regel/Schutz aus Auswahl anlegen“ und „Auswahl als CSV“ nehmen damit keine ausgefilterten Entitäten mehr mit
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.4b5 (Beta)
+- **Regelmaske, Typ klasse (Punkt 168, Korrektur zu 166):** Eine lange Klassen-Auswahl macht die Maske nicht mehr breiter als das Fenster (ID, Name und Typ blieben sonst unerreichbar). Beim Wechsel auf „klasse“ werden Entity-IDs (z. B. aus „Regel aus Auswahl anlegen“) in ihre Klassen umgesetzt statt als ungültige Muster übernommen; beim Wechsel zurück stehen die vorherigen Muster wieder da
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.4b4 (Beta)
+- **Neue Spalte „Klasse“ (Punkt 167):** Tab Entitäten, Gruppe Stammdaten, hinter „Gerät / Herkunft“: die `device_class` der Entität. Sortierbar, Filter als Auswahl (alle vorkommenden Klassen oder „ohne Klasse“); sichtbar in den Ansichten Standard und States & Statistik. Auch im CSV-Export und im Regel-Dialog der Entität
+- **Klassen-Auswahl in der Regelmaske (Punkt 166):** Beim Typ „klasse“ werden die Klassen nicht mehr eingetippt, sondern aus einer aufklappbaren Liste gewählt (Mehrfachauswahl, mit Suche). Je Klasse steht die Anzahl aktiver Entitäten, davon Zähler (vom Zähler-Schutz ausgenommen). Gespeicherte Klassen, die die Analyse nicht mehr kennt, bleiben markiert in der Liste
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.4b3 (Beta)
+- **Logo (Punkt 165):** Die Oberfläche zeigt oben das neue Logo statt der Überschrift, daneben die Version; der Knopf „Analyse starten“ ist genauso hoch wie das Logo
+- **Icons:** App und Integration haben eigene Icons und Logos (im App-Store bzw. ab Home Assistant 2026.3 bei der Integration)
+- Die Integration ändert sich sonst nicht; ihr Update über HACS ist nur für das Icon nötig
+
+## 0.5.4b2 (Beta)
+- **Verbindungswächter (Punkt 164):** Ist die App nicht erreichbar (gestoppt, Neustart), zeigt die Oberfläche ein rotes Banner und sperrt alle ändernden Knöpfe; Speichern wird abgewiesen. Sobald die App wieder antwortet, verschwindet das Banner und die Daten werden neu geladen
+- **Kennung (Punkt 164):** Neben der Überschrift steht die Version, bei der Beta auffällig als „Beta 0.5.4b2“; der Fenstertitel der Beta endet auf „(Beta)“
+- **Tab Löschen (Punkt 163):** „Filter zurücksetzen“, „Spaltenbreiten zurücksetzen“, „Spalten …“ und „CSV“ stehen jetzt direkt über der Tabelle; oben bleiben „Umfang“ und „Plan neu laden“
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
+## 0.5.4b1 (Beta)
+- **Beta-Version, nur auf dem Branch `beta`:** Stand wie 0.5.3, Grundlage für die nächsten Testversionen (noch keine neuen Punkte)
+
 ## 0.5.3
 Zusammenfassung der Testversionen 0.5.3b1 bis 0.5.3b7 (Einzelheiten darunter).
 - **Neue Startregel HA-Standard:** bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (10 Tage, Langzeit unbegrenzt); bei bestehenden Installationen passiv ergänzt, nicht löschbar
