@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.4b5 (Beta)
+- **Regelmaske, Typ klasse (Punkt 168, Korrektur zu 166):** Eine lange Klassen-Auswahl macht die Maske nicht mehr breiter als das Fenster (ID, Name und Typ blieben sonst unerreichbar). Beim Wechsel auf „klasse“ werden Entity-IDs (z. B. aus „Regel aus Auswahl anlegen“) in ihre Klassen umgesetzt statt als ungültige Muster übernommen; beim Wechsel zurück stehen die vorherigen Muster wieder da
+- Nur die App ändert sich. Die Integration bekommt nur die neue Versionsnummer
+
 ## 0.5.4b4 (Beta)
 - **Neue Spalte „Klasse“ (Punkt 167):** Tab Entitäten, Gruppe Stammdaten, hinter „Gerät / Herkunft“: die `device_class` der Entität. Sortierbar, Filter als Auswahl (alle vorkommenden Klassen oder „ohne Klasse“); sichtbar in den Ansichten Standard und States & Statistik. Auch im CSV-Export und im Regel-Dialog der Entität
 - **Klassen-Auswahl in der Regelmaske (Punkt 166):** Beim Typ „klasse“ werden die Klassen nicht mehr eingetippt, sondern aus einer aufklappbaren Liste gewählt (Mehrfachauswahl, mit Suche). Je Klasse steht die Anzahl aktiver Entitäten, davon Zähler (vom Zähler-Schutz ausgenommen). Gespeicherte Klassen, die die Analyse nicht mehr kennt, bleiben markiert in der Liste

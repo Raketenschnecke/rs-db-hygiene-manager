@@ -288,12 +288,13 @@ label.feld > * { font-size: 14px; color: var(--text); }
 .leer { padding: 24px; color: var(--muted); text-align: center; }
 textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: 12.5px; }
 /* Punkt 166: Klassen-Auswahl der Regelmaske (Typ klasse) – aufklappbare Liste mit Mehrfachauswahl */
-.kwahl { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); font-size: 13px; }
+#rKlassen { min-width: 0; }   /* Punkt 166b: lange Auswahl darf die Maske nicht verbreitern */
+.kwahl { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); font-size: 13px; }
 .kwahl > summary { cursor: pointer; padding: 5px 9px; list-style: none; display: flex; gap: 6px; align-items: baseline; }
 .kwahl > summary::-webkit-details-marker { display: none; }
 .kwahl > summary::after { content: "▾"; margin-left: auto; color: var(--muted); }
 .kwahl[open] > summary::after { content: "▴"; }
-.kwahl .kwahl-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
+.kwahl .kwahl-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
 .kwahl .kwahl-suche { margin: 0 8px 6px; width: calc(100% - 16px); box-sizing: border-box; }
 .kwahl .kwahl-liste { max-height: 260px; overflow-y: auto; border-top: 1px solid var(--line); padding: 4px 0; }
 .kwahl .kwahl-liste label { display: flex; gap: 8px; align-items: baseline; padding: 3px 10px; cursor: pointer; }
@@ -2580,10 +2581,21 @@ const MUSTERHILFE = {
 // Punkt 166 (0.5.4): Typ klasse – statt Freitext eine aufklappbare Liste aller Klassen (domain|device_class) aus der letzten
 // Analyse, Mehrfachauswahl; je Klasse Anzahl aktiver Entitäten, davon Zähler (vom Zähler-Schutz ausgenommen). Gespeicherte
 // Klassen, die die Analyse nicht (mehr) kennt, bleiben markiert in der Liste. Das (verborgene) Textfeld #rMuster bleibt die Quelle.
-function klassenModus(t) {
+// Punkt 166b: beim Wechsel zu klasse nur Muster der Form domain|device_class übernehmen (z. B. nicht die Entity-IDs aus
+// „Regel aus Auswahl anlegen“); die vorherigen Muster kommen beim Wechsel zurück zu einem anderen Typ wieder.
+function klassenModus(t, wechsel) {
   const box = $("#rKlassen"), ta = $("#rMuster");
   if (!box || !ta) return;
   const an = t === "klasse";
+  if (wechsel && an && box.dataset.vorher === undefined) {
+    box.dataset.vorher = ta.value;
+    // Entity-IDs (z. B. aus der Auswahl) werden zu ihren Klassen, soweit die Zeilen geladen sind
+    const zeilen = ta.value.split("\n").map(x => x.trim()).filter(Boolean);
+    const aus = zeilen.map(x => S.zeilen?.[x]).filter(e => e?.device_class).map(e => `${e.domain}|${e.device_class}`);
+    ta.value = [...new Set([...zeilen.filter(x => /^[^|\s]+\|[^|\s]+$/.test(x)), ...aus])].join("\n");
+  } else if (wechsel && !an && box.dataset.vorher !== undefined) {
+    ta.value = box.dataset.vorher; delete box.dataset.vorher;
+  }
   box.hidden = !an; ta.hidden = an; $("#rProZeile").hidden = an;
   if (an) baueKlassenWahl(box, ta);
 }
@@ -2659,7 +2671,7 @@ function bearbeiteRegel(i, vorlage) {
       <label class="feld">Name<input id="rName" value="${esc(r.name)}"></label>
       <label class="feld">Typ<select id="rTyp">${REGELTYPEN.map(t => `<option ${r.typ === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
     </div>
-    <label class="feld">Muster<span id="rProZeile" ${r.typ === "klasse" ? "hidden" : ""}> (eines pro Zeile)</span> – <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
+    <label class="feld"><span>Muster<span id="rProZeile" ${r.typ === "klasse" ? "hidden" : ""}> (eines pro Zeile)</span> –</span> <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
       <textarea id="rMuster" ${r.typ === "klasse" ? "hidden" : ""}>${esc(r.muster.join("\n"))}</textarea></label>
     <div id="rKlassen" ${r.typ === "klasse" ? "" : "hidden"}></div>
     <div class="sub" id="rVerwaistHinweis" ${r.typ === "verwaist" ? "" : "hidden"}>Empfehlung: Kurzzeit mit Frist (z. B. 30 Tage) statt „keine“ – eine verwaiste Entität schreibt nichts mehr,
@@ -2745,7 +2757,7 @@ function bearbeiteRegel(i, vorlage) {
     $("#rMusterHilfe").textContent = MUSTERHILFE[t];
     $("#rVerwaistHinweis").hidden = t !== "verwaist";
     eventModus(t);
-    klassenModus(t);
+    klassenModus(t, true);
     if (t === "event" && neu) {   // Vorlage für neue Event-Regeln: 7 Tage
       const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
       if (kz && !wertLesen(kz)) {
