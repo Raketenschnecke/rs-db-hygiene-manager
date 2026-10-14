@@ -392,6 +392,17 @@ table.baustein thead th[data-sort] { cursor: pointer; }
 .schalter.an { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
 .schalter.aus { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
 .massen { padding: 6px 10px; border-radius: 8px; background: var(--accent-weak); border: 1px solid var(--accent); }
+/* Punkt 194 (0.5.5b9): Kasten „Wer schreibt am meisten?“ im Reiter Empfehlungen */
+.pareto { margin: 0 0 10px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.pareto > summary { cursor: pointer; padding: 2px 0; }
+.pareto-kopf { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.pareto-tab { border-collapse: collapse; font-size: 13px; }
+.pareto-tab th, .pareto-tab td { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.pareto-tab .n { text-align: right; font-variant-numeric: tabular-nums; }
+.pareto-tab td.aktion button { margin-right: 4px; }
+.pareto-balken { position: relative; width: 220px; height: 18px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+.pareto-balken span { position: absolute; inset: 0 auto 0 0; background: var(--zf-prog); }
+.pareto-balken b { position: relative; padding-left: 6px; font-size: 12px; line-height: 18px; }
 td.mitte, th.mitte { text-align: center; padding-left: 4px; padding-right: 4px; }
 input[type=checkbox].wahl { width: 16px; height: 16px; margin: 0; cursor: pointer; }
 .loeschkasten { display: grid; gap: 8px; margin-bottom: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
@@ -481,6 +492,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
     <div class="leiste massen" id="massenleiste" hidden></div>
     <div class="leiste massen" id="massenEnt" hidden></div>
     <div class="leiste massen" id="massenEv" hidden></div>
+    <div class="leiste massen" id="massenOpt" hidden></div>
     <div class="leiste" data-leiste="events" hidden>
       <button id="evNeueRegel" class="primaer">Neue Event-Regel</button>
       <button data-reset-filter="events">Filter zurücksetzen</button>
@@ -561,7 +573,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         <ol>
           <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 4–10 min). Nachts läuft die Analyse automatisch. Ist eine Analyse veraltet (älter als 26 h bzw. die Attribut-Analyse älter als 7 Tage), trägt der Knopf ein gelbes Ausrufezeichen; sein Tooltip zeigt den Stand beider Analysen.</li>
           <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird).</li>
-          <li><b>Tab Entitäten:</b> nach „Zuwachs“ (Zeilen / 24 h) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
+          <li><b>Tab Entitäten:</b> nach „Zuwachs“ (Zeilen je Tag) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
           <li><b>Regel anlegen</b> (Tab Regeln → „Neue Regel“) und zunächst <b>passiv</b> lassen. Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert.</li>
           <li>Passt die Wirkung, die Regel <b>aktiv</b> schalten.</li>
           <li><b>Tab Löschen:</b> Plan ansehen und „Jetzt ausführen“. Voraussetzung ist der Hauptschalter „Löschen freigegeben“ in der App-Konfiguration.</li>
@@ -609,6 +621,8 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
             <tr><td><b>entity</b></td><td>exakte Entity-IDs, <b>keine Platzhalter</b></td><td>aktive und verwaiste</td><td><code>sensor.wohnzimmer_temperatur</code></td></tr>
             <tr><td><b>glob</b></td><td>Platzhalter <code>*</code> und <code>?</code></td><td>nur aktive</td><td><code>sensor.*_uptime*</code></td></tr>
             <tr><td><b>klasse</b></td><td><code>domain|device_class</code></td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
+            <tr id="h-herkunft"><td><b>herkunft</b> (ab 0.5.5b9)</td><td>Integration (<code>platform</code> der Registry), Platzhalter erlaubt – Auswahl aus der Liste</td><td>nur aktive</td><td><code>unifi</code>, <code>mobile_app</code></td></tr>
+            <tr id="h-vielschreiber"><td><b>vielschreiber</b> (ab 0.5.5b9)</td><td>eine Zahl = Schwelle in Zeilen je Tag, optional zusätzlich Entity-Muster mit Platzhaltern</td><td>nur aktive, die mindestens so viel schreiben</td><td><code>1000</code> bzw. <code>1000</code> + <code>sensor.*</code></td></tr>
             <tr><td><b>verwaist</b></td><td><code>alle</code>, <code>geloescht</code>, <code>ohne_spur</code>, <code>deaktiviert</code> oder Platzhalter</td><td>nur verwaiste und deaktivierte</td><td><code>*</code></td></tr>
             <tr><td><b>event</b></td><td>Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
             <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>fest <code>*</code></td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage (einstellbar), Langzeit unbegrenzt</td></tr>
@@ -616,12 +630,13 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         </table>
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
         <p>Treffen mehrere aktive Regeln dieselbe Entität, gewinnt je Wert (Kurzzeit und Langzeit getrennt) die mit dem höchsten Rang:</p>
-        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › verwaist › HA-Standard</p>
+        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › herkunft › vielschreiber › verwaist › HA-Standard</p>
+        <p>Die Typen <b>herkunft</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter, wer weniger schreibt, wieder heraus. Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
         <p>Innerhalb desselben Typs gewinnt die Regel, die <b>weiter oben in der Liste</b> steht. Die Reihenfolge änderst du im Tab Regeln mit den Pfeilen.</p>
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
           <li><b>Platzhalter nur bei glob (und schutz):</b> Bei entity wird <code>*</code> wörtlich genommen; die Regel trifft dann nichts. Die App warnt beim Speichern.</li>
-          <li><b>Zähler-Schutz:</b> glob- und klasse-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
+          <li><b>Zähler-Schutz:</b> glob-, klasse-, herkunft- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
           <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>, ab 0.5.3):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<code>purge_keep_days: 10</code>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Ab 0.5.5b7 ist die Kurzzeit einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events; die Langzeit bleibt unbegrenzt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
           <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob die Regel irgendwo überstimmt wird. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
@@ -798,6 +813,14 @@ actions:
       behalten ihre Daten nur <span id="optHaStdKz2">10 Tage</span>. Vorgeschlagen wird nur, was kürzer ist – bei 10 Tagen entfallen Vielschreiber, große Attribute, nirgends verwendete, deaktivierte
       und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage), übrig bleiben die Diagnose-Gruppen (7 Tage).
       Ist <code>HA:standard</code> im Reiter Regeln passiv, gilt wieder „global“ (purge_keep_days).<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a></div>
+    <!-- Punkt 194 (0.5.5b9): Wer schreibt am meisten? – Top N der Kandidaten, Anteil am Zuwachs, Ersparnis, eine Regel statt vieler -->
+    <details class="pareto" id="optPareto" open>
+      <summary><b>Wer schreibt am meisten?</b> <span class="sub" id="paretoKurz"></span></summary>
+      <div class="pareto-kopf">Kurzzeit für die Top N:
+        <select id="paretoTage" aria-label="Kurzzeit für die Top N"><option value="7">7 Tage</option><option value="14" selected>14 Tage</option><option value="30">30 Tage</option><option value="60">60 Tage</option></select>
+        <span class="sub">Kandidaten wie bei den Vorschlägen: aktiv, ohne Schutz und eigene Kurzzeit, keine Zähler, keine Quellen von Energie-Dashboard oder Helfern – und heute länger als die gewählte Kurzzeit.</span></div>
+      <div id="paretoInhalt"><span class="sub">berechne …</span></div>
+    </details>
     <div class="trefferzeile" id="trefferOpt"></div>
     <div class="tabelle"><table id="tOpt" class="baustein"></table></div>
     <p class="sub" id="optText">Vorschläge aus der letzten Analyse – nur für Daten ohne eigene Kurzzeit (Standard bzw. HA-Standard), nie für Zähler, geschützte Entitäten,
@@ -808,7 +831,7 @@ actions:
     <div class="trefferzeile" id="trefferRegeln"></div>
     <div class="tabelle"><table id="tRegeln" class="baustein"></table></div>
     <p class="sub" id="globalText" hidden></p>
-    <p class="sub" id="standardText">Rang: entity › glob › klasse, innerhalb eines Typs die Reihenfolge hier. Jeder der drei Werte wird für sich aufgelöst.</p>
+    <p class="sub" id="standardText">Rang: entity › glob › klasse › herkunft › vielschreiber, innerhalb eines Typs die Reihenfolge hier. Jeder der drei Werte wird für sich aufgelöst.</p>
   </section>
   <section id="tab-probe" hidden>
     <div class="trefferzeile" id="trefferProbe"></div>
@@ -923,7 +946,7 @@ const HA_ICON = `<svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label=
 const STATUS_TITEL = "Entitäts-Status";   // 0.5.3: eindeutig neben der Spalte „Entität“ (entity_id)
 const STATUS_HILFE = "Zustand der Entität in HA (aktiv / deaktiviert / verwaist / verwaist (gelöscht)), nicht der Regel";
 const SONDER = { kurzzeit: ["global", "keine"], attribute: ["wie_kurzzeit", "keine"], langzeit: ["unbegrenzt", "keine"] };
-const REGELTYPEN = ["entity", "glob", "klasse", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111)
+const REGELTYPEN = ["entity", "glob", "klasse", "herkunft", "vielschreiber", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111); herkunft/vielschreiber ab 0.5.5b9 (Punkte 196/193)
 // Punkt 127 (0.5.3): Regel HA-Standard – feste ID, nur aktiv/passiv, nicht löschbar, im Regel-Dialog nicht wählbar
 const HA_STD = "HA:standard";
 const TYPEN_TABELLE = [...REGELTYPEN, "ha_standard"];
@@ -957,7 +980,8 @@ const SCHALTER_ORT = "Einstellungen → Apps → RS DB Hygiene Manager → Konfi
 const SORT_STD_ENT = [{ k: "rows", desc: true }];
 const S = { offset: 0, limit: +speicher.lies("dbh_limit", "100"), sortierung: ladeSort("dbh_sort_ent", SORT_STD_ENT), regeln: null, version: 0,
             status: null, f: {}, optionen: null, render: 0, probe: null, auswahl: new Set(),
-            auswahlEnt: new Set(), auswahlEv: new Set(), entGesamt: 0, entFilter: "" };   // Punkt 91
+            auswahlEnt: new Set(), auswahlEv: new Set(), entGesamt: 0, entFilter: "",   // Punkt 91
+            auswahlOpt: new Set() };   // Punkt 195
 $("#fLimit").value = String(S.limit);
 if ($("#fLimit").value !== String(S.limit)) { S.limit = 100; $("#fLimit").value = "100"; }
 // Punkt 68: Prognosezeitraum je Browser gemerkt
@@ -1422,12 +1446,12 @@ const HILFE = {
     "Löschen im Tab „Löschen“ oder per Automation; Obergrenzen pro Lauf in der App-Konfiguration."],
   r_prog: ["Prognose",
     "Erwarteter Bestand im Dauerbetrieb über den Prognosezeitraum von {ziel}, wenn alle aktiven Regeln wirken.",
-    "Hochgerechnet aus der Schreibrate der letzten 24 h (Attribute und Events: Mittel der letzten 7 vollen Tage). Langzeit: Bestand plus Zuwachs über den Zeitraum, außer eine Regel kürzt sie. Unter der DB-Größe steht dieselbe Prognose ohne Regeln.",
+    "Hochgerechnet aus der Schreibrate (Mittel der letzten 7 vollen Tage). Langzeit: Bestand plus Zuwachs über den Zeitraum, außer eine Regel kürzt sie. Unter der DB-Größe steht dieselbe Prognose ohne Regeln.",
     "Prognosezeitraum variieren, um die Wirkung zu sehen."],
   c_db: ["DB-Größe",
     "Istzustand: Größe der Datei home-assistant_v2.db. Löschmenge sofort: Platz der Zeilen, die ein Lauf jetzt löschen würde. Prognose: erwartete Größe im Dauerbetrieb, darunter ohne Regeln.",
     "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile sind Messwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
-    "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen / 24 h) sortieren)."],
+    "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren)."],
   c_zeilen: ["Datenzeilen gesamt",
     "Summe der Spalten States, 5-Min, Langzeit, Events und Attribute (Zeilen) in dieser Zeile.",
     "Verwaiste sind in den anderen Spalten schon enthalten und zählen nicht doppelt. Ohne Attribut-Analyse fehlen die Attributzeilen in der Summe.",
@@ -1435,7 +1459,7 @@ const HILFE = {
   c_kurz: ["States, 5-Min",
     "Zeilen der Kurzzeit (States, 5-Min, Attribute) ohne die Attribute: Tabellen states und statistics_short_term.",
     "Die Kurzzeit legen Regeln fest; ohne Regel gilt global = purge_keep_days = {pkd} Tage. Die 5-Min-Statistik löscht die App über die Integration RS DB Hygiene (Stufe B).",
-    "Den größten Schreibern (Tab Entitäten, nach „Zuwachs“ (Zeilen / 24 h) sortieren) eine kürzere Kurzzeit geben."],
+    "Den größten Schreibern (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren) eine kürzere Kurzzeit geben."],
   c_lts: ["Langzeit",
     "Zeilen der Langzeit (Stundenstatistik, 1 h) in der Tabelle statistics.",
     "Standard ist „unbegrenzt“: HA löscht Langzeitstatistik nie selbst; die Löschmenge sofort ist daher meist 0.",
@@ -1681,7 +1705,7 @@ Klick: Linie ein-/ausblenden">bisher (seit ${vlTagDatum(st, alleH[0][0])})<b>${g
       <div class="vl-tip" id="vlTip" hidden></div></div>
     <div class="vl-leg">${legH}${leg}</div>
     <p class="sub">Rechnung: Vom heutigen Bestand bleibt je Monat, was nach der wirksamen Vorhaltezeit noch nicht fällig ist (Überfälliges fällt im ersten Monat weg);
-      dazu kommt der Zufluss aus der Schreibrate (letzte 24 h, Attribute und Events 7 Tage). Grau rechnet fest mit HA-Standard 10 Tage (Grundeinstellung von HA).
+      dazu kommt der Zufluss aus der Schreibrate (Mittel der letzten 7 vollen Tage). Grau rechnet fest mit HA-Standard 10 Tage (Grundeinstellung von HA).
       Gelb und Grün rechnen mit HA-Standard in der eingestellten Kurzzeit (${esc(wertAnzeige(st.ha_kurzzeit || "10d"))}) – Grün immer, Gelb nur, wenn die Regel aktiv ist
       (${st.ha_aktiv ? "ist sie" : "ist sie nicht"}${!st.ha_aktiv && st.mit_passiven ? ", Haken „passive Regeln mitrechnen“ gesetzt" : ""}); ohne HA-Standard bleibt, was keine Regel hat, purge_keep_days (${zahl(st.purge_keep_days)} Tage).
       ${st.rest_bytes >= 0 ? `${gb(st.rest_bytes)} der Datei ordnet die Analyse keiner Zeile zu (andere Tabellen, freier Platz) – als fester Betrag angenommen.`
@@ -1731,7 +1755,7 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["status", STATUS_TITEL, 0, "status", "", 155, `${STATUS_HILFE}.`],   // Punkt 128
   // Punkt 132 (0.5.3): Titel „Haupttitel (Zusatz)“ – im Kopf zweizeilig, Zeile 1 unterscheidet die Spalten, Zeile 2 Zusatz bzw. Einheit
   ["rows", "States (Zeilen)", 1, "zahl", ">1000", 105, "Zeilen in states (Zustandswechsel) dieser Entität"],
-  ["rows_24h", "Zuwachs (Zeilen / 24 h)", 1, "zahl", ">0", 110, "neue Zeilen in states in den letzten 24 Stunden"],
+  ["rows_24h", "Zuwachs (Zeilen je Tag)", 1, "zahl", ">0", 110, "neue Zeilen in states je Tag – Mittel der 7 vollen Kalendertage vor heute (Punkt 192, fest ÷ 7)"],
   // Punkt 135 (0.5.3): Bestand der 5-Min-Statistik je Entität (lag schon in Analyse, API und CSV vor)
   ["kurz_rows", "5-Min (Zeilen)", 1, "zahl", ">0", 105, "Zeilen in statistics_short_term (5-Min-Statistik) dieser Entität"],
   // Punkte 118/120 (0.4.11): über alle Datenarten der Zeile; Aufteilung im Tooltip der Zelle
@@ -1745,6 +1769,9 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   // Punkt 63: Block „Löschmenge sofort“ wie in der Monatssumme – Summe, davon je Tabelle, dahinter die Attributzeilen
   ["loesch_summe", "Summe (States + 5-Min + Langzeit)", 1, "zahl", ">0", 175,
     "Zeilen, die ein Lauf sofort löschen würde (Bestand): States + 5-Min-Statistik + Langzeit. Gegenstück: Ersparnis (Dauerbetrieb) im Tab Prognosen je Regel."],
+  // Punkt 197 (0.5.5b9): ersetzt die Spalte „Attribute (MB)“ – Platz der ganzen Löschmenge sofort
+  ["loesch_mb", "Platz frei (MB)", 1, "zahl", ">1 (MB)", 115,
+    "Platz, den ein scharfer Lauf sofort frei macht (nach einem Repack): States, 5-Min-Statistik, Langzeit und Attribute, jeweils inkl. Index (Filter in MB). Attribute nur mit Attribut-Analyse."],
   ["loesch_states", "States", 1, "zahl", ">0", 100, "Zeilen in states außerhalb der Kurzzeit"],
   ["loesch_kurz", "5-Min-Statistik", 1, "zahl", ">0", 150, "Zeilen in statistics_short_term außerhalb der Kurzzeit"],
   ["loesch_lts", "Langzeit", 1, "zahl", ">0", 100, "Stundenstatistik außerhalb der Langzeit-Vorhaltezeit"],
@@ -1756,8 +1783,6 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
     "Neue Attributdaten pro Tag, Mittel der letzten 7 Tage (Filter in MB). Zuwachs × Attribut-Vorhaltezeit ≈ Bestand im Dauerbetrieb."],
   ["attr_avg", "Ø Größe (Attribute · Byte)", 1, "zahl", ">1000 (B)", 115,
     "Durchschnittliche Größe einer Attributzeile in Bytes – hoch bei „schweren“ Attributen wie Vorhersagen."],
-  ["attr_loesch", "Attribute (MB)", 1, "zahl", ">1 (MB)", 110,
-    "Attributdaten, die ein scharfer Lauf sofort freigeben würde (Filter in MB)."],
   ["attr_anteil", "Anteil (Attribute · %)", 1, "zahl", ">50 (%)", 105,
     "Anteil der Attribute am Speicher dieser Entität (Attribute ÷ (Attribute + States))."],
 ];
@@ -1767,7 +1792,7 @@ const SPALTENGRUPPEN = [
   ["Stammdaten", "stamm", ["entity_id", "herkunft", "device_class", "labels", "status"]],
   ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]],
   ["Istzustand", "ist", ["first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
-  ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen", "attr_loesch"]],
+  ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"]],
 ];
 const SPALTEN = SPALTENGRUPPEN.flatMap(([, , ks]) => ks.map(k => SPALTEN_ROH.find(s => s[0] === k)));
 if (SPALTEN.length !== SPALTEN_ROH.length || SPALTEN.includes(undefined)) throw new Error("SPALTENGRUPPEN passt nicht zu SPALTEN_ROH");
@@ -1785,7 +1810,7 @@ const mitKlasse = (html, kl) => {
 const kopfZweizeilig = t => { const m = /^(.+?)\s*\(([^()]*)\)$/.exec(t || ""); return `<span class="kz1"><span class="tk">${esc(m ? m[1] : t)}</span><span class="pfeil"></span></span><span class="kz2">${m ? esc(m[2]) : ""}</span>`; };
 const SPALTE =Object.fromEntries(SPALTEN.map(s => [s[0], s]));
 const SORTIERBAR = new Set(["entity_id", "herkunft", "device_class", "labels", "status", "rows", "rows_24h", "kurz_rows", "first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-                            "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"]);
+                            "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_anteil", "loesch_mb"]);
 const FILTERHILFE = {
   text: "enthält … (Groß/klein egal); * und ? als Platzhalter, z. B. sensor.*_power",
   herkunft: "Gerätename, Datei oder Integration; * als Platzhalter, z. B. sensor.yaml* oder *Shelly*",
@@ -1798,17 +1823,18 @@ const HERKUNFT_LANG = { geraet: "Gerät", integration: "Integration (UI)", ui_he
                         ohne_uid: "ohne unique_id", nicht_gefunden: "Definition nicht gefunden", verwaist: "verwaist / gelöscht" };
 
 // ---- Spaltenauswahl (Punkt 23): gemerkt im Browser; „Entität“ bleibt immer sichtbar
-const ATTR_SPALTEN = ["attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"];
+const ATTR_SPALTEN = ["attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_anteil"];   // Punkt 197: ohne attr_loesch
 const ANSICHTEN_ENT = {
   Standard: SPALTEN.map(s => s[0]).filter(k => !ATTR_SPALTEN.includes(k)),
   // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
   "States & Statistik": ["entity_id", "herkunft", "device_class", "status", "kurzzeit", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
-                         "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts"],
-  Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
+                         "loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_lts"],
+  Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen", "loesch_mb"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
 };
 // Punkt 115 (0.4.10): neue Spalten der Standardansicht auch bei gemerkter Spaltenauswahl einmal einblenden
-const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels", kurz_rows: "dbh_spalte_neu_kurz_rows", device_class: "dbh_spalte_neu_device_class" };   // Punkt 167
+const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels", kurz_rows: "dbh_spalte_neu_kurz_rows", device_class: "dbh_spalte_neu_device_class",   // Punkt 167
+  loesch_mb: "dbh_spalte_neu_loesch_mb" };   // Punkt 197
 const ladeSichtbar = (schluessel, standard) => {
   try { const l = JSON.parse(speicher.lies(schluessel, "null")); if (Array.isArray(l) && l.length) return new Set(l); } catch { /* Standard */ }
   return new Set(standard);
@@ -1930,7 +1956,7 @@ function zeigeSummen(su) {
     langzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "langzeit"), teil(a, "langzeit"))),
     first_ts: zelle(datum(g.first_ts), datum(a.first_ts), `frühester Zeitstempel – ${GEF}`),
     last_ts: zelle(datum(g.last_ts), datum(a.last_ts), `spätester Zeitstempel – ${GEF}`),
-    rows: zz("rows", `Zeilen in states – ${GEF}`), rows_24h: zz("rows_24h", `neue Zeilen in states in 24 h – ${GEF}`),
+    rows: zz("rows", `Zeilen in states – ${GEF}`), rows_24h: zz("rows_24h", `neue Zeilen in states je Tag (Ø 7 volle Tage) – ${GEF}`),
     kurz_rows: zz("kurz_rows", `Zeilen 5-Min-Statistik – ${GEF}`), lts_rows: zz("lts_rows", `Zeilen Langzeit – ${GEF}`),
     loesch_summe: zz("loesch_summe", `Zeilen sofort löschbar (States + 5-Min + Langzeit) – ${GEF}`),
     loesch_states: zz("loesch_states", `States sofort löschbar – ${GEF}`), loesch_kurz: zz("loesch_kurz", `5-Min-Statistik sofort löschbar – ${GEF}`),
@@ -1938,7 +1964,7 @@ function zeigeSummen(su) {
     attr_bytes: zelle(mbz(g.attr_bytes), mbz(a.attr_bytes), `Attribute Bestand in MB – ${GEF}`),
     attr_zuwachs_tag: zelle(mbz(g.attr_zuwachs_tag), mbz(a.attr_zuwachs_tag), `Attribute Zuwachs pro Tag in MB – ${GEF}`),
     attr_avg: zelle(g.attr_avg == null ? "–" : zahl(g.attr_avg), a.attr_avg == null ? "–" : zahl(a.attr_avg), `Ø Größe einer Attributzeile in Byte – ${GEF}`),
-    attr_loesch: zelle(mbz(g.attr_loesch), mbz(a.attr_loesch), `Attribute sofort löschbar in MB – ${GEF}`),
+    loesch_mb: zelle(mbz(g.loesch_mb), mbz(a.loesch_mb), `Platz frei sofort (States, 5-Min, Langzeit, Attribute) in MB – ${GEF}`),   // Punkt 197
     attr_anteil: zelle(pz(g.attr_anteil), pz(a.attr_anteil), `Anteil der Attribute in % – ${GEF}`),
   };
   $("#tEntKopf").querySelectorAll("[data-summe]").forEach(th => {
@@ -2065,7 +2091,7 @@ const ZELLEN = {
   attr_bytes: e => attrTd(e.attr_bytes, mb),
   attr_zuwachs_tag: e => attrTd(e.attr_zuwachs_tag, mb),
   attr_avg: e => attrTd(e.attr_avg, v => zahl(v) + " B"),
-  attr_loesch: e => attrTd(e.attr_loesch, mb),
+  loesch_mb: e => `<td class="n">${e.loesch_mb ? mb(e.loesch_mb) : "–"}</td>`,   // Punkt 197
   attr_anteil: e => attrTd(e.attr_anteil, prozent),
 };
 function zeileHtml(e) {
@@ -2231,11 +2257,13 @@ T.regeln = new LokaleTabelle({
       zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
         : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, Kurzzeit einstellbar, passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
         : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : r.typ,
-      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
+      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · herkunft: Integration wie unifi · vielschreiber: ab n Zeilen je Tag · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
       optionen: () => TYPEN_TABELLE.map(t => [t, t]),
       summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nje Typ: ${TYPEN_TABELLE.map(t => `${t} ${zahl(g.filter(r => r.typ === t).length)}`).join(" · ")}`] },
     { k: "muster", titel: "Muster", typ: "text", breite: 260, wert: r => r.muster.join(" "), tip: r => r.muster.join("\n"),
-      zelle: r => `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}`,
+      zelle: r => r.typ === "vielschreiber"   // Punkt 193: Schwelle lesbar, Einschränkung dahinter
+        ? `<span class="mono">≥ ${esc(zahl(+r.muster[0]))} Zeilen/Tag</span>${r.muster.length > 1 ? ` <span class="sub mono">${esc(r.muster.slice(1, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}` : ""}`
+        : `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}`,
       csv: r => r.muster.join(", "), summe: anzahlSumme(r => r.muster.length) },
     wertSpalte("kurzzeit"), wertSpalte("langzeit"),
     { k: "treffer", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => trefferVon(r),
@@ -2314,11 +2342,16 @@ const optStatus = v => v.vorhanden ? `<span class="chip regel regelklick" data-r
   : (v.passiv || []).map(p => `<span class="chip warn regelklick" data-regel-edit="${esc(p.id)}" title="Die passive Regel ${esc(p.id)} (Kurzzeit ${esc(wertAnzeige(p.kurzzeit))}) trifft schon ${zahl(p.anzahl)} von ${zahl(v.anzahl)} dieser Entitäten – einschalten genügt vielleicht. Klick öffnet sie.">passiv: ${esc(p.id)} (${zahl(p.anzahl)})</span>`).join(" ");
 T.opt = new LokaleTabelle({
   id: "#tOpt", treffer: "#trefferOpt", schluessel: "dbh_breiten_opt", einheit: "Vorschläge", sortStd: { k: "ersparnis", desc: true },
-  gruppen: [["Vorschlag", "stamm", ["art", "titel", "typ", "muster"]], ["Vorhaltezeit", "vorh", ["kurzzeit"]], ["Istzustand", "ist", ["anzahl", "zuwachs_tag"]],
+  gruppen: [["Vorschlag", "stamm", ["wahl", "art", "titel", "typ", "muster"]], ["Vorhaltezeit", "vorh", ["kurzzeit"]], ["Istzustand", "ist", ["anzahl", "zuwachs_tag"]],
     ["Löschmenge sofort", "loesch", ["loesch_zeilen", "loesch_mb"]], ["Prognose", "prog", ["ersparnis"]]],
-  fix: ["art", "titel"],
+  fix: ["wahl", "art", "titel"],
   leer: "keine Vorschläge – entweder ist alles geregelt, oder es fehlt noch eine Analyse",
   spalten: [
+    // Punkt 195 (0.5.5b9): Massenauswahl wie in den Tabs Entitäten, Events und Regeln
+    { k: "wahl", titel: "Auswahl", kopf: `<input type="checkbox" class="wahl" id="wahlAlleOpt" title="alle angezeigten Vorschläge auswählen bzw. abwählen">`, typ: "keine",
+      fest: 1, breite: 40, mitte: 1, wert: () => 0,
+      zelle: r => `<input type="checkbox" class="wahl" data-wahl-opt="${esc(r.id)}" ${S.auswahlOpt.has(r.id) ? "checked" : ""} aria-label="Vorschlag ${esc(r.titel)} auswählen">`,
+      summe: () => [S.auswahlOpt.size ? `${zahl(S.auswahlOpt.size)} ✓` : "", "–"] },
     { k: "art", titel: "Art", typ: "auswahl", breite: 90, wert: r => OPT_ART[r.art] || r.art, zelle: r => esc(OPT_ART[r.art] || r.art), csv: r => r.art,
       optionen: () => Object.values(OPT_ART).map(a => [a, a]), summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Vorschläge – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "titel", titel: "Vorschlag", typ: "text", fest: 1, breite: 330, wert: r => r.titel, zelle: r => `<span class="mono">${esc(r.titel)}</span>`, csv: r => r.titel },
@@ -2347,14 +2380,114 @@ T.opt = new LokaleTabelle({
   ],
   zeileAttr: r => `data-vid="${esc(r.id)}"${r.ignoriert ? ' class="ignoriert"' : ""}`,
   zusatz: () => S.optInfo || "",
+  nachher: () => zeigeAuswahlOpt(),
+});
+// ---- Punkt 195: Massenauswahl Empfehlungen – ausgewählte als passive Regeln anlegen bzw. ignorieren
+function zeigeAuswahlOpt() {
+  const sichtbar = (T.opt?.angezeigt || []).map(r => r.id), gewaehlt = sichtbar.filter(id => S.auswahlOpt.has(id)).length;
+  const alle = $("#wahlAlleOpt");
+  if (alle) { alle.checked = sichtbar.length > 0 && gewaehlt === sichtbar.length; alle.indeterminate = gewaehlt > 0 && gewaehlt < sichtbar.length; }
+  const n = S.auswahlOpt.size, leiste = $("#massenOpt"), auf = !$("#tab-opt").hidden && n > 0;
+  leiste.hidden = !auf;
+  if (!auf) return;
+  const gew = (S.opt || []).filter(v => S.auswahlOpt.has(v.id)), da = gew.filter(v => v.vorhanden).length;
+  const ign = gew.filter(v => v.ignoriert).length;
+  leiste.innerHTML = `<b>${mzahl(n, "Vorschlag", "Vorschläge")} ausgewählt</b>${da ? ` <span class="sub">(${zahl(da)} davon gibt es schon als Regel)</span>` : ""}
+    <span class="sub">Ersparnis zusammen bis zu ${gb(gew.reduce((x, v) => x + (v.ersparnis_bytes || 0), 0))}</span>
+    <button data-masse-opt="anlegen" class="primaer" title="je Vorschlag eine Regel, passiv – erst nach dem Einschalten im Reiter Regeln wirkt sie">als passive Regeln anlegen</button>
+    <button data-masse-opt="ignorieren">ignorieren</button>${ign ? `<button data-masse-opt="zeigen">wieder zeigen</button>` : ""}`;
+}
+$("#tOpt").addEventListener("change", ev => {
+  if (ev.target.id === "wahlAlleOpt") {
+    (T.opt.angezeigt || []).forEach(r => ev.target.checked ? S.auswahlOpt.add(r.id) : S.auswahlOpt.delete(r.id));
+    return T.opt.zeige();
+  }
+  const w = ev.target.closest("[data-wahl-opt]"); if (!w) return;
+  w.checked ? S.auswahlOpt.add(w.dataset.wahlOpt) : S.auswahlOpt.delete(w.dataset.wahlOpt);
+  T.opt.zeige();
+});
+$("#massenOpt").addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-masse-opt]"); if (!b) return;
+  const gew = (S.opt || []).filter(v => S.auswahlOpt.has(v.id));
+  if (b.dataset.masseOpt === "anlegen") {
+    const liste = [...S.regeln.regeln], neu = [], schon = [];
+    for (const v of gew) {
+      if (v.vorhanden) { schon.push(`${v.titel} (${v.vorhanden.id})`); continue; }
+      let id = naechsteId(liste);
+      if (v.regel.typ === "event") {
+        const basis = `EV:${v.regel.muster[0].replace(/[*?\[\]]/g, "") || "muster"}`;
+        id = basis; let k = 2; while (liste.some(x => x.id === id)) id = `${basis}_${k++}`;
+      }
+      liste.push({ ...v.regel, id, aktiv: false });
+      neu.push(id);
+    }
+    if (!neu.length) return meldung("Empfehlungen", `Nichts anzulegen – für alle ausgewählten Vorschläge gibt es schon eine Regel:\n${schon.join("\n")}`);
+    if (!await frage("Regeln anlegen", `${mzahl(neu.length, "Regel", "Regeln")} passiv anlegen (${neu.join(", ")})?` +
+      (schon.length ? `\n\nÜbersprungen – gibt es schon als Regel:\n${schon.join("\n")}` : "") +
+      "\n\nPassive Regeln wirken nicht. Einschalten im Reiter Regeln – dabei prüft die App mögliche Folgen.", "Anlegen")) return;
+    try {
+      await speichereRegeln({ ...S.regeln, regeln: liste });
+      S.auswahlOpt.clear();
+      meldung("Empfehlungen", `${mzahl(neu.length, "Regel", "Regeln")} passiv angelegt: ${neu.join(", ")}.`);
+      ladeOpt();
+    } catch (e) { meldung("Empfehlungen", e.message); }
+    return;
+  }
+  const an = b.dataset.masseOpt === "ignorieren";
+  try {
+    for (const v of gew.filter(v => v.ignoriert !== an)) { await postJson("optimierungen/ignorieren", { id: v.id, ignorieren: an }); v.ignoriert = an; }
+    S.auswahlOpt.clear();
+    const ign = S.opt.filter(x => x.ignoriert).length;
+    S.optInfo = ign ? `<span class="sub">${mzahl(ign, "Vorschlag", "Vorschläge")} ignoriert${$("#oIgnoriert").checked ? "" : " (ausgeblendet)"}</span>` : "";
+    T.opt.daten(S.opt.filter(x => $("#oIgnoriert").checked || !x.ignoriert));
+  } catch (e) { meldung("Empfehlungen", e.message); }
+});
+// ---- Punkt 194: Wer schreibt am meisten? – Stufen Top N, je Stufe eine Regel statt vieler
+async function ladePareto() {
+  const box = $("#paretoInhalt"), tage = +$("#paretoTage").value;
+  box.innerHTML = `<span class="sub">berechne …</span>`;
+  try {
+    const p = await api(`pareto?tage=${tage}&` + par());
+    S.pareto = p;
+    if (p.fehler || !p.stufen.length) {
+      $("#paretoKurz").textContent = "";
+      box.innerHTML = `<span class="sub">${esc(p.fehler || `keine Kandidaten – alles, was viel schreibt, hat schon eine eigene Kurzzeit von höchstens ${tage} Tagen oder ist geschützt`)}</span>`;
+      return;
+    }
+    const s0 = p.stufen[Math.min(1, p.stufen.length - 1)];
+    $("#paretoKurz").textContent = `– die Top ${zahl(s0.top)} von ${mzahl(p.anzahl, "Kandidat", "Kandidaten")} schreiben ${zahl(s0.anteil)} % aller Zeilen`;
+    box.innerHTML = `<table class="pareto-tab"><thead><tr><th>Top</th><th class="n">Zeilen je Tag</th><th>Anteil am Zuwachs (alle Entitäten)</th><th class="n">Schwelle</th>
+        <th class="n" title="wie viel kleiner die DB im Prognosezeitraum (${zahl(p.ziel_tage)} Tage) bleibt, wenn genau diese Entitäten ${tage} Tage Kurzzeit bekommen">Ersparnis</th><th>Regel anlegen (passiv)</th></tr></thead><tbody>` +
+      p.stufen.map(s => `<tr><td>${s.alle ? `alle ${zahl(s.top)}` : zahl(s.top)}</td><td class="n">${zahl(s.zeilen_tag)}</td>
+        <td><div class="pareto-balken" title="${zahl(s.anteil)} % der ${zahl(p.gesamt_zeilen_tag)} Zeilen je Tag aller nicht verwaisten Entitäten"><span style="width:${Math.min(100, s.anteil)}%"></span><b>${zahl(s.anteil)} %</b></div></td>
+        <td class="n" title="Zeilen je Tag der ${zahl(s.top)}. Entität – eine Vielschreiber-Regel ab dieser Schwelle trifft mindestens diese ${zahl(s.top)}">≥ ${zahl(s.schwelle)}</td>
+        <td class="n">${gb(s.ersparnis_bytes)}</td>
+        <td class="aktion"><button data-pareto="viel" data-top="${s.top}" title="Regeltyp vielschreiber ab ${zahl(s.schwelle)} Zeilen je Tag – wirkt dynamisch auch auf künftige Vielschreiber. Trifft auch Entitäten außerhalb der Kandidaten (z. B. Helfer-Quellen ohne Zähler), sofern keine genauere Regel gilt – die Vorschau in der Maske zeigt die genaue Wirkung.">als Vielschreiber-Regel</button>
+          <button data-pareto="entity" data-top="${s.top}" title="Regeltyp entity mit genau diesen ${zahl(s.top)} Entity-IDs – fest, neue Vielschreiber fallen nicht darunter">als entity-Regel</button></td></tr>`).join("") +
+      `</tbody></table>`;
+  } catch (e) { box.innerHTML = `<span class="fehler">${esc(e.message)}</span>`; }
+}
+$("#paretoTage").onchange = ladePareto;
+$("#paretoInhalt").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-pareto]"); if (!b || !S.pareto) return;
+  const p = S.pareto, n = +b.dataset.top, s = p.stufen.find(x => x.top === n); if (!s) return;
+  const kz = `${p.tage}d`, notiz = `aus „Wer schreibt am meisten?“: Top ${n} (${s.anteil} % des Zuwachses)`;
+  if (b.dataset.pareto === "viel")
+    return bearbeiteRegel(-1, { typ: "vielschreiber", muster: [String(s.schwelle)], name: `Vielschreiber ab ${zahl(s.schwelle)} Zeilen/Tag – ${wertAnzeige(kz)}`,
+      kurzzeit: kz, aktiv: false, notiz, typManuell: true });
+  const ids = p.kandidaten.slice(0, n).map(k => k.entity_id);
+  bearbeiteRegel(-1, { typ: "entity", muster: ids, name: `Top ${n} Vielschreiber – ${wertAnzeige(kz)}`, kurzzeit: kz, aktiv: false, notiz, typManuell: true });
 });
 async function ladeOpt() {
   $("#optHaStd").hidden = !haStandardAktiv();   // Punkt 181
   $("#optHaStdKz").textContent = $("#optHaStdKz2").textContent = wertAnzeige(haStdKurzzeit());   // Punkt 190
   T.opt.leer = "berechne Vorschläge …"; T.opt.daten([]);
+  ladePareto();   // Punkt 194
   try {
     const r = await api("optimierungen?" + par());
     S.opt = r.vorschlaege || [];
+    const ids = new Set(S.opt.map(v => v.id));
+    [...S.auswahlOpt].forEach(id => ids.has(id) || S.auswahlOpt.delete(id));   // Punkt 195: verschwundene Vorschläge abwählen
     const ign = S.opt.filter(v => v.ignoriert).length;
     S.optInfo = ign ? `<span class="sub">${mzahl(ign, "Vorschlag", "Vorschläge")} ignoriert${$("#oIgnoriert").checked ? "" : " (ausgeblendet)"}</span>` : "";
     T.opt.leer = r.fehler || "keine Vorschläge – alles mit eigener Kurzzeit geregelt";
@@ -2860,7 +2993,7 @@ async function ladeRegeln() {
   const ids = new Set(S.regeln.regeln.map(x => x.id));
   [...S.auswahl].forEach(id => ids.has(id) || S.auswahl.delete(id));   // entfernte Regeln aus der Auswahl
   const st = S.regeln.standard;
-  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › verwaist › HA-Standard, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
+  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › herkunft › vielschreiber › verwaist › HA-Standard, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
     `Für verwaiste Entitäten gelten E:- und entity-Regeln sowie Regeln vom Typ verwaist. ` +
     `Regeln vom Typ event setzen die ${EV_NAME} (Logbuch) je Event-Typ – genauer Name vor Platzhalter. ` +
     `Standard ohne Regel: ${WNAME.kurzzeit} ${wertAnzeige(st.kurzzeit)}, ${WNAME.langzeit} ${wertAnzeige(st.langzeit)}.`;
@@ -2874,7 +3007,7 @@ function zeigeGlobal() {
   el.hidden = false;
   el.innerHTML = `<b>Ohne eigene Kurzzeit (global = purge_keep_days = ${tageJahre(pkd)}):</b> ${zahl(s.global_entitaeten)} aktive Entitäten,
     heute ${zahl(s.global_states)} States, Zufluss ca. ${zahl(s.global_zuwachs_tag)} States am Tag.
-    HA bewahrt sie ${tageJahre(pkd)} auf; auf diese Zeit hochgerechnet ca. <b>${gb(s.global_bytes_tag * pkd)}</b> (States, 5-Min, Attribute; aus dem Zufluss der letzten 24 h).
+    HA bewahrt sie ${tageJahre(pkd)} auf; auf diese Zeit hochgerechnet ca. <b>${gb(s.global_bytes_tag * pkd)}</b> (States, 5-Min, Attribute; aus dem Zufluss je Tag, Mittel der letzten 7 vollen Tage).
     Kürzer geht es nur über Regeln mit eigener Kurzzeit.`;
   el.title = "Zählt aktive Entitäten, deren Kurzzeit „global“ ist (keine Regel oder eine Regel mit dem Wert global). Verwaiste schreiben nichts mehr und fehlen hier.";
 }
@@ -2899,7 +3032,7 @@ function oeffneEntitaet(e) {
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
   const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "kurzzeit" ? ["keine"] : [], true);   // Punkt 174: Schnellknöpfe
   const info = `<div class="mono">${esc(e.entity_id)}</div>
-    <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/24 h · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
+    <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/Tag (Ø 7 T) · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
       Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
     ${e.herkunft ? `<div class="sub">Herkunft: ${esc(e.herkunft)}${e.herkunft_info ? " – " + esc(e.herkunft_info) : ""}</div>` : ""}
     ${[...e.hinweise, ...e.geschuetzt.map(g => "Zähler-Schutz: Regel " + g + " greift nicht")].map(h => `<div class="chip warn">${esc(h)}</div>`).join(" ")}`;
@@ -2973,14 +3106,16 @@ async function warnPruefung(regel) {
     "\n\nGelöscht wird erst bei einem Lauf im Tab „Löschen“ – dort steht diese Prüfung noch einmal unter „Risiken dieses Laufs“. Trotzdem speichern?", "Trotzdem speichern");
 }
 // Nächste freie Regel-ID (Punkt 25): höchste R-Nummer + 1, Lücken bleiben frei, E:-Regeln zählen nicht
-function naechsteId() {
-  const n = Math.max(0, ...S.regeln.regeln.map(r => /^R(\d+)$/.exec(r.id)).filter(Boolean).map(m => +m[1]));
+function naechsteId(liste = S.regeln.regeln) {   // Punkt 195: auch für eine noch nicht gespeicherte Liste
+  const n = Math.max(0, ...liste.map(r => /^R(\d+)$/.exec(r.id)).filter(Boolean).map(m => +m[1]));
   return "R" + String(n + 1).padStart(2, "0");
 }
 const MUSTERHILFE = {
   entity: "genaue Entity-ID, z. B. sensor.time",
   glob: "Muster mit * und ?, z. B. sensor.*_airq_*",
   klasse: "eine oder mehrere Klassen (domain|device_class) aus der letzten Analyse wählen",
+  herkunft: "eine oder mehrere Integrationen (platform der Registry, z. B. unifi, mobile_app) aus der letzten Analyse wählen – trifft alles dieser Integration ohne genauere Regel (ohne Zähler und verwaiste)",
+  vielschreiber: "erste Zeile: Schwelle in Zeilen je Tag, z. B. 1000 – optional weitere Zeilen mit Entity-Mustern wie sensor.* als Einschränkung. Trifft aktive Entitäten, die mindestens so viel schreiben (ohne Zähler), dynamisch nach jeder Analyse.",
   verwaist: "Art: alle (alle Verwaisten), geloescht (in der Registry als gelöscht vermerkt), ohne_spur oder deaktiviert (abgeschaltet, ohne Zustand; nicht in alle enthalten) – optional zusätzlich ein Entity-Muster wie sensor.windfang_*. Wirkt nur auf verwaiste und deaktivierte Entitäten.",
   event: "Event-Typen, auch mit * und ?, z. B. call_service oder script_* – Vorhaltezeit der Events (Logbuch); wirkt nie auf Entitäten.",
   schutz: "Muster mit * und ?, z. B. sensor.rs_meteo_* – diese Entitäten werden nie gekürzt (höchster Rang, auch vor E:-Regeln, auch verwaist).",
@@ -2990,26 +3125,34 @@ const MUSTERHILFE = {
 // Klassen, die die Analyse nicht (mehr) kennt, bleiben markiert in der Liste. Das (verborgene) Textfeld #rMuster bleibt die Quelle.
 // Punkt 166b: beim Wechsel zu klasse nur Muster der Form domain|device_class übernehmen (z. B. nicht die Entity-IDs aus
 // „Regel aus Auswahl anlegen“); die vorherigen Muster kommen beim Wechsel zurück zu einem anderen Typ wieder.
+// Punkt 196 (0.5.5b9): dieselbe Liste für den Typ herkunft – Integrationen statt Klassen (Endpunkt plattformen)
+const WAHLLISTE = {
+  klasse: { api: "klassen", plural: "Klassen", leer: "keine Klasse gewählt", suche: "Klassen durchsuchen, z. B. power",
+    passt: x => /^[^|\s]+\|[^|\s]+$/.test(x), aus: e => e?.device_class ? `${e.domain}|${e.device_class}` : null },
+  herkunft: { api: "plattformen", plural: "Integrationen", leer: "keine Integration gewählt", suche: "Integrationen durchsuchen, z. B. unifi",
+    passt: x => /^[a-z0-9_*?\[\]-]+$/.test(x) && !/^\d+$/.test(x), aus: e => e?.plattform || null },   // reine Zahl = Schwelle eines Vielschreibers
+};
 function klassenModus(t, wechsel) {
   const box = $("#rKlassen"), ta = $("#rMuster");
   if (!box || !ta) return;
-  const an = t === "klasse";
+  const an = !!WAHLLISTE[t];
+  if (wechsel && box.dataset.vorher !== undefined && box.dataset.modus !== t) {   // zurück zu den Mustern vor der Liste
+    ta.value = box.dataset.vorher; delete box.dataset.vorher; delete box.dataset.modus;
+  }
   if (wechsel && an && box.dataset.vorher === undefined) {
-    box.dataset.vorher = ta.value;
-    // Entity-IDs (z. B. aus der Auswahl) werden zu ihren Klassen, soweit die Zeilen geladen sind
-    const zeilen = ta.value.split("\n").map(x => x.trim()).filter(Boolean);
-    const aus = zeilen.map(x => S.zeilen?.[x]).filter(e => e?.device_class).map(e => `${e.domain}|${e.device_class}`);
-    ta.value = [...new Set([...zeilen.filter(x => /^[^|\s]+\|[^|\s]+$/.test(x)), ...aus])].join("\n");
-  } else if (wechsel && !an && box.dataset.vorher !== undefined) {
-    ta.value = box.dataset.vorher; delete box.dataset.vorher;
+    box.dataset.vorher = ta.value; box.dataset.modus = t;
+    // Entity-IDs (z. B. aus der Auswahl) werden zu ihren Klassen bzw. Integrationen, soweit die Zeilen geladen sind
+    const w = WAHLLISTE[t], zeilen = ta.value.split("\n").map(x => x.trim()).filter(Boolean);
+    const aus = zeilen.map(x => w.aus(S.zeilen?.[x])).filter(Boolean);
+    ta.value = [...new Set([...zeilen.filter(w.passt), ...aus])].join("\n");
   }
   box.hidden = !an; ta.hidden = an; $("#rProZeile").hidden = an;
-  if (an) baueKlassenWahl(box, ta);
+  if (an) baueKlassenWahl(box, ta, WAHLLISTE[t]);
 }
-async function baueKlassenWahl(box, ta) {
-  box.innerHTML = `<div class="sub">lade Klassen …</div>`;
+async function baueKlassenWahl(box, ta, w = WAHLLISTE.klasse) {
+  box.innerHTML = `<div class="sub">lade ${w.plural} …</div>`;
   let liste = [], fehler = "";
-  try { const k = await api("klassen"); liste = k.klassen || []; fehler = k.fehler || ""; }
+  try { const k = await api(w.api); liste = k.klassen || []; fehler = k.fehler || ""; }
   catch (e) { fehler = e.message; }
   if (box.hidden) return;   // inzwischen anderer Typ gewählt
   const gewaehlt = () => ta.value.split("\n").map(s => s.trim()).filter(Boolean);
@@ -3019,15 +3162,15 @@ async function baueKlassenWahl(box, ta) {
   const alle = [...fremd, ...liste.filter(k => start.has(k.muster)), ...liste.filter(k => !start.has(k.muster))];
   const info = k => k.fremd ? "nicht in der Analyse"
     : `${zahl(k.anzahl)} ${k.anzahl === 1 ? "Entität" : "Entitäten"}${k.zaehler ? `, davon ${zahl(k.zaehler)} Zähler – geschützt` : ""}`;
-  const tip = k => k.fremd ? "Diese Klasse kommt in der letzten Analyse bei keiner aktiven Entität vor – die Regel trifft damit derzeit nichts."
+  const tip = k => k.fremd ? `${w === WAHLLISTE.klasse ? "Diese Klasse" : "Diese Integration"} kommt in der letzten Analyse bei keiner aktiven Entität vor – die Regel trifft damit derzeit nichts.`
     : k.zaehler ? `Zähler (state_class total/total_increasing) sind vom Zähler-Schutz ausgenommen: die Regel wirkt auf ${zahl(k.anzahl - k.zaehler)} von ${zahl(k.anzahl)} Entitäten.` : "";
-  const text = () => { const g = gewaehlt(); return g.length ? `${g.length} gewählt: ${g.join(", ")}` : "keine Klasse gewählt"; };
+  const text = () => { const g = gewaehlt(); return g.length ? `${g.length} gewählt: ${g.join(", ")}` : w.leer; };
   box.innerHTML = `<details class="kwahl">
       <summary><span class="kwahl-text">${esc(text())}</span></summary>
-      <input type="search" class="kwahl-suche" placeholder="Klassen durchsuchen, z. B. power" aria-label="Klassen durchsuchen">
+      <input type="search" class="kwahl-suche" placeholder="${esc(w.suche)}" aria-label="${esc(w.plural)} durchsuchen">
       <div class="kwahl-liste">${alle.length ? alle.map(k => `<label class="${k.fremd ? "fremd" : ""}" title="${esc(tip(k))}" data-m="${esc(k.muster)}">
         <input type="checkbox" value="${esc(k.muster)}" ${gewaehlt().includes(k.muster) ? "checked" : ""}><span class="mono">${esc(k.muster)}</span><span class="sub">${esc(info(k))}</span></label>`).join("")
-        : `<div class="sub" style="padding:4px 10px">${esc(fehler || "keine Klassen gefunden")}</div>`}</div>
+        : `<div class="sub" style="padding:4px 10px">${esc(fehler || `keine ${w.plural} gefunden`)}</div>`}</div>
     </details>${fehler && alle.length ? `<div class="sub">${esc(fehler)}</div>` : ""}`;
   const d = box.querySelector("details");
   d.querySelector(".kwahl-liste").addEventListener("change", () => {
@@ -3072,6 +3215,7 @@ function zeigeHaStandard(r) {
 }
 // Punkt 175 (0.5.4): Typen mit Klartext; bei neuen Regeln wird der Typ aus den Mustern abgeleitet, solange er nicht von Hand gewählt wurde
 const TYP_TEXT = { entity: "entity – einzelne Entitäten (genaue ID)", glob: "glob – Namensmuster mit * und ?", klasse: "klasse – Geräteklasse (domain|device_class)",
+  herkunft: "herkunft – Integration (z. B. unifi)", vielschreiber: "vielschreiber – ab n Zeilen je Tag",
   verwaist: "verwaist – nur verwaiste und deaktivierte Entitäten", event: "event – Vorhaltezeit je Event-Typ", schutz: "schutz – nie kürzen" };
 // Punkte 172/173: kompakte Liste aller Entitäten (je Analyse-Stand einmal geladen)
 async function entListe() {
@@ -3093,7 +3237,7 @@ function bearbeiteRegel(i, vorlage) {
   const r = neu ? { id: vorschlagId, name: "", typ: "glob", muster: [], aktiv: true, kurzzeit: null, attribute: null, langzeit: null, notiz: "", ...(vorlage || {}) }
                 : S.regeln.regeln[i];
   // Punkt 175: Typ-Automatik nur bei neuen Regeln, deren Typ nicht vorgegeben oder von Hand gewählt ist
-  let typManuell = !neu || !!r.typManuell || ["verwaist", "event", "schutz"].includes(r.typ);
+  let typManuell = !neu || !!r.typManuell || ["verwaist", "event", "schutz", "herkunft", "vielschreiber"].includes(r.typ);
   dialog(neu ? "Neue Regel" : "Regel " + r.id, `<div id="rMaske" style="display:contents">
     <div class="raster3">
       <label class="feld">ID${neu ? " (Vorschlag, änderbar)" : ""}<input id="rId" value="${esc(r.id)}" placeholder="z. B. R24"></label>
@@ -3101,10 +3245,10 @@ function bearbeiteRegel(i, vorlage) {
       <label class="feld">Typ<select id="rTyp">${REGELTYPEN.map(t => `<option value="${t}" ${r.typ === t ? "selected" : ""}>${esc(TYP_TEXT[t])}</option>`).join("")}</select>
         <span class="typauto" id="rTypAuto"></span></label>
     </div>
-    <label class="feld"><span>Muster<span id="rProZeile" ${r.typ === "klasse" ? "hidden" : ""}> (eines pro Zeile)</span> –</span> <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
-      <textarea id="rMuster" ${r.typ === "klasse" ? "hidden" : ""} autocomplete="off" spellcheck="false">${esc(r.muster.join("\n"))}</textarea></label>
+    <label class="feld"><span>Muster<span id="rProZeile" ${WAHLLISTE[r.typ] ? "hidden" : ""}> (eines pro Zeile)</span> –</span> <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
+      <textarea id="rMuster" ${WAHLLISTE[r.typ] ? "hidden" : ""} autocomplete="off" spellcheck="false">${esc(r.muster.join("\n"))}</textarea></label>
     <div id="rAuto" class="autoliste" role="listbox" hidden></div>
-    <div id="rKlassen" ${r.typ === "klasse" ? "" : "hidden"}></div>
+    <div id="rKlassen" ${WAHLLISTE[r.typ] ? "" : "hidden"}></div>
     <div id="rVerdichten" class="hinweisbox" hidden></div>
     <div class="sub" id="rVerwaistHinweis" ${r.typ === "verwaist" ? "" : "hidden"}>Empfehlung: Kurzzeit mit Frist (z. B. 30 Tage) statt „keine“ – eine verwaiste Entität schreibt nichts mehr,
       nach der Frist ist alles weg, und bis dahin lässt sich eine versehentlich umbenannte Entität wiederherstellen.
@@ -3192,6 +3336,12 @@ function bearbeiteRegel(i, vorlage) {
     if (t === "event" && neu) {   // Vorlage für neue Event-Regeln: 7 Tage
       const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
       if (kz && !wertLesen(kz)) setzeWert(kz, "7d");
+    }
+    if (t === "vielschreiber" && neu) {   // Punkt 193: Vorlage Schwelle 1000 Zeilen/Tag, Kurzzeit 14 Tage
+      const ta = $("#rMuster");
+      if (!ta.value.split("\n").some(x => /^\d+$/.test(x.trim()))) ta.value = ["1000", ...ta.value.split("\n").map(x => x.trim()).filter(x => x && /[*?[]/.test(x))].join("\n");
+      const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
+      if (kz && !wertLesen(kz)) setzeWert(kz, "14d");
     }
     if (t === "verwaist" && neu) {   // Vorlage für neue verwaist-Regeln: Art „alle“, Kurzzeit 30 Tage
       if (!$("#rMuster").value.trim()) $("#rMuster").value = "alle";
@@ -3732,7 +3882,7 @@ $("#tabs").addEventListener("click", ev => {
   document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("an", x === b));
   ["ent", "events", "opt", "regeln", "probe", "lts", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
   document.querySelectorAll("[data-leiste]").forEach(l => l.hidden = l.dataset.leiste !== b.dataset.tab);
-  zeigeAuswahl(); zeigeAuswahlEnt(); zeigeAuswahlEv();
+  zeigeAuswahl(); zeigeAuswahlEnt(); zeigeAuswahlEv(); zeigeAuswahlOpt();
   if (b.dataset.tab === "lts") ladeLts();
   if (b.dataset.tab === "opt") ladeOpt();   // Punkt 176
   if (b.dataset.tab === "loeschen") ladeLoeschen();

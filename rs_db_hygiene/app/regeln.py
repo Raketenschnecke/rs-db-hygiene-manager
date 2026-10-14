@@ -13,11 +13,11 @@ Werte:  "<n>d" Tage, "<n>w" Wochen (7 d), "<n>m" Monate (30 d), "<n>j" Jahre (36
         "keine" (attribute, langzeit) bzw. null = Regel setzt diesen Wert nicht.
 
 Auflösung je Wert getrennt: Es gilt die höchstrangige aktive Regel, die den Wert setzt.
-Rang: entity > glob > klasse, innerhalb eines Typs die Reihenfolge in der Datei.
+Rang: entity > glob > klasse > herkunft > vielschreiber, innerhalb eines Typs die Reihenfolge in der Datei.
 Zähler-Schutz: glob/klasse greifen nie bei state_class total/total_increasing.
 
 Rang ab 0.1.7: E:-Regeln (eigene Vorhaltezeiten aus dem Entitäts-Dialog) stehen immer ganz vorn, unabhängig
-von ihrer Position in der Datei; danach entity > glob > klasse > verwaist.
+von ihrer Position in der Datei; danach entity > glob > klasse > herkunft > vielschreiber > verwaist.
 Je Wert wird neben dem Gewinner auch die Liste der überstimmten Regeln geliefert (Nachvollziehbarkeit).
 
 Typ „verwaist“ (ab 0.1.6) wirkt ausschließlich auf verwaiste Entitäten. Ab 0.1.7 gelten für Verwaiste zusätzlich
@@ -45,6 +45,14 @@ Typ „ha_standard“ (ab 0.5.3, Punkt 127): genau eine Regel mit der festen ID 
   (ab 0.5.5b7, Punkt 190) die Kurzzeit lassen sich ändern – sie gilt dann auch für die Events, Name und Notiz nennen
   den Wert. Der Prognose-Verlauf rechnet die Linie „nur HA-Standard“ immer mit 10 Tagen. Die Regel kann nicht entfernt werden: Fehlt sie, wird sie beim Laden passiv ergänzt
   (bestehende Installationen, ältere Exporte); die Startregeln enthalten sie aktiv.
+
+Typ „herkunft“ (ab 0.5.5b9, Punkt 196): Muster sind Integrationen (platform der Registry, z. B. unifi, snmp, mobile_app),
+  auch mit Platzhaltern. Wirkt wie glob nur auf nicht verwaiste Entitäten, Zähler-Schutz inklusive; Rang nach klasse.
+
+Typ „vielschreiber“ (ab 0.5.5b9, Punkt 193): genau ein Muster ist eine Zahl = Schwelle in Zeilen je Tag (Zuwachs der
+  Analyse); weitere Muster sind optionale Entity-Muster (glob) als Einschränkung. Trifft nicht verwaiste Entitäten mit
+  Zuwachs ≥ Schwelle, Zähler-Schutz inklusive; Rang nach herkunft, vor verwaist. Wirkt dynamisch: Wer mehr schreibt,
+  fällt nach der nächsten Analyse darunter, wer weniger schreibt, wieder heraus.
 """
 import fnmatch
 import json
@@ -60,7 +68,11 @@ EINHEIT_TAGE = {"d": 1, "w": 7, "m": 30, "j": 365}
 EINHEIT_NAME = {"d": "Tage", "w": "Wochen", "m": "Monate", "j": "Jahre"}
 SONDERWERTE = {"kurzzeit": {"global", "keine"}, "attribute": {"wie_kurzzeit", "keine"}, "langzeit": {"unbegrenzt", "keine"}}
 STANDARD = {"kurzzeit": "global", "attribute": "wie_kurzzeit", "langzeit": "unbegrenzt"}
-TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "verwaist": 4, "event": 5, "ha_standard": 6}
+TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "herkunft": 4, "vielschreiber": 5, "verwaist": 6, "event": 7,
+            "ha_standard": 8}
+# Punkte 193/196: wirken wie glob/klasse nur auf nicht verwaiste Entitäten und nie auf Zähler
+MUSTER_TYPEN = ("glob", "klasse", "herkunft", "vielschreiber")
+_SCHWELLE = re.compile(r"^(?:>=|≥)?\s*(\d{1,9})$")
 SCHUTZ_WERTE = {"kurzzeit": "global", "attribute": None, "langzeit": "unbegrenzt"}   # Punkt 111: fest
 # Punkt 127 (0.5.3): Regel „HA-Standard“ – Werte, Name und Notiz fest, nur aktiv/passiv änderbar
 HA_STANDARD_ID = "HA:standard"
@@ -152,7 +164,7 @@ def normalisiere(daten):
             regeln.append(ha_standard(kz, r.get("aktiv", True) is not False))
             continue
         if typ not in TYP_RANG:
-            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, verwaist oder event sein")
+            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft, vielschreiber, verwaist oder event sein")
         roh = r.get("muster") or []
         if isinstance(roh, str):
             roh = re.split(r"[\n,]", roh)
@@ -161,6 +173,13 @@ def normalisiere(daten):
             raise RegelFehler(f"{rid}: mindestens ein Muster nötig")
         if typ == "klasse" and any("|" not in m for m in muster):
             raise RegelFehler(f"{rid}: klasse-Muster haben die Form domain|device_class")
+        if typ == "vielschreiber":            # Punkt 193: genau eine Schwelle, Rest Entity-Muster
+            zahlen = [m for m in muster if _SCHWELLE.match(m)]
+            if len(zahlen) != 1 or int(_SCHWELLE.match(zahlen[0]).group(1)) < 1:
+                raise RegelFehler(f"{rid}: vielschreiber braucht genau eine Schwelle in Zeilen je Tag (Zahl ≥ 1), z. B. 500")
+            muster = [_SCHWELLE.match(zahlen[0]).group(1)] + [m for m in muster if m not in zahlen]
+        if typ == "herkunft" and any(not _EVENT_MUSTER.match(m) for m in muster):   # gleiche Zeichen wie Event-Typen
+            raise RegelFehler(f"{rid}: herkunft-Muster sind Integrationen wie unifi oder mobile_app (Kleinbuchstaben, Ziffern, _ . * ?)")
         neu = {"id": rid, "name": str(r.get("name") or rid), "typ": typ, "muster": muster,
                "aktiv": r.get("aktiv", True) is not False, "notiz": str(r.get("notiz") or "")}
         for art in WERTE:
@@ -352,7 +371,16 @@ class Aufloeser:
             key=lambda r: (rang(r), daten["regeln"].index(r)))
 
     @staticmethod
-    def _trifft(r, eid, domain, dc, status="aktiv"):
+    def _trifft(r, eid, domain, dc, status="aktiv", zuwachs=None, plattform=""):
+        if r["typ"] == "vielschreiber":       # Punkt 193: Schwelle (erstes Muster) und optional Entity-Muster
+            schwelle, globs = int(r["muster"][0]), r["muster"][1:]
+            if (zuwachs or 0) < schwelle:
+                return None
+            if globs and not any(fnmatch.fnmatchcase(eid, m) for m in globs):
+                return None
+            return f"≥ {schwelle}/Tag"
+        if r["typ"] == "herkunft":            # Punkt 196: Integration der Registry
+            return next((m for m in r["muster"] if plattform and fnmatch.fnmatchcase(plattform, m)), None)
         if r["typ"] == "verwaist":
             arten = {m for m in r["muster"] if m in VERWAIST_ARTEN} or {"alle"}
             globs = [m for m in r["muster"] if m not in VERWAIST_ARTEN]
@@ -369,8 +397,14 @@ class Aufloeser:
             return next((m for m in r["muster"] if fnmatch.fnmatchcase(eid, m)), None)
         return next((m for m in r["muster"] if m == f"{domain}|{dc}"), None)
 
-    def loese(self, eid, state_class="", device_class="", status="aktiv"):
-        """Je Wert: Gewinner {wert, regel, muster, ueberstimmt: [{wert, regel, muster}, …]} plus geschuetzt."""
+    def loese_e(self, e):
+        """loese() für eine Entität aus Analyse/Probelauf (Punkte 193/196: mit Zuwachs und Integration)."""
+        return self.loese(e["entity_id"], e.get("state_class"), e.get("device_class"), e.get("status") or "aktiv",
+                          zuwachs=e.get("rows_24h"), plattform=e.get("plattform") or "")
+
+    def loese(self, eid, state_class="", device_class="", status="aktiv", zuwachs=None, plattform=""):
+        """Je Wert: Gewinner {wert, regel, muster, ueberstimmt: [{wert, regel, muster}, …]} plus geschuetzt.
+        zuwachs (Zeilen je Tag) und plattform (Integration) brauchen nur die Typen vielschreiber und herkunft."""
         domain = eid.split(".", 1)[0]
         zaehler = (state_class or "").startswith("total")
         verwaist = ist_verwaist(status)       # Punkt 186: Deaktivierte bleiben für glob/klasse erreichbar
@@ -381,12 +415,12 @@ class Aufloeser:
                 continue
             if r["typ"] == "verwaist" and status == "aktiv":
                 continue
-            if verwaist and r["typ"] in ("glob", "klasse"):
+            if verwaist and r["typ"] in MUSTER_TYPEN:
                 continue
             setzt = [a for a in WERTE if r[a]]
             if not setzt:
                 continue
-            m = self._trifft(r, eid, domain, device_class or "", status)
+            m = self._trifft(r, eid, domain, device_class or "", status, zuwachs, plattform)
             if not m:
                 continue
             # Punkt 127: HA-Standard gilt auch für Zähler (HA löscht deren States ebenso; Langzeit bleibt unbegrenzt)

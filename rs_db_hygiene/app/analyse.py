@@ -21,8 +21,9 @@ TAG = 86400
 # Version des Cache-Aufbaus; ältere Caches werden beim Start neu analysiert (2 = mit Herkunft, ab 0.1.4; 3 = Events je Typ, ab 0.3.0;
 # 4 = exakte erste/letzte Zeitstempel von 5-Min-Statistik und Langzeit, ab 0.4.11, Punkte 118/120;
 # 5 = Tage als lokale Kalendertage statt UTC-Tage, ab 0.4.12, Punkt 121;
-# 6 = Status deaktiviert, Klasse/Einheit deaktivierter Entitäten aus der Registry, ab 0.5.5b5, Punkte 185/186)
-CACHE_VERSION = 6
+# 6 = Status deaktiviert, Klasse/Einheit deaktivierter Entitäten aus der Registry, ab 0.5.5b5, Punkte 185/186;
+# 7 = Integration (platform der Registry) je Entität für den Regeltyp herkunft, ab 0.5.5b9, Punkt 196)
+CACHE_VERSION = 7
 
 CACHE_SCHEMA = """
 CREATE TABLE info (schluessel TEXT PRIMARY KEY, wert TEXT);
@@ -33,7 +34,7 @@ CREATE TABLE entitaet (
   state_class TEXT, device_class TEXT, unit TEXT,
   lts_id INTEGER, lts_rows INTEGER, lts_first_ts REAL, lts_last_ts REAL, kurz_rows INTEGER,
   herkunft_art TEXT, herkunft TEXT, herkunft_info TEXT, device_id TEXT,
-  kurz_first_ts REAL, kurz_last_ts REAL);
+  kurz_first_ts REAL, kurz_last_ts REAL, plattform TEXT);
 CREATE TABLE st_tage (metadata_id INTEGER, tag INTEGER, n INTEGER, PRIMARY KEY (metadata_id, tag));
 CREATE TABLE lts_tage (lts_id INTEGER, tag INTEGER, n INTEGER, PRIMARY KEY (lts_id, tag));
 CREATE TABLE kurz_tage (lts_id INTEGER, tag INTEGER, n INTEGER, PRIMARY KEY (lts_id, tag));
@@ -109,11 +110,15 @@ def lies_registry_details(pfad):
     Einstellung device_class vor original_device_class, die state_class aus capabilities."""
     with open(pfad, encoding="utf-8") as f:
         daten = json.load(f)["data"]
-    return {e["entity_id"]: {"deaktiviert": bool(e.get("disabled_by")),
-                             "device_class": e.get("device_class") or e.get("original_device_class") or "",
-                             "state_class": (e.get("capabilities") or {}).get("state_class") or "",
-                             "unit": e.get("unit_of_measurement") or ""}
-            for e in daten.get("entities", [])}
+    out = {e["entity_id"]: {"deaktiviert": bool(e.get("disabled_by")),
+                            "device_class": e.get("device_class") or e.get("original_device_class") or "",
+                            "state_class": (e.get("capabilities") or {}).get("state_class") or "",
+                            "unit": e.get("unit_of_measurement") or "", "plattform": e.get("platform") or ""}
+           for e in daten.get("entities", [])}
+    # Punkt 196: Integration auch für gelöschte Einträge – nur dieses Feld
+    for e in daten.get("deleted_entities", []):
+        out.setdefault(e["entity_id"], {"plattform": e.get("platform") or ""})
+    return out
 
 
 # Punkt 188: Einheiten der device_class data_size → Bytes
@@ -262,10 +267,14 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
     schritte["states_tage"] = time.time() - t
     _schritt_fertig("states_tage", 2, schritte["states_tage"])
 
+    # Punkt 192 (0.5.5b9): Zuwachs je Tag = Mittel der 7 vollen Kalendertage vor heute (fest ÷ 7, auch bei jüngeren
+    # Entitäten), aus den Tageszeilen statt einer eigenen Abfrage der letzten 24 h. Feldname rows_24h bleibt.
     t = time.time()
-    st_24h = dict(ha.execute(
-        "SELECT metadata_id, COUNT(*) FROM states WHERE last_updated_ts >= ? GROUP BY 1",
-        (jetzt - TAG,)))
+    summe7 = {}
+    for mid, tag, n, _mn, _mx in st_tage:
+        if heute - 7 <= tag < heute:
+            summe7[mid] = summe7.get(mid, 0) + n
+    st_24h = {mid: round(n / 7) for mid, n in summe7.items()}
     schritte["states_24h"] = time.time() - t
     _schritt_fertig("states_24h", 3, schritte["states_24h"])
 
@@ -345,8 +354,8 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
             lts_first.get(lid), lts_last.get(lid),
             kurz_sum.get(lid, 0) if lid else 0,
             h.get("art", ""), h.get("text", ""), h.get("info", ""), h.get("device_id"),
-            kurz_first.get(lid), kurz_last.get(lid)))
-    c.executemany("INSERT INTO entitaet VALUES (" + ",".join("?" * 24) + ")", zeilen)
+            kurz_first.get(lid), kurz_last.get(lid), rd.get("plattform") or ""))
+    c.executemany("INSERT INTO entitaet VALUES (" + ",".join("?" * 25) + ")", zeilen)
     c.executemany("INSERT INTO st_tage VALUES (?,?,?)", ((m, t_, n) for m, t_, n, _a, _b in st_tage))
     c.executemany("INSERT INTO lts_tage VALUES (?,?,?)", ((m, t_, n) for m, t_, n, _a, _b in lts_tage))
     c.executemany("INSERT INTO kurz_tage VALUES (?,?,?)", ((m, t_, n) for m, t_, n, _a, _b in kurz_tage))

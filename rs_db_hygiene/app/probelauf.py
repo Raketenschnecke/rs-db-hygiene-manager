@@ -86,7 +86,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
 
     for e in ents:
         verwaist = e["status"] != "aktiv"     # schreibt nicht mehr: verwaist oder deaktiviert (Punkt 186)
-        erg = aufl.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
+        erg = aufl.loese_e(e)
         # Punkt 102 (0.4.8): „wirksam“ = Regel-Tage, höchstens purge_keep_days („global“ = purge_keep_days). Damit rechnen
         # die Spalten „wirksam“, die Hinweise und die Löschmenge sofort – wie der Löschplan. Bis 0.4.7 stand hier der
         # Prognosezeitraum (ziel), der nur für die Prognose gilt: kp/ap = höchstens der Prognosezeitraum.
@@ -106,7 +106,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             "attr_zeilen": _aelter_zeilen(attr_letzt, mid, heute - al) if mit_attr else None,
             "lts": (_aelter(lts, lid, heute - lz) if lz is not None else 0) if lid else 0,
         }
-        # Wer seit 24 h nichts schreibt (z. B. vom Recorder ausgeschlossen), erzeugt auch keine neuen Attribute –
+        # Wer in den letzten 7 vollen Tagen nichts schreibt (z. B. vom Recorder ausgeschlossen; Punkt 192), erzeugt auch keine neuen Attribute –
         # sonst würde der 7-Tage-Zuwachs von vor dem Ausschluss für den ganzen Prognosezeitraum hochgerechnet.
         if not e["rows_24h"]:
             zuwachs_attr = zuwachs_attr_z = 0
@@ -240,6 +240,9 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                        # Punkt 63: Block „Löschmenge sofort“ als flache Felder (Server-Filter, Sortierung, Summen)
                        "loesch_summe": loesch["states"] + loesch["kurz"] + loesch["lts"], "loesch_states": loesch["states"],
                        "loesch_kurz": loesch["kurz"], "loesch_lts": loesch["lts"], "loesch_attr_zeilen": loesch["attr_zeilen"],
+                       # Punkt 197 (0.5.5b9): Platz der Löschmenge sofort in Bytes – States, 5-Min, Langzeit und Attribute
+                       "loesch_mb": (loesch["states"] * B_STATE + loesch["kurz"] * B_KURZ + loesch["lts"] * B_LTS
+                                     + (loesch["attr_bytes"] or 0)),
                        "hinweise": hinweise, "geschuetzt": erg["geschuetzt"], "schutz": erg.get("schutz")})
         if erg.get("schutz"):
             add(summe, "schutz_entitaeten", 1)    # Punkt 111
@@ -277,7 +280,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             events_liste.append({"event_type": typ, "wert": w or "global", "anzeige": rg.anzeige(w) if w else "global",
                                  "regel": er["regel"], "muster": er["muster"], "ueberstimmt": er["ueberstimmt"],
                                  "tage": k, "zeilen": sum(n for _t, n in h), "pro_tag": round(pro_tag),
-                                 "zeilen_24h": sum(n for t_, n in h if t_ >= heute - 1), "erster_tag": min(t_ for t_, _n in h),
+                                 "zeilen_24h": round(pro_tag), "erster_tag": min(t_ for t_, _n in h),
                                  "loeschbar": loesch, "prognose_bytes": p, "ersparnis_bytes": b - p})
         events_liste.sort(key=lambda x: -x["zeilen"])
     events = int(info.get("events_pro_tag", 0)) * B_EVENT
@@ -319,7 +322,7 @@ def _basis(e):
     b = {k: e[k] for k in ("entity_id", "domain", "status", "rows", "first_ts", "last_ts", "rows_24h",
                            "state_class", "device_class", "unit", "lts_rows", "lts_first_ts", "kurz_rows")}
     # Herkunft gibt es ab Cache-Version 2 (0.1.4); ältere Caches liefern leere Felder bis zur nächsten Analyse
-    for k in ("herkunft_art", "herkunft", "herkunft_info", "device_id"):
+    for k in ("herkunft_art", "herkunft", "herkunft_info", "device_id", "plattform"):   # plattform: Punkt 196 (Cache-Version 7)
         b[k] = e.get(k) or ""
     # Punkte 118/120 (0.4.11): „erster“/„letzter“ über States, 5-Min-Statistik und Langzeit; die Werte je Datenart bleiben
     # einzeln erhalten (st_*, kurz_*, lts_*). Caches vor Version 4 haben keine 5-Min-Zeitstempel und nur tagesgenaue Langzeit.
@@ -381,7 +384,7 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
 
         for e in ents:
             verwaist = e["status"] != "aktiv"     # schreibt nicht mehr: verwaist oder deaktiviert (Punkt 186)
-            t_, _h = rg.wirksame_tage(aufl.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"]), pkd)
+            t_, _h = rg.wirksame_tage(aufl.loese_e(e), pkd)
             k, a, lz = t_["kurzzeit"], t_["attribute"], t_["langzeit"]
             kl, al = max(k, MIN_KEEP_DAYS), max(a, MIN_KEEP_DAYS)
             mid, lid = e["metadata_id"], e["lts_id"]

@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b9 (Beta)
+- **Regeltyp vielschreiber (Punkt 193):** Muster ist eine Schwelle in Zeilen je Tag (z. B. `1000`), optional mit Entity-Mustern als Einschränkung. Trifft aktive Entitäten ab dieser Schreibrate (ohne Zähler) – dynamisch nach jeder Analyse. Rang nach herkunft, vor verwaist
+- **Regeltyp herkunft (Punkt 196):** alles einer Integration (z. B. `unifi`, `mobile_app`), Auswahl als Liste wie bei klasse; ohne Zähler und verwaiste, Rang nach klasse. Der Analyse-Cache kennt dafür die Integration je Entität (neuer Aufbau → nach dem Update einmal neue Analyse)
+- **Wer schreibt am meisten? (Punkt 194):** Kasten im Reiter Empfehlungen – Top 10/25/50/100/250 mit Anteil am Zuwachs, Schwelle und Ersparnis bei wählbarer Kurzzeit; je Stufe „als Vielschreiber-Regel“ oder „als entity-Regel“
+- **Empfehlungen mit Mehrfachauswahl (Punkt 195):** Auswahlspalte und Banner „als passive Regeln anlegen“ / „ignorieren“
+- **Zuwachs je Tag aus 7 vollen Tagen (Punkt 192):** Spalte Zuwachs, Prognose und Empfehlungen rechnen mit dem Mittel der 7 vollen Kalendertage vor heute (fest ÷ 7) statt mit den letzten 24 Stunden; Events ebenso
+- **Spalte „Platz frei (MB)“ (Punkt 197):** ersetzt im Tab Entitäten die Spalte „Attribute (MB)“ – Platz der ganzen Löschmenge sofort (States, 5-Min, Langzeit, Attribute), direkt neben der Summe
+
 ## 0.5.5b8 (Beta)
 - **Prognose-Chart mit HA-Standard (Punkt 191, ersetzt Punkt 180):** Gelb und Grün rechnen die Regel HA:standard in ihrer eingestellten Kurzzeit mit – Grün immer, Gelb nur, wenn sie aktiv ist (oder mit Haken „passive Regeln mitrechnen“). Grau („nur HA-Standard“) bleibt fest bei 10 Tagen als Vergleich mit HA in der Grundeinstellung
 

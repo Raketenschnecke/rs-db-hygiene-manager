@@ -355,10 +355,41 @@ async def klassen(_request):
     return web.json_response({"klassen": [{"muster": m, "anzahl": a, "zaehler": z} for m, (a, z) in sorted(zahl.items())]})
 
 
+async def plattformen(_request):
+    """Punkt 196: alle Integrationen (platform der Registry) nicht verwaister Entitäten – Auswahl für herkunft-Regeln.
+    Gleiche Form wie api/klassen; leer, solange der Cache noch keine Integration kennt (vor Cache-Version 7)."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return web.json_response({"klassen": [], "fehler": "Noch keine Analyse vorhanden"})
+    zahl = {}
+    for e in r["entitaeten"]:
+        if rg.ist_verwaist(e["status"]) or not e.get("plattform"):
+            continue
+        k = zahl.setdefault(e["plattform"], [0, 0])
+        k[0] += 1
+        k[1] += (e.get("state_class") or "").startswith("total")
+    return web.json_response({"klassen": [{"muster": m, "anzahl": a, "zaehler": z} for m, (a, z) in sorted(zahl.items())],
+                              **({} if zahl else {"fehler": "Keine Integrationen bekannt – bitte einmal neu analysieren"})})
+
+
+async def pareto(request):
+    """Punkt 194: Wer schreibt am meisten? Stufen Top N mit Anteil am Zuwachs und Ersparnis bei `tage` Tagen Kurzzeit."""
+    ziel, vm = _parameter(request)
+    t = request.query.get("tage", "14")
+    tage = int(t) if t.isdigit() and int(t) > 0 else 14
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"stufen": [], "fehler": "Noch keine Analyse vorhanden"})
+
+    def rechne():
+        return optimierung.pareto(r, optimierung.histogramme(CACHE), warnungen.kontext(HA_CONFIG), ziel, tage)
+    return web.json_response(await asyncio.to_thread(rechne))
+
+
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
               "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-              "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"}
+              "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb"}
 ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
 
 
@@ -366,7 +397,7 @@ def summen(liste):
     """Summe bzw. Anzahl je Spalte (Punkt 12)."""
     s = {"entitaeten": len(liste), "geraete": len({e["device_id"] for e in liste if e.get("device_id")}),
          "aktiv": 0, "deaktiviert": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
-         "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None,
+         "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None, "loesch_mb": 0,
          "first_ts": None, "last_ts": None,
          # Punkt 115: Entitäten mit Label und Zahl verschiedener Labels
          "labels": sum(1 for e in liste if e.get("labels")),
@@ -387,7 +418,7 @@ def summen(liste):
         for k in ("rows", "rows_24h", "lts_rows", "kurz_rows"):   # kurz_rows: Punkt 135 (0.5.3)
             s[k] += e[k] or 0
         s["loeschbar"] += e["loeschbar"]["states"] or 0
-        for k in ("loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts"):
+        for k in ("loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_mb"):   # loesch_mb: Punkt 197
             s[k] += e.get(k) or 0
         if e.get("loesch_attr_zeilen") is not None:
             s["loesch_attr_zeilen"] = (s["loesch_attr_zeilen"] or 0) + e["loesch_attr_zeilen"]
@@ -519,7 +550,8 @@ async def export_csv(request):
                 "attr_bestand_bytes", "attr_zeilen", "attr_zuwachs_tag_bytes", "attr_avg_bytes",
                 "loeschmenge_sofort_attr_bytes", "attr_anteil_prozent", "hinweise",
                 # Punkte 118/120 (0.4.11): erster/letzter über alle Datenarten, dahinter je Datenart
-                *[f"{a}{k}" for a in ("", "states_", "kurz_", "lts_") for k in ("erster", "letzter")]])
+                *[f"{a}{k}" for a in ("", "states_", "kurz_", "lts_") for k in ("erster", "letzter")],
+                "loeschmenge_sofort_bytes"])   # Punkt 197: am Ende, damit die übrigen Spalten ihren Platz behalten
     ts = lambda t: time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t)) if t else ""  # noqa: E731
     zeilen = _gefiltert(r, request.query)      # hängt auch die Labels an (Punkt 115)
     name = "dbh_probelauf.csv"
@@ -537,7 +569,7 @@ async def export_csv(request):
                       for k in ("attr_bytes", "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil")],
                     " | ".join(e["hinweise"]),
                     *[ts(e.get(k)) for k in ("first_ts", "last_ts", "st_first_ts", "st_last_ts", "kurz_first_ts", "kurz_last_ts",
-                                             "lts_first_ts", "lts_last_ts")]])
+                                             "lts_first_ts", "lts_last_ts")], round(e.get("loesch_mb") or 0)])
     return web.Response(text="﻿" + buf.getvalue(), content_type="text/csv", charset="utf-8",
                         headers={"Content-Disposition": f"attachment; filename={name}"})
 
@@ -1071,6 +1103,8 @@ def erstelle_app():
         web.get("/api/prognose_verlauf", prognose_verlauf),
         web.get("/api/entitaeten", entitaeten),
         web.get("/api/klassen", klassen),
+        web.get("/api/plattformen", plattformen),
+        web.get("/api/pareto", pareto),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),

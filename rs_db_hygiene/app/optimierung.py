@@ -79,6 +79,11 @@ def _vorfilter(regel, ents):
         return [e for e in ents if f'{e["domain"]}|{e.get("device_class") or ""}' in s]
     if t == "verwaist":
         return [e for e in ents if e["status"] != "aktiv"]
+    if t == "vielschreiber":      # Punkt 193: nur wer die Schwelle erreicht
+        s = int(m[0])
+        return [e for e in ents if (e["rows_24h"] or 0) >= s]
+    if t == "herkunft":           # Punkt 196
+        return [e for e in ents if e.get("plattform") and any(fnmatch.fnmatchcase(e["plattform"], x) for x in m)]
     return ents
 
 
@@ -107,7 +112,7 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
     w = {"ueberstimmt": 0, "gewinnt": 0, "zuwachs_tag": 0, "bestand": 0, "loesch_states": 0, "loesch_kurz": 0,
          "loesch_lts": 0, "loesch_bytes": 0, "ersparnis_bytes": 0, "verlaengert": 0}
     for e in _vorfilter(regel, pl.get("entitaeten", [])):
-        x = allein.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
+        x = allein.loese_e(e)
         if x["geschuetzt"]:
             geschuetzt.append(e["entity_id"])
             continue
@@ -117,7 +122,7 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
         getroffen.append(e)
         w["zuwachs_tag"] += e["rows_24h"] or 0
         w["bestand"] += e["rows"] or 0
-        g = gesamt.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
+        g = gesamt.loese_e(e)
         sieger = {g[a]["regel"] for a in rg.WERTE if regel[a] and g[a]["regel"] != regel["id"]}
         if sieger:
             w["ueberstimmt"] += 1
@@ -286,7 +291,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         passiv = []
         if typ != "event":
             for p in passive:
-                n_ = sum(1 for e in w["_ents"] if any(p["_aufl"].loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])[a]["regel"] for a in ("kurzzeit",)))
+                n_ = sum(1 for e in w["_ents"] if any(p["_aufl"].loese_e(e)[a]["regel"] for a in ("kurzzeit",)))
                 if n_:
                     passiv.append({"id": p["id"], "anzahl": n_, "kurzzeit": p["kurzzeit"]})
         v = {"id": vid, "art": art, "titel": titel, "gruende": gruende, "ignoriert": vid in ignoriert,
@@ -332,7 +337,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             gruende.append("in HA deaktiviert – schreibt nichts mehr, Altdaten bleiben sonst bis purge_keep_days")
             tage.append(TAGE["deaktiviert"])
         if n >= VIEL_PRO_TAG:
-            gruende.append(f"Vielschreiber: {n:,} Zeilen in 24 h (≈ alle {max(1, round(86400 / n))} s)".replace(",", "."))
+            gruende.append(f"Vielschreiber: {n:,} Zeilen je Tag (Ø 7 volle Tage, ≈ alle {max(1, round(86400 / n))} s)".replace(",", "."))
             tage.append(TAGE["viel_sehr" if n >= VIEL_SEHR else "viel"])
         if (e.get("attr_zuwachs_tag") or 0) >= ATTR_PRO_TAG:
             gruende.append(f"große Attribute: {e['attr_zuwachs_tag'] / 1e6:.1f} MB je Tag".replace(".", ","))
@@ -396,6 +401,44 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
 
     out.sort(key=lambda v: -(v["ersparnis_bytes"] or 0))
     return out
+
+
+# ---------------------------------------------------------------- Wer schreibt am meisten? (Punkt 194)
+
+PARETO_STUFEN = (10, 25, 50, 100, 250)
+
+
+def pareto(pl, hist, ktx, ziel=None, tage=14):
+    """Kandidaten wie bei den Vorschlägen (_frei: aktiv, ohne Schutz, keine Zähler, keine Energie-/Helfer-Quellen, ohne
+    eigene Kurzzeit), deren wirksame Kurzzeit heute länger als `tage` ist – nach Zeilen je Tag sortiert. Je Stufe (Top N):
+    Anteil am Zuwachs aller nicht verwaisten Entitäten, Schwelle (Zeilen/Tag der N-ten) und Ersparnis im
+    Prognosezeitraum, wenn diese N auf `tage` gekürzt würden (Formel wie wirkung())."""
+    pkd = hist["pkd"]
+    ziel = int(ziel or (pl.get("stand") or {}).get("ziel_tage") or pkd)
+    ents = pl.get("entitaeten", [])
+    gesamt = sum(e["rows_24h"] or 0 for e in ents if not rg.ist_verwaist(e["status"]))
+    kand = []
+    for e in ents:
+        n = e["rows_24h"] or 0
+        alt = ((e["werte"] or {}).get("kurzzeit") or {}).get("tage")
+        if not n or alt is None or alt <= tage or not _frei(e, ktx):
+            continue
+        lid = hist["lids"].get(e["entity_id"])
+        pro_tag = n * pl_.B_STATE + (pl_.KURZ_PRO_TAG * pl_.B_KURZ if lid else 0) + (e.get("attr_zuwachs_tag") or 0)
+        kand.append({"entity_id": e["entity_id"], "rows_24h": n, "kurzzeit_tage": alt,
+                     "ersparnis_bytes": (min(alt, ziel) - min(tage, ziel)) * pro_tag})
+    kand.sort(key=lambda x: -x["rows_24h"])
+    stufen, summe_n, summe_b = [], 0, 0
+    grenzen = [s for s in PARETO_STUFEN if s < len(kand)] + [len(kand)] if kand else []
+    for i, k in enumerate(kand, 1):
+        summe_n += k["rows_24h"]
+        summe_b += k["ersparnis_bytes"]
+        if i in grenzen:
+            stufen.append({"top": i, "alle": i == len(kand), "zeilen_tag": summe_n,
+                           "anteil": round(100 * summe_n / gesamt, 1) if gesamt else 0,
+                           "schwelle": k["rows_24h"], "ersparnis_bytes": summe_b})
+    return {"tage": tage, "ziel_tage": ziel, "gesamt_zeilen_tag": gesamt, "anzahl": len(kand), "stufen": stufen,
+            "kandidaten": kand[:max(PARETO_STUFEN)]}
 
 
 def lies_ignoriert(daten_ordner):
