@@ -258,7 +258,19 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
                                        sorted([a["art"], a["name"], a["keep_days"], a["alle"]] for a in im_lauf_b)],
                                       default=str).encode()).hexdigest()[:12]
     zeilen_b = sum(a["zeilen"] for a in auftraege_b)
+    # Punkt 199 (0.5.5b10): je Eintrag die überstimmten Regeln in Rangfolge (Kurzzeit, Langzeit bzw. Events) – für den
+    # Tooltip „R12 gewinnt vor R30 …“ in der Löschtabelle; nur Anzeige, der Lauf nutzt es nicht
+    namen = {c["entity_id"] for c in eintraege} | {a["name"] for a in auftraege_b}
+    ketten = {}
+    for e in pl["entitaeten"]:
+        if e["entity_id"] in namen:
+            w = e.get("werte") or {}
+            ketten[e["entity_id"]] = {a: [u["regel"] for u in (w.get(a) or {}).get("ueberstimmt") or []] for a in ("kurzzeit", "langzeit")}
+    for ev in pl.get("events") or []:
+        if ev["event_type"] in namen:
+            ketten[ev["event_type"]] = {"events": [u["regel"] for u in ev.get("ueberstimmt") or []]}
     return {
+        "ketten": ketten,
         "analyse_zeit": pl["stand"]["analyse_zeit"], "purge_keep_days": pkd, "grenze": grenze, "grenze_b": grenze_b,
         "nur_regel": nur_regel, "ausnahme": bool(ausnahme),
         "kennung": kennung, "gruppen": gruppen, "entitaeten": eintraege, "auftraege_b": auftraege_b,

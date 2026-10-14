@@ -392,6 +392,8 @@ table.baustein thead th[data-sort] { cursor: pointer; }
 .schalter.an { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
 .schalter.aus { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
 .massen { padding: 6px 10px; border-radius: 8px; background: var(--accent-weak); border: 1px solid var(--accent); }
+/* Punkt 199 (0.5.5b10): Rang „Stufe.Position“ neben dem Regel-Chip */
+.rang { display: inline-block; margin-left: 3px; padding: 0 4px; border-radius: 4px; font: 11px/16px var(--mono); color: var(--muted); border: 1px solid var(--line); vertical-align: middle; cursor: help; }
 /* Punkt 194 (0.5.5b9): Kasten „Wer schreibt am meisten?“ im Reiter Empfehlungen */
 .pareto { margin: 0 0 10px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .pareto > summary { cursor: pointer; padding: 2px 0; }
@@ -632,6 +634,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         <p>Treffen mehrere aktive Regeln dieselbe Entität, gewinnt je Wert (Kurzzeit und Langzeit getrennt) die mit dem höchsten Rang:</p>
         <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › herkunft › vielschreiber › verwaist › HA-Standard</p>
         <p>Die Typen <b>herkunft</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter, wer weniger schreibt, wieder heraus. Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
+        <p id="h-rangnummer"><b>Rangnummer (ab 0.5.5b10):</b> Im Reiter Regeln und in der Löschtabelle steht neben jeder Regel ihr Rang als <b>Stufe.Position</b> – die Stufe nach dem Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), die Position innerhalb der Stufe nach der Reihenfolge der Liste. Kleinere Zahl = höherer Rang; <code>3.2</code> ist die zweite glob-Regel. Der Tooltip in der Löschtabelle zeigt, gegen welche Regeln eine Regel bei dieser Entität gewonnen hat (je Wert getrennt).</p>
         <p>Innerhalb desselben Typs gewinnt die Regel, die <b>weiter oben in der Liste</b> steht. Die Reihenfolge änderst du im Tab Regeln mit den Pfeilen.</p>
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
@@ -861,6 +864,16 @@ actions:
     <div class="tabelle" style="min-height:120px"><table id="tSumme" class="baustein"></table></div>
   </section>
   <section id="tab-lts" hidden>
+    <!-- Punkt 198 (0.5.5b10): Erläuterung, wie die App mit Statistiken ohne Entität umgeht -->
+    <div class="hinweisbox" id="ltsText" style="margin:0 0 8px">
+      <div>Langzeitstatistiken (Stundenstatistik), zu denen es keine States mehr gibt – meist von deaktivierten oder gelöschten Entitäten, nachdem ihre letzten States weggefallen sind.
+        <b>Die App zeigt diese Statistiken nur an. Sie löscht sie nie, auch keine Regel und kein Löschlauf erfasst sie.</b></div>
+      <ul style="margin:0; padding-left:20px">
+        <li><b>Sie bleiben dauerhaft erhalten.</b> Schaltest du einen Sensor wieder ein, läuft seine Statistik weiter.</li>
+        <li><b>Sie zählen bei den Entitäten nicht mit:</b> weder in der Löschmenge noch in der Prognose. Auch das Kachelraster rechnet sie nicht mit.</li>
+        <li><b>Endgültig entfernen</b>, falls du die Sensoren nicht mehr brauchst: in HA unter Entwicklerwerkzeuge → Statistiken. Dort erscheinen sie meist mit einem Hinweis auf ein Problem und lassen sich löschen.</li>
+      </ul>
+    </div>
     <div class="trefferzeile" id="trefferLts"></div>
     <div class="tabelle"><table id="tLts" class="baustein"></table></div>
   </section>
@@ -2208,6 +2221,28 @@ function spaltenEnt() {
 
 // ================================================ Regeln, Prognosen je Regel, Statistik ohne Entität
 const regelIndex = r => S.regeln.regeln.indexOf(r);
+// Punkt 199 (0.5.5b10): Rang „Stufe.Position“ – Stufe nach Typ (Schutz 0, E: 1, entity 2 … verwaist 7, event 8, HA-Standard 99),
+// Position innerhalb der Stufe in der Reihenfolge der Regelliste (aktive und passive, damit die Nummer beim Umschalten bleibt)
+const RANG_STUFE = { schutz: 0, entity: 2, glob: 3, klasse: 4, herkunft: 5, vielschreiber: 6, verwaist: 7, event: 8, ha_standard: 99 };
+const RANG_NAME = { 0: "Schutz", 1: "eigene Vorhaltezeit (E:)", 2: "entity", 3: "glob", 4: "klasse", 5: "herkunft", 6: "vielschreiber", 7: "verwaist", 8: "event", 99: "HA-Standard" };
+const rangStufe = r => r.typ === "schutz" ? 0 : String(r.id).startsWith("E:") ? 1 : RANG_STUFE[r.typ] ?? 50;
+const RANG_CACHE = new WeakMap();
+function regelRang(id) {
+  const l = S.regeln?.regeln || [];
+  let m = RANG_CACHE.get(l);
+  if (!m) {
+    m = new Map(); const n = {};
+    for (const r of l) {
+      const st = rangStufe(r), pos = n[st] = (n[st] || 0) + 1;
+      m.set(r.id, { stufe: st, pos, text: st === 99 ? "99" : `${st}.${pos}`, sort: st * 100000 + pos });
+    }
+    RANG_CACHE.set(l, m);
+  }
+  return m.get(id) || null;
+}
+const rangTip = g => g.stufe === 99 ? "Rang 99: HA-Standard – immer der niedrigste Rang"
+  : `Rang ${g.text}: Stufe ${g.stufe} (${RANG_NAME[g.stufe]}), ${g.pos}. Regel dieser Stufe in der Liste` + (g.stufe === 8 ? " – bei Event-Regeln geht ein genauer Name vor Platzhaltern" : "");
+const rangChip = id => { const g = regelRang(id); return g ? `<span class="rang" title="${esc(rangTip(g))}">${g.text}</span>` : ""; };
 const trefferVon = r => { const x = (S.probe?.regeln || []).find(p => p.regel === r.id); return x ? x.entitaeten : (r.aktiv || S.probe?.stand?.mit_vorgemerkten ? 0 : null); };
 const wertSpalte = art => ({
   k: art, titel: WNAME[art], typ: "auswahl", breite: art === "kurzzeit" ? 200 : 190, wert: r => wertAnzeige(r[art]),
@@ -2234,14 +2269,16 @@ T.regeln = new LokaleTabelle({
       zelle: r => `<button class="schalter ${r.aktiv ? "an" : "aus"}" data-umschalten="${esc(r.id)}" title="Klick: auf ${r.aktiv ? "passiv" : "aktiv"} schalten${!r.aktiv && r.id.startsWith("E:") ? "\npassiv – für diese Entität gelten wieder Muster-Regeln bzw. der Standard" : ""}">${r.aktiv ? "aktiv" : "passiv"}</button>`,
       csv: r => r.aktiv ? "aktiv" : "passiv", optionen: () => [["aktiv", "aktiv"], ["passiv", "passiv"]],
       summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nangezeigt: aktiv ${zahl(g.filter(r => r.aktiv).length)} · passiv ${zahl(g.filter(r => !r.aktiv).length)}\nalle: aktiv ${zahl(a.filter(r => r.aktiv).length)} · passiv ${zahl(a.filter(r => !r.aktiv).length)}`] },
-    { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 75, mitte: 1, wert: r => regelIndex(r),
+    // Punkt 199: Rang „Stufe.Position“ – Sortierung nach Rang zeigt die tatsächliche Vorrangfolge; ▲ tauscht mit der vorigen Regel derselben Stufe
+    { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 90, mitte: 1, wert: r => regelRang(r.id)?.sort ?? regelIndex(r),
+      hilfe: "Stufe.Position: Stufe nach Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), Position innerhalb der Stufe. Kleinere Zahl = höherer Rang. Je Wert gewinnt unter den passenden aktiven Regeln die mit dem höchsten Rang.",
       zelle: r => {
-        if (r.id.startsWith("E:")) return `<span class="chip regel" title="Eigene Vorhaltezeit: hat immer Vorrang vor allen anderen Regeln, die Position spielt keine Rolle">E</span>`;
-        if (r.typ === "ha_standard") return `<span class="chip regel" title="HA-Standard: immer der niedrigste Rang – jede andere Regel geht vor, die Position spielt keine Rolle">HA</span>`;   // Punkt 127
-        const i = regelIndex(r), frei = T.regeln.istUrzustand();
-        return `<button data-hoch="${i}" ${i && frei ? "" : "disabled"} title="${frei ? "nach oben" : "nur ohne Filter und bei Sortierung nach Rang"}">▲</button>`;
+        const g = regelRang(r.id) || {}, chip = rangChip(r.id);
+        if (r.id.startsWith("E:") || r.typ === "ha_standard") return chip;   // E: und HA-Standard: Position ohne Bedeutung bzw. fest
+        const i = regelIndex(r), vor = vorigeGleicheStufe(i), frei = T.regeln.istUrzustand();
+        return `${chip} <button data-hoch="${i}" ${vor >= 0 && frei ? "" : "disabled"} title="${frei ? (vor >= 0 ? "eine Position nach oben (innerhalb der Stufe)" : "schon die erste Regel dieser Stufe") : "nur ohne Filter und bei Sortierung nach Rang"}">▲</button>`;
       },
-      csv: r => regelIndex(r) + 1 },
+      csv: r => regelRang(r.id)?.text ?? "" },
     { k: "id", titel: "ID", typ: "text", fest: 1, breite: 110, wert: r => r.id, zelle: r => `<span class="mono">${esc(r.id)}</span>`, csv: r => r.id, summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "name", titel: "Name", typ: "text", breite: 220, wert: r => r.name, csv: r => r.name,
       zelle: r => {
@@ -2723,13 +2760,20 @@ $("#tRegeln").addEventListener("click", async ev => {
   const hoch = ev.target.closest("[data-hoch]");
   if (hoch) {
     ev.stopPropagation();
-    const i = +hoch.dataset.hoch, l = [...S.regeln.regeln];
-    [l[i - 1], l[i]] = [l[i], l[i - 1]];
+    const i = +hoch.dataset.hoch, j = vorigeGleicheStufe(i), l = [...S.regeln.regeln];
+    if (j < 0) return;
+    [l[j], l[i]] = [l[i], l[j]];   // Punkt 199: mit der vorigen Regel derselben Stufe tauschen
     return speichereRegeln({ ...S.regeln, regeln: l });
   }
   const tr = ev.target.closest("tr[data-i]");
   if (tr) bearbeiteRegel(+tr.dataset.i);
 });
+// Punkt 199: Index der vorigen Regel derselben Rang-Stufe (−1, wenn es keine gibt)
+function vorigeGleicheStufe(i) {
+  const l = S.regeln.regeln, st = rangStufe(l[i]);
+  for (let j = i - 1; j >= 0; j--) if (rangStufe(l[j]) === st) return j;
+  return -1;
+}
 $("#massenleiste").addEventListener("click", async ev => {
   const b = ev.target.closest("[data-masse]"); if (!b) return;
   if (b.dataset.masse === "weg") { S.auswahl.clear(); return T.regeln.zeige(); }
@@ -3523,13 +3567,21 @@ const LART = { "vollständig": "vollständig", "teilweise": "teilweise", "nächs
 const TABNAME = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
 // Punkt 63: Plantabelle je Entität bzw. Event-Typ mit dem Block „Zeilen dieser Lauf“ (wie die Monatssumme)
 const KURZ = { states: "K", kurz: "5M", lts: "L", events: "EV" };
+// Punkt 199: Tooltip „Kurzzeit: R12 (Rang 3.2) gewinnt vor R30 (4.1), HA:standard (99)“ je Wert
+const rangVon = id => { const g = regelRang(id); return g ? `${id} (${g.stufe === 99 ? "99" : g.text})` : id; };
+function ketteTip(r) {
+  const k = r.kette || {}, wn = { kurzzeit: WNAME.kurzzeit, langzeit: WNAME.langzeit, events: EV_NAME };
+  const gew = { kurzzeit: r.regel_k, langzeit: r.regel_l, events: r.regel_e };
+  const z = Object.keys(wn).filter(a => gew[a]).map(a => `${wn[a]}: ${rangVon(gew[a])}${(k[a] || []).length ? ` gewinnt vor ${k[a].map(rangVon).join(", ")}` : " – keine andere Regel trifft"}`);
+  return z.length ? z.join("\n") + "\n\nRang Stufe.Position: 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard" : "";
+}
 function planZeilen(p) {
   const zeilen = {};
   const zeile = (name, status) => zeilen[name] ||= { entity_id: name, status: status || "", regeln: new Set(), teile: [], states: 0, kurz: 0, lts: 0, events: 0,
-    attr_zeilen: null, attr_obergrenze: false, faellig: 0, hinweise: [] };
+    attr_zeilen: null, attr_obergrenze: false, faellig: 0, hinweise: [], kette: (p.ketten || {})[name] };
   const ohne = a => ["nächster Lauf", "übersprungen"].includes(a);
   for (const c of p.entitaeten) {
-    const z = zeile(c.entity_id, c.status); z.regeln.add(c.regel);
+    const z = zeile(c.entity_id, c.status); z.regeln.add(c.regel); z.regel_k = c.regel;
     z.teile.push({ art: "states", keep_days: c.keep_days, kurzzeit: c.kurzzeit_tage, lauf: c.art, zeilen: c.zeilen, gesamt: c.zeilen_gesamt, hinweis: c.hinweis, exakt: p.exakt });
     z.states += c.keep_days != null ? c.zeilen : 0;   // Punkt 121: keep_days 0 = „keine“ bis heute 0:00 z.faellig += c.zeilen_gesamt;
     if (c.attr_zeilen != null) { z.attr_zeilen = (z.attr_zeilen || 0) + c.attr_zeilen; z.attr_obergrenze ||= c.art === "teilweise"; }
@@ -3537,6 +3589,7 @@ function planZeilen(p) {
   }
   for (const a of p.auftraege_b || []) {
     const z = zeile(a.name, a.status); z.regeln.add(a.regel);
+    if (a.art === "lts") z.regel_l = a.regel; else if (a.art === "events") z.regel_e = a.regel; else z.regel_k ||= a.regel;   // Punkt 199
     z.teile.push({ art: a.art, keep_days: a.keep_days, alle: a.alle, lauf: a.art_lauf, zeilen: a.zeilen_lauf ?? a.zeilen, gesamt: a.zeilen, mit_meta: a.mit_meta, hinweis: a.hinweis, exakt: p.exakt });
     z[a.art] += ohne(a.art_lauf) ? 0 : (a.zeilen_lauf ?? a.zeilen); z.faellig += a.zeilen;   // Punkt 75: bei „teilweise“ nur der Teil dieses Laufs
     if (a.hinweis) z.hinweise.push(a.hinweis);
@@ -3589,7 +3642,10 @@ T.loesch = new LokaleTabelle({
   spalten: [
     { k: "entity_id", titel: "Entität / Event-Typ", typ: "text", fest: 1, breite: 330, wert: r => r.entity_id, zelle: r => `<span class="mono">${esc(r.entity_id)}</span>`, csv: r => r.entity_id,
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
-    { k: "regel", titel: "Regel", typ: "text", breite: 150, wert: r => r.regel, zelle: r => r.regel.split(", ").map(regelChip).join(" "), csv: r => r.regel },
+    // Punkt 199: Regel-Chips mit Rang „Stufe.Position“, Tooltip mit der Kette der überstimmten Regeln
+    { k: "regel", titel: "Regel (Rang)", typ: "text", breite: 170, wert: r => r.regel,
+      hilfe: "Regel, die den gelöschten Teil bestimmt, mit Rang Stufe.Position (0 Schutz … 99 HA-Standard; kleinere Zahl = höherer Rang). Tooltip: gegen welche Regeln sie gewonnen hat.",
+      zelle: r => r.regel.split(", ").map(id => `${regelChip(id)}${rangChip(id)}`).join(" "), tip: ketteTip, csv: r => r.regel.split(", ").map(id => `${id} (${regelRang(id)?.text ?? "–"})`).join(", ") },
     // Punkt 114 (0.4.10): Zustand der Entität, nicht der Regel – passive Regeln stehen nie im Plan
     { k: "status", titel: STATUS_TITEL, typ: "auswahl", breite: 145, wert: r => r.status || "–",
       hilfe: `${STATUS_HILFE} – passive Regeln stehen nie im Plan. Bei Event-Typen „–“.`,

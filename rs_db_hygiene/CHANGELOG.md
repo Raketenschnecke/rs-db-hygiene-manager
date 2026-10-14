@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b10 (Beta)
+- **Rangnummer der Regeln (Punkt 199):** Jede Regel trägt ihren Rang als Stufe.Position – 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard. Zu sehen in der Löschtabelle (Spalte „Regel (Rang)“, Tooltip: gegen welche Regeln sie je Wert gewonnen hat) und im Reiter Regeln (Sortierung nach Rang = tatsächliche Vorrangfolge; ▲ verschiebt innerhalb der Stufe)
+- **Statistik ohne Entität erklärt (Punkt 198):** Hinweis oben im Reiter – nur Anzeige, nie gelöscht, zählt nicht in Löschmenge und Prognose; endgültig entfernen in HA unter Entwicklerwerkzeuge → Statistiken
+
 ## 0.5.5b9 (Beta)
 - **Regeltyp vielschreiber (Punkt 193):** Muster ist eine Schwelle in Zeilen je Tag (z. B. `1000`), optional mit Entity-Mustern als Einschränkung. Trifft aktive Entitäten ab dieser Schreibrate (ohne Zähler) – dynamisch nach jeder Analyse. Rang nach herkunft, vor verwaist
 - **Regeltyp herkunft (Punkt 196):** alles einer Integration (z. B. `unifi`, `mobile_app`), Auswahl als Liste wie bei klasse; ohne Zähler und verwaiste, Rang nach klasse. Der Analyse-Cache kennt dafür die Integration je Entität (neuer Aufbau → nach dem Update einmal neue Analyse)
