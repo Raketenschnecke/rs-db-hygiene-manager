@@ -2,8 +2,6 @@
 
 Retention times per entity for the Home Assistant recorder database.
 
-![Overview of the app: tiles for current state, immediate deletion volume and forecast, with the tabs below](https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/uebersicht.png)
-
 The repository consists of two parts that share one version number:
 
 - **App** `rs_db_hygiene/`: web interface (Ingress) with analysis, rules, dry run and deletion run.
