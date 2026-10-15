@@ -67,9 +67,11 @@ def _lade(cache_pfad, attr_pfad):
             "attr_letzt": attr_letzt, "attr_zuwachs": attr_zuwachs, "attr_zuwachs_z": attr_zuwachs_z, "attr_stand": attr_stand}
 
 
-def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=False):
+def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=False, halten_pfad=None):
     d = _lade(cache_pfad, attr_pfad)
     info, heute, pkd, st, lts, kurz, ents, ev = (d[k] for k in ("info", "heute", "pkd", "st", "lts", "kurz", "ents", "ev"))
+    if halten_pfad:   # Punkt 201: Hysterese der vielschreiber-Regeln je Analyse-Stand fortschreiben
+        rg.halte_vielschreiber(regel_daten, ents, info.get("analyse_zeit"), halten_pfad)
     attr_letzt, attr_zuwachs, attr_zuwachs_z, attr_stand = (d[k] for k in ("attr_letzt", "attr_zuwachs", "attr_zuwachs_z", "attr_stand"))
     ziel = int(ziel_tage or pkd)
     zb = min(pkd, ziel)    # Punkt 102: ohne Regeln bleibt höchstens purge_keep_days, im Prognosezeitraum höchstens ziel

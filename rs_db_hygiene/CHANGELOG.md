@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b12 (Beta)
+- **Vielschreiber ohne Pendeln (Punkt 201):** Wer zu einer vielschreiber-Regel gehört, bleibt dabei, bis sein Zuwachs unter 80 % der Schwelle fällt (Hysterese, Stand je Analyse)
+- **Empfehlungen per Massenauswahl (Punkte 212/213):** „als aktive Regeln anlegen …“ mit Warnprüfung vorab; „zu einer Regel zusammenfassen …“ – gleiche Regeltypen werden eine Regel, entity und glob eine glob-Regel, bei verschiedenen Kurzzeiten die längste oder je Kurzzeit eine Regel; ergibt sich genau eine Regel, öffnet sich die Regelmaske
+- **Rückstand in Läufen (Punkt 200):** Tab Löschen schätzt, wie viele Läufe der Rückstand braucht; Tabelle Läufe mit Spalte „Rest danach (≈ Läufe)“
+- **Tooltips (Punkte 215–218):** eigene Tooltip-Anzeige, überall nach dem Schema „**Thema:** Inhalt“ und kontextbezogen (Status-Chip im Löschplan, Kacheln nur ihre Zeile); Status im Löschplan als farbige Chips (grün vollständig, gelb teilweise, rot übersprungen)
+- **Kleinigkeiten:** Spalten „Speicher frei (MB)“ / „Speicher (MB)“ statt „Platz“ (Punkt 209); Notiz der Empfehlungen „Empfehlung des RS DB HM“, ausgeschrieben im Tooltip (Punkt 211); neue FAQ „In welcher Reihenfolge lege ich Regeln an?“, verlinkt neben „Wer schreibt am meisten?“ (Punkt 214)
+
 ## 0.5.5b11 (Beta)
 - **Empfehlungen je Integration (Punkt 205):** Ab 5 Einzelvorschlägen einer Integration (z. B. proxmoxve, unifi) kommt eine herkunft-Regel mit 30 Tagen statt vieler einzelner Regeln; nicht für Sammel-Integrationen wie mqtt, esphome oder template
 - **Empfehlungen je Klasse (Punkt 208):** Mehrere Vorschläge derselben Geräteklasse (z. B. `sensor|frequency`) werden zu einer klasse-Regel, wenn die übrigen Entitäten der Klasse kaum verwendet werden; Uhrzeit-Sensoren (`time_date`) mit 1 Tag. Vorschläge für Integration oder Klasse entfallen, wenn sie eine heute kürzere Kurzzeit verlängern würden

@@ -344,7 +344,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         muster = f"{dom}.*_{end}"
         v = neu(f"gruppe:{muster}", "gruppe", f"Gruppe {muster}", "glob", [muster], TAGE["gruppe"],
                 [f"{len(l)} Diagnose-Entitäten mit Endung _{end} ohne eigene Kurzzeit"],
-                f"Diagnose {muster} – 7 Tage", "Empfehlung der App: Diagnosewerte braucht man selten länger als eine Woche")
+                f"Diagnose {muster} – 7 Tage", "Empfehlung des RS DB HM: Diagnosewerte braucht man selten länger als eine Woche")
         if v:
             vergeben.update(e["entity_id"] for e in l)
 
@@ -424,7 +424,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             gr.append(f"von den übrigen {len(rest)} werden {benutzt} irgendwo verwendet")
         vid = f"klasse:{k}"
         v = neu(vid, "klasse", f"Klasse {k}", "klasse", [k], kz, gr + arten(l), f"Klasse {k} – {rg.anzeige(kz)}",
-                "Empfehlung der App")
+                "Empfehlung des RS DB HM")
         if v and vid not in ignoriert:
             vergeben.update(x[0] for x in l)
 
@@ -450,7 +450,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             gr.append(f"⚠ trifft auch {_anzahl(quellen, 'Quelle', 'Quellen')} von Energie-Dashboard oder Helfern – in der Maske prüfen")
         vid = f"herkunft:{p}"
         v = neu(vid, "herkunft", f"Integration {p}", "herkunft", [p], kz, gr, f"Integration {p} – {rg.anzeige(kz)}",
-                "Empfehlung der App: eine Regel je Integration statt vieler einzelner")
+                "Empfehlung des RS DB HM: eine Regel je Integration statt vieler einzelner")
         if v and vid not in ignoriert:
             vergeben.update(x[0] for x in l)
     einzeln = [x for x in einzeln if x[0] not in vergeben]
@@ -467,13 +467,13 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
                     continue
                 v = neu(f"gruppe:{m}", "gruppe", f"Gruppe {m}", "glob", [m], kz,
                         [f"{len(drin)} Entitäten, alle ohne eigene Kurzzeit"] + arten(drin),
-                        f"{m} – {rg.anzeige(kz)}", "Empfehlung der App")
+                        f"{m} – {rg.anzeige(kz)}", "Empfehlung des RS DB HM")
                 if v:
                     vergeben.update(x[0] for x in drin)
     for eid, kz, gruende in einzeln:
         if eid not in vergeben:
             neu(f"entitaet:{eid}", "entitaet", eid, "entity", [eid], kz, gruende, f"{eid} – {rg.anzeige(kz)}",
-                "Empfehlung der App")
+                "Empfehlung des RS DB HM")
 
     # 3. verwaiste Entitäten ohne verwaist-Regel
     if not any(r["typ"] == "verwaist" and r["aktiv"] for r in bestand["regeln"]):
@@ -483,7 +483,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             neu("verwaist:alle", "verwaist", "verwaiste Entitäten", "verwaist", ["alle"], TAGE["verwaist"],
                 [f"{len(alt)} verwaiste Entitäten ohne Regel; ihre States und 5-Min-Statistik bleiben sonst bis purge_keep_days",
                  "Langzeit bleibt unverändert (unbegrenzt) – lässt sich in der Maske ändern"],
-                "Verwaiste – 30 Tage", "Empfehlung der App: 30 Tage Frist, falls eine Entität nur umbenannt wurde")
+                "Verwaiste – 30 Tage", "Empfehlung des RS DB HM: 30 Tage Frist, falls eine Entität nur umbenannt wurde")
 
     # 4. Event-Typen mit viel Volumen ohne Event-Regel
     te = _tage_von(TAGE["event"])
@@ -493,7 +493,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         typ = ev["event_type"]
         neu(f"event:{typ}", "event", f"Events {typ}", "event", [typ], TAGE["event"],
             [f"{ev['pro_tag']:,} Events je Tag ohne eigene Event-Regel".replace(",", "."),
-             "Events braucht nur das Logbuch („Aktivität“)"], f"Events {typ} – 14 Tage", "Empfehlung der App")
+             "Events braucht nur das Logbuch („Aktivität“)"], f"Events {typ} – 14 Tage", "Empfehlung des RS DB HM")
 
     out.sort(key=lambda v: (-(v["ersparnis_bytes"] or 0), -(v["zuwachs_tag"] or 0)))   # Punkt 207: bei Gleichstand Zuwachs
     return out

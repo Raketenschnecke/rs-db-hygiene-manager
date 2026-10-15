@@ -58,6 +58,16 @@ h1 { margin: 0; line-height: 0; flex: none; }
 #btnAnalyse.alt::after { content: "!"; position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
   background: #f5c400; color: #1d2330; border: 2px solid var(--bg); font-size: 11px; line-height: 16px; font-weight: 800; }
 .kopf-job { display: flex; align-items: center; gap: 10px; flex: none; }
+/* Punkt 216 (0.5.5b12): eigene Tooltip-Anzeige – „Thema:“ fett, Inhalt normal; Popover liegt auch über Dialogen */
+#tip { position: fixed; inset: auto; margin: 0; max-width: min(460px, 92vw); padding: 7px 10px; border-radius: 6px;
+  /* hebt sich ab: Fläche etwas heller als die Panels (im hellen Design leicht getönt), Rahmen und Schein neutral –
+     die Farben Rot/Gelb/Grün/Blau tragen in der App Bedeutung (Istzustand, Löschmenge, Prognose …) */
+  border: 1px solid color-mix(in srgb, var(--text) 45%, var(--panel)); background: color-mix(in srgb, var(--panel) 88%, var(--text));
+  box-shadow: 0 6px 20px rgba(0,0,0,.4), 0 0 14px 1px color-mix(in srgb, var(--text) 28%, transparent);
+  color: var(--text); font-size: 12px; line-height: 1.4; pointer-events: none; overflow-wrap: anywhere; }
+#tip div + div { margin-top: 2px; }
+#tip .tip-luecke { height: 4px; }
+#tip b { font-weight: 700; }
 @media (max-width: 900px) { header { --kopf-h: calc(26px * 1.2); --logo-h: 52px; } }
 h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .sub { color: var(--muted); }
@@ -285,6 +295,9 @@ td.geraetklick:hover { text-decoration: underline; }
 .chip.regelklick { cursor: pointer; }   /* Punkt 97 */
 .chip.regelklick:hover, .chip.regelklick:focus-visible { background: var(--accent); color: #fff; outline: none; }
 .chip.warn { background: var(--warn-bg); color: var(--warn); }
+/* Punkt 217 (0.5.5b12): Status-Chips im Löschplan – grün = vollständig, rot = übersprungen */
+.chip.ok { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); color: var(--ok); }
+.chip.bad { background: color-mix(in srgb, var(--bad) 16%, var(--panel)); color: var(--bad); }
 /* Punkt 115: Labels – an der Entität gefüllt, nur am Gerät mit gestrichelter Linie; Klick filtert */
 .chip[data-label] { cursor: pointer; margin: 0 4px 0 0; background: var(--accent-weak); color: var(--accent); border: 1px solid transparent; }
 .chip.label-geraet { background: transparent; border: 1px dashed var(--accent); }
@@ -633,7 +646,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
         <p>Treffen mehrere aktive Regeln dieselbe Entität, gewinnt je Wert (Kurzzeit und Langzeit getrennt) die mit dem höchsten Rang:</p>
         <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › herkunft › vielschreiber › verwaist › HA-Standard</p>
-        <p>Die Typen <b>herkunft</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter, wer weniger schreibt, wieder heraus. Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
+        <p>Die Typen <b>herkunft</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter; wer schon dazugehört, bleibt, bis sein Zuwachs unter 80 % der Schwelle sinkt (Hysterese, damit Entitäten nahe der Schwelle nicht zwischen kurzer und langer Kurzzeit pendeln). Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
         <p id="h-rangnummer"><b>Rangnummer (ab 0.5.5b10):</b> Im Reiter Regeln und in der Löschtabelle steht neben jeder Regel ihr Rang als <b>Stufe.Position</b> – die Stufe nach dem Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), die Position innerhalb der Stufe nach der Reihenfolge der Liste. Kleinere Zahl = höherer Rang; <code>3.2</code> ist die zweite glob-Regel. Der Tooltip in der Löschtabelle zeigt, gegen welche Regeln eine Regel bei dieser Entität gewonnen hat (je Wert getrennt).</p>
         <p>Innerhalb desselben Typs gewinnt die Regel, die <b>weiter oben in der Liste</b> steht. Die Reihenfolge änderst du im Tab Regeln mit den Pfeilen.</p>
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
@@ -805,6 +818,15 @@ actions:
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Auf Startregeln zurücksetzen</b>. Alle Regeln werden durch die Startliste ersetzt (alle passiv außer <a class="hverweis" href="#h-ha-standard">HA-Standard</a>). Vorher sichert die App die bisherigen Regeln; unter „Sicherungen“ lässt sich jeder Stand wiederherstellen (die letzten 10 bleiben). Ein Stand mit genau dem Inhalt der Startliste trägt den Vermerk „= Startregeln“ – wer zweimal hintereinander zurücksetzt, findet die eigenen Regeln in der älteren Sicherung. Gesperrt, solange ein Löschlauf läuft.</p>
         <h3 id="h-faq-empfehlungen">Nach dem Zurücksetzen sind die Empfehlungen fast leer – warum?</h3>
         <p>In den Startregeln ist <a class="hverweis" href="#h-ha-standard">HA-Standard</a> aktiv: Alles ohne eigene Regel behält seine Daten nur 10 Tage. Der Reiter Empfehlungen schlägt nur Vorhaltezeiten vor, die kürzer sind als die heute wirksame. Vielschreiber, große Attribute, nirgends verwendete, deaktivierte und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage) entfallen deshalb; übrig bleiben die Diagnose-Gruppen (7 Tage). Der Reiter weist darauf hin, solange HA-Standard aktiv ist und auf 10 Tagen steht; mit längerer Kurzzeit erscheinen die Vorschläge wieder, soweit sie kürzer sind. Ist die Regel <code>HA:standard</code> passiv, gilt wieder „global“ (purge_keep_days), und die Vorschläge erscheinen nach „Neu berechnen“ wieder.</p>
+        <!-- Punkt 214 (0.5.5b12): Strategie beim Aufbau der Regeln, verlinkt neben dem Kasten „Wer schreibt am meisten?“ -->
+        <h3 id="h-faq-reihenfolge">In welcher Reihenfolge lege ich Regeln an?</h3>
+        <p>Welche Regel gewinnt, entscheidet allein der <a class="hverweis" href="#h-rang">Rang</a> – nicht die Reihenfolge, in der die Regeln entstanden sind. Die Reihenfolge bestimmt aber, was die Empfehlungen und „Wer schreibt am meisten?“ vorschlagen: Beide betrachten nur Entitäten ohne eigene Kurzzeit. Bewährt hat sich: <b>Erst die gezielten Regeln, dann die Vielschreiber-Regel als Auffangnetz:</b></p>
+        <ol>
+          <li>Bekannte Gruppen als glob oder klasse anlegen, z. B. die Diagnose-Gruppen mit 7 Tagen.</li>
+          <li>Herkunftsregeln für Monitoring-Integrationen (unifi, proxmoxve, frigate, opnsense …). Bei Integrationen mit lauten Entitäten die Kurzzeit gleich kurz wählen oder bewusst kurz halten.</li>
+          <li>Neu berechnen und im Kasten „Wer schreibt am meisten?“ die Schwelle für die Vielschreiber-Regel auf den Rest bestimmen.</li>
+          <li>In der Löschtabelle mit den Rangnummern und dem Tooltip „gewinnt vor …“ prüfen, ob irgendwo eine Herkunftsregel eine kürzere Vielschreiber-Regel überstimmt.</li>
+        </ol>
         <h3 id="h-faq-export">Wie nehme ich meine Regeln auf eine andere Installation mit?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>
       </details>
@@ -819,7 +841,8 @@ actions:
       Ist <code>HA:standard</code> im Reiter Regeln passiv, gilt wieder „global“ (purge_keep_days).<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a></div>
     <!-- Punkt 194 (0.5.5b9): Wer schreibt am meisten? – Top N der Kandidaten, Anteil am Zuwachs, Ersparnis, eine Regel statt vieler -->
     <details class="pareto" id="optPareto" open>
-      <summary><b>Wer schreibt am meisten?</b> <span class="sub" id="paretoKurz"></span></summary>
+      <summary><b>Wer schreibt am meisten?</b> <span class="sub" id="paretoKurz"></span>
+        <a class="hverweis" href="#h-faq-reihenfolge" style="margin-left:10px">In welcher Reihenfolge lege ich Regeln an?</a></summary>   <!-- Punkt 214 -->
       <div class="pareto-kopf">Kurzzeit für die Top N:
         <select id="paretoTage" aria-label="Kurzzeit für die Top N"><option value="7">7 Tage</option><option value="14" selected>14 Tage</option><option value="30">30 Tage</option><option value="60">60 Tage</option></select>
         <span class="sub">Kandidaten wie bei den Vorschlägen: aktiv, ohne Schutz und eigene Kurzzeit, keine Zähler, keine Quellen von Energie-Dashboard oder Helfern – und heute länger als die gewählte Kurzzeit.</span></div>
@@ -880,6 +903,7 @@ actions:
   </section>
 </main>
 
+<div id="tip" popover="manual" role="tooltip"></div>   <!-- Punkt 216: eigene Tooltip-Anzeige -->
 <dialog id="dlg">
   <div class="dlg-kopf"><span id="dlgTitel"></span><button id="dlgX" aria-label="schließen">✕</button></div>
   <div class="dlg-inhalt" id="dlgInhalt"></div>
@@ -940,6 +964,8 @@ const gb = b => b == null ? "–" : (b / 1e9).toLocaleString("de-DE", { maximumF
 const datum = ts => ts ? new Date(ts * 1000).toLocaleDateString("de-DE") : "–";
 const zeit = ts => ts ? new Date(ts * 1000).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "–";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// Punkt 211 (0.5.5b12): Notiz der Empfehlungen kurz „RS DB HM“, im Tooltip ausgeschrieben
+const notizLang = s => String(s ?? "").replace(/\bRS DB HM\b/g, "RS DB Hygiene Manager");
 // Punkt 92: Spaltentitel – Hauptbegriff prominent, Klammerteil am Ende im bisherigen Format
 const kopfText = t => { const m = /^(.+?)\s*(\([^()]*\))$/.exec(t || ""); return m ? `<span class="tk">${esc(m[1])}</span> <span class="tz">${esc(m[2])}</span>` : `<span class="tk">${esc(t)}</span>`; };
 const speicher = { // Browser-Speicher nur für Komfort; darf fehlen
@@ -1200,7 +1226,7 @@ class LokaleTabelle {
     for (let i = 0; i < sp.length;) {
       let n = 1;
       while (i + n < sp.length && g(sp[i + n]).name === g(sp[i]).name && g(sp[i + n]).farbe === g(sp[i]).farbe) n++;
-      const { name, farbe } = g(sp[i]), tip = name ? ` title="Gruppe ${esc(name)}"` : "";
+      const { name, farbe } = g(sp[i]), tip = name ? ` title="Spaltengruppe: ${esc(name)}"` : "";
       const nf = i === 0 ? Math.min(this.fixe.length, n) : 0;   // der fixierte Teil der ersten Gruppe trägt den Namen
       if (nf) h += `<th colspan="${nf}" class="gruppe gr gr-${farbe} fix fx0 gname-links"${tip}>${esc(name)}</th>` +
         (n > nf ? `<th colspan="${n - nf}" class="gruppe gr gr-${farbe}"${tip}></th>` : "");
@@ -1502,7 +1528,7 @@ const HILFE = {
   optimierungen: ["Empfehlungen",
     "Regelvorschläge, die die App aus der letzten Analyse ableitet – ohne neue Abfrage der Datenbank und ohne dass etwas gelöscht wird. Vorgeschlagen wird nur eine kürzere Kurzzeit für Daten, für die heute keine eigene Regel gilt; die Langzeit bleibt unverändert.",
     "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Klasse (mehrere Vorschläge derselben Geräteklasse, z. B. sensor|frequency, als eine klasse-Regel) · Integration (ab 5 Vorschlägen einer Integration wie proxmoxve eine herkunft-Regel mit 30 Tagen – sie trifft alle Entitäten der Integration ohne eigene Kurzzeit, auch künftige) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt; gilt nicht für Automationen und Skripte –, in HA deaktiviert, Uhrzeit-Sensoren mit 1 Tag) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt (unter 1 GB in MB). ⚠ heißt: Die Regel würde wegen ihres Rangs für einige Entitäten eine heute kürzere Kurzzeit verlängern. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
-    "Nach Ersparnis sortiert von oben abarbeiten: „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; Treffer und Wirkung zeigt die Vorschau dort. Was nicht passt, „ignorieren“ – die App merkt es sich."],
+    "Nach Ersparnis sortiert von oben abarbeiten: „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; Treffer und Wirkung zeigt die Vorschau dort. Was nicht passt, „ignorieren“ – die App merkt es sich. Mehrere ausgewählte Vorschläge: „als passive Regeln anlegen“, „als aktive Regeln anlegen …“ (mit Warnprüfung, wirkt ab dem nächsten Löschlauf) oder „zu einer Regel zusammenfassen …“ – gleiche Regeltypen werden eine Regel, entity und glob gemeinsam eine glob-Regel; ergibt sich genau eine Regel, öffnet sich die Regelmaske."],
   passiv: ["Passive Regeln mitrechnen",
     "Rechnet passive Regeln (z. B. R23 Einzelfallprüfung) so, als wären sie aktiv.",
     "Wirkt auf Kacheln, Tabellen, Probelauf und CSV – nur in dieser Ansicht. An den Regeln selbst ändert sich nichts.",
@@ -1571,6 +1597,14 @@ function rasterWerte(s, st) {
   return { ist, loesch, prog };
 }
 
+// Punkt 218: Kachel-Tooltip kontextbezogen – erklärt die Spaltenhilfe alle drei Zeilen („Istzustand: … Löschmenge sofort: …
+// Prognose: …“), zeigt eine Kachel nur den Teil ihrer Zeile
+function zeilenTeil(text, zname) {
+  const teile = (text || "").split(/(?:^|\s)(Istzustand|Löschmenge sofort|Prognose):\s/);
+  if (teile.length < 5) return text;     // nicht nach Zeilen gegliedert → ganz
+  for (let i = 1; i < teile.length; i += 2) if (teile[i] === zname) return `${zname}: ${teile[i + 1].trim()}`;
+  return text;
+}
 function rasterHtml(s, st) {
   const werte = rasterWerte(s, st), zr = jahreText(zielJahre());
   const zsub = { ist: "Stand der Analyse", loesch: "aktive Regeln, ohne Obergrenze", prog: `über ${zr}` };
@@ -1583,7 +1617,7 @@ function rasterHtml(s, st) {
     for (const [k, kname] of RSPALTEN) {
       const c = werte[z][k];
       const lang = c.fehlt || (c.gb ? gb(c.w) : zahl(c.w == null ? null : Math.round(c.w))), kurz = c.fehlt || (c.gb ? kgb(c.w) : kzahl(c.w));
-      const tip = `${zname} · ${kname}${z === "prog" ? ` (${zr})` : ""}\n${lang}${c.u ? " – " + c.u : ""}\n\n${hilfeTexte("c_" + k)[0]}`;
+      const tip = `${zname} · ${kname}${z === "prog" ? ` (${zr})` : ""}\n${lang}${c.u ? " – " + c.u : ""}\n\n${zeilenTeil(hilfeTexte("c_" + k)[0], zname)}`;
       const vl = k === "db" ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf
       h += `<div class="kachel ${klasse}${c.fehlt ? " fehlt" : ""}" title="${esc(tip + (vl ? "\n\nKlick: Prognose-Verlauf je Monat" : ""))}" data-zelle="${z}.${k}"${vl}>
         <div class="z"><span class="lang">${esc(lang)}</span><span class="kurz">${esc(kurz)}</span></div>${c.u ? `<div class="u">${esc(c.u)}</div>` : ""}</div>`;
@@ -1785,8 +1819,9 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["loesch_summe", "Summe (States + 5-Min + Langzeit)", 1, "zahl", ">0", 175,
     "Zeilen, die ein Lauf sofort löschen würde (Bestand): States + 5-Min-Statistik + Langzeit. Gegenstück: Ersparnis (Dauerbetrieb) im Tab Prognosen je Regel."],
   // Punkt 197 (0.5.5b9): ersetzt die Spalte „Attribute (MB)“ – Platz der ganzen Löschmenge sofort
-  ["loesch_mb", "Platz frei (MB)", 1, "zahl", ">1 (MB)", 115,
-    "Platz, den ein scharfer Lauf sofort frei macht (nach einem Repack): States, 5-Min-Statistik, Langzeit und Attribute, jeweils inkl. Index (Filter in MB). Attribute nur mit Attribut-Analyse."],
+  // Punkt 209 (0.5.5b12): „Speicher“ statt „Platz“
+  ["loesch_mb", "Speicher frei (MB)", 1, "zahl", ">1 (MB)", 125,
+    "Speicher, den ein scharfer Lauf sofort frei macht (nach einem Repack): States, 5-Min-Statistik, Langzeit und Attribute, jeweils inkl. Index (Filter in MB). Attribute nur mit Attribut-Analyse."],
   ["loesch_states", "States", 1, "zahl", ">0", 100, "Zeilen in states außerhalb der Kurzzeit"],
   ["loesch_kurz", "5-Min-Statistik", 1, "zahl", ">0", 150, "Zeilen in statistics_short_term außerhalb der Kurzzeit"],
   ["loesch_lts", "Langzeit", 1, "zahl", ">0", 100, "Stundenstatistik außerhalb der Langzeit-Vorhaltezeit"],
@@ -1933,9 +1968,9 @@ function baueKopf() {
     // Punkt 137 (0.5.3): die Auswahlspalte (☐) gehört farblich zu den Stammdaten (Entität steht immer vorn)
     // Punkt 140: über Auswahl und Entität ein eigenes, fixiertes Feld mit dem Namen; der Rest der Gruppe scrollt ohne Namen mit
     if (i === 0 && GRUPPEN_ID[sp[0][0]] === "stamm") {
-      gruppen += `<th colspan="2" class="gruppe gr gr-stamm fix fix0 gname-links" title="Gruppe ${esc(g)}">${esc(g)}</th>` +
-        (n > 1 ? `<th colspan="${n - 1}" class="gruppe gr gr-stamm gruppe-rest" title="Gruppe ${esc(g)}"></th>` : "");
-    } else gruppen += `<th colspan="${n}" class="gruppe ${gk[i]}" title="Gruppe ${esc(g)}">${esc(g)}</th>`;
+      gruppen += `<th colspan="2" class="gruppe gr gr-stamm fix fix0 gname-links" title="Spaltengruppe: ${esc(g)}">${esc(g)}</th>` +
+        (n > 1 ? `<th colspan="${n - 1}" class="gruppe gr gr-stamm gruppe-rest" title="Spaltengruppe: ${esc(g)}"></th>` : "");
+    } else gruppen += `<th colspan="${n}" class="gruppe ${gk[i]}" title="Spaltengruppe: ${esc(g)}">${esc(g)}</th>`;
     i += n;
   }
   const gruppenzeile = `<tr class="gruppenzeile">${GRUPPEN_ID[sp[0][0]] === "stamm" ? "" : `<th class="gruppe-leer"></th>`}${gruppen}</tr>`;
@@ -1979,7 +2014,7 @@ function zeigeSummen(su) {
     attr_bytes: zelle(mbz(g.attr_bytes), mbz(a.attr_bytes), `Attribute Bestand in MB – ${GEF}`),
     attr_zuwachs_tag: zelle(mbz(g.attr_zuwachs_tag), mbz(a.attr_zuwachs_tag), `Attribute Zuwachs pro Tag in MB – ${GEF}`),
     attr_avg: zelle(g.attr_avg == null ? "–" : zahl(g.attr_avg), a.attr_avg == null ? "–" : zahl(a.attr_avg), `Ø Größe einer Attributzeile in Byte – ${GEF}`),
-    loesch_mb: zelle(mbz(g.loesch_mb), mbz(a.loesch_mb), `Platz frei sofort (States, 5-Min, Langzeit, Attribute) in MB – ${GEF}`),   // Punkt 197
+    loesch_mb: zelle(mbz(g.loesch_mb), mbz(a.loesch_mb), `Speicher frei sofort (States, 5-Min, Langzeit, Attribute) in MB – ${GEF}`),   // Punkt 197
     attr_anteil: zelle(pz(g.attr_anteil), pz(a.attr_anteil), `Anteil der Attribute in % – ${GEF}`),
   };
   $("#tEntKopf").querySelectorAll("[data-summe]").forEach(th => {
@@ -2062,7 +2097,9 @@ function oeffneRegel(id) {
 }
 function herkunftZelle(e) {
   if (!e.herkunft_art) return `<td class="sub">–</td>`;
-  const tip = [HERKUNFT_LANG[e.herkunft_art], e.herkunft, e.herkunft_info].filter(Boolean).join("\n");
+  // Punkt 218: „Art: Name“ und „Plattform: x“ – passend zur Tooltip-Anzeige „Thema: Inhalt“
+  const tip = [HERKUNFT_LANG[e.herkunft_art] ? `${HERKUNFT_LANG[e.herkunft_art]}: ${e.herkunft || ""}` : e.herkunft,
+    (e.herkunft_info || "").replace(/^Plattform (\S+)/, "Plattform: $1")].filter(Boolean).join("\n");
   const klick = e.device_id ? ` class="geraetklick" data-geraet="${esc(e.device_id)}" data-gname="${esc(e.herkunft)}"` : "";
   return `<td${klick} title="${esc(tip)}${e.device_id ? "\nKlick: alle Entitäten dieses Geräts" : ""}"><span class="art art-${e.herkunft_art}">${HERKUNFT_ART[e.herkunft_art] || ""}</span>${esc(e.herkunft)}</td>`;
 }
@@ -2310,7 +2347,7 @@ T.regeln = new LokaleTabelle({
     { k: "treffer", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => trefferVon(r),
       zelle: r => { const t = trefferVon(r); return t == null ? `<span class="sub" title="passiv – mit „passive Regeln mitrechnen“ sichtbar">–</span>` : zahl(t); },
       tip: () => "Entitäten, für die diese Regel mindestens einen Wert bestimmt", csv: r => trefferVon(r) ?? "", summe: anzahlSumme(r => trefferVon(r)) },
-    { k: "notiz", titel: "Notiz", typ: "text", breite: 200, wert: r => r.notiz, zelle: r => esc(r.notiz), csv: r => r.notiz },
+    { k: "notiz", titel: "Notiz", typ: "text", breite: 200, wert: r => r.notiz, zelle: r => esc(r.notiz), csv: r => r.notiz, tip: r => notizLang(r.notiz) },
   ],
   zeileAttr: r => `class="klick" data-i="${regelIndex(r)}"`,
   zusatz: t => t.istUrzustand() ? "" : `<span class="sub">Rang-Verschieben (▲) nur ohne Filter und bei Sortierung nach Rang</span>`,
@@ -2324,7 +2361,7 @@ T.probe = new LokaleTabelle({
     ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]]],
   fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
-  zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)} bearbeiten"` : "",
+  zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)}: Klick öffnet die Regelmaske"` : "",
   leer: "keine Regeln wirksam",
   spalten: [
     { k: "regel", titel: "Regel", typ: "text", fest: 1, breite: 110, wert: r => r.regel, zelle: r => regelChip(r.regel), csv: r => r.regel, summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
@@ -2411,7 +2448,7 @@ T.opt = new LokaleTabelle({
     { k: "zuwachs_tag", titel: "Zuwachs (Zeilen pro Tag)", typ: "zahl", n: 1, breite: 120, wert: r => r.zuwachs_tag, zelle: r => zahl(r.zuwachs_tag), csv: r => r.zuwachs_tag, summe: anzahlSumme(r => r.zuwachs_tag) },
     { k: "loesch_zeilen", titel: "Zeilen", typ: "zahl", n: 1, breite: 110, hilfe: "zusätzlich zu den heutigen Regeln sofort löschbar (States, 5-Min-Statistik bzw. Events)",
       wert: r => r.loesch_zeilen, zelle: r => zahl(r.loesch_zeilen), csv: r => r.loesch_zeilen, summe: anzahlSumme(r => r.loesch_zeilen) },
-    { k: "loesch_mb", titel: "Platz (MB)", typ: "zahl", n: 1, breite: 100, hilfe: "Platz der zusätzlichen Löschmenge sofort (wird nach einem Repack frei)",
+    { k: "loesch_mb", titel: "Speicher (MB)", typ: "zahl", n: 1, breite: 110, hilfe: "Speicher der zusätzlichen Löschmenge sofort (wird nach einem Repack frei) – Punkt 209",
       wert: r => Math.round(r.loesch_bytes / 1e6), zelle: r => mb(r.loesch_bytes), csv: r => Math.round(r.loesch_bytes), summe: (g, a) => [mb(g.reduce((x, r) => x + r.loesch_bytes, 0)), mb(a.reduce((x, r) => x + r.loesch_bytes, 0))] },
     { k: "ersparnis", titel: "Ersparnis (Prognosezeitraum)", typ: "gb", n: 1, einheit: 1, breite: 150, hilfe: "wie viel kleiner die DB im Prognosezeitraum bleibt, verglichen mit den heutigen Regeln – unter 1 GB in MB; Filter in GB, z. B. >0,05. Summe: alle Vorschläge zusammen (überschneiden sie sich, ist die echte Ersparnis kleiner)",
       wert: r => r.ersparnis_bytes, zelle: r => gbmb(r.ersparnis_bytes), csv: r => Math.round(r.ersparnis_bytes),
@@ -2440,6 +2477,8 @@ function zeigeAuswahlOpt() {
   leiste.innerHTML = `<b>${mzahl(n, "Vorschlag", "Vorschläge")} ausgewählt</b>${da ? ` <span class="sub">(${zahl(da)} davon gibt es schon als Regel)</span>` : ""}
     <span class="sub">Ersparnis zusammen bis zu ${gbmb(gew.reduce((x, v) => x + (v.ersparnis_bytes || 0), 0))}</span>
     <button data-masse-opt="anlegen" class="primaer" title="je Vorschlag eine Regel, passiv – erst nach dem Einschalten im Reiter Regeln wirkt sie">als passive Regeln anlegen</button>
+    <button data-masse-opt="aktiv" title="je Vorschlag eine Regel, gleich aktiv – vorher Warnprüfung und Rückfrage; wirkt ab dem nächsten Löschlauf (Punkt 212)">als aktive Regeln anlegen …</button>
+    ${n >= 2 ? `<button data-masse-opt="zusammen" title="so wenige Regeln wie möglich: gleiche Regeltypen in eine Regel, entity und glob als glob; bei genau einer Regel öffnet sich die Regelmaske (Punkt 213)">zu einer Regel zusammenfassen …</button>` : ""}
     <button data-masse-opt="ignorieren">ignorieren</button>${ign ? `<button data-masse-opt="zeigen">wieder zeigen</button>` : ""}`;
 }
 $("#tOpt").addEventListener("change", ev => {
@@ -2454,30 +2493,10 @@ $("#tOpt").addEventListener("change", ev => {
 $("#massenOpt").addEventListener("click", async ev => {
   const b = ev.target.closest("[data-masse-opt]"); if (!b) return;
   const gew = (S.opt || []).filter(v => S.auswahlOpt.has(v.id));
-  if (b.dataset.masseOpt === "anlegen") {
-    const liste = [...S.regeln.regeln], neu = [], schon = [];
-    for (const v of gew) {
-      if (v.vorhanden) { schon.push(`${v.titel} (${v.vorhanden.id})`); continue; }
-      let id = naechsteId(liste);
-      if (v.regel.typ === "event") {
-        const basis = `EV:${v.regel.muster[0].replace(/[*?\[\]]/g, "") || "muster"}`;
-        id = basis; let k = 2; while (liste.some(x => x.id === id)) id = `${basis}_${k++}`;
-      }
-      liste.push({ ...v.regel, id, aktiv: false });
-      neu.push(id);
-    }
-    if (!neu.length) return meldung("Empfehlungen", `Nichts anzulegen – für alle ausgewählten Vorschläge gibt es schon eine Regel:\n${schon.join("\n")}`);
-    if (!await frage("Regeln anlegen", `${mzahl(neu.length, "Regel", "Regeln")} passiv anlegen (${neu.join(", ")})?` +
-      (schon.length ? `\n\nÜbersprungen – gibt es schon als Regel:\n${schon.join("\n")}` : "") +
-      "\n\nPassive Regeln wirken nicht. Einschalten im Reiter Regeln – dabei prüft die App mögliche Folgen.", "Anlegen")) return;
-    try {
-      await speichereRegeln({ ...S.regeln, regeln: liste });
-      S.auswahlOpt.clear();
-      meldung("Empfehlungen", `${mzahl(neu.length, "Regel", "Regeln")} passiv angelegt: ${neu.join(", ")}.`);
-      ladeOpt();
-    } catch (e) { meldung("Empfehlungen", e.message); }
-    return;
-  }
+  if (b.dataset.masseOpt === "anlegen" || b.dataset.masseOpt === "aktiv")
+    return legeRegelnAn(gew.map(v => ({ regel: v.regel, titel: v.titel, vorhanden: v.vorhanden, ersparnis: v.ersparnis_bytes, loesch: v.loesch_bytes })),
+      b.dataset.masseOpt === "aktiv");
+  if (b.dataset.masseOpt === "zusammen") return fasseZusammen(gew);
   const an = b.dataset.masseOpt === "ignorieren";
   try {
     for (const v of gew.filter(v => v.ignoriert !== an)) { await postJson("optimierungen/ignorieren", { id: v.id, ignorieren: an }); v.ignoriert = an; }
@@ -2487,6 +2506,103 @@ $("#massenOpt").addEventListener("click", async ev => {
     T.opt.daten(S.opt.filter(x => $("#oIgnoriert").checked || !x.ignoriert));
   } catch (e) { meldung("Empfehlungen", e.message); }
 });
+// Punkte 195/212: Regeln aus Vorschlägen anlegen – passiv wie bisher oder gleich aktiv (dann Warnprüfung vorgezogen).
+// eintraege: [{regel, titel, vorhanden, ersparnis, loesch}]
+async function legeRegelnAn(eintraege, aktiv) {
+  const liste = [...S.regeln.regeln], neu = [], schon = [];
+  for (const v of eintraege) {
+    if (v.vorhanden) { schon.push(`${v.titel} (${v.vorhanden.id})`); continue; }
+    let id = naechsteId(liste);
+    if (v.regel.typ === "event") {
+      const basis = `EV:${v.regel.muster[0].replace(/[*?\[\]]/g, "") || "muster"}`;
+      id = basis; let k = 2; while (liste.some(x => x.id === id)) id = `${basis}_${k++}`;
+    }
+    const r = { ...v.regel, id, aktiv };
+    liste.push(r); neu.push(r);
+  }
+  if (!neu.length) return meldung("Empfehlungen", `Nichts anzulegen – für alle ausgewählten Vorschläge gibt es schon eine Regel:\n${schon.join("\n")}`);
+  const ids = neu.map(r => r.id).join(", "), uebersprungen = schon.length ? `\n\nÜbersprungen – gibt es schon als Regel:\n${schon.join("\n")}` : "";
+  let ok;
+  if (aktiv) {
+    const warn = [];
+    for (const r of neu) {
+      try { ((await postJson("regeln/pruefen", r)).warnungen || []).forEach(x => warn.push(`⚠ ${r.id} ${r.name}: ${x.text}`)); }
+      catch (e) { /* Prüfung ist Zusatz; Fehler der Regel selbst meldet das Speichern */ }
+    }
+    const summe = k => eintraege.filter(v => !v.vorhanden).reduce((x, v) => x + (v[k] || 0), 0);
+    ok = await frage("Regeln aktiv anlegen", `${mzahl(neu.length, "Regel", "Regeln")} aktiv anlegen (${ids})?\n\n` +
+      `Zusätzlich sofort löschbar: ${gbmb(summe("loesch"))} · Ersparnis zusammen bis zu ${gbmb(summe("ersparnis"))}.\n` +
+      "Die Regeln wirken ab dem nächsten Löschlauf (Nachtlauf bzw. Tab „Löschen“)." +
+      (warn.length ? `\n\nBitte prüfen – mögliche Folgen:\n${warn.join("\n\n")}` : "\n\nWarnprüfung: keine Auffälligkeiten (Energie-Dashboard, Zähler, kurze Kurzzeit, Helfer-Quellen, breite Event-Muster).") +
+      uebersprungen, warn.length ? "Trotzdem aktiv anlegen" : "Aktiv anlegen");
+  } else {
+    ok = await frage("Regeln anlegen", `${mzahl(neu.length, "Regel", "Regeln")} passiv anlegen (${ids})?` + uebersprungen +
+      "\n\nPassive Regeln wirken nicht. Einschalten im Reiter Regeln – dabei prüft die App mögliche Folgen.", "Anlegen");
+  }
+  if (!ok) return;
+  try {
+    await speichereRegeln({ ...S.regeln, regeln: liste });
+    S.auswahlOpt.clear();
+    meldung("Empfehlungen", `${mzahl(neu.length, "Regel", "Regeln")} ${aktiv ? "aktiv" : "passiv"} angelegt: ${ids}.`);
+    ladeOpt();
+  } catch (e) { meldung("Empfehlungen", e.message); }
+}
+// Punkt 213: ausgewählte Vorschläge zu so wenigen Regeln wie möglich zusammenfassen. Eine Regel hat einen Typ und eine
+// Kurzzeit: gleiche Typen werden vereinigt, entity + glob → glob (eine Entity-ID ist ein glob-Muster ohne Platzhalter),
+// klasse/herkunft/verwaist/event bleiben je für sich. Verschiedene Kurzzeiten: längste (vorsichtig) oder je Kurzzeit eine.
+const DAUER_TAGE = { d: 1, w: 7, m: 30, j: 365 };
+const dauerTage = w => { const m = /^(\d+)([dwmj])$/.exec(w || ""); return m ? +m[1] * DAUER_TAGE[m[2]] : Infinity; };
+function sammelName(regel, anzahl, alleDiagnose) {
+  const kz = wertAnzeige(regel.kurzzeit);
+  // z. B. sensor.*_rssi, sensor.*_uptime → „Diagnose: rssi, uptime – 7 Tage“ bzw. „sensor: rssi, uptime – 7 Tage“
+  const end = regel.muster.map(m => /^([a-z_]+)\.\*_([^*?\[\]]+)$/.exec(m));
+  if (regel.typ === "glob" && end.every(Boolean) && new Set(end.map(x => x[1])).size === 1)
+    return `${alleDiagnose ? "Diagnose" : end[0][1]}: ${end.map(x => x[2]).join(", ")} – ${kz}`;
+  const teile = regel.muster.slice(0, 3).join(", ") + (regel.muster.length > 3 ? ` … (+${regel.muster.length - 3})` : "");
+  return `${anzahl} Empfehlungen: ${teile} – ${kz}`;
+}
+async function fasseZusammen(gew) {
+  const familie = v => ["entity", "glob"].includes(v.regel.typ) ? "glob" : v.regel.typ;
+  const kzs = [...new Set(gew.map(v => v.regel.kurzzeit))].sort((a, b) => dauerTage(a) - dauerTage(b));
+  let jeKz = false;
+  if (kzs.length > 1) {
+    const w = await frageWahl("Verschiedene Kurzzeiten", `Die ausgewählten Vorschläge haben verschiedene Kurzzeiten: ${kzs.map(wertAnzeige).join(", ")}.\n\n` +
+      "„Längste nehmen“: jede entstehende Regel bekommt die längste Kurzzeit ihrer Vorschläge – vorsichtig, keine Entität verliert mehr als vorgeschlagen.\n" +
+      "„Je Kurzzeit eine Regel“: die Unterschiede bleiben erhalten.\n\nDie kürzeste lässt sich danach bewusst in der Regelmaske einstellen.",
+      "Längste nehmen", "Je Kurzzeit eine Regel");
+    if (w === "nein") return;
+    jeKz = w === "extra";
+  }
+  const gruppen = new Map();
+  for (const v of gew) {
+    const k = familie(v) + (jeKz ? "|" + v.regel.kurzzeit : "");
+    if (!gruppen.has(k)) gruppen.set(k, []);
+    gruppen.get(k).push(v);
+  }
+  const eintraege = [...gruppen.values()].map(l => {
+    const typ = familie(l[0]) === "glob" ? (l.every(v => v.regel.typ === "entity") ? "entity" : "glob") : l[0].regel.typ;
+    const regel = { ...l[0].regel, id: "VORSCHLAG", typ, muster: [...new Set(l.flatMap(v => v.regel.muster))],
+      kurzzeit: l.map(v => v.regel.kurzzeit).sort((a, b) => dauerTage(b) - dauerTage(a))[0], aktiv: false,
+      notiz: l.length > 1 ? `Empfehlung des RS DB HM (${l.length} Vorschläge zusammengefasst)` : l[0].regel.notiz };
+    if (l.length > 1) regel.name = sammelName(regel, l.length, l.every(v => /^Diagnose /.test(v.regel.name || "")));
+    const gleich = S.regeln.regeln.find(r => r.typ === regel.typ && [...r.muster].sort().join("\n") === [...regel.muster].sort().join("\n"));
+    return { regel, titel: regel.name, vorhanden: gleich ? { id: gleich.id, aktiv: gleich.aktiv } : null,
+      ersparnis: l.reduce((x, v) => x + (v.ersparnis_bytes || 0), 0), loesch: l.reduce((x, v) => x + (v.loesch_bytes || 0), 0), anzahl: l.length };
+  });
+  if (eintraege.length === 1) {
+    const [x] = eintraege;
+    if (x.vorhanden) return meldung("Zusammenfassen", `Diese Regel gibt es schon: ${x.vorhanden.id}${x.vorhanden.aktiv ? "" : " (passiv)"}.`);
+    S.auswahlOpt.clear(); T.opt.zeige();
+    const id = x.regel.typ === "event" && !S.regeln.regeln.some(r => r.id === `EV:${x.regel.muster[0]}`) ? `EV:${x.regel.muster[0]}` : naechsteId();
+    return bearbeiteRegel(-1, { ...x.regel, id, typManuell: true });
+  }
+  const w = await frageWahl("Zusammenfassen", `Die ${mzahl(gew.length, "Empfehlung", "Empfehlungen")} lassen sich nicht in eine einzige Regel fassen ` +
+    `(eine Regel hat genau einen Typ${jeKz ? " und eine Kurzzeit" : ""}). Vorschlag – ${mzahl(eintraege.length, "Regel", "Regeln")}:\n\n` +
+    eintraege.map(x => `• ${x.regel.typ} · ${wertAnzeige(x.regel.kurzzeit)} · ${x.regel.muster.length} Muster: ${x.titel}${x.vorhanden ? ` (gibt es schon: ${x.vorhanden.id})` : ""}`).join("\n") +
+    "\n\nPassiv anlegen oder gleich aktiv (mit Warnprüfung)?", "Passiv anlegen", "Aktiv anlegen …");
+  if (w === "nein") return;
+  return legeRegelnAn(eintraege, w === "extra");
+}
 // ---- Punkt 194: Wer schreibt am meisten? – Stufen Top N, je Stufe eine Regel statt vieler
 async function ladePareto() {
   const box = $("#paretoInhalt"), tage = +$("#paretoTage").value;
@@ -2540,6 +2656,12 @@ async function ladeOpt() {
 }
 $("#oNeu").onclick = ladeOpt;
 $("#optHaStd").addEventListener("click", ev => {
+  const a = ev.target.closest("a[href^='#h-']"); if (!a) return;
+  ev.preventDefault();
+  springeHilfe(a.getAttribute("href").slice(1));
+});
+// Punkt 214: Link zur FAQ neben dem Kasten – im summary würde der Klick sonst den Kasten auf- bzw. zuklappen
+$("#optPareto summary").addEventListener("click", ev => {
   const a = ev.target.closest("a[href^='#h-']"); if (!a) return;
   ev.preventDefault();
   springeHilfe(a.getAttribute("href").slice(1));
@@ -2731,7 +2853,7 @@ $("#massenEv").addEventListener("click", ev => {
 // ---- Punkt 97 (0.4.7): Regeln aus Löschplan und Prognosen je Regel direkt öffnen
 const regelIdx = id => (S.regeln?.regeln || []).findIndex(x => x.id === id);
 const regelChip = id => regelIdx(id) >= 0
-  ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)} bearbeiten" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(chipText(id))}</span>`
+  ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)}: Klick öffnet die Regelmaske" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(chipText(id))}</span>`
   : `<span class="chip regel" title="${esc(id)}">${esc(chipText(id))}</span>`;   // Punkt 160: E: kurz
 document.addEventListener("click", ev => {
   const e = ev.target.closest("[data-regel-edit]"); if (!e || T.loesch?.z.klickIstZiehen?.(ev) || T.probe?.z.klickIstZiehen?.(ev)) return;
@@ -3072,7 +3194,7 @@ function zeigeGlobal() {
     heute ${zahl(s.global_states)} States, Zufluss ca. ${zahl(s.global_zuwachs_tag)} States am Tag.
     HA bewahrt sie ${tageJahre(pkd)} auf; auf diese Zeit hochgerechnet ca. <b>${gb(s.global_bytes_tag * pkd)}</b> (States, 5-Min, Attribute; aus dem Zufluss je Tag, Mittel der letzten 7 vollen Tage).
     Kürzer geht es nur über Regeln mit eigener Kurzzeit.`;
-  el.title = "Zählt aktive Entitäten, deren Kurzzeit „global“ ist (keine Regel oder eine Regel mit dem Wert global). Verwaiste schreiben nichts mehr und fehlen hier.";
+  el.title = "Kurzzeit global: Zählt aktive Entitäten, deren Kurzzeit „global“ ist (keine Regel oder eine Regel mit dem Wert global). Verwaiste schreiben nichts mehr und fehlen hier.";
 }
 async function speichereRegeln(daten) {
   const r = await api("regeln", { method: "PUT", headers: { "content-type": "application/json" },
@@ -3178,7 +3300,7 @@ const MUSTERHILFE = {
   glob: "Muster mit * und ?, z. B. sensor.*_airq_*",
   klasse: "eine oder mehrere Klassen (domain|device_class) aus der letzten Analyse wählen",
   herkunft: "eine oder mehrere Integrationen (platform der Registry, z. B. unifi, mobile_app) aus der letzten Analyse wählen – trifft alles dieser Integration ohne genauere Regel (ohne Zähler und verwaiste)",
-  vielschreiber: "erste Zeile: Schwelle in Zeilen je Tag, z. B. 1000 – optional weitere Zeilen mit Entity-Mustern wie sensor.* als Einschränkung. Trifft aktive Entitäten, die mindestens so viel schreiben (ohne Zähler), dynamisch nach jeder Analyse.",
+  vielschreiber: "erste Zeile: Schwelle in Zeilen je Tag, z. B. 1000 – optional weitere Zeilen mit Entity-Mustern wie sensor.* als Einschränkung. Trifft aktive Entitäten, die mindestens so viel schreiben (ohne Zähler), dynamisch nach jeder Analyse; wer schon dazugehört, bleibt bis unter 80 % der Schwelle.",
   verwaist: "Art: alle (alle Verwaisten), geloescht (in der Registry als gelöscht vermerkt), ohne_spur oder deaktiviert (abgeschaltet, ohne Zustand; nicht in alle enthalten) – optional zusätzlich ein Entity-Muster wie sensor.windfang_*. Wirkt nur auf verwaiste und deaktivierte Entitäten.",
   event: "Event-Typen, auch mit * und ?, z. B. call_service oder script_* – Vorhaltezeit der Events (Logbuch); wirkt nie auf Entitäten.",
   schutz: "Muster mit * und ?, z. B. sensor.rs_meteo_* – diese Entitäten werden nie gekürzt (höchster Rang, auch vor E:-Regeln, auch verwaist).",
@@ -3321,7 +3443,7 @@ function bearbeiteRegel(i, vorlage) {
     <div class="sub" id="rSchutzHinweis" ${r.typ === "schutz" ? "" : "hidden"}>🔒 <b>Schutz:</b> Kurzzeit „global“ und Langzeit „unbegrenzt“ sind fest. Höchster Rang – vor allen anderen Regeln, auch vor E:-Regeln –, gilt auch für verwaiste Entitäten und Zähler. Der Löschplan schließt diese Entitäten zusätzlich aus. „global“ heißt purge_keep_days: HA selbst löscht nach dieser Zeit.</div>
     <div class="raster3">${WERTE.map(a => wertBlock(a, r[a], true, "", undefined, true)).join("")}</div>
     <label><input type="checkbox" id="rAktiv" ${r.aktiv ? "checked" : ""}> aktiv (sonst passiv)</label>
-    <label class="feld">Notiz<input id="rNotiz" value="${esc(r.notiz)}"></label>
+    <label class="feld">Notiz<input id="rNotiz" value="${esc(r.notiz)}" title="${esc(notizLang(r.notiz))}"></label>
     <div id="rVorschau" class="vorschau" aria-live="polite"><span class="sub">Vorschau …</span></div>
     <div id="dlgFehler" class="fehler"></div></div>`, [
     ...(neu ? [] : [["Regel entfernen", async () => {
@@ -3414,6 +3536,7 @@ function bearbeiteRegel(i, vorlage) {
     pruefeVerdichten(); vorschau();
   }
   $("#rTyp").onchange = () => { typManuell = true; $("#rTypAuto").textContent = ""; typGewechselt($("#rTyp").value); };
+  $("#rNotiz").oninput = () => { $("#rNotiz").title = notizLang($("#rNotiz").value); };   // Punkt 211
   klassenModus(r.typ);
   // Punkt 175: Typ aus den Mustern ableiten (| → klasse, * ? [ → glob, sonst entity)
   function typAuto() {
@@ -3624,31 +3747,44 @@ function planZeilen(p) {
 // Punkt 113 (0.4.10): Tooltip je Zelle „Vorhaltung · in diesem Lauf“ – eine Zeile je Teil mit den Werten dieser Zeile
 const TEIL_NAME = { states: "States (Kurzzeit, Attribute folgen)", kurz: "5-Min-Statistik (folgt der Kurzzeit)", lts: "Langzeit (Stundenstatistik)", events: "Events" };
 const TEIL_WEG = { states: "recorder.purge_entities", kurz: "rs_db_hygiene.purge", lts: "rs_db_hygiene.purge", events: "rs_db_hygiene.purge" };
+// Punkt 217 (0.5.5b12): jeder Status als Chip – grün vollständig, gelb teilweise/nächster Lauf/Ausnahme, rot übersprungen
+const LART_CHIP = { "vollständig": "ok", "teilweise": "warn", "nächster Lauf": "warn", "Ausnahme": "warn", "übersprungen": "bad" };
+// Punkt 215 (0.5.5b12): Erklärung je Status im Format „Thema: Inhalt“ – steht im Tooltip ganz oben
 const LART_TEXT = {
-  "vollständig": "vollständig – alles außerhalb der Vorhaltezeit",
-  "teilweise": "teilweise – nur bis zur Obergrenze, der Rest folgt in späteren Läufen",
-  "nächster Lauf": "nächster Lauf – passt nicht mehr unter die Obergrenze",
-  "übersprungen": "übersprungen – Integration RS DB Hygiene fehlt",
-  "Ausnahme": "Ausnahme – schon der älteste Tag liegt über der Obergrenze, einmalig erlaubt",
+  "vollständig": "vollständig: Dieser Lauf löscht alles außerhalb der Vorhaltezeit.",
+  "teilweise": "teilweise: Dieser Lauf löscht nur so viel, wie unter die Obergrenze passt – der Rest folgt in den nächsten Läufen.",
+  "nächster Lauf": "nächster Lauf: Passt nicht mehr unter die Obergrenze dieses Laufs – folgt im nächsten Lauf.",
+  "übersprungen": "übersprungen: Die Integration RS DB Hygiene fehlt – dieser Teil wird nicht gelöscht.",
+  "Ausnahme": "Ausnahme: Schon der älteste Tag liegt über der Obergrenze – für diesen Lauf einmalig erlaubt.",
 };
 const tageText = d => `${zahl(d)} ${d === 1 ? "Tag" : "Tage"}`;
 // Punkt 121 (0.4.12): Grenze = lokale Mitternacht von „heute − keep_days“ (Integration ≥ 0.4.5), sonst jetzt − keep_days
 const grenzTag = d => { const x = new Date(); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - d); return x.toLocaleDateString("de-DE"); };
 const grenzText = (d, exakt) => exakt ? `vor dem ${grenzTag(d)}, 0:00 (${d ? `${tageText(d)} voll + heute` : "alles bis auf heute"})` : `älter als ${tageText(d)}`;
-function teilText(t) {
+function teilText(t, mitStatus) {
   const name = TEIL_NAME[t.art] || t.art, weg = t.exakt && t.art === "states" ? "rs_db_hygiene.purge_states" : TEIL_WEG[t.art] || "";
   const menge = t.zeilen != null && t.gesamt != null && t.lauf !== "vollständig" && t.zeilen !== t.gesamt
     ? ` · ca. ${zahl(t.zeilen)} von ${zahl(t.gesamt)} fälligen Zeilen` : t.zeilen ? ` · ca. ${zahl(t.zeilen)} Zeilen` : "";
-  const status = LART_TEXT[t.lauf] || t.lauf || "";
+  const status = mitStatus ? ` – ${t.lauf || ""}` : "";
   let was;
   if (t.alle) was = `alle Zeilen löschen (Vorhaltung keine${t.mit_meta ? ", samt Eintrag in statistics_meta" : ""}; ${weg})`;
   else if (t.keep_days == null) was = t.art === "states" && t.kurzzeit ? `Ziel der Regel ${tageText(t.kurzzeit)} – in diesem Lauf nichts` : "in diesem Lauf nichts";
   else if (t.art === "states" && t.kurzzeit != null && t.keep_days !== t.kurzzeit)
     was = `dieser Lauf löscht nur Zeilen ${grenzText(t.keep_days, t.exakt)} (${weg}, keep_days ${t.keep_days}), Ziel der Regel ${tageText(t.kurzzeit)} – der Rest folgt in späteren Läufen (Obergrenze)`;
   else was = `Zeilen ${grenzText(t.keep_days, t.exakt)} löschen (${weg}, keep_days ${t.keep_days})`;
-  return `${name}: ${was} – ${status}${menge}${t.hinweis ? ` · ${t.hinweis}` : ""}`;
+  return `${name}: ${was}${status}${menge}${t.hinweis ? ` · ${t.hinweis}` : ""}`;
 }
-const vorhaltungTip = r => r.teile.map(teilText).join("\n");
+// Punkt 215: oben die Erklärung des Status, der im Chip steht (r.lauf); sind die Teile gemischt (z. B. States vollständig,
+// 5-Min übersprungen → Chip „teilweise“), sagt die erste Zeile, welcher Teil wie läuft. Darunter je Teil eine Zeile.
+const TEIL_KURZ = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
+const vorhaltungTip = r => {
+  const status = [...new Set(r.teile.map(t => t.lauf))];
+  const kopf = status.length > 1 && !status.includes(r.lauf)
+    ? `${r.lauf}: In diesem Lauf wird nur ein Teil gelöscht – ${r.teile.map(t => `${TEIL_KURZ[t.art] || t.art} ${t.lauf}`).join(", ")}.`
+    : LART_TEXT[r.lauf] || r.lauf;
+  // kontextbezogen: erklärt wird nur der Status im Chip, nicht die übrigen Status der Teile
+  return [kopf, "", ...r.teile.map(t => teilText(t, status.length > 1))].join("\n");
+};
 const blockSpalte = (k, titel, hilfe, breite = 115) => ({ k, titel, hilfe, typ: "zahl", n: 1, breite, wert: r => r[k],
   zelle: r => r[k] == null ? "–" : (k === "attr_zeilen" && r.attr_obergrenze ? "≤ " : "") + zahl(r[k]), csv: r => r[k] ?? "", summe: anzahlSumme(r => r[k]) });
 T.loesch = new LokaleTabelle({
@@ -3674,7 +3810,7 @@ T.loesch = new LokaleTabelle({
     { k: "lauf", titel: "Vorhaltung (in diesem Lauf)", typ: "auswahl", breite: 230, wert: r => r.lauf,
       hilfe: "K = States (keep_days an recorder.purge_entities), 5M = 5-Min-Statistik, L = Langzeit, EV = Events. vollständig: alles außerhalb der Vorhaltezeit · teilweise: nur die ältesten Tage bzw. bis zur Obergrenze · nächster Lauf: passt nicht mehr unter die Obergrenze · übersprungen: Integration fehlt. Einzelheiten je Zeile im Tooltip der Zelle.",
       tip: vorhaltungTip,
-      zelle: r => `${esc(r.vorhaltung)} · ${r.lauf === "vollständig" ? r.lauf : `<span class="chip warn">${esc(r.lauf)}</span>`}`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
+      zelle: r => `${esc(r.vorhaltung)} · <span class="chip ${LART_CHIP[r.lauf] || "warn"}">${esc(r.lauf)}</span>`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
       optionen: () => Object.keys(LART).map(x => [x, x]),
       summe: (g, a) => [zahl(g.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), zahl(a.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), "Einträge, die dieser Lauf bearbeitet (ohne „nächster Lauf“ und „übersprungen“) – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     blockSpalte("summe", "Summe (dieser Lauf)", "Summe aus States, 5-Min-Statistik, Langzeit und Events – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
@@ -3694,7 +3830,7 @@ T.laeufe = new LokaleTabelle({
   id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true },
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
+  gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt", "rest"]],
     ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_lts", "lauf_events", "lauf_attr"]]],
   fix: ["start"],
   leer: "noch kein Löschlauf",
@@ -3717,6 +3853,11 @@ T.laeufe = new LokaleTabelle({
     // Punkt 59: genau gezählt vor jedem Paket bzw. Auftrag = eigentlicher Vergleichswert zu „gelöscht“
     { k: "gezaehlt", titel: "gezählt", typ: "zahl", n: 1, breite: 110, wert: r => gezaehltLauf(r), zelle: r => zahl(gezaehltLauf(r)), csv: r => gezaehltLauf(r), summe: anzahlSumme(r => gezaehltLauf(r)),
       hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“" },
+    // Punkt 200 (0.5.5b12): Rückstand nach dem Lauf = beim Start fällig − gelöscht, dazu die geschätzte Zahl weiterer Läufe
+    { k: "rest", titel: "Rest danach (≈ Läufe)", typ: "zahl", n: 1, breite: 140, wert: r => laufRest(r)?.zeilen ?? null,
+      zelle: r => { const x = laufRest(r); return x ? `${zahl(x.zeilen)}${x.laeufe ? ` <span class="sub">(≈ ${zahl(x.laeufe)})</span>` : ""}` : "–"; },
+      csv: r => laufRest(r)?.zeilen ?? "", tip: r => { const x = laufRest(r); return x ? `nach diesem Lauf noch fällig: ${zahl(x.zeilen)} Zeilen – bei gleicher Obergrenze ≈ ${mzahl(x.laeufe, "weiterer Lauf", "weitere Läufe")} (Schätzung; neue Zeilen kommen täglich dazu)` : ""; },
+      hilfe: "Was beim Start des Laufs insgesamt fällig war, abzüglich des Gelöschten, und wie viele Läufe das bei gleicher Obergrenze ungefähr noch braucht. Erst ab 0.5.5b12 erfasst; ältere Läufe „–“." },
     { k: "geloescht", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 130, wert: r => r.geloescht, zelle: r => zahl(r.geloescht), csv: r => r.geloescht, summe: anzahlSumme(r => r.geloescht) },
     // Punkt 63: Block wie in der Monatssumme – davon je Tabelle, dahinter die gemessenen Attributzeilen (nicht in der Summe)
     ...[["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
@@ -3729,6 +3870,13 @@ T.laeufe = new LokaleTabelle({
   ],
   zeileAttr: r => `class="klick" data-lauf="${r.start}"`,
 });
+// Punkt 200 (0.5.5b12): wie loeschen.laeufe_noetig – je Obergrenze aufgerundet, die längere zählt
+const laeufeNoetig = (states, b, g, gb) => Math.max(states > 0 && g ? Math.ceil(states / g) : 0, b > 0 && (gb ?? g) ? Math.ceil(b / (gb ?? g)) : 0);
+function laufRest(r) {
+  if (r.faellig_states == null || r.status === "läuft") return null;
+  const st = Math.max(0, r.faellig_states - laufArt(r, "states")), b = Math.max(0, (r.faellig_b || 0) - laufArt(r, "kurz") - laufArt(r, "lts") - laufArt(r, "events"));
+  return { zeilen: st + b, laeufe: laeufeNoetig(st, b, r.grenze, r.grenze_b) };
+}
 // ab 0.4.3 (Punkt 82): getrennte Obergrenzen für States und Stufe B (5-Min-Statistik, Langzeit, Events)
 const obergrenzeText = x => x.grenze_b != null ? `States ${zahl(x.grenze)} Zeilen, Statistik und Events ${zahl(x.grenze_b)} Zeilen` : `${zahl(x.grenze)} Zeilen`;
 // Punkt 84: Verwaiste, die beim Lauf wieder als Zustand vorhanden waren, wurden übersprungen
@@ -3807,7 +3955,9 @@ async function ladeLoeschen() {
     if (p.stufe_b) for (const [art, name] of [["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]]) if (zb[art]) teile.push(`${name} ${zahl(zb[art])}`);
     const attrText = su.zeilen_states && su.attr_bekannt && su.attr_zeilen ? `; mit den States fallen ca. ${zahl(su.attr_zeilen)} Attributzeilen weg` : "";
     const laufText = su.zeilen && teile.length ? `ca. ${zahl(su.zeilen)} Zeilen – ${teile.join(" · ")}${attrText}.` : "nichts zu löschen.";
-    const restText = su.zeilen_gesamt > su.zeilen ? ` Insgesamt fällig (alle Tabellen): ${zahl(su.zeilen_gesamt)} Zeilen – der Rest folgt in den nächsten Läufen.` : "";
+    // Punkt 200 (0.5.5b12): wie viele Läufe der Rückstand ungefähr braucht (je Obergrenze aufgerundet)
+    const restLaeufe = su.laeufe > 1 ? ` Bei der Obergrenze von ${obergrenzeText(p)} sind das <b title="Schätzung: je Obergrenze aufgerundet; täglich kommen neue Zeilen dazu, und Entitäten, die nicht mehr ganz in einen Lauf passen, warten auf den nächsten">≈ ${mzahl(su.laeufe, "Lauf", "Läufe")}</b> (dieser und ${zahl(su.laeufe - 1)} weitere).` : "";
+    const restText = su.zeilen_gesamt > su.zeilen ? ` Insgesamt fällig (alle Tabellen): ${zahl(su.zeilen_gesamt)} Zeilen – der Rest folgt in den nächsten Läufen.${restLaeufe}` : "";
     const automatik = !!S.status?.optionen?.automatik_freigegeben;
     // Punkt 43: Verwaiste, die zum Muster einer aktiven glob-Regel passen
     const vu = (p.verwaist_ungedeckt || []).map((g, i) => `<div class="sperre">⚠ ${zahl(g.entitaeten)} verwaiste Entitäten (${zahl(g.zeilen)} Zeilen) passen zu
@@ -3816,7 +3966,7 @@ async function ladeLoeschen() {
       <button data-vu="${i}" style="margin-left:6px">Regel „verwaist“ mit diesem Muster anlegen</button></div>`).join("");
     // Punkt 54: Risiken dieses Laufs; Punkt 53: Entitäten, die schon am ältesten Tag über der Obergrenze liegen
     const ris = (p.risiken || []).length ? `<div><b>Risiken dieses Laufs:</b><ul style="margin:4px 0 0 18px;padding:0">${p.risiken.map(x =>
-      `<li class="risiko${x.schwer ? " schwer" : ""}" title="${esc(x.beispiele.join("\n"))}">${esc(x.text)} <span class="sub">(${esc(x.beispiele.slice(0, 3).join(", "))}${x.anzahl > 3 ? " …" : ""})</span></li>`).join("")}</ul></div>`
+      `<li class="risiko${x.schwer ? " schwer" : ""}" title="${esc("Betroffen\n" + x.beispiele.join("\n"))}">${esc(x.text)} <span class="sub">(${esc(x.beispiele.slice(0, 3).join(", "))}${x.anzahl > 3 ? " …" : ""})</span></li>`).join("")}</ul></div>`
       : `<div class="sub">Risiken dieses Laufs: keine erkannt (Energie-Dashboard, Zähler, kurze Kurzzeit, Helfer-Quellen, System-Events geprüft).</div>`;
     const zg = p.summe.zu_gross ? `<div class="sperre">⚠ ${zahl(p.summe.zu_gross)} Entitäten haben schon am ältesten Tag mehr Zeilen als die Obergrenze und kämen sonst nie an die Reihe.
       <label style="margin-left:6px"><input type="checkbox" id="lAusnahme" ${p.ausnahme ? "checked" : ""}> für diesen Lauf einmalig erlauben (nur ihr ältester Tag)</label>
@@ -3988,6 +4138,93 @@ async function ladeAlles(regelnAuch = true) {
 }
 T.opt.daten([]); T.probe.daten([]); T.lts.daten([]); T.events.daten([]); T.loesch.daten([]); T.laeufe.daten([]); T.summe.daten([]);
 ladeStatus().then(s => { jobWar = !!(s && (s.job || !s.analyse?.analyse_zeit)); ladeAlles(); pruefe(); });
+
+// ================================================ Punkt 216 (0.5.5b12): eigene Tooltip-Anzeige „Thema: Inhalt“
+// Liest beim Überfahren den Text aus title, nimmt title solange weg (kein Browser-Tooltip) und setzt ihn danach zurück –
+// alle bestehenden Tooltips funktionieren ohne Umbau. Am Zeilenanfang wird ein Thema vor „: “ (höchstens 40 Zeichen) fett;
+// „0:00“ bleibt unberührt (kein Leerzeichen nach dem Doppelpunkt). Als Popover liegt die Anzeige auch über offenen Dialogen.
+const TIP = { el: $("#tip"), ziel: null, text: "", timer: 0, x: 0, y: 0, weg: [] };
+// Thema: bis 40 Zeichen vor „: “ (Doppelpunkt ohne folgendes Leerzeichen erlaubt, z. B. EV:alle), Klammern ausgeglichen –
+// sonst wäre „Zeilen in der Tabelle events (Logbuch“ ein Thema
+const tipThemaAus = z => { const m = /^((?:[^:\n]|:(?!\s)){1,40}?):\s(.*)$/.exec(z); return m && m[1].split("(").length === m[1].split(")").length ? m : null; };
+const tipZeile = z => { const m = tipThemaAus(z); return m ? (m[2].trim() ? `<b>${esc(m[1])}:</b> ${esc(m[2])}` : `<b>${esc(m[1])}</b>`) : esc(z); };
+// Punkt 218 (0.5.5b12): alle Tooltips nach dem Schema „Thema: Inhalt“, ohne jeden Text einzeln umzuschreiben.
+// 1. schon strukturiert → bleibt; 2. kurze Überschrift + Inhalt in Zeile 2 („Gerät ⏎ Name …“) → „Gerät: Name …“;
+// 3. sonst Thema aus dem Kontext: Spaltentitel (Zellen, Summen), „Filter <Spalte>“ (Filterfelder), Beschriftung (Knöpfe, Chips, Reiter).
+const TIP_THEMA = { test: z => !!tipThemaAus(z || "") };
+const tipKurz = s => { s = (s || "").replace(/\s+/g, " ").trim(); return s.length && s.length <= 40 ? s : ""; };
+function tipSpalte(zelle) {
+  // Titelzelle derselben Spalte im Tabellenkopf: die Kopfzelle mit Haupttitel (.tk) bzw. ohne colspan, die horizontal über der Zelle liegt
+  const kopf = zelle.closest("table")?.tHead; if (!kopf) return "";
+  const r = zelle.getBoundingClientRect(), mitte = r.left + r.width / 2;
+  let kand = [...kopf.querySelectorAll("th")].filter(t => t !== zelle && t.colSpan === 1);
+  kand = kand.some(t => t.querySelector(".tk")) ? kand.filter(t => t.querySelector(".tk")) : kand.filter(t => !t.querySelector("input, select"));
+  const th = kand.find(t => { const k = t.getBoundingClientRect(); return k.left <= mitte && mitte <= k.right && t.textContent.trim(); });
+  return th ? tipKurz(th.querySelector(".tk")?.textContent || th.textContent) : "";
+}
+function tipThema(el) {
+  const tk = el.matches("th") && el.querySelector(".tk");
+  if (tk) return tipKurz(tk.textContent);     // Titelzelle selbst
+  const zelle = el.closest("td, th");
+  if (zelle && zelle.colSpan === 1) {
+    const sp = tipSpalte(zelle);
+    if (sp) return el.matches("input, select") ? `Filter ${sp}` : sp;
+  }
+  if (el.matches("input[type=checkbox].wahl")) return "Auswahl";
+  if (el.matches("th")) return tipKurz(el.querySelector(".tk")?.textContent || el.textContent);
+  const lang = el.querySelector(".lang");     // Köpfe des Kachelrasters: Langform des Titels
+  if (lang) return tipKurz(lang.textContent);
+  return tipKurz(el.getAttribute("aria-label") || (el.matches("button, a, label, summary, .chip, [role=button]") ? el.textContent : ""));
+}
+function tipSchema(el, text) {
+  const z = text.split("\n");
+  if (TIP_THEMA.test(z[0])) return z;
+  const ueber = tipKurz(z[0]);
+  // kurze Überschrift ohne Doppelpunkt (keine Entity-ID, keine reine Zahl) und Zeile 2 ohne eigenes Thema → zusammenziehen
+  if (z.length > 1 && ueber && !/^[a-z_]+\.[a-z0-9_]+$/.test(ueber) && !/^[\d.,\s%–-]+$/.test(ueber) && z[1].trim() && !TIP_THEMA.test(z[1]))
+    return [`${ueber}: ${z[1].trim()}`, ...z.slice(2)];
+  const thema = tipThema(el);
+  // nur ein kurzes Wort wie „Auswahl“ oder „Aktion“: ist selbst das Thema
+  if (!thema || z[0].trim().toLowerCase() === thema.toLowerCase()) return z.length === 1 && ueber ? [`${ueber}: `] : z;
+  return [`${thema}: ${z[0]}`, ...z.slice(1)];
+}
+function tipZurueck() {
+  clearTimeout(TIP.timer);
+  // Ziel und umgebende Elemente bekommen ihren title zurück – inzwischen neu gesetzt? dann bleibt der neue
+  (TIP.weg || []).forEach(([el, t]) => el.hasAttribute("title") || el.setAttribute("title", t));
+  TIP.weg = []; TIP.ziel = null;
+  if (TIP.el.matches(":popover-open")) TIP.el.hidePopover();
+}
+function tipZeigen() {
+  if (!TIP.ziel || !TIP.text) return;
+  TIP.el.innerHTML = tipSchema(TIP.ziel, TIP.text).map(z => z.trim() ? `<div>${tipZeile(z)}</div>` : `<div class="tip-luecke"></div>`).join("");
+  if (TIP.el.matches(":popover-open")) TIP.el.hidePopover();
+  TIP.el.showPopover();          // neu öffnen = zuoberst, auch über einem eben geöffneten Dialog
+  const r = TIP.el.getBoundingClientRect(), w = innerWidth, h = innerHeight;
+  TIP.el.style.left = Math.max(8, Math.min(TIP.x + 14, w - r.width - 8)) + "px";
+  TIP.el.style.top = (TIP.y + 18 + r.height > h - 8 ? Math.max(8, TIP.y - r.height - 10) : TIP.y + 18) + "px";
+}
+document.addEventListener("mouseover", ev => {
+  // innerhalb des aktuellen Ziels bleiben (seine und die umgebenden title sind gerade entfernt), außer ein inneres Element
+  // hat einen eigenen title
+  if (TIP.ziel && TIP.ziel.contains(ev.target)) {
+    const innen = ev.target.closest?.("[title]");
+    if (!innen || innen === TIP.ziel || !TIP.ziel.contains(innen)) return;
+  }
+  tipZurueck();
+  const ziel = ev.target.closest?.("[title]");
+  if (!ziel || !ziel.getAttribute("title")) return;
+  // auch die title der umgebenden Elemente wegnehmen (z. B. Label-Chip in einer Zelle mit eigenem title) –
+  // sonst zeigt der Browser deren Tooltip zusätzlich
+  for (let a = ziel; a && a.hasAttribute; a = a.parentElement)
+    if (a.hasAttribute("title")) { TIP.weg.push([a, a.getAttribute("title")]); a.removeAttribute("title"); }
+  TIP.ziel = ziel; TIP.text = TIP.weg[0][1];
+  TIP.x = ev.clientX; TIP.y = ev.clientY;
+  TIP.timer = setTimeout(tipZeigen, 450);
+});
+document.addEventListener("mousemove", ev => { if (TIP.ziel && !TIP.el.matches(":popover-open")) { TIP.x = ev.clientX; TIP.y = ev.clientY; } });
+document.addEventListener("mouseout", ev => { if (TIP.ziel && !TIP.ziel.contains(ev.relatedTarget)) tipZurueck(); });
+["mousedown", "keydown", "wheel"].forEach(t => document.addEventListener(t, tipZurueck, true));
 </script>
 </body>
 </html>

@@ -286,6 +286,9 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
                   "attr_bekannt": any(c["attr_zeilen_gesamt"] is not None for c in eintraege),
                   "zeilen_gesamt": sum(c["zeilen_gesamt"] for c in eintraege) + zeilen_b,
                   "zeilen_b": {art: sum(a["zeilen"] for a in auftraege_b if a["art"] == art) for art in ART_B},
+                  # Punkt 200 (0.5.5b12): alles Fällige je Obergrenze und wie viele Läufe es ungefähr braucht
+                  "zeilen_states_gesamt": sum(c["zeilen_gesamt"] for c in eintraege),
+                  "laeufe": laeufe_noetig(sum(c["zeilen_gesamt"] for c in eintraege), zeilen_b if stufe_b else 0, grenze, grenze_b),
                   "entitaeten": sum(1 for c in eintraege if c["keep_days"] is not None),
                   "verschoben": sum(1 for c in eintraege if c["keep_days"] is None) + (len(auftraege_b) - len(im_lauf_b) if stufe_b else 0),
                   "uebersprungen": 0 if stufe_b else len(auftraege_b),
@@ -294,6 +297,14 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
                   "auftraege_b": len(im_lauf_b),
                   "aufrufe": sum(-(-len(g["entitaeten"]) // PAKET) for g in gruppen)},
     }
+
+
+def laeufe_noetig(states, b, grenze, grenze_b):
+    """Punkt 200: Läufe, bis alles Fällige gelöscht ist – je Obergrenze aufgerundet, die längere zählt. Schätzung:
+    neue Zeilen kommen jeden Tag dazu, und Entitäten, die nicht ganz in den Rest der Obergrenze passen, warten."""
+    def n(z, g):
+        return -(-z // g) if z > 0 and g else 0
+    return max(n(states, grenze), n(b, grenze_b if grenze_b is not None else grenze))
 
 
 # Stufe B: Art im Plan → Tabelle der Mini-Integration
@@ -589,6 +600,9 @@ class Lauf:
                      # Punkt 83: auf welchem Analyse-Stand der Plan beruht
                      "analyse_zeit": p.get("analyse_zeit"), "analyse_vorher": bool(p.get("analyse_vorher")),
                      "kennung": p["kennung"], "geplant_zeilen": p["summe"]["zeilen"], "geloescht": 0,
+                     # Punkt 200 (0.5.5b12): alles Fällige beim Start – Rest danach = fällig − gelöscht (je Obergrenze)
+                     "faellig_states": p["summe"].get("zeilen_states_gesamt"),
+                     "faellig_b": sum((p["summe"].get("zeilen_b") or {}).values()) if p.get("stufe_b") else 0,
                      # Punkt 116 (0.4.10): Wartezeit auf HA-Backups (Sekunden, Anzahl Pausen), je Lauf und je Paket
                      "backup_warte_s": 0, "backup_pausen": 0,
                      # Punkt 121 (0.4.12): Grenze lokale Mitternacht (exakt) oder „jetzt minus keep_days“

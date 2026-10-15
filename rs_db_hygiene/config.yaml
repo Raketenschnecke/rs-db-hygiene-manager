@@ -1,5 +1,5 @@
 name: RS DB Hygiene Manager (Beta)
-version: "0.5.5b11"
+version: "0.5.5b12"
 slug: rs_db_hygiene
 stage: experimental
 description: >-

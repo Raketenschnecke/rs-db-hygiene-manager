@@ -52,7 +52,9 @@ Typ „herkunft“ (ab 0.5.5b9, Punkt 196): Muster sind Integrationen (platform 
 Typ „vielschreiber“ (ab 0.5.5b9, Punkt 193): genau ein Muster ist eine Zahl = Schwelle in Zeilen je Tag (Zuwachs der
   Analyse); weitere Muster sind optionale Entity-Muster (glob) als Einschränkung. Trifft nicht verwaiste Entitäten mit
   Zuwachs ≥ Schwelle, Zähler-Schutz inklusive; Rang nach herkunft, vor verwaist. Wirkt dynamisch: Wer mehr schreibt,
-  fällt nach der nächsten Analyse darunter, wer weniger schreibt, wieder heraus.
+  fällt nach der nächsten Analyse darunter, wer weniger schreibt, wieder heraus. Ab 0.5.5b12 (Punkt 201) mit Hysterese:
+  Wer bei der vorigen Analyse dazugehörte, bleibt, bis sein Zuwachs unter 80 % der Schwelle fällt – sonst pendeln
+  Entitäten nahe der Schwelle zwischen kurzer und langer Kurzzeit. Den Stand hält halte_vielschreiber() je Analyse fest.
 """
 import fnmatch
 import json
@@ -73,6 +75,10 @@ TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "herkunft": 4, "vi
 # Punkte 193/196: wirken wie glob/klasse nur auf nicht verwaiste Entitäten und nie auf Zähler
 MUSTER_TYPEN = ("glob", "klasse", "herkunft", "vielschreiber")
 _SCHWELLE = re.compile(r"^(?:>=|≥)?\s*(\d{1,9})$")
+# Punkt 201: Hysterese der Vielschreiber – Austritt erst unter diesem Anteil der Schwelle. HALTEN: je Regel-ID die
+# Schwelle und die Entitäten, die bei der vorigen Analyse dazugehörten (gesetzt von halte_vielschreiber)
+HYSTERESE = 0.8
+HALTEN = {}
 SCHUTZ_WERTE = {"kurzzeit": "global", "attribute": None, "langzeit": "unbegrenzt"}   # Punkt 111: fest
 # Punkt 127 (0.5.3): Regel „HA-Standard“ – Werte, Name und Notiz fest, nur aktiv/passiv änderbar
 HA_STANDARD_ID = "HA:standard"
@@ -361,6 +367,37 @@ def lies_sicherung(ordner, name):
         return lies_import(json.load(f))
 
 
+def halte_vielschreiber(daten, ents, stand, pfad):
+    """Punkt 201: Hysterese der vielschreiber-Regeln über Analysen hinweg.
+
+    Je Regel steht in pfad: Schwelle, Analyse-Stand, die Entitäten dieses Stands (ids) und die des vorigen (vorher).
+    Bei einem neuen Analyse-Stand wird ids zu vorher; bei geänderter Schwelle beginnt die Regel neu. HALTEN bekommt je
+    Regel (Schwelle, vorher) – _trifft lässt diese Entitäten bis 80 % der Schwelle dabei. Gleicher Stand rechnet mit
+    demselben vorher und kommt deshalb immer zum selben Ergebnis."""
+    try:
+        with open(pfad, encoding="utf-8") as f:
+            alt = json.load(f)
+    except (OSError, ValueError):
+        alt = {}
+    neu = {}
+    HALTEN.clear()
+    for r in daten["regeln"]:
+        if r["typ"] != "vielschreiber":
+            continue
+        s, z = int(r["muster"][0]), alt.get(r["id"]) or {}
+        if z.get("schwelle") != s:
+            z = {}
+        vorher = set(z.get("vorher") or []) if z.get("stand") == stand else set(z.get("ids") or [])
+        ids = {e["entity_id"] for e in ents if not ist_verwaist(e["status"])
+               and ((e["rows_24h"] or 0) >= s or (e["entity_id"] in vorher and (e["rows_24h"] or 0) >= HYSTERESE * s))}
+        neu[r["id"]] = {"schwelle": s, "stand": stand, "ids": sorted(ids), "vorher": sorted(vorher)}
+        HALTEN[r["id"]] = (s, frozenset(vorher))
+    if neu != alt:
+        with open(pfad + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(neu, f, ensure_ascii=False)
+        os.replace(pfad + ".tmp", pfad)
+
+
 class Aufloeser:
     """Ermittelt je Entität die wirksamen drei Werte samt Herkunft."""
 
@@ -374,11 +411,15 @@ class Aufloeser:
     def _trifft(r, eid, domain, dc, status="aktiv", zuwachs=None, plattform=""):
         if r["typ"] == "vielschreiber":       # Punkt 193: Schwelle (erstes Muster) und optional Entity-Muster
             schwelle, globs = int(r["muster"][0]), r["muster"][1:]
+            gehalten = False
             if (zuwachs or 0) < schwelle:
-                return None
+                h = HALTEN.get(r["id"])      # Punkt 201: bleibt dabei bis unter 80 % der Schwelle
+                if not (h and h[0] == schwelle and eid in h[1] and (zuwachs or 0) >= HYSTERESE * schwelle):
+                    return None
+                gehalten = True
             if globs and not any(fnmatch.fnmatchcase(eid, m) for m in globs):
                 return None
-            return f"≥ {schwelle}/Tag"
+            return f"≥ {schwelle}/Tag" + (f" (gehalten bis {int(HYSTERESE * schwelle)})" if gehalten else "")
         if r["typ"] == "herkunft":            # Punkt 196: Integration der Registry
             return next((m for m in r["muster"] if plattform and fnmatch.fnmatchcase(plattform, m)), None)
         if r["typ"] == "verwaist":

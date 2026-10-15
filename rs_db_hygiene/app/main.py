@@ -33,6 +33,7 @@ OPTIONEN_PFAD = os.path.join(DATA, "options.json")
 CACHE = os.path.join(DATA, "cache.db")
 ATTR = os.path.join(DATA, "attribute.db")
 REGELN = os.path.join(DATA, "regeln.json")
+HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
 LAEUFE = os.path.join(DATA, "laeufe")
 LAEUFE_SUMME = os.path.join(DATA, "laeufe_summe.json")
 VORLAGE = os.path.join(APP_DIR, "regeln_vorlage.json")
@@ -73,7 +74,7 @@ class Zustand:
         # denselben Probelauf nicht mehrfach parallel; wer wartet, findet danach das Ergebnis im Cache
         with self._rechnen:
             if schluessel not in self._pl_cache:
-                erg = probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)
+                erg = probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt, halten_pfad=HALTEN)
                 # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Empfehlungen rechnen teils mit
                 # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
                 alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
