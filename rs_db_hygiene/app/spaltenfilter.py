@@ -7,7 +7,8 @@ Parameter f_<spalte> aus der Abfrage:
                                            >1000  >=5  <10  <=10  =0  0  100-500  0,5-2  (Tausenderpunkt, Dezimalkomma)
   Datum  f_first_ts f_last_ts              <1.9.2026  >=8.10.2026  8.10.2026  1.9.2026-30.9.2026
   Wert   f_kurzzeit f_attribute f_langzeit regel:R14 | std | wert:30 Tage
-  Herkunft f_herkunft (Text in Name/Datei und Tooltip), f_herkunft_art (geraet, yaml, …), f_device_id (genau)
+  Herkunft f_herkunft (Text in Name/Datei und Tooltip), f_herkunft_art (geraet, yaml, …), f_device_id (genau),
+           f_plattform (Integration genau, ab 0.5.5b11 für „Ansehen“ der Empfehlungen, Punkt 205)
   Labels f_labels                          enthält bzw. * und ? in der Liste „A, B“ (Labels an Entität und Gerät, ab 0.4.10)
   Klasse f_device_class                    genau (z. B. power) | __ohne (keine device_class), ab 0.5.4 (Punkt 167)
 Ungültige Eingaben werden ignoriert und als Fehler je Spalte zurückgegeben.
@@ -160,7 +161,7 @@ def baue(parameter):
         try:
             if spalte in ("entity_id", "herkunft", "labels"):
                 f = text_filter(roh)
-            elif spalte in ("herkunft_art", "device_id"):
+            elif spalte in ("herkunft_art", "device_id", "plattform"):
                 f = gleich_filter(roh)
             elif spalte == "device_class":
                 f = klasse_filter(roh)

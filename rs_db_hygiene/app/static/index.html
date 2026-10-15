@@ -658,7 +658,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
             <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort; ab 0.5.3), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt</td></tr>
-            <tr><td><b>Empfehlungen</b> (ab 0.5.4)</td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, Vielschreiber, große Attribute, nirgends verwendete und deaktivierte Entitäten, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert.</td></tr>
+            <tr><td><b>Empfehlungen</b> (ab 0.5.4)</td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert.</td></tr>
             <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“; der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
             <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Einzelheiten (auch die Pause wegen eines Backups) und die Monatssumme je Entität</td></tr>
@@ -804,16 +804,17 @@ actions:
         <h3 id="h-faq-vorn">Wie fange ich mit den Regeln von vorn an?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Auf Startregeln zurücksetzen</b>. Alle Regeln werden durch die Startliste ersetzt (alle passiv außer <a class="hverweis" href="#h-ha-standard">HA-Standard</a>). Vorher sichert die App die bisherigen Regeln; unter „Sicherungen“ lässt sich jeder Stand wiederherstellen (die letzten 10 bleiben). Ein Stand mit genau dem Inhalt der Startliste trägt den Vermerk „= Startregeln“ – wer zweimal hintereinander zurücksetzt, findet die eigenen Regeln in der älteren Sicherung. Gesperrt, solange ein Löschlauf läuft.</p>
         <h3 id="h-faq-empfehlungen">Nach dem Zurücksetzen sind die Empfehlungen fast leer – warum?</h3>
-        <p>In den Startregeln ist <a class="hverweis" href="#h-ha-standard">HA-Standard</a> aktiv: Alles ohne eigene Regel behält seine Daten nur 10 Tage. Der Reiter Empfehlungen schlägt nur Vorhaltezeiten vor, die kürzer sind als die heute wirksame. Vielschreiber, große Attribute, nirgends verwendete, deaktivierte und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage) entfallen deshalb; übrig bleiben die Diagnose-Gruppen (7 Tage). Der Reiter weist darauf hin, solange HA-Standard aktiv ist. Ist die Regel <code>HA:standard</code> passiv, gilt wieder „global“ (purge_keep_days), und die Vorschläge erscheinen nach „Neu berechnen“ wieder.</p>
+        <p>In den Startregeln ist <a class="hverweis" href="#h-ha-standard">HA-Standard</a> aktiv: Alles ohne eigene Regel behält seine Daten nur 10 Tage. Der Reiter Empfehlungen schlägt nur Vorhaltezeiten vor, die kürzer sind als die heute wirksame. Vielschreiber, große Attribute, nirgends verwendete, deaktivierte und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage) entfallen deshalb; übrig bleiben die Diagnose-Gruppen (7 Tage). Der Reiter weist darauf hin, solange HA-Standard aktiv ist und auf 10 Tagen steht; mit längerer Kurzzeit erscheinen die Vorschläge wieder, soweit sie kürzer sind. Ist die Regel <code>HA:standard</code> passiv, gilt wieder „global“ (purge_keep_days), und die Vorschläge erscheinen nach „Neu berechnen“ wieder.</p>
         <h3 id="h-faq-export">Wie nehme ich meine Regeln auf eine andere Installation mit?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>
       </details>
     </div>
   </section>
   <section id="tab-opt" hidden>
-    <!-- Punkt 181: Mit aktivem HA-Standard entfallen alle Vorschläge, die nicht kürzer sind als dessen Kurzzeit (Punkt 190: einstellbar) -->
-    <div class="banner" id="optHaStd" style="margin:0 0 8px" hidden><b>HA-Standard aktiv (<span id="optHaStdKz">10 Tage</span>):</b> Entitäten und Event-Typen ohne eigene Regel
-      behalten ihre Daten nur <span id="optHaStdKz2">10 Tage</span>. Vorgeschlagen wird nur, was kürzer ist – bei 10 Tagen entfallen Vielschreiber, große Attribute, nirgends verwendete, deaktivierte
+    <!-- Punkt 181: Mit aktivem HA-Standard entfallen alle Vorschläge, die nicht kürzer sind als dessen Kurzzeit; Punkt 210: nur bei
+         der Grundeinstellung 10 Tage – bei längerer Kurzzeit (Punkt 190) erscheinen die Vorschläge ja wieder -->
+    <div class="banner" id="optHaStd" style="margin:0 0 8px" hidden><b>HA-Standard aktiv (10 Tage):</b> Entitäten und Event-Typen ohne eigene Regel
+      behalten ihre Daten nur 10 Tage. Vorgeschlagen wird nur, was kürzer ist – deshalb entfallen Vielschreiber, große Attribute, nirgends verwendete, deaktivierte
       und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage), übrig bleiben die Diagnose-Gruppen (7 Tage).
       Ist <code>HA:standard</code> im Reiter Regeln passiv, gilt wieder „global“ (purge_keep_days).<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a></div>
     <!-- Punkt 194 (0.5.5b9): Wer schreibt am meisten? – Top N der Kandidaten, Anteil am Zuwachs, Ersparnis, eine Regel statt vieler -->
@@ -1275,7 +1276,8 @@ class LokaleTabelle {
       const [oben, unten, tip] = s.summe ? s.summe(l, this.zeilen) : ["", ""];
       if (!this.gruppen) { th.innerHTML = oben === "" ? "" : `<b>${oben}</b><span class="ges">gesamt ${unten}</span>`; return; }
       // Punkt 139 im gemeinsamen Baustein: ein Wert, „(gesamt)“ nur bei Filter, Erklärung im Tooltip
-      th.innerHTML = oben === "" ? "" : `<b>${ohneEinheit(oben)}</b>${gef && unten !== "–" && unten !== "" ? `<span class="ges">(${ohneEinheit(unten)})</span>` : ""}`;
+      const oe = s.einheit ? String : ohneEinheit;   // Punkt 207: Spalten mit wechselnder Einheit (MB/GB) behalten sie
+      th.innerHTML = oben === "" ? "" : `<b>${oe(oben)}</b>${gef && unten !== "–" && unten !== "" ? `<span class="ges">(${oe(unten)})</span>` : ""}`;
       th.title = oben === "" ? "" : (tip || `${s.titel}: Summe bzw. Anzahl – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)`);
     });
     const sp = this.zeigbar(), sicht = this.seite ? l.slice(0, this.seite) : l, gk = this.klassen(sp);
@@ -1499,7 +1501,7 @@ const HILFE = {
     "Nach „Ersparnis (Dauerbetrieb)“ sortieren, um die Hebel zu sehen; Regeln mit 0 Entitäten treffen nichts oder werden überstimmt."],
   optimierungen: ["Empfehlungen",
     "Regelvorschläge, die die App aus der letzten Analyse ableitet – ohne neue Abfrage der Datenbank und ohne dass etwas gelöscht wird. Vorgeschlagen wird nur eine kürzere Kurzzeit für Daten, für die heute keine eigene Regel gilt; die Langzeit bleibt unverändert.",
-    "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt –, in HA deaktiviert) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
+    "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Klasse (mehrere Vorschläge derselben Geräteklasse, z. B. sensor|frequency, als eine klasse-Regel) · Integration (ab 5 Vorschlägen einer Integration wie proxmoxve eine herkunft-Regel mit 30 Tagen – sie trifft alle Entitäten der Integration ohne eigene Kurzzeit, auch künftige) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt; gilt nicht für Automationen und Skripte –, in HA deaktiviert, Uhrzeit-Sensoren mit 1 Tag) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt (unter 1 GB in MB). ⚠ heißt: Die Regel würde wegen ihres Rangs für einige Entitäten eine heute kürzere Kurzzeit verlängern. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
     "Nach Ersparnis sortiert von oben abarbeiten: „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; Treffer und Wirkung zeigt die Vorschau dort. Was nicht passt, „ignorieren“ – die App merkt es sich."],
   passiv: ["Passive Regeln mitrechnen",
     "Rechnet passive Regeln (z. B. R23 Einzelfallprüfung) so, als wären sie aktiv.",
@@ -2129,7 +2131,7 @@ function zeigeZeilen(zeilen) {
   requestAnimationFrame(weiter);
 }
 // Filter ausgeblendeter Spalten wirken nicht (Punkt 23)
-const unsichtbareFilter = () => Object.keys(S.f).filter(k => S.f[k] && k !== "device_id" &&
+const unsichtbareFilter = () => Object.keys(S.f).filter(k => S.f[k] && k !== "device_id" && k !== "plattform" &&
   !S.sichtbar.has(k === "herkunft_art" ? "herkunft" : k));
 function zeigeTreffer(r) {
   const bis = S.limit ? Math.min(S.offset + S.limit, r.gesamt) : r.gesamt;
@@ -2137,6 +2139,7 @@ function zeigeTreffer(r) {
   // Punkt 153 (0.5.3): Anzahl und Bereich entfallen – Anzahl in der Summenzeile, Bereich unten beim Blättern; die Zeile erscheint nur noch mit Gerätefilter oder Warnung
   $("#trefferzeile").innerHTML = "" +
     (S.f.device_id ? `<span class="filterchip">Gerät: ${esc(S.geraetName || S.f.device_id)}<button id="geraetWeg" aria-label="Gerätefilter entfernen">✕</button></span>` : "") +
+    (S.f.plattform ? `<span class="filterchip">Integration: ${esc(S.f.plattform)}<button id="plattformWeg" aria-label="Filter Integration entfernen">✕</button></span>` : "") +   // Punkt 205
     (aus.length ? `<span class="chip warn" title="${esc(aus.map(k => SPALTE[k === "herkunft_art" ? "herkunft" : k][1]).join(", "))}">${aus.length} Filter in ausgeblendeten Spalten wirken nicht</span>` : "");
   $("#trefferzeile").hidden = !$("#trefferzeile").innerHTML.trim();
   $("#seite").textContent = `${zahl(r.gesamt ? S.offset + 1 : 0)}–${zahl(bis)} von ${zahl(r.gesamt)}`;
@@ -2146,6 +2149,7 @@ function zeigeTreffer(r) {
 }
 $("#trefferzeile").addEventListener("click", ev => {
   if (ev.target.closest("#geraetWeg")) { S.geraetName = ""; setzeFilter("device_id", "", true); }
+  if (ev.target.closest("#plattformWeg")) setzeFilter("plattform", "", true);
 });
 async function ladeEntitaeten() {
   const p = par();
@@ -2374,7 +2378,10 @@ T.lts = new LokaleTabelle({
   ],
 });
 // ---- Punkt 176 (0.5.4): Empfehlungen (bis 0.5.4b7 „Optimierungen“) – Regelvorschläge aus der letzten Analyse
-const OPT_ART = { gruppe: "Gruppe", entitaet: "Entität", verwaist: "Verwaiste", event: "Events" };
+// Punkte 205/208 (0.5.5b11): Vorschläge je Integration (herkunft) und je Klasse
+const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events" };
+// Punkt 207: Ersparnis unter 1 GB in MB, sonst GB
+const gbmb = b => b == null ? "–" : Math.abs(b) < 1e9 ? mb(b) : gb(b);
 const optStatus = v => v.vorhanden ? `<span class="chip regel regelklick" data-regel-edit="${esc(v.vorhanden.id)}" title="Regel mit genau diesem Muster gibt es schon (${v.vorhanden.aktiv ? "aktiv" : "passiv"}) – Klick öffnet sie">${esc(v.vorhanden.id)} ${v.vorhanden.aktiv ? "" : "passiv"}</span>`
   : (v.passiv || []).map(p => `<span class="chip warn regelklick" data-regel-edit="${esc(p.id)}" title="Die passive Regel ${esc(p.id)} (Kurzzeit ${esc(wertAnzeige(p.kurzzeit))}) trifft schon ${zahl(p.anzahl)} von ${zahl(v.anzahl)} dieser Entitäten – einschalten genügt vielleicht. Klick öffnet sie.">passiv: ${esc(p.id)} (${zahl(p.anzahl)})</span>`).join(" ");
 T.opt = new LokaleTabelle({
@@ -2406,8 +2413,9 @@ T.opt = new LokaleTabelle({
       wert: r => r.loesch_zeilen, zelle: r => zahl(r.loesch_zeilen), csv: r => r.loesch_zeilen, summe: anzahlSumme(r => r.loesch_zeilen) },
     { k: "loesch_mb", titel: "Platz (MB)", typ: "zahl", n: 1, breite: 100, hilfe: "Platz der zusätzlichen Löschmenge sofort (wird nach einem Repack frei)",
       wert: r => Math.round(r.loesch_bytes / 1e6), zelle: r => mb(r.loesch_bytes), csv: r => Math.round(r.loesch_bytes), summe: (g, a) => [mb(g.reduce((x, r) => x + r.loesch_bytes, 0)), mb(a.reduce((x, r) => x + r.loesch_bytes, 0))] },
-    { k: "ersparnis", titel: "Ersparnis (Prognosezeitraum · GB)", typ: "gb", n: 1, breite: 150, hilfe: "wie viel kleiner die DB im Prognosezeitraum bleibt, verglichen mit den heutigen Regeln",
-      wert: r => r.ersparnis_bytes, zelle: r => gb(r.ersparnis_bytes), csv: r => Math.round(r.ersparnis_bytes), summe: gbSumme(r => r.ersparnis_bytes) },
+    { k: "ersparnis", titel: "Ersparnis (Prognosezeitraum)", typ: "gb", n: 1, einheit: 1, breite: 150, hilfe: "wie viel kleiner die DB im Prognosezeitraum bleibt, verglichen mit den heutigen Regeln – unter 1 GB in MB; Filter in GB, z. B. >0,05. Summe: alle Vorschläge zusammen (überschneiden sie sich, ist die echte Ersparnis kleiner)",
+      wert: r => r.ersparnis_bytes, zelle: r => gbmb(r.ersparnis_bytes), csv: r => Math.round(r.ersparnis_bytes),
+      summe: (g, a) => [gbmb(g.reduce((x, r) => x + (r.ersparnis_bytes || 0), 0)), gbmb(a.reduce((x, r) => x + (r.ersparnis_bytes || 0), 0))] },
     { k: "gruende", titel: "Begründung", typ: "text", breite: 380, wert: r => r.gruende.join(" · "), tdKlasse: "gruende",
       zelle: r => esc(r.gruende.join(" · ")), csv: r => r.gruende.join(" | "), tip: r => r.gruende.join("\n") + (r.beispiele?.length ? `\n\nBeispiele: ${r.beispiele.join(", ")}` : "") },
     { k: "aktion", titel: "Aktion", typ: "keine", breite: 250, wert: () => 0,
@@ -2430,7 +2438,7 @@ function zeigeAuswahlOpt() {
   const gew = (S.opt || []).filter(v => S.auswahlOpt.has(v.id)), da = gew.filter(v => v.vorhanden).length;
   const ign = gew.filter(v => v.ignoriert).length;
   leiste.innerHTML = `<b>${mzahl(n, "Vorschlag", "Vorschläge")} ausgewählt</b>${da ? ` <span class="sub">(${zahl(da)} davon gibt es schon als Regel)</span>` : ""}
-    <span class="sub">Ersparnis zusammen bis zu ${gb(gew.reduce((x, v) => x + (v.ersparnis_bytes || 0), 0))}</span>
+    <span class="sub">Ersparnis zusammen bis zu ${gbmb(gew.reduce((x, v) => x + (v.ersparnis_bytes || 0), 0))}</span>
     <button data-masse-opt="anlegen" class="primaer" title="je Vorschlag eine Regel, passiv – erst nach dem Einschalten im Reiter Regeln wirkt sie">als passive Regeln anlegen</button>
     <button data-masse-opt="ignorieren">ignorieren</button>${ign ? `<button data-masse-opt="zeigen">wieder zeigen</button>` : ""}`;
 }
@@ -2516,8 +2524,7 @@ $("#paretoInhalt").addEventListener("click", ev => {
   bearbeiteRegel(-1, { typ: "entity", muster: ids, name: `Top ${n} Vielschreiber – ${wertAnzeige(kz)}`, kurzzeit: kz, aktiv: false, notiz, typManuell: true });
 });
 async function ladeOpt() {
-  $("#optHaStd").hidden = !haStandardAktiv();   // Punkt 181
-  $("#optHaStdKz").textContent = $("#optHaStdKz2").textContent = wertAnzeige(haStdKurzzeit());   // Punkt 190
+  $("#optHaStd").hidden = !(haStandardAktiv() && haStdKurzzeit() === HA_STD_KZ);   // Punkte 181, 210: nur aktiv und 10 Tage
   T.opt.leer = "berechne Vorschläge …"; T.opt.daten([]);
   ladePareto();   // Punkt 194
   try {
@@ -2550,6 +2557,18 @@ $("#tOpt").addEventListener("click", async ev => {
   if (was === "ansehen") {
     document.querySelector('#tabs button[data-tab="ent"]').click();
     if (v.regel.typ === "verwaist") { setzeFilter("entity_id", "", false); return setzeFilter("status", "verwaist", true); }
+    // Punkte 205/208: Integration als Filter-Chip (wie Gerät), Klasse über die Spalte Klasse und das Domain-Feld
+    setzeFilter("plattform", v.regel.typ === "herkunft" ? v.regel.muster[0] : "", false);
+    if (v.regel.typ === "klasse") {
+      const [dom, dc] = v.regel.muster[0].split("|");
+      setzeFilter("entity_id", "", false);
+      if (!S.sichtbar.has("device_class")) {   // Filter ausgeblendeter Spalten wirken nicht (Punkt 23)
+        S.sichtbar.add("device_class"); speicher.schreib("dbh_spalten_ent", JSON.stringify([...S.sichtbar])); baueKopf();
+      }
+      if ([...$("#fDomain").options].some(o => o.value === dom)) $("#fDomain").value = dom;
+      return setzeFilter("device_class", dc, true);
+    }
+    if (v.regel.typ === "herkunft") { setzeFilter("entity_id", "", false); return setzeFilter("device_class", "", true); }
     return setzeFilter("entity_id", v.regel.muster.length === 1 ? v.regel.muster[0] : "", true);
   }
   try {

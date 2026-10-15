@@ -5,7 +5,8 @@ Alles rechnet auf dem Probelauf (Analyse-Cache + aktuelle Regeln), ohne neue Abf
   wirkung()     Was eine Regel im Regelwerk bewirkt, verglichen mit den heutigen Regeln: Treffer, Überstimmungen,
                 zusätzliche Löschmenge sofort (aus den Tageshistogrammen) und Ersparnis im Prognosezeitraum.
   vorschlaege() Regelvorschläge nach der Analyse: Gruppen (Diagnose-Endungen), einzelne Entitäten (Vielschreiber,
-                große Attribute, nirgends verwendet, deaktiviert), verwaiste ohne Regel, Event-Typen ohne Event-Regel.
+                große Attribute, nirgends verwendet, deaktiviert, Uhrzeit), zusammengefasst je Klasse (Punkt 208), je
+                Integration (Punkt 205) oder Namensmuster; verwaiste ohne Regel, Event-Typen ohne Event-Regel.
                 Leitplanken: nie Energie- oder Helfer-Quellen, nie geschützte Entitäten oder Zähler, nie die Langzeit;
                 nur wo heute keine eigene Kurzzeit gilt (Standard bzw. HA-Standard) und der Vorschlag kürzer ist.
   verdichte()   Punkt 171: Muster mit Platzhaltern, die genau eine Auswahl von Entity-IDs treffen.
@@ -31,7 +32,19 @@ GRUPPE_PRO_TAG = 1000        # Mindestzuwachs einer Gruppe (Zeilen je Tag)
 EVENT_PRO_TAG = 1000         # Event-Typen ab so vielen Events je Tag
 VERWAIST_MIN_ZEILEN = 10000  # verwaiste Altdaten ab dieser Menge (States + 5-Min + Langzeit)
 TAGE = {"gruppe": "7d", "viel": "30d", "viel_sehr": "14d", "attribute": "30d", "unbenutzt": "14d", "deaktiviert": "30d",
-        "verwaist": "30d", "event": "14d"}
+        "verwaist": "30d", "event": "14d", "herkunft": "30d", "uhrzeit": "1d"}
+# Punkt 205: ab so vielen Einzelvorschlägen einer Integration eine herkunft-Regel statt vieler entity-Regeln; nicht für
+# Sammel-Integrationen, unter denen ganz verschiedene Geräte und Helfer stehen
+HERKUNFT_MIN = 5
+HERKUNFT_NIE = ("mqtt", "esphome", "template", "group", "automation", "script", "scene", "statistics", "utility_meter",
+                "integration", "derivative", "filter", "min_max", "threshold", "trend", "history_stats", "zha", "zwave_js",
+                "knx", "modbus", "rest", "command_line", "sql", "homeassistant")
+# Punkt 208: klasse-Gruppe nur, wenn höchstens dieser Anteil der übrigen freien Entitäten der Klasse irgendwo verwendet wird
+# (ohne Verwendungsprüfung: wenn die Vorschläge mindestens die Hälfte der Klasse ausmachen)
+KLASSE_VERWENDET = 0.1
+# Punkt 206: Automationen und Skripte nennt keine andere Stelle – „nirgends verwendet“ wäre für sie immer wahr
+NIE_UNBENUTZT = ("automation", "script")
+UHRZEIT_PLATTFORMEN = ("time_date",)   # Punkt 208: Uhrzeit-/Datumssensoren, Verlauf ohne Nutzen
 # Endungen typischer Diagnose-Entitäten (Funk, Laufzeit, Netz, Systemwerte) – Grundlage der Gruppen
 DIAGNOSE_ENDUNGEN = ("rssi", "linkquality", "signal_strength", "wifi_signal", "signal", "uptime", "last_seen", "last_restart",
                      "ip", "ip_address", "ssid", "bssid", "mac", "mac_address", "heap", "free_heap", "free_memory", "loop_time",
@@ -264,6 +277,10 @@ def _tage_von(wert):
     return rg.in_tagen(wert)
 
 
+def _anzahl(n, ein, mehr):
+    return f"{n:,} {ein if n == 1 else mehr}".replace(",", ".")
+
+
 def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
     ents = [e for e in pl.get("entitaeten", [])]
     reg = registry_info(config)
@@ -286,6 +303,12 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         w = event_wirkung(norm, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(norm, pl, bestand, hist, ziel=ziel, mit_ents=True)
         if not w["gewinnt"] or w["ersparnis_bytes"] <= 0 and not w["loesch_bytes"]:
             return None
+        # Punkte 205/208: herkunft/klasse haben Rang vor vielschreiber – nie vorschlagen, wenn sie irgendwo verlängern
+        if typ in ("herkunft", "klasse") and (w.get("verlaengert") or w["ersparnis_bytes"] <= 0):
+            return None
+        if w.get("verlaengert"):   # Punkte 205/208: herkunft/klasse haben Rang vor vielschreiber und können verlängern
+            gruende = gruende + [f"⚠ verlängert die Kurzzeit von {_anzahl(w['verlaengert'], 'Entität', 'Entitäten')}, "
+                                 "für die heute eine kürzere Regel gilt (Rang) – in der Maske prüfen"]
         vorhanden = regeln_muster.get((typ, tuple(sorted(muster))))
         # passive Regeln, die schon (einen Teil) der Treffer abdecken – der Vorschlag ist dann vielleicht nur „einschalten“
         passiv = []
@@ -342,9 +365,12 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         if (e.get("attr_zuwachs_tag") or 0) >= ATTR_PRO_TAG:
             gruende.append(f"große Attribute: {e['attr_zuwachs_tag'] / 1e6:.1f} MB je Tag".replace(".", ","))
             tage.append(TAGE["attribute"])
-        if verwendet is not None and n >= UNBENUTZT_PRO_TAG and eid not in verwendet:
+        if verwendet is not None and n >= UNBENUTZT_PRO_TAG and eid not in verwendet and e["domain"] not in NIE_UNBENUTZT:
             gruende.append("nirgends verwendet (nicht in Dashboards, Automationen, Skripten, Templates, Helfern, Energie)")
             tage.append(TAGE["unbenutzt"])
+        if (e.get("plattform") or ri.get("platform")) in UHRZEIT_PLATTFORMEN and n:   # Punkt 208
+            gruende.append("Uhrzeit/Datum: der Verlauf hat keinen Nutzen")
+            tage.append(TAGE["uhrzeit"])
         if not gruende:
             continue
         kz = min(tage, key=_tage_von)
@@ -353,6 +379,81 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         if ri.get("platform") == "esphome" and n >= VIEL_PRO_TAG:
             gruende.append("ESPHome: besser direkt am Gerät filtern (delta, throttle_average) – dann entstehen die Zeilen gar nicht erst")
         einzeln.append((eid, kz, gruende))
+
+    def arten(drin):
+        """Gründe der Einzelvorschläge einer Gruppe gezählt, z. B. „12× nirgends verwendet“."""
+        n_ = {}
+        for _e, _k, g in drin:
+            for t in g:
+                kurz = t.split(":")[0].split(" (")[0].split(" –")[0]
+                n_[kurz] = n_.get(kurz, 0) + 1
+        return [f"{z}× {a}" for a, z in sorted(n_.items(), key=lambda kv: -kv[1])]
+
+    eidx = {e["entity_id"]: e for e in ents}
+
+    def frei_alle(pruef, kz):
+        """Alle freien Entitäten, die eine Muster-Regel mit Kurzzeit kz kürzen würde – nicht nur die Einzelvorschläge."""
+        return [e for e in ents if pruef(e) and _frei(e, ktx) and (kurz_wirksam(e) or 0) > _tage_von(kz)]
+
+    # Punkt 208: Einzelvorschläge derselben Klasse (domain|device_class) → eine klasse-Regel, wenn die übrigen freien
+    # Entitäten der Klasse (fast) nirgends verwendet werden – sonst träfe die Regel Werte, die jemand nutzt (z. B. power)
+    je_kl = {}
+    for x in einzeln:
+        e = eidx[x[0]]
+        if e.get("device_class"):
+            je_kl.setdefault(f'{e["domain"]}|{e["device_class"]}', []).append(x)
+    for k, l in sorted(je_kl.items(), key=lambda kv: -len(kv[1])):
+        if len(l) < GRUPPE_MIN:
+            continue
+        kz = max((x[1] for x in l), key=_tage_von)
+        dom, dc = k.split("|", 1)
+        frei = frei_alle(lambda e: e["domain"] == dom and e.get("device_class") == dc, kz)
+        kand = {x[0] for x in l}
+        rest = [e for e in frei if e["entity_id"] not in kand]
+        if verwendet is None:
+            if len(l) < 0.5 * len(frei):
+                continue
+            benutzt = None
+        else:
+            benutzt = sum(1 for e in rest if e["entity_id"] in verwendet)
+            if benutzt > KLASSE_VERWENDET * len(rest):
+                continue
+        gr = [f"{len(l)} Einzelvorschläge der Klasse {k} – eine Regel statt {len(l)}",
+              f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} dieser Klasse ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"]
+        if rest and benutzt is not None:
+            gr.append(f"von den übrigen {len(rest)} werden {benutzt} irgendwo verwendet")
+        vid = f"klasse:{k}"
+        v = neu(vid, "klasse", f"Klasse {k}", "klasse", [k], kz, gr + arten(l), f"Klasse {k} – {rg.anzeige(kz)}",
+                "Empfehlung der App")
+        if v and vid not in ignoriert:
+            vergeben.update(x[0] for x in l)
+
+    # Punkt 205: viele Einzelvorschläge einer Integration → eine herkunft-Regel (trifft alle Entitäten der Integration);
+    # Uhrzeit-Integrationen schon ab einem Vorschlag
+    je_pl = {}
+    for x in einzeln:
+        p = eidx[x[0]].get("plattform") or (reg.get(x[0]) or {}).get("platform") or ""
+        if x[0] not in vergeben and p and p not in HERKUNFT_NIE:
+            je_pl.setdefault(p, []).append(x)
+    for p, l in sorted(je_pl.items(), key=lambda kv: -len(kv[1])):
+        uhr = p in UHRZEIT_PLATTFORMEN
+        if len(l) < (1 if uhr else HERKUNFT_MIN):
+            continue
+        kz = TAGE["uhrzeit" if uhr else "herkunft"]
+        frei = frei_alle(lambda e: e.get("plattform") == p, kz)
+        quellen = sum(1 for e in ents if e.get("plattform") == p and e["status"] == "aktiv"
+                      and not (e.get("state_class") or "").startswith("total")
+                      and (e["entity_id"] in ktx["energie"] or e["entity_id"] in ktx["helfer"]))
+        gr = [f"{_anzahl(len(l), 'Einzelvorschlag', 'Einzelvorschläge')} dieser Integration – eine Regel statt {len(l)}",
+              f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} von {p} ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"] + arten(l)
+        if quellen:
+            gr.append(f"⚠ trifft auch {_anzahl(quellen, 'Quelle', 'Quellen')} von Energie-Dashboard oder Helfern – in der Maske prüfen")
+        vid = f"herkunft:{p}"
+        v = neu(vid, "herkunft", f"Integration {p}", "herkunft", [p], kz, gr, f"Integration {p} – {rg.anzeige(kz)}",
+                "Empfehlung der App: eine Regel je Integration statt vieler einzelner")
+        if v and vid not in ignoriert:
+            vergeben.update(x[0] for x in l)
+    einzeln = [x for x in einzeln if x[0] not in vergeben]
 
     # gleichartige Einzelvorschläge (gleiche Kurzzeit) zu Mustern verdichten, die nur Kandidaten treffen
     for kz in sorted({k for _e, k, _g in einzeln}, key=_tage_von):
@@ -364,13 +465,8 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
                 drin = [x for x in l if fnmatch.fnmatchcase(x[0], m)]
                 if len(drin) < GRUPPE_MIN:
                     continue
-                arten = {}
-                for _e, _k, g in drin:
-                    for t in g:
-                        kurz = t.split(":")[0].split(" (")[0].split(" –")[0]
-                        arten[kurz] = arten.get(kurz, 0) + 1
                 v = neu(f"gruppe:{m}", "gruppe", f"Gruppe {m}", "glob", [m], kz,
-                        [f"{len(drin)} Entitäten, alle ohne eigene Kurzzeit"] + [f"{n_}× {a}" for a, n_ in sorted(arten.items(), key=lambda kv: -kv[1])],
+                        [f"{len(drin)} Entitäten, alle ohne eigene Kurzzeit"] + arten(drin),
                         f"{m} – {rg.anzeige(kz)}", "Empfehlung der App")
                 if v:
                     vergeben.update(x[0] for x in drin)
@@ -399,7 +495,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             [f"{ev['pro_tag']:,} Events je Tag ohne eigene Event-Regel".replace(",", "."),
              "Events braucht nur das Logbuch („Aktivität“)"], f"Events {typ} – 14 Tage", "Empfehlung der App")
 
-    out.sort(key=lambda v: -(v["ersparnis_bytes"] or 0))
+    out.sort(key=lambda v: (-(v["ersparnis_bytes"] or 0), -(v["zuwachs_tag"] or 0)))   # Punkt 207: bei Gleichstand Zuwachs
     return out
 
 

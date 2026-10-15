@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b11 (Beta)
+- **Empfehlungen je Integration (Punkt 205):** Ab 5 Einzelvorschlägen einer Integration (z. B. proxmoxve, unifi) kommt eine herkunft-Regel mit 30 Tagen statt vieler einzelner Regeln; nicht für Sammel-Integrationen wie mqtt, esphome oder template
+- **Empfehlungen je Klasse (Punkt 208):** Mehrere Vorschläge derselben Geräteklasse (z. B. `sensor|frequency`) werden zu einer klasse-Regel, wenn die übrigen Entitäten der Klasse kaum verwendet werden; Uhrzeit-Sensoren (`time_date`) mit 1 Tag. Vorschläge für Integration oder Klasse entfallen, wenn sie eine heute kürzere Kurzzeit verlängern würden
+- **„Nirgends verwendet“ nicht mehr für Automationen und Skripte (Punkt 206)**
+- **Ersparnis in MB (Punkt 207):** unter 1 GB in MB, auch in der Summenzeile; „Ansehen“ filtert im Tab Entitäten nach Integration bzw. Klasse
+- **Hinweis „HA-Standard aktiv“ (Punkt 210):** nur noch bei aktiver Regel mit 10 Tagen
+- HACS-Prüfung (Validate) prüft wieder die Brand-Bilder
+
 ## 0.5.5b10 (Beta)
 - **Rangnummer der Regeln (Punkt 199):** Jede Regel trägt ihren Rang als Stufe.Position – 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard. Zu sehen in der Löschtabelle (Spalte „Regel (Rang)“, Tooltip: gegen welche Regeln sie je Wert gewonnen hat) und im Reiter Regeln (Sortierung nach Rang = tatsächliche Vorrangfolge; ▲ verschiebt innerhalb der Stufe)
 - **Statistik ohne Entität erklärt (Punkt 198):** Hinweis oben im Reiter – nur Anzeige, nie gelöscht, zählt nicht in Löschmenge und Prognose; endgültig entfernen in HA unter Entwicklerwerkzeuge → Statistiken
