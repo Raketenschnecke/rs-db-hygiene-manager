@@ -657,7 +657,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
           <li><b>Zähler-Schutz:</b> glob-, klasse-, herkunft- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
           <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>, ab 0.5.3):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<code>purge_keep_days: 10</code>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Ab 0.5.5b7 ist die Kurzzeit einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events; die Langzeit bleibt unbegrenzt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
-          <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob die Regel irgendwo überstimmt wird. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
+          <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob eine andere Regel irgendwo Vorrang hat. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
         </ul>
         <h3 id="h-passiv">Aktiv und passiv</h3>
         <p><b>Passive</b> Regeln wirken nicht, auch nicht beim Löschen. Mit „passive Regeln mitrechnen“ (unter dem Kachelraster) siehst du, was sie bewirken würden. Siehe auch <a class="hverweis" href="#h-faq-passiv">FAQ: Warum steht in der Löschtabelle nie „passiv“?</a></p>
@@ -784,7 +784,7 @@ actions:
         <ul>
           <li>Platzhalter in einer entity-Regel (Typ auf glob ändern). Beispiel: Eine Regel vom Typ <i>entity</i> mit dem Muster <code>switch.adaptive_lighting_*</code> sucht wörtlich eine Entität dieses Namens und trifft deshalb nichts. Als Typ <i>glob</i> trifft dasselbe Muster alle 47 Adaptive-Lighting-Schalter. Die Vorschlagsliste unter dem Musterfeld zeigt das schon beim Tippen und bietet „Typ auf glob ändern“ oder „alle … als Entity-IDs übernehmen“ (so gelten auch Zähler);</li>
           <li>die Regel ist passiv;</li>
-          <li>eine höher stehende Regel gewinnt (Vorschau: „überstimmt“, siehe <a class="hverweis" href="#h-rang">Rangfolge</a>);</li>
+          <li>eine höher stehende Regel gewinnt (Vorschau: „R07 hat Vorrang“, siehe <a class="hverweis" href="#h-rang">Rangfolge</a>);</li>
           <li>es handelt sich um Zähler (<a class="hverweis" href="#h-wichtig">Zähler-Schutz</a>) oder um geschützte Entitäten (🔒).</li>
         </ul>
         <h3 id="h-faq-menge">Warum ist die Löschmenge 0, obwohl die Regel greift?</h3>
@@ -827,7 +827,7 @@ actions:
           <li>Bekannte Gruppen als glob oder klasse anlegen, z. B. die Diagnose-Gruppen mit 7 Tagen.</li>
           <li>Herkunftsregeln für Monitoring-Integrationen (unifi, proxmoxve, frigate, opnsense …). Bei Integrationen mit lauten Entitäten die Kurzzeit gleich kurz wählen oder bewusst kurz halten.</li>
           <li>Neu berechnen und im Kasten „Wer schreibt am meisten?“ die Schwelle für die Vielschreiber-Regel auf den Rest bestimmen.</li>
-          <li>In der Löschtabelle mit den Rangnummern und dem Tooltip „gewinnt vor …“ prüfen, ob irgendwo eine Herkunftsregel eine kürzere Vielschreiber-Regel überstimmt.</li>
+          <li>In der Löschtabelle mit den Rangnummern und dem Tooltip „hat Vorrang vor …“ prüfen, ob irgendwo eine Herkunftsregel eine kürzere Vielschreiber-Regel überstimmt.</li>
         </ol>
         <h3 id="h-faq-export">Wie nehme ich meine Regeln auf eine andere Installation mit?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>
@@ -1012,7 +1012,8 @@ const pfeilText = (stufen, k) => {
   const i = stufen.findIndex(s => s.k === k);
   return i < 0 ? "" : ` ${stufen[i].desc ? "↓" : "↑"}${stufen.length > 1 ? i + 1 : ""}`;
 };
-const SORT_TIP = " – Klick: nur nach dieser Spalte sortieren · Umschalt+Klick: weitere Sortierstufe (nochmals: Richtung umkehren, ein drittes Mal: Stufe entfernen)";
+// Punkt 223 (0.5.5b14): Bedienhinweise je in eigener Zeile – die Tooltip-Anzeige setzt die Aktion fett
+const SORT_TIP = "\nKlick: nur nach dieser Spalte sortieren\nUmschalt+Klick: weitere Sortierstufe (nochmals: Richtung umkehren, ein drittes Mal: Stufe entfernen)";
 const ladeSort = (schluessel, std) => {
   try { const l = JSON.parse(speicher.lies(schluessel, "null")); if (Array.isArray(l) && l.every(s => s && typeof s.k === "string")) return l; } catch { /* Standard */ }
   return std;
@@ -1325,8 +1326,10 @@ class LokaleTabelle {
   }
   resetFilter() { this.f = {}; this.sortierung = [...this.sortStdListe]; this.merkeSort(); this.baueKopf(); this.zeige(); }
   csv(name) {
-    const sp = this.spalten.filter(s => s.csv);
-    ladeCsv(name, sp.map(s => s.titel), this.angezeigt.map(r => sp.map(s => s.csv(r))));
+    // Punkt 226 (0.5.5b14): csvTeile = [[Titel, Wert-Funktion], …] – eine zusammengefasste Spalte als mehrere CSV-Felder
+    const sp = this.spalten.filter(s => s.csv || s.csvTeile);
+    ladeCsv(name, sp.flatMap(s => s.csvTeile ? s.csvTeile.map(t => t[0]) : [s.titel]),
+      this.angezeigt.map(r => sp.flatMap(s => s.csvTeile ? s.csvTeile.map(t => t[1](r)) : [s.csv(r)])));
   }
 }
 const anzahlSumme = (feld) => (g, a) => [zahl(g.reduce((x, r) => x + (feld(r) || 0), 0)), zahl(a.reduce((x, r) => x + (feld(r) || 0), 0))];
@@ -1526,7 +1529,7 @@ const HILFE = {
   prognosen: ["Prognosen je Regel",
     "Wirkungsbilanz jeder Regel – ohne dass etwas gelöscht wird. Löschmenge sofort betrifft den Bestand: Was ist heute zu viel? Ersparnis (Dauerbetrieb) betrifft den Zufluss: Was sammelt sich ohne Regel künftig an?",
     "Entitäten: wie viele Entitäten diese Regel tatsächlich bestimmt (nur wo sie den Vorrang gewinnt) · Entitäten mit Kurzzeit bzw. Langzeit aus dieser Regel: bei wie vielen Entitäten der Wert aus dieser Regel stammt (Anzahl, keine Zeilen) · Löschmenge sofort: was ein scharfer Lauf jetzt löschen würde (bei Regeln länger als purge_keep_days = {pkd} Tage steht 0) · Ersparnis (Dauerbetrieb): wie viel kleiner die DB über den Prognosezeitraum von {ziel} bleibt, aufgeteilt in States und Attribute. Beispiel R21: 0 Zeilen sofort, trotzdem Ersparnis auf Dauer.",
-    "Nach „Ersparnis (Dauerbetrieb)“ sortieren, um die Hebel zu sehen; Regeln mit 0 Entitäten treffen nichts oder werden überstimmt."],
+    "Nach „Ersparnis (Dauerbetrieb)“ sortieren, um die Hebel zu sehen; Regeln mit 0 Entitäten treffen nichts, oder andere Regeln haben überall Vorrang."],
   optimierungen: ["Empfehlungen",
     "Regelvorschläge, die die App aus der letzten Analyse ableitet – ohne neue Abfrage der Datenbank und ohne dass etwas gelöscht wird. Vorgeschlagen wird nur eine kürzere Kurzzeit für Daten, für die heute keine eigene Regel gilt; die Langzeit bleibt unverändert.",
     "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Klasse (mehrere Vorschläge derselben Geräteklasse, z. B. sensor|frequency, als eine klasse-Regel) · Integration (ab 5 Vorschlägen einer Integration wie proxmoxve eine herkunft-Regel mit 30 Tagen – sie trifft alle Entitäten der Integration ohne eigene Kurzzeit, auch künftige) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt; gilt nicht für Automationen und Skripte –, in HA deaktiviert, Uhrzeit-Sensoren mit 1 Tag) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt (unter 1 GB in MB). ⚠ heißt: Die Regel würde wegen ihres Rangs für einige Entitäten eine heute kürzere Kurzzeit verlängern. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
@@ -2329,7 +2332,8 @@ T.regeln = new LokaleTabelle({
         const ueber = Object.entries(S.ueberschneidungen || {}).filter(([, ids]) => ids.includes(r.id));
         return esc(r.name) +
           (r.typ === "entity" && p.verwaist ? `<span class="chip warn" title="${zahl(p.verwaist)} der Entitäten sind verwaist – die Regel gilt dort nur noch für Altdaten. Behalten oder entfernen entscheidest du.">Entität verwaist</span>` : "") +
-          (p.ueberstimmt ? `<span class="chip" title="bei ${zahl(p.ueberstimmt)} Entitäten gewinnt für mindestens einen Wert eine andere Regel (Details: Klick auf die Entität)">${zahl(p.ueberstimmt)}× überstimmt</span>` : "") +
+          // Punkt 225 (0.5.5b14): „andere Regel hat Vorrang“ statt „überstimmt“
+          (p.ueberstimmt ? `<span class="chip" title="${esc(`Andere Regel hat Vorrang: bei ${mzahl(p.ueberstimmt, "Entität", "Entitäten")} für mindestens einen Wert\nDetails: Klick auf die Entität im Tab Entitäten`)}">${zahl(p.ueberstimmt)}× andere Regel hat Vorrang</span>` : "") +
           (ueber.length ? `<span class="chip warn" title="${esc(ueber.map(([eid, ids]) => `${eid}: ${ids.join(" › ")}`).join("\n"))}">Überschneidung</span>` : "");
       } },
     { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => r.typ, csv: r => r.typ,
@@ -2358,8 +2362,8 @@ T.regeln = new LokaleTabelle({
 T.probe = new LokaleTabelle({
   id: "#tProbe", treffer: "#trefferProbe", schluessel: "dbh_breiten_probe", einheit: "Regeln", sortStd: { k: "regel" },
   // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
+  // Punkt 224 (0.5.5b14): Block „Löschmenge sofort“ entfällt – die steht in Kacheln, Tab Entitäten und Tab Löschen
   gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
-    ["Löschmenge sofort", "loesch", ["loesch_summe", "states", "kurz", "lts", "events", "attr_zeilen", "attr_bytes"]],
     ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]]],
   fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
@@ -2373,16 +2377,6 @@ T.probe = new LokaleTabelle({
         ["kurzzeit", "Kurzzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Kurzzeit (States, 5-Min-Statistik und Attribute) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"],
         ["langzeit", "Langzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Langzeit (Stundenstatistik, 1 h) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"]].map(([k, t, h]) => (
       { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "entitaeten" ? 100 : 130, wert: r => r[k], zelle: r => zahl(r[k]), csv: r => r[k], summe: anzahlSumme(r => r[k]) })),
-    // Punkt 63: Block „Löschmenge sofort“ – Summe, davon je Tabelle, dahinter die Attributzeilen (nicht in der Summe)
-    ...[["loesch_summe", "Summe (States + 5-Min + Langzeit + Events)", HILFE_LOESCH + " Summe aus States, 5-Min-Statistik, Langzeit und Events."],
-        ["states", "States", HILFE_LOESCH],
-        ["kurz", "5-Min-Statistik", HILFE_LOESCH],
-        ["lts", "Langzeit", HILFE_LOESCH],
-        ["events", "Events", HILFE_LOESCH],
-        ["attr_zeilen", "Attributzeilen (mit den States)", "Attributzeilen, die mit den States dieser Regel wegfallen – nicht in der Summe; aus der Attribut-Analyse"]].map(([k, t, h]) => (
-      { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "attr_zeilen" ? 150 : k === "loesch_summe" ? 200 : k === "kurz" ? 145 : 120, wert: r => probeWert(r, k), zelle: r => zahl(probeWert(r, k)), csv: r => probeWert(r, k), summe: anzahlSumme(r => probeWert(r, k)) })),
-    { k: "attr_bytes", titel: "Attribute (GB)", hilfe: "Datenmenge der Attributzeilen, die mit den States wegfallen (inkl. Index)", typ: "gb", n: 1, breite: 120, wert: r => r.attr_bytes,
-      zelle: r => S.probe?.stand?.attribut_analyse ? gb(r.attr_bytes) : "–", csv: r => r.attr_bytes, summe: gbSumme(r => r.attr_bytes) },
     { k: "ersparnis_bytes", titel: "Summe (Dauerbetrieb · GB)", hilfe: HILFE_ERSPARNIS, typ: "gb", n: 1, breite: 160, wert: r => r.ersparnis_bytes,
       zelle: r => gb(r.ersparnis_bytes), csv: r => r.ersparnis_bytes, summe: gbSumme(r => r.ersparnis_bytes) },
     { k: "ersparnis_states", titel: "States (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Rohdaten und 5-Min-Statistik (über die Kurzzeit)",
@@ -2395,11 +2389,6 @@ T.probe = new LokaleTabelle({
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_events || 0, zelle: r => gb(r.ersparnis_events || 0), csv: r => r.ersparnis_events || 0, summe: gbSumme(r => r.ersparnis_events || 0) },
   ],
 });
-// Punkt 63: Summe des Blocks je Regel
-function probeWert(r, k) {
-  if (k === "loesch_summe") return (r.states || 0) + (r.kurz || 0) + (r.lts || 0) + (r.events || 0);
-  return r[k] || 0;
-}
 T.lts = new LokaleTabelle({
   id: "#tLts", treffer: "#trefferLts", schluessel: "dbh_breiten_lts", einheit: "Statistiken", sortStd: { k: "rows", desc: true },
   // Punkt 147 (0.5.3): Look & Feel wie Tab Entitäten
@@ -2726,8 +2715,9 @@ $("#evHinweis").addEventListener("click", ev => {
 T.events = new LokaleTabelle({
   id: "#tEvents", treffer: "#trefferEvents", schluessel: "dbh_breiten_events", einheit: "Event-Typen", sortStd: { k: "zeilen", desc: true },
   // Punkt 144 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
-  gruppen: [["Stammdaten", "stamm", ["wahl", "event_type", "regel"]], ["Vorhaltezeiten", "vorh", ["anzeige", "tage"]],
-    ["Istzustand", "ist", ["zeilen", "pro_tag", "erster_tag"]], ["Löschmenge sofort", "loesch", ["loeschbar"]], ["Prognose", "prog", ["ersparnis_bytes"]]],
+  // Punkt 226 (0.5.5b14): Regel, Vorhaltezeit und wirksame Tage als eine Spalte „Vorhaltezeit“; Punkt 227: ohne Gruppe Prognose
+  gruppen: [["Stammdaten", "stamm", ["wahl", "event_type"]], ["Vorhaltezeiten", "vorh", ["vorhaltung"]],
+    ["Istzustand", "ist", ["zeilen", "pro_tag", "erster_tag"]], ["Löschmenge sofort", "loesch", ["loeschbar"]]],
   fix: ["wahl", "event_type"],
   leer: "keine Events (Analyse ab 0.3.0 nötig)",
   spalten: [
@@ -2738,23 +2728,26 @@ T.events = new LokaleTabelle({
       summe: () => [S.auswahlEv.size ? `${zahl(S.auswahlEv.size)} ✓` : "", "–"] },
     { k: "event_type", titel: "Event-Typ", typ: "text", fest: 1, breite: 300, wert: r => r.event_type, zelle: r => `<span class="mono">${esc(r.event_type)}</span>`, csv: r => r.event_type,
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
-    { k: "regel", titel: "Regel", typ: "auswahl", breite: 160, wert: r => r.regel || "–",
-      hilfe: "Event-Regel aus der Regelliste (Typ event), die für diesen Event-Typ gilt; ohne Regel gilt global",
-      zelle: r => r.regel ? `${regelChip(r.regel)}${r.ueberstimmt?.length ? ` <span class="chip" title="überstimmt: ${esc(r.ueberstimmt.map(u => u.regel).join(", "))}">+${r.ueberstimmt.length}</span>` : ""}` : `<span class="sub">– (global)</span>`,
-      csv: r => r.regel || "", optionen: l => [["–", "ohne Regel"], ...[...new Set(l.map(r => r.regel).filter(Boolean))].sort().map(x => [x, x])],
+    // Punkt 226 (0.5.5b14): wie Kurzzeit im Tab Entitäten – Wert, Regel-Chip, Chip „+N“ (Punkt 225: „hat Vorrang vor“);
+    // die wirksamen Tage nur in der Zelle, wenn sie vom Wert abweichen (global bzw. länger als purge_keep_days)
+    { k: "vorhaltung", titel: "Vorhaltezeit", typ: "auswahl", breite: 230, wert: r => r.tage,
+      hilfe: "Vorhaltezeit des Event-Typs und die Regel, aus der sie stammt (Typ event; ohne eigene Regel HA-Standard bzw. global). Eine Zeit wirkt höchstens bis purge_keep_days – weicht die wirksame Zeit ab, steht sie in Klammern. Filter nach Regel oder Wert, Sortierung nach den wirksamen Tagen",
+      zelle: r => {
+        const wert = r.wert === "global" ? `<span class="sub">global</span>` : esc(wertAnzeige(r.wert));
+        const wirk = r.wert === "global" || dauerTage(r.wert) !== r.tage ? ` <span class="sub">(${esc(tageText(r.tage))})</span>` : "";
+        return `${wert}${wirk} ${r.regel ? regelChip(r.regel) : `<span class="sub">ohne Regel</span>`}${vorrangChip(r.regel, r.ueberstimmt, u => wertAnzeige(u.wert))}`;
+      },
+      tip: r => `Vorhaltezeit: ${r.wert === "global" ? "global" : wertAnzeige(r.wert)} – wirksam ${tageText(r.tage)}\nRegel: ${r.regel || "keine eigene Event-Regel"}`,
+      csvTeile: [["Regel", r => r.regel || ""], ["Vorhaltezeit", r => r.wert], ["wirksam (Tage)", r => r.tage]],
+      optionen: l => [...[...new Set(l.map(r => r.regel).filter(Boolean))].sort().map(x => ["regel:" + x, "Regel " + x]), ["regel:–", "ohne Regel"],
+        ...[...new Set(l.map(r => r.wert))].sort((a, b) => dauerTage(a) - dauerTage(b)).map(w => ["wert:" + w, w === "global" ? "global" : wertAnzeige(w)])],
+      passt: (r, a) => a.startsWith("regel:") ? (r.regel || "–") === a.slice(6) : a.startsWith("wert:") ? r.wert === a.slice(5) : true,
       summe: (g, a) => [zahl(g.filter(r => r.regel).length), zahl(a.filter(r => r.regel).length), "Event-Typen mit eigener Regel – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
-    { k: "anzeige", titel: "Vorhaltezeit", typ: "auswahl", breite: 120, wert: r => r.wert === "global" ? "global" : "eigene",
-      zelle: r => r.wert === "global" ? `<span class="sub">global</span>` : esc(wertAnzeige(r.wert)), csv: r => r.wert,
-      optionen: () => [["global", "global"], ["eigene", "eigene Zeit"]] },
-    { k: "tage", titel: "wirksam (Tage)", typ: "zahl", n: 1, breite: 110, wert: r => r.tage, zelle: r => zahl(r.tage), csv: r => r.tage,
-      hilfe: "global = purge_keep_days; eine eigene Zeit wirkt höchstens bis purge_keep_days" },
     { k: "zeilen", titel: "Bestand (Events)", typ: "zahl", n: 1, breite: 120, wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
     { k: "pro_tag", titel: "Zuwachs (Events pro Tag, Ø 7 d)", typ: "zahl", n: 1, breite: 155, wert: r => r.pro_tag, zelle: r => zahl(r.pro_tag), csv: r => r.pro_tag, summe: anzahlSumme(r => r.pro_tag),
       hilfe: "Mittel der letzten 7 vollen Tage; 0 bei Typen, die der Recorder ausschließt (z. B. call_service per exclude)" },
     { k: "erster_tag", titel: "ältestes (Event)", typ: "keine", sortierbar: 1, breite: 100, wert: r => r.erster_tag, zelle: r => datum(r.erster_tag * 86400), csv: r => datum(r.erster_tag * 86400) },
     { k: "loeschbar", titel: "Events (Zeilen)", typ: "zahl", n: 1, breite: 170, hilfe: HILFE_LOESCH, wert: r => r.loeschbar, zelle: r => zahl(r.loeschbar), csv: r => r.loeschbar, summe: anzahlSumme(r => r.loeschbar) },
-    { k: "ersparnis_bytes", titel: "Ersparnis (Dauerbetrieb · GB)", typ: "gb", n: 1, breite: 160, hilfe: HILFE_ERSPARNIS, wert: r => r.ersparnis_bytes,
-      zelle: r => gb(r.ersparnis_bytes), csv: r => r.ersparnis_bytes, summe: gbSumme(r => r.ersparnis_bytes) },
   ],
   zeileAttr: r => `class="klick" data-ev="${esc(r.event_type)}"`,
   nachher: () => zeigeAuswahlEv(),
@@ -2876,6 +2869,11 @@ const regelIdx = id => (S.regeln?.regeln || []).findIndex(x => x.id === id);
 const regelChip = id => regelIdx(id) >= 0
   ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)}: Klick öffnet die Regelmaske" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(chipText(id))}</span>`
   : `<span class="chip regel" title="${esc(id)}">${esc(chipText(id))}</span>`;   // Punkt 160: E: kurz
+// Punkt 225 (0.5.5b14): einheitlich „X hat Vorrang vor: Y – Wert“ (statt „überstimmt“ bzw. „gewinnt vor“).
+// liste: unterlegene Regeln [{regel, …}], wertVon: Wert der unterlegenen Regel als Text
+const vorrangText = (gewinner, liste, wertVon) => liste.map(u => `${gewinner || "Standard"} hat Vorrang vor: ${u.regel}${wertVon(u) ? ` – ${wertVon(u)}` : ""}`).join("\n");
+const vorrangChip = (gewinner, liste, wertVon) => liste?.length
+  ? ` <span class="chip" title="${esc(vorrangText(gewinner, liste, wertVon))}">+${liste.length}</span>` : "";
 document.addEventListener("click", ev => {
   const e = ev.target.closest("[data-regel-edit]"); if (!e || T.loesch?.z.klickIstZiehen?.(ev) || T.probe?.z.klickIstZiehen?.(ev)) return;
   const i = regelIdx(e.dataset.regelEdit);
@@ -3229,11 +3227,11 @@ function oeffneEntitaet(e) {
   const id = "E:" + e.entity_id;
   const eigene = S.regeln.regeln.find(r => r.id === id);
   const w = e.werte || {};
-  // Kette je Wert (Punkt 29): Gewinner, dann die überstimmten Regeln in Rangfolge
+  // Kette je Wert (Punkt 29): Gewinner, dann die unterlegenen Regeln in Rangfolge (Punkt 225: „hat Vorrang vor“)
   const kette = a => {
     const x = w[a] || {}, u = x.ueberstimmt || [];
     return `wirksam: ${esc(x.anzeige || "–")} (${esc(x.regel || "Standard")})` +
-      (u.length ? `<br><span title="${esc(u.map(v => `${v.regel}: ${v.anzeige}`).join("\n"))}">überstimmt: ${esc(u.map(v => `${v.regel} ${v.anzeige}`).join(" · "))}</span>` : "");
+      (u.length ? `<br><span title="${esc(vorrangText(x.regel, u, v => v.anzeige))}">${esc(x.regel || "Standard")} hat Vorrang vor: ${esc(u.map(v => `${v.regel} – ${v.anzeige}`).join(" · "))}</span>` : "");
   };
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
   const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "kurzzeit" ? ["keine"] : [], true);   // Punkt 174: Schnellknöpfe
@@ -3488,7 +3486,7 @@ function bearbeiteRegel(i, vorlage) {
       if (x.typ === "event") {
         const andere = S.regeln.regeln.filter((o, j) => o.typ === "event" && (neu || j !== i) && o.id !== x.id && o.muster.some(m => x.muster.includes(m)));
         if (andere.length && !await frage("Event-Typ bereits in einer anderen Event-Regel",
-          `Dasselbe Muster steht schon in ${andere.map(o => `${o.id} (${o.aktiv ? "aktiv" : "passiv"})`).join(", ")}. Bei gleichen Mustern gilt die Reihenfolge der Regeln – die spätere wird überstimmt. Trotzdem speichern?`,
+          `Dasselbe Muster steht schon in ${andere.map(o => `${o.id} (${o.aktiv ? "aktiv" : "passiv"})`).join(", ")}. Bei gleichen Mustern gilt die Reihenfolge der Regeln – die frühere hat Vorrang. Trotzdem speichern?`,
           "Trotzdem speichern")) return;
       }
       // Punkt 106: * ? [ sind bei entity keine Platzhalter – die Regel liefe ins Leere
@@ -3703,10 +3701,11 @@ function bearbeiteRegel(i, vorlage) {
 // Punkt 170: Text der Live-Vorschau
 function vorschauHtml(v, ohneWert, x) {
   const ev = v.einheit === "Event-Typen", einheit = v.einheit || "Entitäten";
-  const von = Object.entries(v.ueberstimmt_von || {}).map(([r, n]) => `${r} (${zahl(n)})`).join(", ");
+  // Punkt 225: Gegenrichtung – die bearbeitete Regel ist unterlegen: „R07 hat Vorrang (bei 12 Entitäten)“
+  const vorrang = Object.entries(v.ueberstimmt_von || {}).map(([r, n]) => `${r} hat Vorrang (bei ${zahl(n)} ${n === 1 ? (einheit === "Event-Typen" ? "Event-Typ" : "Entität") : einheit})`);
   const z1 = `<div class="kz"><span><b>${zahl(v.anzahl)}</b> ${einheit} getroffen</span>` +
     (v.anzahl_geschuetzt ? `<span title="state_class total/total_increasing: glob- und klasse-Regeln greifen dort nicht">${zahl(v.anzahl_geschuetzt)} Zähler geschützt</span>` : "") +
-    (v.anzahl_ueberstimmt ? `<span title="${esc(von)}">bei <b>${zahl(v.anzahl_ueberstimmt)}</b> überstimmt von ${esc(von.length > 60 ? von.slice(0, 60) + " …" : von)}</span>` : "") +
+    (v.anzahl_ueberstimmt ? `<span title="${esc(vorrang.join("\n"))}">${esc(vorrang.slice(0, 2).join(" · ") + (vorrang.length > 2 ? ` … (+${vorrang.length - 2})` : ""))}</span>` : "") +
     (v.anzahl ? `<span>Zuwachs <b>${zahl(v.zuwachs_tag)}</b> ${ev ? "Events" : "Zeilen"}/Tag</span>` : "") + `</div>`;
   const loesch = (v.loesch_states || 0) + (v.loesch_kurz || 0) + (v.loesch_lts || 0) + (v.loesch_events || 0);
   const ersp = v.ersparnis_bytes || 0;
@@ -3730,12 +3729,13 @@ const LART = { "vollständig": "vollständig", "teilweise": "teilweise", "nächs
 const TABNAME = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
 // Punkt 63: Plantabelle je Entität bzw. Event-Typ mit dem Block „Zeilen dieser Lauf“ (wie die Monatssumme)
 const KURZ = { states: "K", kurz: "5M", lts: "L", events: "EV" };
-// Punkt 199: Tooltip „Kurzzeit: R12 (Rang 3.2) gewinnt vor R30 (4.1), HA:standard (99)“ je Wert
+// Punkt 199: Tooltip je Wert; Punkt 225 (0.5.5b14): „Kurzzeit: R12 (3.2) hat Vorrang vor R30 (4.1) – 30 Tage, HA:standard (99) – 90 Tage“
 const rangVon = id => { const g = regelRang(id); return g ? `${id} (${g.stufe === 99 ? "99" : g.text})` : id; };
+const ketteGlied = x => typeof x === "string" ? rangVon(x) : `${rangVon(x.regel)}${x.anzeige ? ` – ${x.anzeige}` : ""}`;   // bis 0.5.5b13 nur IDs
 function ketteTip(r) {
   const k = r.kette || {}, wn = { kurzzeit: WNAME.kurzzeit, langzeit: WNAME.langzeit, events: EV_NAME };
   const gew = { kurzzeit: r.regel_k, langzeit: r.regel_l, events: r.regel_e };
-  const z = Object.keys(wn).filter(a => gew[a]).map(a => `${wn[a]}: ${rangVon(gew[a])}${(k[a] || []).length ? ` gewinnt vor ${k[a].map(rangVon).join(", ")}` : " – keine andere Regel trifft"}`);
+  const z = Object.keys(wn).filter(a => gew[a]).map(a => `${wn[a]}: ${rangVon(gew[a])}${(k[a] || []).length ? ` hat Vorrang vor ${k[a].map(ketteGlied).join(", ")}` : " – keine andere Regel trifft"}`);
   return z.length ? z.join("\n") + "\n\nRang Stufe.Position: 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard" : "";
 }
 function planZeilen(p) {
@@ -4220,8 +4220,11 @@ function tipThema(el) {
   if (lang) return tipKurz(lang.textContent);
   return tipKurz(el.getAttribute("aria-label") || (el.matches("button, a, label, summary, .chip, [role=button]") ? el.textContent : ""));
 }
+// Punkt 223 (0.5.5b14): Bedienhinweise („Klick: …“, „Umschalt+Klick: …“, „Doppelklick: …“) mitten im Text nach „ – “ bzw.
+// „ · “ in eigene Zeilen trennen – die Aktion steht dann am Zeilenanfang und wird fett
+const TIP_BEDIENUNG = /\s+[–·]\s+(?=(?:Klick|Doppelklick|Rechtsklick|Umschalt\+Klick|Strg\+Klick|Ziehen)(?:\s[^:\n]{1,30})?:\s)/g;
 function tipSchema(el, text) {
-  const z = text.split("\n");
+  const z = text.split("\n").flatMap(zeile => zeile.split(TIP_BEDIENUNG));
   if (TIP_THEMA.test(z[0])) return z;
   const ueber = tipKurz(z[0]);
   // kurze Überschrift ohne Doppelpunkt (keine Entity-ID, keine reine Zahl) und Zeile 2 ohne eigenes Thema → zusammenziehen
@@ -4229,7 +4232,8 @@ function tipSchema(el, text) {
     return [`${ueber}: ${z[1].trim()}`, ...z.slice(2)];
   const thema = tipThema(el);
   // nur ein kurzes Wort wie „Auswahl“ oder „Aktion“: ist selbst das Thema
-  if (!thema || z[0].trim().toLowerCase() === thema.toLowerCase()) return z.length === 1 && ueber ? [`${ueber}: `] : z;
+  // Punkt 223: auch vor Bedienhinweisen („Langzeit ⏎ Klick: …“) ist die erste Zeile selbst das Thema
+  if (!thema || z[0].trim().toLowerCase() === thema.toLowerCase()) return ueber && (z.length === 1 || TIP_THEMA.test(z[1])) ? [`${ueber}: `, ...z.slice(1)] : z;
   return [`${thema}: ${z[0]}`, ...z.slice(1)];
 }
 function tipZurueck() {

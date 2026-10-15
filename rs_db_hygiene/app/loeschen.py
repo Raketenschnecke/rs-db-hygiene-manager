@@ -265,10 +265,13 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
     for e in pl["entitaeten"]:
         if e["entity_id"] in namen:
             w = e.get("werte") or {}
-            ketten[e["entity_id"]] = {a: [u["regel"] for u in (w.get(a) or {}).get("ueberstimmt") or []] for a in ("kurzzeit", "langzeit")}
+            # Punkt 225 (0.5.5b14): mit dem Wert der unterlegenen Regel („R07 hat Vorrang vor: HA:standard – 90 Tage“)
+            ketten[e["entity_id"]] = {a: [{"regel": u["regel"], "anzeige": u.get("anzeige")} for u in (w.get(a) or {}).get("ueberstimmt") or []]
+                                      for a in ("kurzzeit", "langzeit")}
     for ev in pl.get("events") or []:
         if ev["event_type"] in namen:
-            ketten[ev["event_type"]] = {"events": [u["regel"] for u in ev.get("ueberstimmt") or []]}
+            ketten[ev["event_type"]] = {"events": [{"regel": u["regel"], "anzeige": u.get("anzeige") or rg.anzeige(u.get("wert"))}
+                                                   for u in ev.get("ueberstimmt") or []]}
     return {
         "ketten": ketten,
         "analyse_zeit": pl["stand"]["analyse_zeit"], "purge_keep_days": pkd, "grenze": grenze, "grenze_b": grenze_b,

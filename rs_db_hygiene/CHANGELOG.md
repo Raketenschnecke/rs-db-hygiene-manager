@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b14 (Beta)
+- **„hat Vorrang vor“ (Punkt 225):** einheitlich statt „überstimmt“ bzw. „gewinnt vor“, mit dem Wert der unterlegenen Regel – z. B. „EV:alle hat Vorrang vor: HA:standard – 90 Tage“; in der Regelmaske „R07 hat Vorrang (bei 12 Entitäten)“
+- **Reiter Events (Punkte 226/227):** Regel, Vorhaltezeit und wirksame Tage in einer Spalte „Vorhaltezeit“ wie im Tab Entitäten, mit gemeinsamem Filter; Spalte Prognose entfällt
+- **Reiter Prognosen je Regel (Punkt 224):** Block „Löschmenge sofort“ entfällt
+- **Tooltips (Punkt 223):** Bedienhinweise wie „Klick:“ oder „Umschalt+Klick:“ stehen je in eigener Zeile, die Aktion fett
+
 ## 0.5.5b13 (Beta)
 - **Löschplan: Überhang statt „fällig“ (Punkte 219, 222):** Die Spalte zählte die States nicht mit (Fehler seit 0.5.0). Jetzt „Überhang (weitere Läufe)“ – was dieser Lauf wegen der Obergrenzen nicht schafft; als eigene rote Spaltengruppe. Übersprungenes (Integration fehlt) zählt nicht dazu
 - **Löschplan: Summe und Attribute (Punkt 221):** „Summe (excl. Attribute)“, „Attributzeilen (zus. zu Summe)“ direkt hinter der 5-Min-Statistik
