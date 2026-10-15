@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5b13 (Beta)
+- **Löschplan: Überhang statt „fällig“ (Punkte 219, 222):** Die Spalte zählte die States nicht mit (Fehler seit 0.5.0). Jetzt „Überhang (weitere Läufe)“ – was dieser Lauf wegen der Obergrenzen nicht schafft; als eigene rote Spaltengruppe. Übersprungenes (Integration fehlt) zählt nicht dazu
+- **Löschplan: Summe und Attribute (Punkt 221):** „Summe (excl. Attribute)“, „Attributzeilen (zus. zu Summe)“ direkt hinter der 5-Min-Statistik
+- **„Integration fehlt“ erklärt (Punkt 222):** Tooltip – 5-Min-Statistik, Langzeit und Events löscht die App nur über die installierte und betriebsbereite Integration RS DB Hygiene
+- **Event-Typen ohne eigene Regel (Punkt 204):** Hinweis im Reiter Events, unabhängig von der Menge, mit Knopf „Event-Regel für diese anlegen …“
+- Tooltip-Thema auch unter fixierten Spalten richtig (Punkt 220)
+
 ## 0.5.5b12 (Beta)
 - **Vielschreiber ohne Pendeln (Punkt 201):** Wer zu einer vielschreiber-Regel gehört, bleibt dabei, bis sein Zuwachs unter 80 % der Schwelle fällt (Hysterese, Stand je Analyse)
 - **Empfehlungen per Massenauswahl (Punkte 212/213):** „als aktive Regeln anlegen …“ mit Warnprüfung vorab; „zu einer Regel zusammenfassen …“ – gleiche Regeltypen werden eine Regel, entity und glob eine glob-Regel, bei verschiedenen Kurzzeiten die längste oder je Kurzzeit eine Regel; ergibt sich genau eine Regel, öffnet sich die Regelmaske

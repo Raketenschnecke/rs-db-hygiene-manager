@@ -562,6 +562,8 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
     <div class="blaettern"><button id="zurueck">‹</button><span id="seite"></span><button id="weiter">›</button><span id="aufbau" class="sub"></span></div>
   </section>
   <section id="tab-events" hidden>
+    <!-- Punkt 204 (0.5.5b13): Event-Typen ohne eigene Event-Regel, unabhängig von der Menge -->
+    <div class="banner" id="evHinweis" style="margin:0 0 8px" hidden></div>
     <div class="trefferzeile" id="trefferEvents"></div>
     <div class="tabelle"><table id="tEvents" class="baustein"></table></div>
     <p class="sub">Je Event-Typ die wirksame Vorhaltezeit. Gesetzt wird sie im Tab „Regeln“ mit Regeln vom Typ „event“; Klick auf eine Zeile öffnet die Regel bzw. legt eine an. Events braucht nur das Logbuch („Aktivität“).</p>
@@ -1633,7 +1635,7 @@ async function ladeKacheln() {
     zeigeGlobal();
     $("#raster").innerHTML = rasterHtml(r.summe, r.stand);
     T.probe.daten(r.regeln);
-    S.events = r.events || []; T.events.daten(S.events);
+    S.events = r.events || []; T.events.daten(S.events); zeigeEvHinweis();
     if (S.regeln) T.regeln.daten(S.regeln.regeln);   // Spalte „Treffer“ aktualisieren
   } catch (e) {
     $("#raster").innerHTML = `<div class="kachel leer ganz">${esc(leerText(e))}</div>`;
@@ -2701,6 +2703,25 @@ $("#tOpt").addEventListener("click", async ev => {
     T.opt.daten(S.opt.filter(x => $("#oIgnoriert").checked || !x.ignoriert));
   } catch (e) { meldung("Empfehlungen", e.message); }
 });
+// ---- Punkt 204 (0.5.5b13): Hinweis auf Event-Typen ohne eigene Event-Regel – unabhängig von der Menge, damit ein neu
+// auftauchender Typ nicht unbemerkt nach HA-Standard bzw. global aufbewahrt wird
+const evOhneRegel = () => (S.events || []).filter(e => !e.regel || e.regel === HA_STD);
+function zeigeEvHinweis() {
+  const l = evOhneRegel().sort((a, b) => (b.zeilen || 0) - (a.zeilen || 0)), box = $("#evHinweis");
+  box.hidden = !l.length;
+  if (!l.length) return (box.innerHTML = "");
+  const gilt = haStandardAktiv() ? `HA-Standard (${wertAnzeige(haStdKurzzeit())})` : "global (purge_keep_days)";
+  const namen = l.map(e => e.event_type), kurz = namen.slice(0, 6).join(", ") + (namen.length > 6 ? ` … (+${namen.length - 6})` : "");
+  box.innerHTML = `<b>${mzahl(l.length, "Event-Typ", "Event-Typen")} ohne eigene Event-Regel:</b> Für ${l.length === 1 ? "ihn" : "sie"} gilt ${esc(gilt)}.
+    <span class="mono" title="${esc("Ohne eigene Event-Regel\n" + namen.join("\n"))}">${esc(kurz)}</span>
+    <button id="evHinweisRegel" style="margin-left:8px" title="Regelmaske ausgefüllt öffnen: eine Event-Regel mit diesen Typen, passiv, 14 Tage – Werte in der Maske änderbar">Event-Regel für diese anlegen …</button>`;
+}
+$("#evHinweis").addEventListener("click", ev => {
+  if (!ev.target.closest("#evHinweisRegel")) return;
+  let id = "EV:ohne_regel", k = 2; while (S.regeln.regeln.some(r => r.id === id)) id = `EV:ohne_regel_${k++}`;
+  bearbeiteRegel(-1, { id, typ: "event", muster: evOhneRegel().map(e => e.event_type), name: "Events ohne eigene Regel – 14 Tage", kurzzeit: "14d",
+    aktiv: false, notiz: "Empfehlung des RS DB HM: Event-Typen, die bisher nach HA-Standard bzw. global aufbewahrt wurden", typManuell: true });
+});
 // ---- Events je Typ (Punkt 42/48): Vorhaltezeit je Event-Typ, gespeichert in der Regeldatei unter "events"
 T.events = new LokaleTabelle({
   id: "#tEvents", treffer: "#trefferEvents", schluessel: "dbh_breiten_events", einheit: "Event-Typen", sortStd: { k: "zeilen", desc: true },
@@ -3720,12 +3741,13 @@ function ketteTip(r) {
 function planZeilen(p) {
   const zeilen = {};
   const zeile = (name, status) => zeilen[name] ||= { entity_id: name, status: status || "", regeln: new Set(), teile: [], states: 0, kurz: 0, lts: 0, events: 0,
-    attr_zeilen: null, attr_obergrenze: false, faellig: 0, hinweise: [], kette: (p.ketten || {})[name] };
+    attr_zeilen: null, attr_obergrenze: false, faellig: 0, uebersprungen: 0, hinweise: [], kette: (p.ketten || {})[name] };
   const ohne = a => ["nächster Lauf", "übersprungen"].includes(a);
   for (const c of p.entitaeten) {
     const z = zeile(c.entity_id, c.status); z.regeln.add(c.regel); z.regel_k = c.regel;
     z.teile.push({ art: "states", keep_days: c.keep_days, kurzzeit: c.kurzzeit_tage, lauf: c.art, zeilen: c.zeilen, gesamt: c.zeilen_gesamt, hinweis: c.hinweis, exakt: p.exakt });
-    z.states += c.keep_days != null ? c.zeilen : 0;   // Punkt 121: keep_days 0 = „keine“ bis heute 0:00 z.faellig += c.zeilen_gesamt;
+    z.states += c.keep_days != null ? c.zeilen : 0;   // Punkt 121: keep_days 0 = „keine“ bis heute 0:00
+    z.faellig += c.zeilen_gesamt;   // Punkt 219 (0.5.5b13): stand bis hier hinter dem Kommentar und wurde nie ausgeführt
     if (c.attr_zeilen != null) { z.attr_zeilen = (z.attr_zeilen || 0) + c.attr_zeilen; z.attr_obergrenze ||= c.art === "teilweise"; }
     if (c.hinweis) z.hinweise.push(c.hinweis);
   }
@@ -3733,20 +3755,28 @@ function planZeilen(p) {
     const z = zeile(a.name, a.status); z.regeln.add(a.regel);
     if (a.art === "lts") z.regel_l = a.regel; else if (a.art === "events") z.regel_e = a.regel; else z.regel_k ||= a.regel;   // Punkt 199
     z.teile.push({ art: a.art, keep_days: a.keep_days, alle: a.alle, lauf: a.art_lauf, zeilen: a.zeilen_lauf ?? a.zeilen, gesamt: a.zeilen, mit_meta: a.mit_meta, hinweis: a.hinweis, exakt: p.exakt });
-    z[a.art] += ohne(a.art_lauf) ? 0 : (a.zeilen_lauf ?? a.zeilen); z.faellig += a.zeilen;   // Punkt 75: bei „teilweise“ nur der Teil dieses Laufs
+    z[a.art] += ohne(a.art_lauf) ? 0 : (a.zeilen_lauf ?? a.zeilen);   // Punkt 75: bei „teilweise“ nur der Teil dieses Laufs
+    // Punkt 222 (0.5.5b13): Übersprungenes (Integration fehlt) ist kein Überhang – auch kein weiterer Lauf löscht es
+    if (a.art_lauf === "übersprungen") z.uebersprungen += a.zeilen; else z.faellig += a.zeilen;
     if (a.hinweis) z.hinweise.push(a.hinweis);
     if (!p.stufe_b) z.hinweise.push("Integration fehlt");
   }
   return Object.values(zeilen).map(z => {
     const laeufe = new Set(z.teile.map(t => t.lauf));
     const lauf = laeufe.size === 1 ? [...laeufe][0] : [...laeufe].every(x => !ohne(x)) ? (laeufe.has("teilweise") ? "teilweise" : "vollständig") : "teilweise";
-    return { ...z, regel: [...z.regeln].join(", "), lauf, summe: z.states + z.kurz + z.lts + z.events, hinweis: [...new Set(z.hinweise)].join(" · "),
+    const summe = z.states + z.kurz + z.lts + z.events;
+    // Punkt 219: Überhang = was dieser Lauf löschen müsste, wegen der Obergrenzen aber in weitere Läufe fällt
+    return { ...z, regel: [...z.regeln].join(", "), lauf, summe, ueberhang: Math.max(0, z.faellig - summe), hinweis: [...new Set(z.hinweise)].join(" · "),
       vorhaltung: z.teile.map(t => `${KURZ[t.art]} ${t.alle ? "alle" : t.keep_days != null ? t.keep_days + " d" : "–"}${t.art === "states" && t.keep_days != null && t.kurzzeit != null && t.keep_days !== t.kurzzeit ? ` (Ziel ${t.kurzzeit} d)` : ""}`).join(" · ") };
   });
 }
 // Punkt 113 (0.4.10): Tooltip je Zelle „Vorhaltung · in diesem Lauf“ – eine Zeile je Teil mit den Werten dieser Zeile
 const TEIL_NAME = { states: "States (Kurzzeit, Attribute folgen)", kurz: "5-Min-Statistik (folgt der Kurzzeit)", lts: "Langzeit (Stundenstatistik)", events: "Events" };
 const TEIL_WEG = { states: "recorder.purge_entities", kurz: "rs_db_hygiene.purge", lts: "rs_db_hygiene.purge", events: "rs_db_hygiene.purge" };
+// Punkt 222 (0.5.5b13): was „Integration fehlt“ bedeutet – Tooltip im Löschplan (Spalte Hinweis, Kasten oben)
+const INTEGRATION_FEHLT = "Integration fehlt: 5-Min-Statistik, Langzeit und Events löscht der RS DB Hygiene Manager nicht selbst, sondern über die Integration RS DB Hygiene (Dienst rs_db_hygiene.purge). Das geht nur, wenn die Integration in Home Assistant installiert und betriebsbereit ist.\n" +
+  "Abhilfe: Integration über HACS installieren, in HA einrichten (Einstellungen → Geräte & Dienste) und HA neu starten – auch nach einem Update der Integration.\n" +
+  "Bis dahin: Diese Teile werden in jedem Lauf übersprungen und zählen nicht zum Überhang. States löscht die App weiter über recorder.purge_entities.";
 // Punkt 217 (0.5.5b12): jeder Status als Chip – grün vollständig, gelb teilweise/nächster Lauf/Ausnahme, rot übersprungen
 const LART_CHIP = { "vollständig": "ok", "teilweise": "warn", "nächster Lauf": "warn", "Ausnahme": "warn", "übersprungen": "bad" };
 // Punkt 215 (0.5.5b12): Erklärung je Status im Format „Thema: Inhalt“ – steht im Tooltip ganz oben
@@ -3791,7 +3821,9 @@ T.loesch = new LokaleTabelle({
   id: "#tLoesch", treffer: "#trefferLoesch", schluessel: "dbh_breiten_loesch2", einheit: "Entitäten bzw. Event-Typen im Plan", sortStd: { k: "summe", desc: true },
   // Punkt 148 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Stammdaten", "stamm", ["entity_id", "regel", "status"]], ["Vorhaltezeiten", "vorh", ["lauf"]],
-    ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "lts", "events", "attr_zeilen", "faellig"]]],
+    ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "attr_zeilen", "lts", "events"]],
+    // Punkt 221 (0.5.5b13): Überhang als eigene Gruppe im Rot des Istzustands – optisch getrennt von der Löschmenge dieses Laufs
+    ["Überhang", "ist", ["ueberhang"]]],
   fix: ["entity_id"],
   leer: "nichts zu löschen",
   spalten: [
@@ -3813,14 +3845,18 @@ T.loesch = new LokaleTabelle({
       zelle: r => `${esc(r.vorhaltung)} · <span class="chip ${LART_CHIP[r.lauf] || "warn"}">${esc(r.lauf)}</span>`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
       optionen: () => Object.keys(LART).map(x => [x, x]),
       summe: (g, a) => [zahl(g.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), zahl(a.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), "Einträge, die dieser Lauf bearbeitet (ohne „nächster Lauf“ und „übersprungen“) – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
-    blockSpalte("summe", "Summe (dieser Lauf)", "Summe aus States, 5-Min-Statistik, Langzeit und Events – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
+    // Punkt 221 (0.5.5b13): Untertitel „excl. Attribute“ bzw. „zus. zu Summe“, Attributzeilen direkt hinter der 5-Min-Statistik
+    blockSpalte("summe", "Summe (excl. Attribute)", "Summe aus States, 5-Min-Statistik, Langzeit und Events (ohne Attributzeilen) – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
     blockSpalte("states", "States", "Zeilen in states (recorder.purge_entities)"),
     blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)", 145),
+    blockSpalte("attr_zeilen", "Attributzeilen (zus. zu Summe)", "Attributzeilen, die mit den States wegfallen – zusätzlich zur Summe, nicht darin enthalten; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele (≤)", 150),
     blockSpalte("lts", "Langzeit", "Stundenstatistik (Integration RS DB Hygiene)"),
     blockSpalte("events", "Events", "Events dieses Typs (Integration RS DB Hygiene)"),
-    blockSpalte("attr_zeilen", "Attributzeilen (mit den States)", "Attributzeilen, die mit den States wegfallen – nicht in der Summe; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele (≤)", 150),
-    blockSpalte("faellig", "fällig (insgesamt)", "alle Zeilen außerhalb der Vorhaltezeiten (= Löschmenge sofort), unabhängig von der Obergrenze", 130),
-    { k: "hinweis", titel: "Hinweis", typ: "text", breite: 200, wert: r => r.hinweis || "", zelle: r => esc(r.hinweis || ""), csv: r => r.hinweis || "" },
+    // Punkt 219 (0.5.5b13): ersetzt „fällig (insgesamt)“ – Summe + Überhang = alles Fällige (= Löschmenge sofort)
+    blockSpalte("ueberhang", "Überhang (weitere Läufe)", "alles, was dieser Lauf löschen müsste, wegen der Obergrenzen aber in weitere Löschläufe fällt – Summe + Überhang = alles Fällige (Löschmenge sofort); bei „vollständig“ 0", 140),
+    { k: "hinweis", titel: "Hinweis", typ: "text", breite: 200, wert: r => r.hinweis || "", zelle: r => esc(r.hinweis || ""), csv: r => r.hinweis || "",
+      // Punkt 222: „Integration fehlt“ erklären, mit der Menge, die in dieser Zeile übersprungen wird
+      tip: r => /Integration fehlt/.test(r.hinweis || "") ? `${INTEGRATION_FEHLT}${r.uebersprungen ? `\nÜbersprungen in dieser Zeile: ${zahl(r.uebersprungen)} Zeilen` : ""}` : r.hinweis || "" },
   ],
 });
 // Punkt 116 (0.4.10): „1:20 min (1 Pause)“
@@ -3948,7 +3984,7 @@ async function ladeLoeschen() {
     // Punkt 75 (0.4.4): je Tabelle nur, was dieser Lauf löscht (zeilen_b_lauf); zeilen_b enthält auch „nächster Lauf“
     const zb = su.zeilen_b_lauf || su.zeilen_b || {}, bAnz = (p.auftraege_b || []).length;
     const bText = bAnz ? `<div class="sub">Integration RS DB Hygiene (rs_db_hygiene.purge): ${mz(su.auftraege_b || 0, "Auftrag", "Aufträge")} von ${zahl(bAnz)} in diesem Lauf
-      ${p.stufe_b ? "" : `<span class="chip warn">Integration RS DB Hygiene nicht aktiv – wird übersprungen</span>`}</div>` : "";
+      ${p.stufe_b ? "" : `<span class="chip warn" title="${esc(INTEGRATION_FEHLT)}">Integration RS DB Hygiene nicht aktiv – wird übersprungen</span>`}</div>` : "";
     // Punkt 67: nur Teile nennen, die etwas löschen; leerer Plan = „nichts zu löschen“
     const teile = [];
     if (su.zeilen_states) teile.push(`States ${zahl(su.zeilen_states)} von ${mz(su.entitaeten, "Entität", "Entitäten")} in ${mz(su.aufrufe, "Aufruf", "Aufrufen")} von ${p.exakt ? "rs_db_hygiene.purge_states" : "recorder.purge_entities"}${gruppen ? ` (${gruppen})` : ""}`);
@@ -4156,6 +4192,14 @@ const tipKurz = s => { s = (s || "").replace(/\s+/g, " ").trim(); return s.lengt
 function tipSpalte(zelle) {
   // Titelzelle derselben Spalte im Tabellenkopf: die Kopfzelle mit Haupttitel (.tk) bzw. ohne colspan, die horizontal über der Zelle liegt
   const kopf = zelle.closest("table")?.tHead; if (!kopf) return "";
+  // Punkt 220 (0.5.5b13): zuerst über die Spaltennummer – die Titelzeile (Zellen mit .tk) hat so viele Zellen wie die Zeile
+  // der Zelle; über die Lage auf dem Bildschirm träfe eine fixierte Spalte, die beim Scrollen darüber liegt
+  const titelzeile = [...kopf.rows].find(z => z.querySelector(".tk"));
+  if (titelzeile && titelzeile !== zelle.parentElement && titelzeile.cells.length === zelle.parentElement.cells.length) {
+    const th = titelzeile.cells[zelle.cellIndex];
+    const t = th && tipKurz(th.querySelector(".tk")?.textContent || th.textContent);
+    if (t) return t;
+  }
   const r = zelle.getBoundingClientRect(), mitte = r.left + r.width / 2;
   let kand = [...kopf.querySelectorAll("th")].filter(t => t !== zelle && t.colSpan === 1);
   kand = kand.some(t => t.querySelector(".tk")) ? kand.filter(t => t.querySelector(".tk")) : kand.filter(t => !t.querySelector("input, select"));
