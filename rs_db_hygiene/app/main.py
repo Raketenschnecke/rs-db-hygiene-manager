@@ -9,6 +9,7 @@ import io
 import json
 import logging
 import os
+import threading
 import time
 
 from aiohttp import web
@@ -32,6 +33,7 @@ OPTIONEN_PFAD = os.path.join(DATA, "options.json")
 CACHE = os.path.join(DATA, "cache.db")
 ATTR = os.path.join(DATA, "attribute.db")
 REGELN = os.path.join(DATA, "regeln.json")
+HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
 LAEUFE = os.path.join(DATA, "laeufe")
 LAEUFE_SUMME = os.path.join(DATA, "laeufe_summe.json")
 VORLAGE = os.path.join(APP_DIR, "regeln_vorlage.json")
@@ -54,7 +56,10 @@ class Zustand:
         self.letzter_fehler = None
         self.letzter_job = None
         self._pl_cache = {}
+        self._vl_cache = {}        # Punkt 179: Prognose-Verlauf (Popup an den DB-Größe-Kacheln)
+        self._hist = (None, None)  # Punkt 188: (Stunde, bisherige DB-Größe)
         self.lauf = None           # laufender Löschlauf (loeschen.Lauf)
+        self._rechnen = threading.Lock()   # Punkt 189: Probelauf/Verlauf nacheinander rechnen
 
     def mtime(self, pfad):
         return os.path.getmtime(pfad) if os.path.exists(pfad) else 0
@@ -63,14 +68,44 @@ class Zustand:
         if not os.path.exists(CACHE):
             return None
         schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
-        if schluessel not in self._pl_cache:
-            # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Empfehlungen rechnen teils mit
-            # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
-            alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
-            while len(alt) >= 3:
-                alt.pop(next(iter(alt)))
-            self._pl_cache = {**alt, schluessel: probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt)}
-        return self._pl_cache[schluessel]
+        if schluessel in self._pl_cache:           # Treffer ohne Warten, auch während eine andere Rechnung läuft
+            return self._pl_cache[schluessel]
+        # Punkt 189: Rechnungen nacheinander – gleichzeitige Anfragen (Kacheln, Entitäten, Plan der Integration) rechnen
+        # denselben Probelauf nicht mehrfach parallel; wer wartet, findet danach das Ergebnis im Cache
+        with self._rechnen:
+            if schluessel not in self._pl_cache:
+                erg = probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt, halten_pfad=HALTEN)
+                # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Empfehlungen rechnen teils mit
+                # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
+                alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
+                while len(alt) >= 3:
+                    alt.pop(next(iter(alt)))
+                self._pl_cache = {**alt, schluessel: erg}
+            return self._pl_cache[schluessel]
+
+    def verlauf(self, ziel, passiv):
+        if not os.path.exists(CACHE):
+            return None
+        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
+        if schluessel in self._vl_cache:
+            return self._vl_cache[schluessel]
+        with self._rechnen:                         # Punkt 189: wie probelauf
+            if schluessel not in self._vl_cache:
+                self._vl_cache = {schluessel: probelauf.verlauf(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, passiv)}
+            return self._vl_cache[schluessel]
+
+    def historie(self):
+        """Punkt 188: bisherige DB-Größe (Sensor der Integration, max. 2 Jahre) – höchstens einmal je Stunde aus der HA-DB."""
+        stunde = int(time.time() // 3600)
+        if self._hist[0] != stunde:
+            try:
+                h = analyse.historie_groesse(optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db"),
+                                             f"{HA_CONFIG}/.storage/core.entity_registry")
+            except Exception as e:  # noqa: BLE001 – ohne Historie zeigt das Chart nur die Prognose
+                _LOG.exception("Historie der DB-Größe nicht lesbar")
+                h = {"entity_id": None, "punkte": [], "grund": str(e)}
+            self._hist = (stunde, h)
+        return self._hist[1]
 
 
 Z = Zustand()
@@ -91,13 +126,18 @@ def _analyse_sync():
     db = opt.get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
     pkd = _pkd_wirksam()
     reg, gel = analyse.lies_registry(f"{HA_CONFIG}/.storage/core.entity_registry")
+    try:
+        reg_d = analyse.lies_registry_details(f"{HA_CONFIG}/.storage/core.entity_registry")
+    except Exception:  # noqa: BLE001 – Zusatzinformation (Punkte 185/186), die Analyse soll trotzdem laufen
+        _LOG.exception("Registry-Details konnten nicht gelesen werden")
+        reg_d = {}
     zustaende = analyse.hole_zustaende()
     try:
         hku = herkunft.ermittle(HA_CONFIG, zustaende)
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku)
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d)
 
 
 def _cache_version():
@@ -291,15 +331,24 @@ async def probelauf_summe(request):
     return web.json_response({"stand": r["stand"], "summe": r["summe"], "regeln": r["regeln"], "events": r.get("events", [])})
 
 
+async def prognose_verlauf(request):
+    """Punkt 179: DB-Größe je Monat über den Prognosezeitraum – ohne Regeln, nur HA:standard, aktive (passive nur mit Haken), aktive + passive Regeln."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.verlauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response({**r, "historie": await asyncio.to_thread(Z.historie)})
+
+
 async def klassen(_request):
-    """Punkt 166: alle Paare domain|device_class aktiver Entitäten aus der letzten Analyse – Auswahl für klasse-Regeln.
+    """Punkt 166: alle Paare domain|device_class aktiver und deaktivierter Entitäten (Punkt 185) aus der letzten Analyse – Auswahl für klasse-Regeln.
     zaehler = davon Zähler (state_class total/total_increasing), die der Zähler-Schutz von klasse-Regeln ausnimmt."""
     r = await asyncio.to_thread(Z.probelauf, None, False)
     if not r:
         return web.json_response({"klassen": [], "fehler": "Noch keine Analyse vorhanden"})
     zahl = {}
     for e in r["entitaeten"]:
-        if e["status"] != "aktiv" or not e.get("device_class"):
+        if rg.ist_verwaist(e["status"]) or not e.get("device_class"):
             continue
         k = zahl.setdefault(f'{e["domain"]}|{e["device_class"]}', [0, 0])
         k[0] += 1
@@ -307,18 +356,49 @@ async def klassen(_request):
     return web.json_response({"klassen": [{"muster": m, "anzahl": a, "zaehler": z} for m, (a, z) in sorted(zahl.items())]})
 
 
+async def plattformen(_request):
+    """Punkt 196: alle Integrationen (platform der Registry) nicht verwaister Entitäten – Auswahl für herkunft-Regeln.
+    Gleiche Form wie api/klassen; leer, solange der Cache noch keine Integration kennt (vor Cache-Version 7)."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return web.json_response({"klassen": [], "fehler": "Noch keine Analyse vorhanden"})
+    zahl = {}
+    for e in r["entitaeten"]:
+        if rg.ist_verwaist(e["status"]) or not e.get("plattform"):
+            continue
+        k = zahl.setdefault(e["plattform"], [0, 0])
+        k[0] += 1
+        k[1] += (e.get("state_class") or "").startswith("total")
+    return web.json_response({"klassen": [{"muster": m, "anzahl": a, "zaehler": z} for m, (a, z) in sorted(zahl.items())],
+                              **({} if zahl else {"fehler": "Keine Integrationen bekannt – bitte einmal neu analysieren"})})
+
+
+async def pareto(request):
+    """Punkt 194: Wer schreibt am meisten? Stufen Top N mit Anteil am Zuwachs und Ersparnis bei `tage` Tagen Kurzzeit."""
+    ziel, vm = _parameter(request)
+    t = request.query.get("tage", "14")
+    tage = int(t) if t.isdigit() and int(t) > 0 else 14
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"stufen": [], "fehler": "Noch keine Analyse vorhanden"})
+
+    def rechne():
+        return optimierung.pareto(r, optimierung.histogramme(CACHE), warnungen.kontext(HA_CONFIG), ziel, tage)
+    return web.json_response(await asyncio.to_thread(rechne))
+
+
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
               "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-              "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil"}
+              "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb"}
 ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
 
 
 def summen(liste):
     """Summe bzw. Anzahl je Spalte (Punkt 12)."""
     s = {"entitaeten": len(liste), "geraete": len({e["device_id"] for e in liste if e.get("device_id")}),
-         "aktiv": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
-         "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None,
+         "aktiv": 0, "deaktiviert": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
+         "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None, "loesch_mb": 0,
          "first_ts": None, "last_ts": None,
          # Punkt 115: Entitäten mit Label und Zahl verschiedener Labels
          "labels": sum(1 for e in liste if e.get("labels")),
@@ -335,11 +415,11 @@ def summen(liste):
         if e.get("attr_zeilen") is not None:
             s["attr_zeilen"] = (s["attr_zeilen"] or 0) + e["attr_zeilen"]
             gewicht += (e["rows"] or 0) * probelauf.B_STATE
-        s["aktiv" if e["status"] == "aktiv" else "verwaist"] += 1
+        s["aktiv" if e["status"] == "aktiv" else "deaktiviert" if e["status"] == "deaktiviert" else "verwaist"] += 1
         for k in ("rows", "rows_24h", "lts_rows", "kurz_rows"):   # kurz_rows: Punkt 135 (0.5.3)
             s[k] += e[k] or 0
         s["loeschbar"] += e["loeschbar"]["states"] or 0
-        for k in ("loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts"):
+        for k in ("loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_mb"):   # loesch_mb: Punkt 197
             s[k] += e.get(k) or 0
         if e.get("loesch_attr_zeilen") is not None:
             s["loesch_attr_zeilen"] = (s["loesch_attr_zeilen"] or 0) + e["loesch_attr_zeilen"]
@@ -399,12 +479,14 @@ def _gefiltert(r, q, fehler_ziel=None):
             continue
         if status_f == "aktiv" and e["status"] != "aktiv":
             continue
-        if status_f == "verwaist" and e["status"] == "aktiv":
+        if status_f == "verwaist" and not rg.ist_verwaist(e["status"]):
+            continue
+        if status_f == "deaktiviert" and e["status"] != "deaktiviert":
             continue
         regeln_e = {v["regel"] for v in (e["werte"] or {}).values() if v["regel"]}
         if regel_f == "mit" and not regeln_e:
             continue
-        if regel_f == "ohne" and (regeln_e or e["status"] != "aktiv"):
+        if regel_f == "ohne" and (regeln_e or rg.ist_verwaist(e["status"])):
             continue
         if regel_f and regel_f not in ("mit", "ohne") and regel_f not in regeln_e:
             continue
@@ -469,7 +551,8 @@ async def export_csv(request):
                 "attr_bestand_bytes", "attr_zeilen", "attr_zuwachs_tag_bytes", "attr_avg_bytes",
                 "loeschmenge_sofort_attr_bytes", "attr_anteil_prozent", "hinweise",
                 # Punkte 118/120 (0.4.11): erster/letzter über alle Datenarten, dahinter je Datenart
-                *[f"{a}{k}" for a in ("", "states_", "kurz_", "lts_") for k in ("erster", "letzter")]])
+                *[f"{a}{k}" for a in ("", "states_", "kurz_", "lts_") for k in ("erster", "letzter")],
+                "loeschmenge_sofort_bytes"])   # Punkt 197: am Ende, damit die übrigen Spalten ihren Platz behalten
     ts = lambda t: time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t)) if t else ""  # noqa: E731
     zeilen = _gefiltert(r, request.query)      # hängt auch die Labels an (Punkt 115)
     name = "dbh_probelauf.csv"
@@ -487,7 +570,7 @@ async def export_csv(request):
                       for k in ("attr_bytes", "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil")],
                     " | ".join(e["hinweise"]),
                     *[ts(e.get(k)) for k in ("first_ts", "last_ts", "st_first_ts", "st_last_ts", "kurz_first_ts", "kurz_last_ts",
-                                             "lts_first_ts", "lts_last_ts")]])
+                                             "lts_first_ts", "lts_last_ts")], round(e.get("loesch_mb") or 0)])
     return web.Response(text="﻿" + buf.getvalue(), content_type="text/csv", charset="utf-8",
                         headers={"Content-Disposition": f"attachment; filename={name}"})
 
@@ -537,9 +620,12 @@ def _vorlage():
 
 
 async def regeln_verwalten(_request):
-    """Kennzahlen für die Rückfragen: aktuelle Regeln, Startregeln und die Liste der Sicherungen."""
-    return web.json_response({"aktuell": rg.kennzahlen(rg.lade(REGELN, VORLAGE)), "vorlage": rg.kennzahlen(_vorlage()),
-                              "sicherungen": rg.liste_sicherungen(SICHERUNGEN), "behalten": rg.SICHERUNGEN_BEHALTEN,
+    """Kennzahlen für die Rückfragen: aktuelle Regeln, Startregeln und die Liste der Sicherungen.
+    Punkt 182: startvorlage markiert Stände mit genau dem Inhalt der Startregeln."""
+    vorlage = _vorlage()
+    fp = rg.fingerabdruck(vorlage)
+    return web.json_response({"aktuell": rg.kennzahlen(rg.lade(REGELN, VORLAGE), fp), "vorlage": rg.kennzahlen(vorlage),
+                              "sicherungen": rg.liste_sicherungen(SICHERUNGEN, fp), "behalten": rg.SICHERUNGEN_BEHALTEN,
                               "gesperrt": bool(Z.job and Z.job.get("art") == "loeschen")})
 
 
@@ -635,12 +721,12 @@ async def muster_verdichten(request):
 
 async def entitaet_liste(_request):
     """Punkte 172/173: kompakte Liste aller Entitäten für Autovervollständigung und „Regel für …“ –
-    [entity_id, Zeilen je Tag, aktiv (1/0), Zähler (1/0), device_class]."""
+    [entity_id, Zeilen je Tag, nicht verwaist (1/0; glob-Regeln treffen auch Deaktivierte), Zähler (1/0), device_class, Status]."""
     r = await asyncio.to_thread(Z.probelauf, None, False)
     if not r:
         return web.json_response({"e": []})
-    return web.json_response({"e": [[e["entity_id"], e["rows_24h"] or 0, int(e["status"] == "aktiv"),
-                                     int((e.get("state_class") or "").startswith("total")), e.get("device_class") or ""]
+    return web.json_response({"e": [[e["entity_id"], e["rows_24h"] or 0, int(not rg.ist_verwaist(e["status"])),
+                                     int((e.get("state_class") or "").startswith("total")), e.get("device_class") or "", e["status"]]
                                     for e in r["entitaeten"]]})
 
 
@@ -1015,8 +1101,11 @@ def erstelle_app():
         web.get("/api/status", status),
         web.post("/api/job/{art}", job_starten),
         web.get("/api/probelauf", probelauf_summe),
+        web.get("/api/prognose_verlauf", prognose_verlauf),
         web.get("/api/entitaeten", entitaeten),
         web.get("/api/klassen", klassen),
+        web.get("/api/plattformen", plattformen),
+        web.get("/api/pareto", pareto),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),

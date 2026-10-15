@@ -4,6 +4,88 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5
+Zusammenfassung der Testversionen 0.5.5b1 bis 0.5.5b14 (Einzelheiten darunter). Nach dem Update startet einmal eine neue Analyse (neuer Aufbau des Analyse-Speichers).
+- **Neue Regeltypen:** `herkunft` (alles einer Integration, z. B. `unifi`) und `vielschreiber` (ab einer Schwelle in Zeilen je Tag, mit Hysterese – wer dazugehört, bleibt bis unter 80 % der Schwelle)
+- **HA-Standard als Auffangregel:** Kurzzeit einstellbar; Hinweis im Reiter Empfehlungen nur bei der Grundeinstellung 10 Tage
+- **Empfehlungen:** Vorschläge je Integration und je Geräteklasse statt vieler Einzelregeln; Kasten „Wer schreibt am meisten?“; Mehrfachauswahl mit „als passive Regeln anlegen“, „als aktive Regeln anlegen …“ (mit Warnprüfung) und „zu einer Regel zusammenfassen …“; Ersparnis unter 1 GB in MB; FAQ „In welcher Reihenfolge lege ich Regeln an?“
+- **Prognose-Chart** an den DB-Größe-Kacheln, mit Vergangenheit und HA-Standard
+- **Rangnummer der Regeln** (Stufe.Position) und einheitlich „X hat Vorrang vor: Y – Wert“
+- **Tab Löschen:** Rückstand in Läufen, Spalte „Überhang (weitere Läufe)“ statt „fällig“ (zählte die States nicht), „Summe (excl. Attribute)“, Status als farbige Chips, Erklärung „Integration fehlt“
+- **Reiter Events:** eine Spalte „Vorhaltezeit“ (Wert, Regel, wirksame Tage); Hinweis auf Event-Typen ohne eigene Event-Regel
+- **Tooltips:** eigene Anzeige nach dem Schema „**Thema:** Inhalt“, kontextbezogen, Bedienhinweise je in eigener Zeile
+- Zuwachs je Tag aus den 7 vollen Tagen vor heute; deaktivierte Entitäten mit eigenem Status; Spalte „Speicher frei (MB)“
+- Die Integration ändert sich nur in der Versionsnummer; ihr Update über HACS ist optional
+
+## 0.5.5b14 (Beta)
+- **„hat Vorrang vor“ (Punkt 225):** einheitlich statt „überstimmt“ bzw. „gewinnt vor“, mit dem Wert der unterlegenen Regel – z. B. „EV:alle hat Vorrang vor: HA:standard – 90 Tage“; in der Regelmaske „R07 hat Vorrang (bei 12 Entitäten)“
+- **Reiter Events (Punkte 226/227):** Regel, Vorhaltezeit und wirksame Tage in einer Spalte „Vorhaltezeit“ wie im Tab Entitäten, mit gemeinsamem Filter; Spalte Prognose entfällt
+- **Reiter Prognosen je Regel (Punkt 224):** Block „Löschmenge sofort“ entfällt
+- **Tooltips (Punkt 223):** Bedienhinweise wie „Klick:“ oder „Umschalt+Klick:“ stehen je in eigener Zeile, die Aktion fett
+
+## 0.5.5b13 (Beta)
+- **Löschplan: Überhang statt „fällig“ (Punkte 219, 222):** Die Spalte zählte die States nicht mit (Fehler seit 0.5.0). Jetzt „Überhang (weitere Läufe)“ – was dieser Lauf wegen der Obergrenzen nicht schafft; als eigene rote Spaltengruppe. Übersprungenes (Integration fehlt) zählt nicht dazu
+- **Löschplan: Summe und Attribute (Punkt 221):** „Summe (excl. Attribute)“, „Attributzeilen (zus. zu Summe)“ direkt hinter der 5-Min-Statistik
+- **„Integration fehlt“ erklärt (Punkt 222):** Tooltip – 5-Min-Statistik, Langzeit und Events löscht die App nur über die installierte und betriebsbereite Integration RS DB Hygiene
+- **Event-Typen ohne eigene Regel (Punkt 204):** Hinweis im Reiter Events, unabhängig von der Menge, mit Knopf „Event-Regel für diese anlegen …“
+- Tooltip-Thema auch unter fixierten Spalten richtig (Punkt 220)
+
+## 0.5.5b12 (Beta)
+- **Vielschreiber ohne Pendeln (Punkt 201):** Wer zu einer vielschreiber-Regel gehört, bleibt dabei, bis sein Zuwachs unter 80 % der Schwelle fällt (Hysterese, Stand je Analyse)
+- **Empfehlungen per Massenauswahl (Punkte 212/213):** „als aktive Regeln anlegen …“ mit Warnprüfung vorab; „zu einer Regel zusammenfassen …“ – gleiche Regeltypen werden eine Regel, entity und glob eine glob-Regel, bei verschiedenen Kurzzeiten die längste oder je Kurzzeit eine Regel; ergibt sich genau eine Regel, öffnet sich die Regelmaske
+- **Rückstand in Läufen (Punkt 200):** Tab Löschen schätzt, wie viele Läufe der Rückstand braucht; Tabelle Läufe mit Spalte „Rest danach (≈ Läufe)“
+- **Tooltips (Punkte 215–218):** eigene Tooltip-Anzeige, überall nach dem Schema „**Thema:** Inhalt“ und kontextbezogen (Status-Chip im Löschplan, Kacheln nur ihre Zeile); Status im Löschplan als farbige Chips (grün vollständig, gelb teilweise, rot übersprungen)
+- **Kleinigkeiten:** Spalten „Speicher frei (MB)“ / „Speicher (MB)“ statt „Platz“ (Punkt 209); Notiz der Empfehlungen „Empfehlung des RS DB HM“, ausgeschrieben im Tooltip (Punkt 211); neue FAQ „In welcher Reihenfolge lege ich Regeln an?“, verlinkt neben „Wer schreibt am meisten?“ (Punkt 214)
+
+## 0.5.5b11 (Beta)
+- **Empfehlungen je Integration (Punkt 205):** Ab 5 Einzelvorschlägen einer Integration (z. B. proxmoxve, unifi) kommt eine herkunft-Regel mit 30 Tagen statt vieler einzelner Regeln; nicht für Sammel-Integrationen wie mqtt, esphome oder template
+- **Empfehlungen je Klasse (Punkt 208):** Mehrere Vorschläge derselben Geräteklasse (z. B. `sensor|frequency`) werden zu einer klasse-Regel, wenn die übrigen Entitäten der Klasse kaum verwendet werden; Uhrzeit-Sensoren (`time_date`) mit 1 Tag. Vorschläge für Integration oder Klasse entfallen, wenn sie eine heute kürzere Kurzzeit verlängern würden
+- **„Nirgends verwendet“ nicht mehr für Automationen und Skripte (Punkt 206)**
+- **Ersparnis in MB (Punkt 207):** unter 1 GB in MB, auch in der Summenzeile; „Ansehen“ filtert im Tab Entitäten nach Integration bzw. Klasse
+- **Hinweis „HA-Standard aktiv“ (Punkt 210):** nur noch bei aktiver Regel mit 10 Tagen
+- HACS-Prüfung (Validate) prüft wieder die Brand-Bilder
+
+## 0.5.5b10 (Beta)
+- **Rangnummer der Regeln (Punkt 199):** Jede Regel trägt ihren Rang als Stufe.Position – 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard. Zu sehen in der Löschtabelle (Spalte „Regel (Rang)“, Tooltip: gegen welche Regeln sie je Wert gewonnen hat) und im Reiter Regeln (Sortierung nach Rang = tatsächliche Vorrangfolge; ▲ verschiebt innerhalb der Stufe)
+- **Statistik ohne Entität erklärt (Punkt 198):** Hinweis oben im Reiter – nur Anzeige, nie gelöscht, zählt nicht in Löschmenge und Prognose; endgültig entfernen in HA unter Entwicklerwerkzeuge → Statistiken
+
+## 0.5.5b9 (Beta)
+- **Regeltyp vielschreiber (Punkt 193):** Muster ist eine Schwelle in Zeilen je Tag (z. B. `1000`), optional mit Entity-Mustern als Einschränkung. Trifft aktive Entitäten ab dieser Schreibrate (ohne Zähler) – dynamisch nach jeder Analyse. Rang nach herkunft, vor verwaist
+- **Regeltyp herkunft (Punkt 196):** alles einer Integration (z. B. `unifi`, `mobile_app`), Auswahl als Liste wie bei klasse; ohne Zähler und verwaiste, Rang nach klasse. Der Analyse-Cache kennt dafür die Integration je Entität (neuer Aufbau → nach dem Update einmal neue Analyse)
+- **Wer schreibt am meisten? (Punkt 194):** Kasten im Reiter Empfehlungen – Top 10/25/50/100/250 mit Anteil am Zuwachs, Schwelle und Ersparnis bei wählbarer Kurzzeit; je Stufe „als Vielschreiber-Regel“ oder „als entity-Regel“
+- **Empfehlungen mit Mehrfachauswahl (Punkt 195):** Auswahlspalte und Banner „als passive Regeln anlegen“ / „ignorieren“
+- **Zuwachs je Tag aus 7 vollen Tagen (Punkt 192):** Spalte Zuwachs, Prognose und Empfehlungen rechnen mit dem Mittel der 7 vollen Kalendertage vor heute (fest ÷ 7) statt mit den letzten 24 Stunden; Events ebenso
+- **Spalte „Platz frei (MB)“ (Punkt 197):** ersetzt im Tab Entitäten die Spalte „Attribute (MB)“ – Platz der ganzen Löschmenge sofort (States, 5-Min, Langzeit, Attribute), direkt neben der Summe
+
+## 0.5.5b8 (Beta)
+- **Prognose-Chart mit HA-Standard (Punkt 191, ersetzt Punkt 180):** Gelb und Grün rechnen die Regel HA:standard in ihrer eingestellten Kurzzeit mit – Grün immer, Gelb nur, wenn sie aktiv ist (oder mit Haken „passive Regeln mitrechnen“). Grau („nur HA-Standard“) bleibt fest bei 10 Tagen als Vergleich mit HA in der Grundeinstellung
+
+## 0.5.5b7 (Beta)
+- **HA-Standard als Auffangregel (Punkt 190):** Die Kurzzeit der Regel HA:standard ist einstellbar (Klick auf die Regel, nur Dauer; gilt auch für die Events, Langzeit bleibt unbegrenzt). Mit z. B. 90 Tagen fängt sie alles ohne eigene Regel auf – mit niedrigstem Rang und auch für Zähler, anders als eine glob-Regel `*`, die alle klasse-Regeln überstimmt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet weiter mit 10 Tagen
+- **GUI hängt nach Wechsel des Prognosezeitraums (Punkt 189):** Gleichzeitige Anfragen rechnen denselben Probelauf nicht mehr mehrfach parallel; Rechnungen laufen nacheinander, wartende Anfragen übernehmen das Ergebnis
+
+## 0.5.5b6 (Beta)
+- **Prognose-Chart mit Vergangenheit (Punkt 188):** Links von „heute“ zeigt eine rote, durchgezogene Linie die bisherige DB-Größe aus der Langzeitstatistik des Integrations-Sensors „DB-Größe“ (Tagesmittel, höchstens 2 Jahre); eigener Legendeneintrag, per Klick ausblendbar, Tooltip je Tag. Die Prognoselinien sind gestrichelt und 1 px dick, „ohne Regeln“ ist violett statt rot
+
+## 0.5.5b5 (Beta)
+- **Deaktivierte Entitäten (Punkte 185/186):** Eigener Entitäts-Status „deaktiviert“ (in der Registry abgeschaltet, ohne Zustand) statt „aktiv“; Filter, Summenzeile und Hilfe kennen ihn. Die Regelart `deaktiviert` im Typ verwaist trifft sie (`alle` gilt nur für echte Verwaiste). Ihr Statistik-Eintrag bleibt auch bei Langzeit „keine“ erhalten; die Prognose rechnet keinen Zuwachs mehr für sie
+- **Klasse und Einheit ohne Zustand (185):** Bei Entitäten ohne Zustand (deaktivierte) kommen device_class, state_class und Einheit aus der Registry – die Spalte Klasse ist gefüllt, klasse-Regeln und der Zähler-Schutz greifen. Die erste Analyse nach dem Update läuft automatisch (Cache-Aufbau 6)
+
+## 0.5.5b4 (Beta)
+- **Logo:** Der Schriftzug „DB Hygiene Manager“ im Kopf ist im dunklen Modus jetzt kräftig dunkelrot statt hellrot
+
+## 0.5.5b3 (Beta)
+- **Prognose-Chart:** Die Linien „eigene Regeln“ (gelb, grün) rechnen ohne die Regel HA-Standard – sie zeigen, was die eigenen Regeln allein bewirken
+- **Empfehlungen:** Hinweis, solange HA-Standard aktiv ist – dann entfallen alle Vorschläge mit mehr als 10 Tagen; neue FAQ dazu im Reiter Hilfe
+- **Regeln verwalten:** Stände mit genau dem Inhalt der Startregeln tragen den Vermerk „= Startregeln“ (aktuell und in der Sicherungsliste)
+- **Regelmaske:** Beim Typ entity zeigt die Vorschlagsliste bei Platzhaltern „trifft keine Entität“ mit Knopf „Typ auf glob ändern“; neuer Knopf „alle … als Entity-IDs übernehmen“ übernimmt alle Treffer eines Musters als genaue IDs – auch Zähler
+
+## 0.5.5b2 (Beta)
+- **Prognose-Chart:** Klick auf eine Kachel der Spalte „DB-Größe“ zeigt die erwartete Entwicklung der DB in Monatsschritten über den Prognosezeitraum – ohne Regeln, nur HA-Standard, eigene aktive Regeln (passive mit Haken „passive Regeln mitrechnen“) und eigene Regeln aktiv + passiv; Monatswerte beim Überfahren, Linien per Legende ausblendbar
+
+## 0.5.5b1 (Beta)
+- **Beta-Version, nur auf dem Branch `beta`:** Stand wie 0.5.4, Grundlage für die nächsten Testversionen (noch keine neuen Punkte)
+
 ## 0.5.4
 Zusammenfassung der Testversionen 0.5.4b1 bis 0.5.4b7 und des Nachtrags (Einzelheiten darunter).
 - **Neuer Reiter „Empfehlungen“:** Regelvorschläge aus der letzten Analyse – gleichartige Entitäten als ein Muster, Vielschreiber, große Attribute, nirgends verwendete und deaktivierte Entitäten, verwaiste ohne Regel, Event-Typen ohne Event-Regel; je mit Treffern, Löschmenge sofort und Ersparnis, Hinweis auf passende passive Regeln. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv, „ignorieren“ merkt sich die App. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert

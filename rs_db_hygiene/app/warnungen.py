@@ -117,7 +117,7 @@ def pruefe_regel(regel, pl, ktx):
     k, lz = _tage(regel.get("kurzzeit")), _tage(regel.get("langzeit"))
     kurz, zaehler, energie, helfer = [], [], [], {}
     for e in pl.get("entitaeten", []):
-        x = allein.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
+        x = allein.loese_e(e)
         if not any(x[a]["regel"] for a in rg.WERTE):
             continue
         eid = e["entity_id"]
@@ -141,7 +141,7 @@ def pruefe_regel(regel, pl, ktx):
         geschuetzt = {}
         for e in pl.get("entitaeten", []):
             if e.get("schutz") and e.get("schutz") != regel.get("id"):
-                x = allein.loese(e["entity_id"], e["state_class"], e["device_class"], e["status"])
+                x = allein.loese_e(e)
                 if any(x[a]["regel"] for a in rg.WERTE):
                     geschuetzt.setdefault(e["schutz"], []).append(e["entity_id"])
         for sid, ids in geschuetzt.items():

@@ -2,12 +2,13 @@
 
 Parameter f_<spalte> aus der Abfrage:
   Text   f_entity_id                       enthält; mit * als Platzhalter (fnmatch)
-  Status f_status                          aktiv | verwaist (beide Arten) | verwaist_geloescht
-  Zahl   f_rows f_rows_24h f_lts_rows f_kurz_rows f_loeschbar f_attr_avg f_attr_anteil, in MB: f_attr_bytes f_attr_zuwachs_tag f_attr_loesch
+  Status f_status                          aktiv | deaktiviert | verwaist (beide Arten) | verwaist_geloescht
+  Zahl   f_rows f_rows_24h f_lts_rows f_kurz_rows f_loeschbar f_attr_avg f_attr_anteil, in MB: f_attr_bytes f_attr_zuwachs_tag f_attr_loesch f_loesch_mb
                                            >1000  >=5  <10  <=10  =0  0  100-500  0,5-2  (Tausenderpunkt, Dezimalkomma)
   Datum  f_first_ts f_last_ts              <1.9.2026  >=8.10.2026  8.10.2026  1.9.2026-30.9.2026
   Wert   f_kurzzeit f_attribute f_langzeit regel:R14 | std | wert:30 Tage
-  Herkunft f_herkunft (Text in Name/Datei und Tooltip), f_herkunft_art (geraet, yaml, …), f_device_id (genau)
+  Herkunft f_herkunft (Text in Name/Datei und Tooltip), f_herkunft_art (geraet, yaml, …), f_device_id (genau),
+           f_plattform (Integration genau, ab 0.5.5b11 für „Ansehen“ der Empfehlungen, Punkt 205)
   Labels f_labels                          enthält bzw. * und ? in der Liste „A, B“ (Labels an Entität und Gerät, ab 0.4.10)
   Klasse f_device_class                    genau (z. B. power) | __ohne (keine device_class), ab 0.5.4 (Punkt 167)
 Ungültige Eingaben werden ignoriert und als Fehler je Spalte zurückgegeben.
@@ -19,9 +20,9 @@ import time
 
 ZAHL_SPALTEN = ("rows", "rows_24h", "lts_rows", "kurz_rows", "loeschbar", "attr_avg", "attr_anteil",
                 "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-                "attr_bytes", "attr_zuwachs_tag", "attr_loesch")
+                "attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb")
 # Attribut-Größen werden in MB gefiltert (Eingabe z. B. >50 oder 0,5-2), gespeichert sind Bytes
-MB_SPALTEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
+MB_SPALTEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb")   # loesch_mb: Punkt 197
 DATUM_SPALTEN = ("first_ts", "last_ts")
 WERT_SPALTEN = ("kurzzeit", "attribute", "langzeit")
 
@@ -106,10 +107,12 @@ def status_filter(ausdruck):
     if a == "aktiv":
         return lambda s: s == "aktiv"
     if a == "verwaist":
-        return lambda s: s != "aktiv"
+        return lambda s: s in ("verwaist", "verwaist_geloescht")     # Punkt 186: ohne die Deaktivierten
+    if a == "deaktiviert":
+        return lambda s: s == "deaktiviert"
     if a == "verwaist_geloescht":
         return lambda s: s == "verwaist_geloescht"
-    raise FilterFehler("aktiv, verwaist oder verwaist_geloescht erwartet")
+    raise FilterFehler("aktiv, deaktiviert, verwaist oder verwaist_geloescht erwartet")
 
 
 def wert_filter(ausdruck):
@@ -158,7 +161,7 @@ def baue(parameter):
         try:
             if spalte in ("entity_id", "herkunft", "labels"):
                 f = text_filter(roh)
-            elif spalte in ("herkunft_art", "device_id"):
+            elif spalte in ("herkunft_art", "device_id", "plattform"):
                 f = gleich_filter(roh)
             elif spalte == "device_class":
                 f = klasse_filter(roh)

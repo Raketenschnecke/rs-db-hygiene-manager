@@ -23,6 +23,8 @@ import sqlite3
 import time
 import urllib.request
 
+import regeln as rg
+
 _LOG = logging.getLogger("loeschen")
 
 TAG = 86400
@@ -256,7 +258,22 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
                                        sorted([a["art"], a["name"], a["keep_days"], a["alle"]] for a in im_lauf_b)],
                                       default=str).encode()).hexdigest()[:12]
     zeilen_b = sum(a["zeilen"] for a in auftraege_b)
+    # Punkt 199 (0.5.5b10): je Eintrag die überstimmten Regeln in Rangfolge (Kurzzeit, Langzeit bzw. Events) – für den
+    # Tooltip „R12 gewinnt vor R30 …“ in der Löschtabelle; nur Anzeige, der Lauf nutzt es nicht
+    namen = {c["entity_id"] for c in eintraege} | {a["name"] for a in auftraege_b}
+    ketten = {}
+    for e in pl["entitaeten"]:
+        if e["entity_id"] in namen:
+            w = e.get("werte") or {}
+            # Punkt 225 (0.5.5b14): mit dem Wert der unterlegenen Regel („R07 hat Vorrang vor: HA:standard – 90 Tage“)
+            ketten[e["entity_id"]] = {a: [{"regel": u["regel"], "anzeige": u.get("anzeige")} for u in (w.get(a) or {}).get("ueberstimmt") or []]
+                                      for a in ("kurzzeit", "langzeit")}
+    for ev in pl.get("events") or []:
+        if ev["event_type"] in namen:
+            ketten[ev["event_type"]] = {"events": [{"regel": u["regel"], "anzeige": u.get("anzeige") or rg.anzeige(u.get("wert"))}
+                                                   for u in ev.get("ueberstimmt") or []]}
     return {
+        "ketten": ketten,
         "analyse_zeit": pl["stand"]["analyse_zeit"], "purge_keep_days": pkd, "grenze": grenze, "grenze_b": grenze_b,
         "nur_regel": nur_regel, "ausnahme": bool(ausnahme),
         "kennung": kennung, "gruppen": gruppen, "entitaeten": eintraege, "auftraege_b": auftraege_b,
@@ -272,6 +289,9 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
                   "attr_bekannt": any(c["attr_zeilen_gesamt"] is not None for c in eintraege),
                   "zeilen_gesamt": sum(c["zeilen_gesamt"] for c in eintraege) + zeilen_b,
                   "zeilen_b": {art: sum(a["zeilen"] for a in auftraege_b if a["art"] == art) for art in ART_B},
+                  # Punkt 200 (0.5.5b12): alles Fällige je Obergrenze und wie viele Läufe es ungefähr braucht
+                  "zeilen_states_gesamt": sum(c["zeilen_gesamt"] for c in eintraege),
+                  "laeufe": laeufe_noetig(sum(c["zeilen_gesamt"] for c in eintraege), zeilen_b if stufe_b else 0, grenze, grenze_b),
                   "entitaeten": sum(1 for c in eintraege if c["keep_days"] is not None),
                   "verschoben": sum(1 for c in eintraege if c["keep_days"] is None) + (len(auftraege_b) - len(im_lauf_b) if stufe_b else 0),
                   "uebersprungen": 0 if stufe_b else len(auftraege_b),
@@ -280,6 +300,14 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
                   "auftraege_b": len(im_lauf_b),
                   "aufrufe": sum(-(-len(g["entitaeten"]) // PAKET) for g in gruppen)},
     }
+
+
+def laeufe_noetig(states, b, grenze, grenze_b):
+    """Punkt 200: Läufe, bis alles Fällige gelöscht ist – je Obergrenze aufgerundet, die längere zählt. Schätzung:
+    neue Zeilen kommen jeden Tag dazu, und Entitäten, die nicht ganz in den Rest der Obergrenze passen, warten."""
+    def n(z, g):
+        return -(-z // g) if z > 0 and g else 0
+    return max(n(states, grenze), n(b, grenze_b if grenze_b is not None else grenze))
 
 
 # Stufe B: Art im Plan → Tabelle der Mini-Integration
@@ -316,8 +344,8 @@ def plan_b(pl, pkd, nur_regel=None, exakt=False):
             if not alle and lz["tage"] > MAX_KEEP_DAYS_B:
                 continue
             out.append({"art": "lts", "name": e["entity_id"], "regel": lz["regel"], "status": e["status"],
-                        "keep_days": None if alle else lz["tage"], "alle": alle, "mit_meta": alle and e["status"] != "aktiv",
-                        "zeilen": lo_["lts"], "hinweis": ("Langzeit „keine“ – samt statistics_meta" if alle and e["status"] != "aktiv"
+                        "keep_days": None if alle else lz["tage"], "alle": alle, "mit_meta": alle and rg.ist_verwaist(e["status"]),   # Punkt 186: Deaktivierte behalten ihren Statistik-Eintrag
+                        "zeilen": lo_["lts"], "hinweis": ("Langzeit „keine“ – samt statistics_meta" if alle and rg.ist_verwaist(e["status"])
                                                           else "Langzeit „keine“ – alle Stundenwerte" if alle else "")})
     for ev in pl.get("events") or []:
         if ev["wert"] == "global" or ev["tage"] >= pkd or not ev["loeschbar"]:
@@ -575,6 +603,9 @@ class Lauf:
                      # Punkt 83: auf welchem Analyse-Stand der Plan beruht
                      "analyse_zeit": p.get("analyse_zeit"), "analyse_vorher": bool(p.get("analyse_vorher")),
                      "kennung": p["kennung"], "geplant_zeilen": p["summe"]["zeilen"], "geloescht": 0,
+                     # Punkt 200 (0.5.5b12): alles Fällige beim Start – Rest danach = fällig − gelöscht (je Obergrenze)
+                     "faellig_states": p["summe"].get("zeilen_states_gesamt"),
+                     "faellig_b": sum((p["summe"].get("zeilen_b") or {}).values()) if p.get("stufe_b") else 0,
                      # Punkt 116 (0.4.10): Wartezeit auf HA-Backups (Sekunden, Anzahl Pausen), je Lauf und je Paket
                      "backup_warte_s": 0, "backup_pausen": 0,
                      # Punkt 121 (0.4.12): Grenze lokale Mitternacht (exakt) oder „jetzt minus keep_days“
@@ -1003,7 +1034,7 @@ def verwaist_ungedeckt(pl, regel_daten):
     globs = [r for r in regel_daten["regeln"] if r["typ"] == "glob" and r.get("aktiv", True)]
     out = {}
     for e in pl["entitaeten"]:
-        if e["status"] == "aktiv" or ((e.get("werte") or {}).get("kurzzeit") or {}).get("regel"):
+        if not rg.ist_verwaist(e["status"]) or ((e.get("werte") or {}).get("kurzzeit") or {}).get("regel"):
             continue
         for r in globs:
             m = next((m for m in r["muster"] if fnmatch.fnmatchcase(e["entity_id"], m)), None)

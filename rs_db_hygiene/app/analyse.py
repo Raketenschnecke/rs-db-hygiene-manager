@@ -20,8 +20,10 @@ _LOG = logging.getLogger("analyse")
 TAG = 86400
 # Version des Cache-Aufbaus; ältere Caches werden beim Start neu analysiert (2 = mit Herkunft, ab 0.1.4; 3 = Events je Typ, ab 0.3.0;
 # 4 = exakte erste/letzte Zeitstempel von 5-Min-Statistik und Langzeit, ab 0.4.11, Punkte 118/120;
-# 5 = Tage als lokale Kalendertage statt UTC-Tage, ab 0.4.12, Punkt 121)
-CACHE_VERSION = 5
+# 5 = Tage als lokale Kalendertage statt UTC-Tage, ab 0.4.12, Punkt 121;
+# 6 = Status deaktiviert, Klasse/Einheit deaktivierter Entitäten aus der Registry, ab 0.5.5b5, Punkte 185/186;
+# 7 = Integration (platform der Registry) je Entität für den Regeltyp herkunft, ab 0.5.5b9, Punkt 196)
+CACHE_VERSION = 7
 
 CACHE_SCHEMA = """
 CREATE TABLE info (schluessel TEXT PRIMARY KEY, wert TEXT);
@@ -32,7 +34,7 @@ CREATE TABLE entitaet (
   state_class TEXT, device_class TEXT, unit TEXT,
   lts_id INTEGER, lts_rows INTEGER, lts_first_ts REAL, lts_last_ts REAL, kurz_rows INTEGER,
   herkunft_art TEXT, herkunft TEXT, herkunft_info TEXT, device_id TEXT,
-  kurz_first_ts REAL, kurz_last_ts REAL);
+  kurz_first_ts REAL, kurz_last_ts REAL, plattform TEXT);
 CREATE TABLE st_tage (metadata_id INTEGER, tag INTEGER, n INTEGER, PRIMARY KEY (metadata_id, tag));
 CREATE TABLE lts_tage (lts_id INTEGER, tag INTEGER, n INTEGER, PRIMARY KEY (lts_id, tag));
 CREATE TABLE kurz_tage (lts_id INTEGER, tag INTEGER, n INTEGER, PRIMARY KEY (lts_id, tag));
@@ -99,6 +101,58 @@ def lies_registry(pfad):
     aktiv = {e["entity_id"] for e in daten.get("entities", [])}
     geloescht = {e["entity_id"] for e in daten.get("deleted_entities", [])}
     return aktiv, geloescht
+
+
+def lies_registry_details(pfad):
+    """Punkte 185/186: je Entität in der Registry {deaktiviert, device_class, state_class, unit}.
+
+    Zustandslose Entitäten (deaktivierte) haben keine Attribute; die Klasse kommt dann aus der Registry – die eigene
+    Einstellung device_class vor original_device_class, die state_class aus capabilities."""
+    with open(pfad, encoding="utf-8") as f:
+        daten = json.load(f)["data"]
+    out = {e["entity_id"]: {"deaktiviert": bool(e.get("disabled_by")),
+                            "device_class": e.get("device_class") or e.get("original_device_class") or "",
+                            "state_class": (e.get("capabilities") or {}).get("state_class") or "",
+                            "unit": e.get("unit_of_measurement") or "", "plattform": e.get("platform") or ""}
+           for e in daten.get("entities", [])}
+    # Punkt 196: Integration auch für gelöschte Einträge – nur dieses Feld
+    for e in daten.get("deleted_entities", []):
+        out.setdefault(e["entity_id"], {"plattform": e.get("platform") or ""})
+    return out
+
+
+# Punkt 188: Einheiten der device_class data_size → Bytes
+_BYTES_JE = {"B": 1, "kB": 1e3, "KB": 1e3, "MB": 1e6, "GB": 1e9, "TB": 1e12, "PB": 1e15,
+             "KiB": 2**10, "MiB": 2**20, "GiB": 2**30, "TiB": 2**40, "PiB": 2**50,
+             "bit": 1 / 8, "kbit": 1e3 / 8, "Mbit": 1e6 / 8, "Gbit": 1e9 / 8}
+
+
+def historie_groesse(db_pfad, registry_pfad, tage=730):
+    """Punkt 188: bisherige DB-Größe aus der Langzeitstatistik des eigenen Sensors „DB-Größe“ (unique_id
+    rs_db_hygiene_db_groesse), ein Wert je Tag (Mittel der Stundenwerte) über höchstens `tage` Tage.
+
+    Liefert {entity_id, punkte: [[Tagesbeginn UTC in s, Bytes], …]} oder {entity_id, punkte: [], grund}."""
+    with open(registry_pfad, encoding="utf-8") as f:
+        ents = json.load(f)["data"].get("entities", [])
+    eid = next((e["entity_id"] for e in ents if e.get("platform") == "rs_db_hygiene"
+                and e.get("unique_id") == "rs_db_hygiene_db_groesse"), None)
+    if not eid:
+        return {"entity_id": None, "punkte": [], "grund": "Sensor „DB-Größe“ der Integration nicht gefunden"}
+    con = oeffne_ha_db(db_pfad)
+    try:
+        meta = con.execute("SELECT id, unit_of_measurement FROM statistics_meta WHERE statistic_id = ?", (eid,)).fetchone()
+        if not meta:
+            return {"entity_id": eid, "punkte": [], "grund": "keine Langzeitstatistik"}
+        faktor = _BYTES_JE.get(meta[1] or "GB")
+        if not faktor:
+            return {"entity_id": eid, "punkte": [], "grund": f"unbekannte Einheit {meta[1]}"}
+        ab = time.time() - tage * 86400
+        zeilen = con.execute("SELECT CAST(start_ts / 86400 AS INTEGER) AS tag, AVG(mean) FROM statistics "
+                             "WHERE metadata_id = ? AND start_ts >= ? AND mean IS NOT NULL GROUP BY tag ORDER BY tag",
+                             (meta[0], ab)).fetchall()
+    finally:
+        con.close()
+    return {"entity_id": eid, "punkte": [[t * 86400, round(m * faktor)] for t, m in zeilen if m and m > 0]}
 
 
 def hole_zustaende(url="http://supervisor/core/api/states", token=None):
@@ -183,13 +237,15 @@ def _schritt_fertig(name, nr, dauer):
         FORTSCHRITT.update(nr=nr + 1, schritt=ANALYSE_SCHRITTE[nr])
 
 
-def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None):
+def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None):
     """Vollanalyse von states, statistics und statistics_short_term (ohne Attribute).
 
     herkunft: Ergebnis von herkunft.ermittle() – {entity_id: {art, text, info, device_id}}.
+    reg_details: Ergebnis von lies_registry_details() (ab 0.5.5b5): Status deaktiviert und Klasse ohne Zustand.
     Dauer bei 22 GB / 73 Mio. States ca. 1–2 min.
     """
     herkunft = herkunft or {}
+    reg_details = reg_details or {}
     start = time.time()
     jetzt = time.time()
     heute = lokaler_tag(jetzt)        # Punkt 121: lokaler Kalendertag (bis 0.4.11 UTC-Tag)
@@ -211,10 +267,14 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
     schritte["states_tage"] = time.time() - t
     _schritt_fertig("states_tage", 2, schritte["states_tage"])
 
+    # Punkt 192 (0.5.5b9): Zuwachs je Tag = Mittel der 7 vollen Kalendertage vor heute (fest ÷ 7, auch bei jüngeren
+    # Entitäten), aus den Tageszeilen statt einer eigenen Abfrage der letzten 24 h. Feldname rows_24h bleibt.
     t = time.time()
-    st_24h = dict(ha.execute(
-        "SELECT metadata_id, COUNT(*) FROM states WHERE last_updated_ts >= ? GROUP BY 1",
-        (jetzt - TAG,)))
+    summe7 = {}
+    for mid, tag, n, _mn, _mx in st_tage:
+        if heute - 7 <= tag < heute:
+            summe7[mid] = summe7.get(mid, 0) + n
+    st_24h = {mid: round(n / 7) for mid, n in summe7.items()}
     schritte["states_24h"] = time.time() - t
     _schritt_fertig("states_24h", 3, schritte["states_24h"])
 
@@ -274,16 +334,18 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
         n, mn, mx = info.get(mid, (0, None, None))
         in_reg = eid in registry
         hat_state = eid in zust
+        rd = reg_details.get(eid) or {}
         if in_reg or hat_state:
-            status = "aktiv"
+            status = "deaktiviert" if rd.get("deaktiviert") and not hat_state else "aktiv"     # Punkt 186
         elif eid in geloescht:
             status = "verwaist_geloescht"
         else:
             status = "verwaist"
-        a = zust.get(eid, {})
+        a = zust.get(eid) or {"state_class": rd.get("state_class"), "device_class": rd.get("device_class"),   # Punkt 185:
+                              "unit_of_measurement": rd.get("unit")}                                         # ohne Zustand aus der Registry
         lid = lts_id_von.get(eid)
         h = herkunft.get(eid) or ({"art": "verwaist", "text": "verwaist, ohne Spur in der Registry", "info": ""}
-                                  if status != "aktiv" else {"art": "", "text": "", "info": ""})
+                                  if status.startswith("verwaist") else {"art": "", "text": "", "info": ""})
         zeilen.append((
             eid, mid, eid.split(".", 1)[0], n, mn, mx, st_24h.get(mid, 0),
             int(in_reg), int(hat_state), status,
@@ -292,8 +354,8 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
             lts_first.get(lid), lts_last.get(lid),
             kurz_sum.get(lid, 0) if lid else 0,
             h.get("art", ""), h.get("text", ""), h.get("info", ""), h.get("device_id"),
-            kurz_first.get(lid), kurz_last.get(lid)))
-    c.executemany("INSERT INTO entitaet VALUES (" + ",".join("?" * 24) + ")", zeilen)
+            kurz_first.get(lid), kurz_last.get(lid), rd.get("plattform") or ""))
+    c.executemany("INSERT INTO entitaet VALUES (" + ",".join("?" * 25) + ")", zeilen)
     c.executemany("INSERT INTO st_tage VALUES (?,?,?)", ((m, t_, n) for m, t_, n, _a, _b in st_tage))
     c.executemany("INSERT INTO lts_tage VALUES (?,?,?)", ((m, t_, n) for m, t_, n, _a, _b in lts_tage))
     c.executemany("INSERT INTO kurz_tage VALUES (?,?,?)", ((m, t_, n) for m, t_, n, _a, _b in kurz_tage))
