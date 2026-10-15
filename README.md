@@ -13,6 +13,25 @@ Requirements: Home Assistant OS or Supervised 2026.10 or later, recorder with SQ
 
 Note: the app's user interface is currently in German.
 
+## Screenshots (version 0.5.5)
+
+Click an image to open it in full size.
+
+<table>
+  <tr>
+    <td width="50%" align="center"><a href="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/01-entities.png"><img src="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/01-entities.png" alt="Entities tab with tiles, filters and column groups"></a><br><sub>Entities tab with tiles, filters and column groups</sub></td>
+    <td width="50%" align="center"><a href="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/02-recommendations.png"><img src="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/02-recommendations.png" alt="Recommendations with suggested rules"></a><br><sub>Recommendations with suggested rules</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><a href="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/03-top-writers.png"><img src="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/03-top-writers.png" alt="Who writes the most? Top N and savings"></a><br><sub>Who writes the most? Top N and savings</sub></td>
+    <td width="50%" align="center"><a href="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/04-rules.png"><img src="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/04-rules.png" alt="Rules with rank, retention times and hits"></a><br><sub>Rules with rank, retention times and hits</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><a href="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/05-forecast-per-rule.png"><img src="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/05-forecast-per-rule.png" alt="Forecast per rule"></a><br><sub>Forecast per rule</sub></td>
+    <td width="50%" align="center"><a href="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/06-growth-forecast.png"><img src="https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/screenshots/06-growth-forecast.png" alt="Growth forecast of the database (5 years)"></a><br><sub>Growth forecast of the database (5 years)</sub></td>
+  </tr>
+</table>
+
 ## Installation
 
 1. **App:** Settings → Apps → App Store → ⋮ → Repositories → add `https://github.com/Raketenschnecke/rs-db-hygiene-manager`. Then install and start the app “RS DB Hygiene Manager”.
