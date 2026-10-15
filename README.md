@@ -1,65 +1,67 @@
 # RS DB Hygiene Manager
 
-Vorhaltezeiten pro Entität für die Recorder-Datenbank von Home Assistant.
+Retention times per entity for the Home Assistant recorder database.
 
-![Übersicht der App: Kacheln zu Istzustand, Löschmenge sofort und Prognose, darunter die Reiter](https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/uebersicht.png)
+![Overview of the app: tiles for current state, immediate deletion volume and forecast, with the tabs below](https://raw.githubusercontent.com/Raketenschnecke/rs-db-hygiene-manager/main/docs/uebersicht.png)
 
-Das Repository besteht aus zwei Teilen mit gemeinsamer Versionsnummer:
+The repository consists of two parts that share one version number:
 
-- **App** `rs_db_hygiene/`: Web-Oberfläche (Ingress) mit Analyse, Regeln, Probelauf und Löschlauf.
-- **Integration** `custom_components/rs_db_hygiene/`: Gerät „RS DB Hygiene“ mit Sensoren, Knöpfen und Diensten. Sie führt die Löschung von Statistik und Events über die Recorder-Warteschlange aus.
+- **App** `rs_db_hygiene/`: web interface (Ingress) with analysis, rules, dry run and deletion run.
+- **Integration** `custom_components/rs_db_hygiene/`: device “RS DB Hygiene” with sensors, buttons and services. It deletes statistics and events through the recorder queue.
 
-Voraussetzung: Home Assistant OS oder Supervised ab 2026.10, Recorder mit SQLite.
+Requirements: Home Assistant OS or Supervised 2026.10 or later, recorder with SQLite.
+
+Note: the app's user interface is currently in German.
 
 ## Installation
 
-1. **App:** Einstellungen → Apps → App-Store → ⋮ → Repositories → `https://github.com/Raketenschnecke/rs-db-hygiene-manager` eintragen. Danach die App „RS DB Hygiene Manager“ installieren und starten.
+1. **App:** Settings → Apps → App Store → ⋮ → Repositories → add `https://github.com/Raketenschnecke/rs-db-hygiene-manager`. Then install and start the app “RS DB Hygiene Manager”.
 
-Alternativ hier:
+   Or use this button:
 
-   [![App-Repository in Home Assistant hinzufügen](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FRaketenschnecke%2Frs-db-hygiene-manager)
+   [![Add the app repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FRaketenschnecke%2Frs-db-hygiene-manager)
 
-3. **Integration:** HACS → ⋮ → Benutzerdefinierte Repositories → dieselbe URL, Typ „Integration“. „RS DB Hygiene“ herunterladen und Home Assistant neu starten. Sobald die App läuft, meldet sie sich per Discovery; die Integration unter Einstellungen → Geräte & Dienste bestätigen.
+2. **Integration:** HACS → ⋮ → Custom repositories → the same URL, type “Integration”. Download “RS DB Hygiene” and restart Home Assistant. As soon as the app is running, it announces itself via discovery; confirm the integration under Settings → Devices & services.
 
-Alternativ hier:
+   Or use this button:
 
-   [![Repository in HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Raketenschnecke&repository=rs-db-hygiene-manager&category=integration)
+   [![Open the repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Raketenschnecke&repository=rs-db-hygiene-manager&category=integration)
 
 
-## Schnelleinstieg
+## Quick start
 
-**Manueller Modus:**
-Home-Assistant-Datenbank vom Hygiene Manager analysieren lassen → Analyseergebnisse in den Reitern „Entitäten“ und „Events“ sichten und Löschregeln ableiten (oder Vorschläge aus dem Reiter „Empfehlungen“ übernehmen) → im Reiter „Prognosen je Regel“ die prognostizierten Löschergebnisse beurteilen → im Reiter „Löschen“ den manuellen Löschvorgang starten → fertig.
+**Manual mode:**
+Let the Hygiene Manager analyse the Home Assistant database → review the results in the tabs “Entitäten” (entities) and “Events” and derive deletion rules (or adopt suggestions from the tab “Empfehlungen”, recommendations) → assess the forecast deletion results in the tab “Prognosen je Regel” (forecasts per rule) → start the manual deletion run in the tab “Löschen” (delete) → done.
 
-**Automatik:**
-In HA eine Automation anlegen, die über die Integration RS DB Hygiene einen Löschlauf startet (Aktion `rs_db_hygiene.loeschlauf_starten`) → fertig.
+**Automatic mode:**
+Create an automation in HA that starts a deletion run through the RS DB Hygiene integration (action `rs_db_hygiene.loeschlauf_starten`) → done.
 
-Gelöscht wird nur, wenn in der App-Konfiguration „Löschen freigegeben“ eingeschaltet ist; für die Steuerung via Automation muss zusätzlich „Automatik freigegeben“ aktiviert sein.
+Data is only deleted if “Löschen freigegeben” (deletion enabled, the main switch) is switched on in the app configuration; for control by an automation, “Automatik freigegeben” (automation enabled) must be switched on as well.
 
-## Empfohlene Einrichtung
+## Recommended setup
 
-Die Idee: Home Assistant bewahrt grundsätzlich alles lange auf, der Hygiene Manager kürzt gezielt, was du nicht so lange brauchst. Das geht in drei Schritten.
+The idea: Home Assistant keeps everything for a long time by default, and the Hygiene Manager shortens specifically what you don't need for that long. This takes three steps.
 
-### 1. Recorder in der `configuration.yaml`
+### 1. Recorder in `configuration.yaml`
 
 ```yaml
 recorder:
-  purge_keep_days: 3650   # Beispiel und Empfehlung: 10 Jahre als Obergrenze für alles ohne eigene Regel (bis 7300 möglich)
-  auto_purge: false       # HAs nächtliches Löschen aus – gelöscht wird nur noch nach deinen Regeln
-  auto_repack: false      # HAs monatliches Verdichten aus – übernimmt die Automation „Repack“
+  purge_keep_days: 3650   # example and recommendation: 10 years as the upper limit for everything without its own rule (up to 7300 possible)
+  auto_purge: false       # HA's nightly purge off – data is only deleted according to your rules
+  auto_repack: false      # HA's monthly repack off – handled by the "Repack" automation
 ```
 
-- **`purge_keep_days`** ist die längste Vorhaltezeit; 3650 Tage (10 Jahre) sind ein Beispiel und unsere Empfehlung als Startwert. Alles ohne eigene Regel („global“) bleibt so lange in der DB. Regeln können nur kürzen; eine Regel mit längerer Zeit wird auf diesen Wert gedeckelt.
-- **`auto_purge: false`** schaltet HAs eigenes Löschen um 04:12 ab. Die Datenbank verwaltet dann allein der Hygiene Manager mit seinem Löschlauf.
-- **`auto_repack: false`** schaltet HAs eigenes Verdichten am 2. Sonntag im Monat ab (es läuft ohnehin nur zusammen mit `auto_purge`). Das Repack macht die Automation „Repack“ zum selben Termin.
-- Wichtig: `auto_repack` erst abschalten, wenn die Automation „Repack“ angelegt ist, sonst wird die Datei nach Löschläufen nie kleiner. Nach der Änderung Konfiguration prüfen und HA neu starten.
+- **`purge_keep_days`** is the longest retention time; 3650 days (10 years) is an example and our recommended starting value. Everything without its own rule (“global”) stays in the database this long. Rules can only shorten it; a rule with a longer time is capped at this value.
+- **`auto_purge: false`** switches off HA's own purge at 04:12. The database is then managed solely by the Hygiene Manager and its deletion run.
+- **`auto_repack: false`** switches off HA's own repack on the 2nd Sunday of the month (it only runs together with `auto_purge` anyway). The repack is done by the “Repack” automation on the same schedule.
+- Important: only switch off `auto_repack` once the “Repack” automation is in place, otherwise the file never shrinks after deletion runs. After the change, check the configuration and restart HA.
 
-### 2. Automation „Löschlauf“
+### 2. Automation “Deletion run”
 
-Startet jede Nacht einen Löschlauf im RS DB Hygiene Manager (und automatisiert somit lediglich das manuelle "auf den Löschknopf drücken").
+Starts a deletion run in the RS DB Hygiene Manager every night (and thus merely automates “pressing the delete button” by hand).
 
 ```yaml
-alias: RS DB Hygiene – Löschlauf
+alias: RS DB Hygiene – Deletion run
 mode: single
 triggers:
   - trigger: time
@@ -79,24 +81,24 @@ actions:
     data:
       title: RS DB Hygiene
       message: >-
-        {% if wait.trigger %}Löschlauf {{ wait.trigger.event.data.status }}:
-        {{ wait.trigger.event.data.geloescht }} Zeilen in {{ wait.trigger.event.data.dauer_s }} s.
-        {% else %}Löschlauf nach 3 h nicht beendet.{% endif %}
+        {% if wait.trigger %}Deletion run {{ wait.trigger.event.data.status }}:
+        {{ wait.trigger.event.data.geloescht }} rows in {{ wait.trigger.event.data.dauer_s }} s.
+        {% else %}Deletion run not finished after 3 h.{% endif %}
 ```
 
-Die Benachrichtigung am Ende ist optional. Das Event `rs_db_hygiene_lauf_beendet` liefert außerdem `attributzeilen`, `umfang` und `fehler`.
+The notification at the end is optional. The event `rs_db_hygiene_lauf_beendet` also provides `attributzeilen` (attribute rows), `umfang` (scope) and `fehler` (error). The state `bereit` of `sensor.rs_db_hygiene_status` is shown as “ready” in the UI; in automations the internal value `bereit` is used.
 
-### 3. Automation „Repack“
+### 3. Automation “Repack”
 
-**Warum ein Repack?** SQLite gibt Platz, der durch Löschen frei wird, nicht an das Dateisystem zurück. Die gelöschten Zeilen hinterlassen freie Seiten in der Datei; neue Daten füllen sie nach und nach wieder auf. Die Datei `home-assistant_v2.db` bleibt deshalb nach einem Löschlauf genauso groß wie vorher, auch wenn Millionen Zeilen weg sind. Erst ein Repack (SQLite `VACUUM`) schreibt die Datenbank neu und lückenlos, danach ist die Datei kleiner.
+**Why a repack?** SQLite does not return space freed by deletion to the file system. Deleted rows leave free pages in the file, which new data gradually fills again. The file `home-assistant_v2.db` therefore stays as large after a deletion run as before, even if millions of rows are gone. Only a repack (SQLite `VACUUM`) rewrites the database without gaps; afterwards the file is smaller.
 
-Sinnvoll oder nötig ist das vor allem:
+This is useful or necessary above all:
 
-- **nach großen Löschläufen**, z. B. beim ersten Lauf mit neuen Regeln, der Jahre an Daten entfernt. Ohne Repack bleibt der Platz auf dem Datenträger belegt;
-- **für Backups:** HA sichert die Datenbankdatei samt freier Seiten. Eine kleinere Datei macht jedes Backup kleiner und schneller;
-- **gegen Zerstückelung:** Nach vielen Lösch- und Schreibvorgängen liegen die Daten verstreut in der Datei. Ein Repack ordnet sie neu, Abfragen für Verlauf und Statistik werden dadurch oft wieder schneller.
+- **after large deletion runs**, e.g. the first run with new rules that removes years of data. Without a repack, the space on the storage stays occupied;
+- **for backups:** HA backs up the database file including its free pages. A smaller file makes every backup smaller and faster;
+- **against fragmentation:** after many delete and write operations the data is scattered across the file. A repack reorders it, and queries for history and statistics often become faster again.
 
-Bleibt die Datenbank dagegen ungefähr gleich groß, weil täglich etwa so viel gelöscht wie neu geschrieben wird, bringt ein Repack wenig. Einmal im Monat genügt dann völlig.
+If, on the other hand, the database stays roughly the same size because about as much is deleted each day as is newly written, a repack achieves little. Once a month is then entirely sufficient.
 
 ```yaml
 alias: RS DB Hygiene – Repack
@@ -105,11 +107,11 @@ triggers:
   - trigger: time
     at: "05:00:00"
 conditions:
-  # einmal im Monat: 2. Sonntag (wie HAs eigenes auto_repack)
+  # once a month: 2nd Sunday (like HA's own auto_repack)
   - condition: template
     value_template: "{{ now().weekday() == 6 and 8 <= now().day <= 14 }}"
 actions:
-  # läuft noch ein Löschlauf, erst sein Ende abwarten
+  # if a deletion run is still active, wait for it to finish first
   - wait_template: "{{ not is_state('sensor.rs_db_hygiene_status', 'loeschlauf') }}"
     timeout: "03:00:00"
   - action: recorder.purge
@@ -117,21 +119,21 @@ actions:
       repack: true
 ```
 
-- HA hat keinen eigenen Dienst nur für das Repack, es läuft über `recorder.purge` mit `repack: true`. Ohne `keep_days` löscht der Dienst dabei nur, was älter als `purge_keep_days` ist, also nichts, was deine Einstellung nicht ohnehin erlaubt.
-- Ein Repack sperrt den Recorder für einige Minuten, bei großen Datenbanken auch länger. Neue Werte puffert der Recorder in dieser Zeit und schreibt sie danach.
-- Es braucht vorübergehend freien Platz in Größe der Datenbank. Nicht gleichzeitig mit einem Backup laufen lassen.
+- HA has no service just for the repack; it runs through `recorder.purge` with `repack: true`. Without `keep_days`, the service only deletes what is older than `purge_keep_days`, i.e. nothing your setting does not already allow.
+- A repack locks the recorder for a few minutes, with large databases also longer. The recorder buffers new values during this time and writes them afterwards.
+- It temporarily needs free space the size of the database. Do not run it at the same time as a backup.
 
 ## Updates
 
-- **App:** erscheint als Update im App-Store bzw. unter Einstellungen → Updates.
-- **Integration:** erscheint in HACS bzw. unter Einstellungen → Updates; danach Home Assistant neu starten.
-- Änderungen stehen in [`rs_db_hygiene/CHANGELOG.md`](rs_db_hygiene/CHANGELOG.md).
+- **App:** appears as an update in the App Store or under Settings → Updates.
+- **Integration:** appears in HACS or under Settings → Updates; restart Home Assistant afterwards.
+- Changes are listed in [`rs_db_hygiene/CHANGELOG.md`](rs_db_hygiene/CHANGELOG.md) (German).
 
-## Hinweise
+## Notes
 
-- Löschläufe sind nur mit aktiviertem Hauptschalter in der App-Konfiguration möglich. Ohne ihn löscht die App nichts.
-- Der Wert `purge_keep_days` in der `configuration.yaml` bestimmt die max. Vorhaltedauer der State- und 5Min Werte in der DB. Wenn du `auto_purge` abschaltest, übernimmt der Manager bzw. eine Automation das Management der HA SQLite Daten.
+- Deletion runs are only possible with the main switch enabled in the app configuration. Without it, the app deletes nothing.
+- The value `purge_keep_days` in `configuration.yaml` determines the maximum retention time of states and 5-minute values in the database. If you switch off `auto_purge`, the manager or an automation takes over managing HA's SQLite data.
 
-## Lizenz
+## License
 
-MIT, siehe [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
