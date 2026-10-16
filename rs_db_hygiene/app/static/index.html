@@ -298,6 +298,18 @@ td.geraetklick:hover { text-decoration: underline; }
 /* Punkt 217 (0.5.5b12): Status-Chips im Löschplan – grün = vollständig, rot = übersprungen */
 .chip.ok { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); color: var(--ok); }
 .chip.bad { background: color-mix(in srgb, var(--bad) 16%, var(--panel)); color: var(--bad); }
+/* Punkt 232: Regelwerk-Check – Chips in der Spalte Empfehlung und im Kasten über der Tabelle */
+.chip.check { cursor: pointer; margin: 1px 4px 1px 0; }
+.chip.check:hover { outline: 1px solid currentColor; }
+#regelCheck { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 8px; }
+#regelCheck .chip { margin-left: 0; }
+.rc-diff { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; margin: 6px 0; }
+.rc-diff table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rc-diff td, .rc-diff th { padding: 2px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.rc-wahl label { display: block; padding: 1px 0; white-space: normal; }
+.rc-wahl, .rc-diff, #rcWirkung { min-width: 0; }
+.rc-folgen ul { margin: 2px 0 6px; padding-left: 18px; list-style: none; }
+.rc-folgen li.bad { color: var(--bad); } .rc-folgen li.ok { color: var(--ok); }   /* im Raster des Dialogs nicht breiter als der Dialog */
 /* Punkt 115: Labels – an der Entität gefüllt, nur am Gerät mit gestrichelter Linie; Klick filtert */
 .chip[data-label] { cursor: pointer; margin: 0 4px 0 0; background: var(--accent-weak); color: var(--accent); border: 1px solid transparent; }
 .chip.label-geraet { background: transparent; border: 1px dashed var(--accent); }
@@ -857,6 +869,7 @@ actions:
       ausgefüllt und <b>passiv</b> – erst nach dem Speichern und Einschalten wirkt die Regel.</p>
   </section>
   <section id="tab-regeln" hidden>
+    <div class="hinweisbox" id="regelCheck" hidden></div>   <!-- Punkt 232: Regelwerk-Check -->
     <div class="trefferzeile" id="trefferRegeln"></div>
     <div class="tabelle"><table id="tRegeln" class="baustein"></table></div>
     <p class="sub" id="globalText" hidden></p>
@@ -2304,7 +2317,8 @@ const T = {};
 T.regeln = new LokaleTabelle({
   id: "#tRegeln", treffer: "#trefferRegeln", schluessel: "dbh_breiten_regeln", einheit: "Regeln", sortStd: { k: "rang" },
   // Punkt 145 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["treffer"]]],
+  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["treffer"]],
+    ["Regelwerk-Check", "loesch", ["empfehlung"]]],   // Punkt 232: Farbe wie der Reiter Empfehlungen
   fix: ["wahl", "aktiv", "rang", "id"],
   leer: "keine Regeln",
   spalten: [
@@ -2353,6 +2367,13 @@ T.regeln = new LokaleTabelle({
     { k: "treffer", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => trefferVon(r),
       zelle: r => { const t = trefferVon(r); return t == null ? `<span class="sub" title="passiv – mit „passive Regeln mitrechnen“ sichtbar">–</span>` : zahl(t); },
       tip: () => "Entitäten, für die diese Regel mindestens einen Wert bestimmt", csv: r => trefferVon(r) ?? "", summe: anzahlSumme(r => trefferVon(r)) },
+    // Punkt 232: Befunde des Regelwerk-Checks als Chips je Regel – rot Konflikt, gelb Verdichtung, grau Hinweis
+    { k: "empfehlung", titel: "Empfehlung", typ: "auswahl", fest: 1, breite: 230, wert: r => checkWert(r),
+      hilfe: "Regelwerk-Check: Befunde zum bestehenden Regelwerk – rot Fehler oder Konflikt, gelb Verdichtung, grau Hinweis. Klick auf einen Chip: Begründung, Wirkung und Übernehmen",
+      zelle: r => checkChips(r), tip: () => "", csv: r => checkVon(r).map(b => b.kurz).join(", "),
+      optionen: () => [["__mit", "mit Befund"], ["rot", "Fehler/Konflikt"], ["gelb", "Verdichtung"], ["grau", "Hinweis"], ["__ohne", "ohne Befund"]],
+      passt: (r, w) => { const l = checkVon(r); return w === "__mit" ? l.length > 0 : w === "__ohne" ? !l.length : l.some(b => b.stufe === w); },
+      summe: (g, a) => [zahl(g.filter(r => checkVon(r).length).length), zahl(a.filter(r => checkVon(r).length).length), "Regeln mit Befund – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "notiz", titel: "Notiz", typ: "text", breite: 200, wert: r => r.notiz, zelle: r => esc(r.notiz), csv: r => r.notiz, tip: r => notizLang(r.notiz) },
   ],
   zeileAttr: r => `class="klick" data-i="${regelIndex(r)}"`,
@@ -2908,6 +2929,8 @@ $("#tRegeln").addEventListener("change", ev => {
 });
 $("#tRegeln").addEventListener("click", async ev => {
   if (ev.target.closest("thead") || ev.target.closest("[data-wahl]")) return;
+  const bf = ev.target.closest("[data-befund]");   // Punkt 232: Chip des Regelwerk-Checks statt Regelmaske
+  if (bf) { ev.stopPropagation(); return zeigeBefund(bf.dataset.befund); }
   const sch = ev.target.closest("[data-umschalten]");
   if (sch) {
     ev.stopPropagation();
@@ -3154,6 +3177,7 @@ document.addEventListener("change", ev => {
 function dialog(titel, inhalt, knoepfe) {
   $("#dlg").classList.remove("breit", "vl-dlg");
   $("#dlgTitel").textContent = titel; $("#dlgInhalt").innerHTML = inhalt; $("#dlgFuss").innerHTML = "";
+  $("#dlgInhalt").onchange = $("#dlgInhalt").oninput = null;   // Punkt 232: Handler eines vorigen Dialogs entfernen
   knoepfe.forEach(([t, fn, primaer]) => {
     const b = document.createElement("button"); b.textContent = t; if (primaer) b.className = "primaer";
     b.onclick = fn; $("#dlgFuss").append(b);
@@ -3203,6 +3227,7 @@ async function ladeRegeln() {
     `Standard ohne Regel: ${WNAME.kurzzeit} ${wertAnzeige(st.kurzzeit)}, ${WNAME.langzeit} ${wertAnzeige(st.langzeit)}.`;
   T.regeln.daten(S.regeln.regeln);
   zeigeGlobal();
+  ladeRegelCheck();
 }
 // Punkt 79: Wie viel ohne eigene Kurzzeit bleibt – „global“ heißt purge_keep_days, bei 7300 also 20 Jahre
 function zeigeGlobal() {
@@ -3219,7 +3244,120 @@ async function speichereRegeln(daten) {
   const r = await api("regeln", { method: "PUT", headers: { "content-type": "application/json" },
     body: JSON.stringify({ daten, version: S.version }) });
   S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
-  T.regeln.daten(S.regeln.regeln); ladeAlles(false);
+  T.regeln.daten(S.regeln.regeln); ladeAlles(false); ladeRegelCheck();
+}
+
+// ================================================ Punkt 232: Regelwerk-Check – Befunde zum bestehenden Regelwerk
+// Gegenstück zum Reiter Empfehlungen (neue Regeln): rot Fehler/Konflikt, gelb Verdichtung, grau Hinweis. Jede Variante
+// eines Vorschlags ist auf allen Entitäten durchgerechnet – „wirkungsneutral“ oder mit der Liste der Unterschiede.
+const CHECK_STUFE = { rot: ["bad", "Fehler oder Konflikt"], gelb: ["warn", "Verdichtung"], grau: ["", "Hinweis"] };
+S.check = null; S.checkAlle = false;
+const checkVon = r => (S.check?.je[r.id] || []).filter(b => S.checkAlle || !b.ignoriert);
+const checkWert = r => { const l = checkVon(r); return l.length ? String(Math.min(...l.map(b => ({ rot: 1, gelb: 2, grau: 3 })[b.stufe]))) : "9"; };
+function checkChips(r) {
+  return checkVon(r).map(b => {
+    const andere = b.regeln.filter(i => i !== r.id);
+    const tip = `${CHECK_STUFE[b.stufe][1]}: ${b.titel}\n${b.gruende.join("\n")}${b.ignoriert ? "\nausgeblendet (bewusst so)" : ""}\nKlick: Details${b.varianten.length ? " und Übernehmen" : ""}`;
+    // Vorrang: an der unwirksamen Regel „teilweise unwirksam · R15“, an der wirksamen „hat Vorrang vor R29“
+    const text = b.art === "vorrang" && r.id === b.regeln[1] ? `hat Vorrang vor ${b.regeln[0]}`
+      : b.kurz + (andere.length && b.art !== "zusammen" ? " · " + andere.join(", ") : "");
+    return `<span class="chip check ${CHECK_STUFE[b.stufe][0]}" data-befund="${esc(b.id)}" title="${esc(tip)}"${b.ignoriert ? ' style="opacity:.55"' : ""}>${esc(text)}</span>`;
+  }).join("") || `<span class="sub">–</span>`;
+}
+async function ladeRegelCheck() {
+  let d;
+  try { d = await api("regelcheck"); } catch (e) { S.check = null; $("#regelCheck").hidden = true; return; }
+  const je = {};
+  for (const b of d.befunde || []) for (const id of b.regeln) (je[id] ||= []).push(b);
+  S.check = { ...d, je, nachId: Object.fromEntries((d.befunde || []).map(b => [b.id, b])) };
+  zeigeRegelCheckKasten();
+  T.regeln.zeige();
+}
+function zeigeRegelCheckKasten() {
+  const el = $("#regelCheck"), d = S.check;
+  if (!d || d.fehler) { el.hidden = true; return; }
+  const z = d.zusammenfassung, filter = st => `<span class="chip check ${CHECK_STUFE[st][0]}" data-rc-filter="${st}" title="Filter: nur Regeln mit diesem Befund\nKlick: Tabelle filtern">${zahl(z[st])} ${CHECK_STUFE[st][1]}</span>`;
+  el.hidden = false;
+  el.innerHTML = `<b>Regelwerk-Check</b>` +
+    (z.rot + z.gelb + z.grau ? ["rot", "gelb", "grau"].filter(st => z[st]).map(filter).join("") : `<span class="chip ok">keine Befunde</span>`) +
+    `<span class="sub" title="Wenn alle angezeigten Vorschläge (jeweils die erste Variante) übernommen würden; Vorschläge zu schon geänderten Regeln zählen nicht doppelt">alle Vorschläge übernommen: Regeln ${zahl(z.vorher.regeln)} → ${zahl(z.nachher.regeln)} · Muster ${zahl(z.vorher.muster)} → ${zahl(z.nachher.muster)}</span>` +
+    (z.ausgeblendet ? `<label class="sub"><input type="checkbox" id="rcAlle" ${S.checkAlle ? "checked" : ""}> ${zahl(z.ausgeblendet)} ausgeblendete zeigen</label>` : "") +
+    `<span class="sub" style="margin-left:auto">${d.dauer_s >= 0.1 ? `gerechnet in ${String(d.dauer_s).replace(".", ",")} s` : ""}</span>`;
+}
+$("#regelCheck").addEventListener("click", ev => {
+  const f = ev.target.closest("[data-rc-filter]"); if (!f) return;
+  T.regeln.f.empfehlung = T.regeln.f.empfehlung === f.dataset.rcFilter ? "" : f.dataset.rcFilter;
+  T.regeln.baueKopf(); T.regeln.zeige();
+});
+$("#regelCheck").addEventListener("change", ev => {
+  if (ev.target.id !== "rcAlle") return;
+  S.checkAlle = ev.target.checked; T.regeln.zeige();
+});
+// Was die Variante am Regelwerk macht – jede gelöschte, neue und geänderte Regel ausdrücklich
+const RC_FOLGE = { geloescht: ["✕", "bad"], neu: ["✚", "ok"], geaendert: ["✎", ""] };
+const rcFolgenHtml = v => v.folgen?.length ? `<div class="rc-folgen"><b>Änderungen am Regelwerk:</b><ul>${v.folgen.map(f =>
+  `<li class="${RC_FOLGE[f.art][1]}">${RC_FOLGE[f.art][0]} <b class="mono">${esc(f.id)}</b> <span class="sub">„${esc(f.name)}“</span> ${esc(f.text)}</li>`).join("")}</ul></div>` : "";
+function rcDiffHtml(v) {
+  const d = v.diff, k = rcFolgenHtml(v) + `<div class="sub">Regeln ${zahl(v.vorher.regeln)} → ${zahl(v.nachher.regeln)} · Muster ${zahl(v.vorher.muster)} → ${zahl(v.nachher.muster)}</div>`;
+  if (v.neutral) return `<p class="chip ok" style="display:block;margin:6px 0">✓ wirkungsneutral – an keiner Entität und keinem Event-Typ ändert sich ein wirksamer Wert</p>${k}`;
+  const zeilen = d.beispiele.map(x => `<tr><td class="mono">${esc(x.entity_id)}</td><td>${esc(x.vorher)}</td><td>→</td><td><b>${esc(x.nachher)}</b></td><td class="n">${zahl(x.rows_24h)}/Tag</td></tr>`).join("");
+  const ev = d.ev_beispiele.map(x => `<tr><td class="mono">${esc(x.event_type)}</td><td>${esc(x.vorher)}</td><td>→</td><td><b>${esc(x.nachher)}</b></td><td class="n">${zahl(x.pro_tag)}/Tag</td></tr>`).join("");
+  return `<p class="chip warn" style="display:block;margin:6px 0">⚠ ändert die Wirkung: ${d.anzahl ? `${mzahl(d.anzahl, "Entität", "Entitäten")} (${zahl(d.zeilen_tag)} Zeilen/Tag)` : ""}${d.anzahl && d.events ? ", " : ""}${d.events ? mzahl(d.events, "Event-Typ", "Event-Typen") : ""}</p>${k}
+    <div class="rc-diff"><table><tr><th>Entität / Event-Typ</th><th>heute (Kurzzeit / Langzeit)</th><th></th><th>danach</th><th>Zuwachs</th></tr>${zeilen}${ev}</table></div>
+    ${d.anzahl > d.beispiele.length ? `<div class="sub">… die ${zahl(d.beispiele.length)} mit dem größten Zuwachs von ${zahl(d.anzahl)}</div>` : ""}`;
+}
+async function zeigeBefund(id) {
+  const b = S.check?.nachId[id]; if (!b) return;
+  const regeln = Object.fromEntries(S.regeln.regeln.map(r => [r.id, r]));
+  // Vorrang: keine Vorauswahl – der Nutzer entscheidet, welche Regel gelten soll
+  let nr = b.wahl_pflicht ? -1 : 0, v = b.wahl_pflicht ? null : b.varianten[0] || null;
+  // Vorrang: regeln = [unterlegen, gilt] – die Regel-IDs stehen in den Spaltenköpfen
+  const bsp = b.beispiele?.length ? `<div class="rc-diff"><table><tr><th>Entität</th><th>Wert</th><th>${esc(b.regeln[1])} (wirksam)</th><th>${esc(b.regeln[0])} (unwirksam)</th><th>Zuwachs</th></tr>${b.beispiele.map(x =>
+    `<tr><td class="mono">${esc(x.entity_id)}</td><td>${esc(x.wert)}</td><td><b>${esc(x.gilt)}</b></td><td>${esc(x.statt)}</td><td class="n">${zahl(x.rows_24h)}/Tag</td></tr>`).join("")}</table></div>` : "";
+  const wahl = b.varianten.length > 1 || b.wahl_pflicht ? `<div class="rc-wahl"><b>${b.wahl_pflicht ? "Wie auflösen? (bitte wählen)" : "Vorschlag:"}</b>${b.varianten.map((x, i) =>
+    `<label><input type="radio" name="rcVar" value="${i}" ${i === nr ? "checked" : ""}> ${esc(x.titel)}${x.erklaerung ? ` <span class="sub">– ${esc(x.erklaerung)}</span>` : ""}${x.neutral ? "" : ` <span class="sub">(${x.diff.anzahl ? mzahl(x.diff.anzahl, "Entität", "Entitäten") : ""}${x.diff.anzahl && x.diff.events ? ", " : ""}${x.diff.events ? mzahl(x.diff.events, "Event-Typ", "Event-Typen") : ""})</span>`}</label>`).join("")}</div>`
+    : v ? `<div><b>Vorschlag:</b> ${esc(v.titel)}${v.erklaerung ? ` <span class="sub">– ${esc(v.erklaerung)}</span>` : ""}</div>` : "";
+  const zus = b.art === "zusammen" ? `<div class="rc-wahl"><b>Regeln:</b>${b.regeln.map(i =>
+      `<label><input type="checkbox" class="rcRegel" value="${esc(i)}" checked> <span class="mono">${esc(i)}</span> ${esc(regeln[i]?.name || "")} <span class="sub">(${zahl(regeln[i]?.muster.length || 0)} Muster)</span></label>`).join("")}</div>
+    <label class="feld">Name der zusammengelegten Regel<input id="rcName" value="${esc(b.name_vorschlag || "")}"></label>` : "";
+  dialog(b.titel, `<p><span class="chip ${CHECK_STUFE[b.stufe][0]}" style="margin-left:0">${esc(CHECK_STUFE[b.stufe][1])}</span>
+      Regeln: ${b.regeln.map(i => `<span class="mono">${esc(i)}</span>${regeln[i] ? ` <span class="sub">${esc(regeln[i].name)}</span>` : ""}`).join(" · ")}</p>
+    <ul>${b.gruende.map(g => `<li>${esc(g)}</li>`).join("")}</ul>${bsp}${wahl}${zus}
+    <div id="rcWirkung">${v ? rcDiffHtml(v) : b.wahl_pflicht ? `<span class="sub">Nach der Wahl steht hier, was sich ändert.</span>` : ""}</div>
+    ${b.ignoriert ? `<p class="sub">Dieser Befund ist ausgeblendet („bewusst so“).</p>` : ""}
+    <div id="dlgFehler" class="fehler"></div>`, [
+    [b.ignoriert ? "Wieder einblenden" : b.art === "vorrang" ? `Bewusst so (${b.regeln[1]} gilt)` : "Bewusst so", async () => {
+      try { await api("optimierungen/ignorieren", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: b.id, ignorieren: !b.ignoriert }) });
+        $("#dlg").close(); ladeRegelCheck(); } catch (e) { $("#dlgFehler").textContent = e.message; } }],
+    ["Abbrechen", () => $("#dlg").close()],
+    ...(b.varianten.length ? [[v?.knopf || "Übernehmen", async () => {
+      if (!v) return $("#dlgFehler").textContent = "Bitte zuerst wählen, wie der Befund aufgelöst werden soll.";
+      if (!v.neutral && !await frage("Wirkung ändert sich", `Diese Änderung setzt bei ${v.diff.anzahl ? mzahl(v.diff.anzahl, "Entität", "Entitäten") : ""}${v.diff.anzahl && v.diff.events ? " und " : ""}${v.diff.events ? mzahl(v.diff.events, "Event-Typ", "Event-Typen") : ""} andere Vorhaltezeiten. Gelöscht wird erst beim nächsten Lauf. Übernehmen?`, "Übernehmen")) return;
+      try {
+        const r = await api("regelcheck/uebernehmen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...auftrag(), version: S.version }) });
+        S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
+        $("#dlg").close(); T.regeln.daten(S.regeln.regeln); ladeAlles(false); ladeRegelCheck();
+      } catch (e) { $("#dlgFehler").textContent = e.message; }
+    }, true]] : [])]);
+  $("#dlg").classList.add("breit");
+  // Knopf sagt, was die gewählte Variante tut (z. B. „Regel R28 löschen“), statt nur „Übernehmen“
+  const knopf = $("#dlgFuss .primaer"), beschrifte = () => { if (knopf) knopf.textContent = v?.knopf || "Übernehmen"; };
+  let nameManuell = false;
+  $("#dlgInhalt").oninput = ev => { if (ev.target.id === "rcName") nameManuell = true; };
+  function auftrag() {
+    const a = { id: b.id, variante: nr };
+    // Name nur mitschicken, wenn von Hand geändert – sonst bildet ihn der Server aus der aktuellen Auswahl
+    if (b.art === "zusammen") { a.auswahl = [...document.querySelectorAll(".rcRegel:checked")].map(c => c.value); a.name = nameManuell ? $("#rcName").value : ""; }
+    return a;
+  }
+  $("#dlgInhalt").onchange = async ev => {   // onchange statt addEventListener: der Dialog wird wiederverwendet
+    if (ev.target.name === "rcVar") { nr = +ev.target.value; v = b.varianten[nr]; $("#rcWirkung").innerHTML = rcDiffHtml(v); $("#dlgFehler").textContent = ""; beschrifte(); return; }
+    if (!ev.target.classList.contains("rcRegel") && ev.target.id !== "rcName") return;
+    $("#rcWirkung").innerHTML = `<span class="sub">rechne …</span>`;
+    try { v = await api("regelcheck/vorschau", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(auftrag()) }); $("#rcWirkung").innerHTML = rcDiffHtml(v); $("#dlgFehler").textContent = ""; beschrifte();
+      const n = v.aenderung?.setzen?.[0]?.name; if (!nameManuell && n && $("#rcName")) $("#rcName").value = n; }
+    catch (e) { v = null; $("#rcWirkung").innerHTML = ""; $("#dlgFehler").textContent = e.message; beschrifte(); }
+  };
 }
 
 function oeffneEntitaet(e) {

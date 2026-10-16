@@ -20,6 +20,7 @@ import herkunft
 import loeschen
 import optimierung
 import probelauf
+import regelcheck
 import regeln as rg
 import spaltenfilter
 import warnungen
@@ -710,6 +711,59 @@ async def optimierung_ignorieren(request):
     return web.json_response({"ignoriert": sorted(s)})
 
 
+async def _regelcheck_daten():
+    """Punkt 232: Regelwerk-Check auf dem Probelauf (nur aktive Regeln) – zwischengespeichert je Stand."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return None, None, None
+    bestand = rg.lade(REGELN, VORLAGE)
+    ign = optimierung.lies_ignoriert(DATA)
+    schl = (id(r), (r.get("stand") or {}).get("analyse_zeit"), Z.mtime(REGELN), tuple(sorted(ign)))
+    return r, bestand, await asyncio.to_thread(regelcheck.berechne, r, bestand, ign, schl)
+
+
+async def regelcheck_lesen(_request):
+    t0 = time.time()
+    _r, _b, daten = await _regelcheck_daten()
+    if daten is None:
+        return web.json_response({"befunde": [], "fehler": "Noch keine Analyse vorhanden"})
+    return web.json_response({**daten, "dauer_s": round(time.time() - t0, 2)})
+
+
+async def _regelcheck_variante(body):
+    r, bestand, daten = await _regelcheck_daten()
+    if daten is None:
+        raise ValueError("Noch keine Analyse vorhanden")
+    b = regelcheck.finde(daten, str(body.get("id") or ""))
+    if not b:
+        raise ValueError("Befund nicht mehr vorhanden – bitte neu laden")
+    v = await asyncio.to_thread(regelcheck.variante_fuer, r, bestand, b, int(body.get("variante") or 0),
+                                body.get("auswahl"), body.get("name"))
+    return bestand, v
+
+
+async def regelcheck_vorschau(request):
+    """Variante eines Befunds neu bewerten (Teilauswahl und Name beim Zusammenlegen)."""
+    try:
+        _b, v = await _regelcheck_variante(await request.json())
+    except ValueError as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    return web.json_response(v)
+
+
+async def regelcheck_uebernehmen(request):
+    """Variante übernehmen – mit Sicherung der Regeln wie bei Import und Wiederherstellen."""
+    body = await request.json()
+    gesperrt = _ersetzen_gesperrt(body)
+    if gesperrt is not None:
+        return gesperrt
+    try:
+        bestand, v = await _regelcheck_variante(body)
+        return _ersetze_regeln(regelcheck.anwenden(bestand, v), "regelcheck")
+    except (rg.RegelFehler, ValueError) as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+
+
 async def muster_verdichten(request):
     """Punkt 171: Platzhalter-Muster für eine Auswahl von Entity-IDs."""
     body = await request.json()
@@ -1114,6 +1168,9 @@ def erstelle_app():
         web.post("/api/regeln/pruefen", regel_pruefen),
         web.get("/api/optimierungen", optimierungen),
         web.post("/api/optimierungen/ignorieren", optimierung_ignorieren),
+        web.get("/api/regelcheck", regelcheck_lesen),
+        web.post("/api/regelcheck/vorschau", regelcheck_vorschau),
+        web.post("/api/regelcheck/uebernehmen", regelcheck_uebernehmen),
         web.post("/api/muster/verdichten", muster_verdichten),
         web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),

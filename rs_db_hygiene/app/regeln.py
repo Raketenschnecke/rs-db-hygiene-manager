@@ -289,7 +289,8 @@ def speichere(pfad, daten):
 # Dateiname regeln_<JJJJMMTT>_<hhmmss>_<grund>[<n>].json – n nur, wenn zwei Sicherungen in dieselbe Sekunde fallen
 SICHERUNGEN_BEHALTEN = 10
 _SICHERUNG = re.compile(r"^regeln_\d{8}_\d{6}_([a-z]+?)(\d*)\.json$")
-GRUENDE = {"zuruecksetzen": "vor Zurücksetzen", "wiederherstellen": "vor Wiederherstellen", "import": "vor Import"}
+GRUENDE = {"zuruecksetzen": "vor Zurücksetzen", "wiederherstellen": "vor Wiederherstellen", "import": "vor Import",
+           "regelcheck": "vor Regelwerk-Check"}   # Punkt 232
 
 
 def kennzahlen(daten, vorlage=None):

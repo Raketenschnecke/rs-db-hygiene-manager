@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b1 (Beta)
+- **Regelwerk-Check im Reiter Regeln (Punkt 232):** prüft das bestehende Regelwerk – Gegenstück zum Reiter Empfehlungen, der nur neue Regeln vorschlägt. Kasten über der Tabelle mit Zählern und „Regeln vorher → nachher“, neue Spalte „Empfehlung“ mit einem Chip je Befund
+  - rot: Regel unwirksam (setzt nirgends einen Wert) oder teilweise unwirksam (ein anderer Regeltyp hat Vorrang und setzt einen anderen Wert)
+  - gelb: Muster doppelt, Regeln gleichen Typs mit gleichen Werten zusammenlegen, lange ID-Listen als Platzhalter, Event-Liste als `*`
+  - grau: Muster ohne Entität, überflüssige Regel, meist überstimmt
+- **Dialog je Befund:** Begründung, Vorschläge zur Wahl (bei „teilweise unwirksam“ ohne Vorauswahl: Ausnahme-Regel oder Werte angleichen), Liste „Änderungen am Regelwerk“ (gelöschte, neue, geänderte Regeln), Wirkung – „wirkungsneutral“ oder die betroffenen Entitäten mit Werten vorher und nachher. Der Knopf heißt wie die Aktion, z. B. „Regel R28 löschen“. Vor jeder Übernahme wird das Regelwerk gesichert; „Bewusst so“ blendet einen Befund aus
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.5
 Zusammenfassung der Testversionen 0.5.5b1 bis 0.5.5b14 (Einzelheiten darunter). Nach dem Update startet einmal eine neue Analyse (neuer Aufbau des Analyse-Speichers).
 - **Neue Regeltypen:** `herkunft` (alles einer Integration, z. B. `unifi`) und `vielschreiber` (ab einer Schwelle in Zeilen je Tag, mit Hysterese – wer dazugehört, bleibt bis unter 80 % der Schwelle)
