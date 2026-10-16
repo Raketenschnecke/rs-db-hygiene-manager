@@ -1010,7 +1010,8 @@ const HILFE_LOESCH = "Was ein scharfer Lauf sofort löschen würde – auf den D
 const HILFE_ERSPARNIS = "Wie viel kleiner die DB auf Dauer durch diese Regel bleibt, verglichen mit „ohne Regeln“ – Hochrechnung aus der Schreibrate über den Prognosezeitraum (Zufluss). Kann groß sein, auch wenn die Löschmenge sofort 0 ist (z. B. R21). Gegenstück: Löschmenge sofort.";
 const SNAME = { global: "global", wie_kurzzeit: "wie Kurzzeit", unbegrenzt: "unbegrenzt", keine: "keine" };
 const EINH = { d: "Tage", w: "Wochen", m: "Monate", j: "Jahre" };
-const wertAnzeige = v => v == null ? "" : (SNAME[v] || v.replace(/^(\d+)([dwmj])$/, (_, n, e) => `${n} ${EINH[e]}`));
+const EINH1 = { d: "Tag", w: "Woche", m: "Monat", j: "Jahr" };   // Einzahl: „1 Woche“ statt „1 Wochen“
+const wertAnzeige = v => v == null ? "" : (SNAME[v] || v.replace(/^(\d+)([dwmj])$/, (_, n, e) => `${n} ${n === "1" ? EINH1[e] : EINH[e]}`));
 
 // ---- Mehrfachsortierung (Punkt 74): Klick = nur nach dieser Spalte, Umschalt+Klick = weitere Stufe → Richtung umkehren → entfernen
 // Stufe { k, desc, um }: um = per Umschalt+Klick schon umgekehrt, der nächste Umschalt+Klick entfernt sie
@@ -2428,11 +2429,37 @@ T.lts = new LokaleTabelle({
 });
 // ---- Punkt 176 (0.5.4): Empfehlungen (bis 0.5.4b7 „Optimierungen“) – Regelvorschläge aus der letzten Analyse
 // Punkte 205/208 (0.5.5b11): Vorschläge je Integration (herkunft) und je Klasse
-const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events" };
+const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", sammel: "Sammelregel", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events" };
 // Punkt 207: Ersparnis unter 1 GB in MB, sonst GB
 const gbmb = b => b == null ? "–" : Math.abs(b) < 1e9 ? mb(b) : gb(b);
 const optStatus = v => v.vorhanden ? `<span class="chip regel regelklick" data-regel-edit="${esc(v.vorhanden.id)}" title="Regel mit genau diesem Muster gibt es schon (${v.vorhanden.aktiv ? "aktiv" : "passiv"}) – Klick öffnet sie">${esc(v.vorhanden.id)} ${v.vorhanden.aktiv ? "" : "passiv"}</span>`
   : (v.passiv || []).map(p => `<span class="chip warn regelklick" data-regel-edit="${esc(p.id)}" title="Die passive Regel ${esc(p.id)} (Kurzzeit ${esc(wertAnzeige(p.kurzzeit))}) trifft schon ${zahl(p.anzahl)} von ${zahl(v.anzahl)} dieser Entitäten – einschalten genügt vielleicht. Klick öffnet sie.">passiv: ${esc(p.id)} (${zahl(p.anzahl)})</span>`).join(" ");
+// Punkt 232 (offener Teil, 0.5.6b2): Erweitern statt neu – der Vorschlag passt in eine bestehende Regel gleichen Typs
+function erweiternWerte(e) {
+  return `Kurzzeit ${wertAnzeige(e.kurzzeit)}${e.langzeit ? `, Langzeit ${wertAnzeige(e.langzeit)}` : ""}`;
+}
+function erweiternTip(v) {
+  const e = v.erweitern;
+  return `Erweitern statt neu: ${e.id} „${e.name}“ (${e.aktiv ? "aktiv" : "passiv"}) hat denselben Typ und ${e.gleich ? "dieselbe Kurzzeit" : erweiternWerte(e)}.\n` +
+    (e.gleich ? "" : `Abweichung: Vorschlag ${wertAnzeige(v.regel.kurzzeit)}${e.langzeit ? " ohne Langzeit" : ""} – aufgenommen gelten die Werte von ${e.id}.\n`) +
+    (e.langzeit ? `⚠ Langzeit: ${e.id} kürzt auch die Stundenstatistik auf ${wertAnzeige(e.langzeit)} – Empfehlungen lassen die Langzeit sonst unverändert.\n` : "") +
+    `Neue Muster: ${e.muster_neu.join(", ")}\nErsparnis ${gbmb(e.ersparnis_bytes)} · sofort löschbar ${mb(e.loesch_bytes)}${e.aktiv ? "" : "\npassiv – wirkt erst nach dem Einschalten"}\nKlick: Rückfrage, dann in ${e.id} aufnehmen`;
+}
+async function erweitereRegeln(vorschlaege) {
+  // je Zielregel die neuen Muster sammeln; Regel aus dem aktuellen Stand (nicht aus dem Vorschlag) – kein veralteter Inhalt
+  const ziel = new Map();
+  for (const v of vorschlaege) {
+    const r = S.regeln.regeln.find(x => x.id === v.erweitern.id); if (!r) continue;
+    const z = ziel.get(r.id) || { r, neu: [] };
+    z.neu.push(...v.erweitern.muster_neu.filter(m => !r.muster.includes(m) && !z.neu.includes(m)));
+    ziel.set(r.id, z);
+  }
+  if (!ziel.size) return false;
+  const geaendert = [...ziel.values()].map(({ r, neu }) => ({ ...r, muster: [...r.muster, ...neu] }));
+  for (const r of geaendert) if (r.aktiv && !await warnPruefung(r)) return false;
+  await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.map(x => geaendert.find(g => g.id === x.id) || x) });
+  return [...ziel.values()].map(({ r, neu }) => `${r.id}: +${neu.length} Muster`);
+}
 T.opt = new LokaleTabelle({
   id: "#tOpt", treffer: "#trefferOpt", schluessel: "dbh_breiten_opt", einheit: "Vorschläge", sortStd: { k: "ersparnis", desc: true },
   gruppen: [["Vorschlag", "stamm", ["wahl", "art", "titel", "typ", "muster"]], ["Vorhaltezeit", "vorh", ["kurzzeit"]], ["Istzustand", "ist", ["anzahl", "zuwachs_tag"]],
@@ -2467,8 +2494,8 @@ T.opt = new LokaleTabelle({
       summe: (g, a) => [gbmb(g.reduce((x, r) => x + (r.ersparnis_bytes || 0), 0)), gbmb(a.reduce((x, r) => x + (r.ersparnis_bytes || 0), 0))] },
     { k: "gruende", titel: "Begründung", typ: "text", breite: 380, wert: r => r.gruende.join(" · "), tdKlasse: "gruende",
       zelle: r => esc(r.gruende.join(" · ")), csv: r => r.gruende.join(" | "), tip: r => r.gruende.join("\n") + (r.beispiele?.length ? `\n\nBeispiele: ${r.beispiele.join(", ")}` : "") },
-    { k: "aktion", titel: "Aktion", typ: "keine", breite: 250, wert: () => 0,
-      zelle: r => `<div class="aktion">${optStatus(r)}<button data-opt="nehmen" data-vid="${esc(r.id)}" title="Regelmaske ausgefüllt öffnen (passiv)">Übernehmen …</button>` +
+    { k: "aktion", titel: "Aktion", typ: "keine", breite: 330, wert: () => 0,
+      zelle: r => `<div class="aktion">${optStatus(r)}${r.erweitern ? `<button data-opt="erweitern" data-vid="${esc(r.id)}" title="${esc(erweiternTip(r))}">${r.erweitern.langzeit ? "⚠ " : ""}In ${esc(r.erweitern.id)} aufnehmen …</button>` : ""}<button data-opt="nehmen" data-vid="${esc(r.id)}" title="Regelmaske ausgefüllt öffnen (passiv)${r.erweitern ? " – als neue Regel statt in " + esc(r.erweitern.id) : ""}">${r.erweitern ? "Neue Regel …" : "Übernehmen …"}</button>` +
         (r.regel.typ === "event" ? "" : `<button data-opt="ansehen" data-vid="${esc(r.id)}" title="Treffer im Tab Entitäten zeigen">Ansehen</button>`) +
         `<button data-opt="${r.ignoriert ? "zeigen" : "ignorieren"}" data-vid="${esc(r.id)}">${r.ignoriert ? "wieder zeigen" : "ignorieren"}</button></div>` },
   ],
@@ -2505,9 +2532,26 @@ $("#tOpt").addEventListener("change", ev => {
 $("#massenOpt").addEventListener("click", async ev => {
   const b = ev.target.closest("[data-masse-opt]"); if (!b) return;
   const gew = (S.opt || []).filter(v => S.auswahlOpt.has(v.id));
-  if (b.dataset.masseOpt === "anlegen" || b.dataset.masseOpt === "aktiv")
-    return legeRegelnAn(gew.map(v => ({ regel: v.regel, titel: v.titel, vorhanden: v.vorhanden, ersparnis: v.ersparnis_bytes, loesch: v.loesch_bytes })),
+  if (b.dataset.masseOpt === "anlegen" || b.dataset.masseOpt === "aktiv") {
+    // Punkt 232: passen Vorschläge in bestehende Regeln, zuerst fragen – aufnehmen oder trotzdem neue Regeln
+    let rest = gew;
+    const erw = gew.filter(v => v.erweitern && !v.vorhanden);
+    if (erw.length) {
+      const w = await frageWahl("Bestehende Regeln erweitern?", `${mzahl(erw.length, "Vorschlag passt", "Vorschläge passen")} in eine bestehende Regel gleichen Typs:\n\n` +
+        erw.map(v => `• ${v.titel} → ${v.erweitern.id} „${v.erweitern.name}“ (${erweiternWerte(v.erweitern)}${v.erweitern.gleich ? "" : " – andere Werte als vorgeschlagen"}${v.erweitern.aktiv ? "" : ", passiv"})`).join("\n") +
+        `\n\n„In bestehende aufnehmen“: keine neue Regel für diese – es gelten die Werte der Zielregel.${gew.length > erw.length ? ` Die übrigen ${zahl(gew.length - erw.length)} werden wie gewählt neu angelegt.` : ""}`,
+        "In bestehende aufnehmen", "Trotzdem neue Regeln");
+      if (w === "nein") return;
+      if (w === "ja") {
+        try { const l = await erweitereRegeln(erw); if (l === false) return; meldung("Empfehlungen", `Aufgenommen – ${l.join(", ")}.`); }
+        catch (e) { return meldung("Empfehlungen", e.message); }
+        rest = gew.filter(v => !erw.includes(v));
+        if (!rest.length) { S.auswahlOpt.clear(); return ladeOpt(); }
+      }
+    }
+    return legeRegelnAn(rest.map(v => ({ regel: v.regel, titel: v.titel, vorhanden: v.vorhanden, ersparnis: v.ersparnis_bytes, loesch: v.loesch_bytes })),
       b.dataset.masseOpt === "aktiv");
+  }
   if (b.dataset.masseOpt === "zusammen") return fasseZusammen(gew);
   const an = b.dataset.masseOpt === "ignorieren";
   try {
@@ -2684,6 +2728,15 @@ $("#tOpt").addEventListener("click", async ev => {
   if (!b) return;
   const v = (S.opt || []).find(x => x.id === b.dataset.vid); if (!v) return;
   const was = b.dataset.opt;
+  if (was === "erweitern") {
+    const e = v.erweitern;
+    if (!await frage(`In ${e.id} aufnehmen`, `${e.muster_neu.join(", ")}\n\nin Regel ${e.id} „${e.name}“ (${e.aktiv ? "aktiv" : "passiv"}, ${erweiternWerte(e)}) aufnehmen – keine neue Regel.` +
+      (e.gleich ? "" : `\n\nAchtung: Es gelten die Werte von ${e.id}, nicht die des Vorschlags (Kurzzeit ${wertAnzeige(v.regel.kurzzeit)}${e.langzeit ? ", keine Langzeit" : ""}).`) +
+      `\n\nErsparnis ${gbmb(e.ersparnis_bytes)} · sofort löschbar ${mb(e.loesch_bytes)}.` + (e.aktiv ? " Wirkt ab dem nächsten Löschlauf." : " Die Regel ist passiv – sie wirkt erst nach dem Einschalten."), "Aufnehmen")) return;
+    try { const l = await erweitereRegeln([v]); if (l) { meldung("Empfehlungen", `Aufgenommen – ${l.join(", ")}.`); ladeOpt(); } }
+    catch (e) { meldung("Empfehlungen", e.message); }
+    return;
+  }
   if (was === "nehmen") {
     const id = v.regel.typ === "event" && !S.regeln.regeln.some(x => x.id === `EV:${v.regel.muster[0]}`) ? `EV:${v.regel.muster[0]}` : naechsteId();
     return bearbeiteRegel(-1, { ...v.regel, id, aktiv: false, typManuell: true });

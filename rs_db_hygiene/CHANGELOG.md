@@ -4,6 +4,15 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b2 (Beta)
+- **Erweitern statt neu (Punkt 232):** passt ein Vorschlag in eine bestehende Regel gleichen Typs, bietet der Reiter Empfehlungen „In Rxx aufnehmen …“ an (⚠, wenn die Zielregel die Langzeit kürzt); bei der Massenauswahl fragt die App, ob aufgenommen oder neu angelegt wird
+- **Sammelregel (Punkte 233/234):** ist eine Klassen- oder Integrationsregel nicht sicher (zu viele der Entitäten werden verwendet, oder sie verlängert die Kurzzeit anderer), schlagen die Empfehlungen eine Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration vor
+- **Integrationsregeln:** Kurzzeit wie bei den Einzelvorschlägen statt fest 30 Tage, Verwendungsprüfung wie bei Klassen, schon ab 3 Einzelvorschlägen
+- **Wenig schreibende unbenutzte Entitäten (Punkt 236):** ab 100 Zeilen je Tag zählen sie für Klassen-, Integrations- und Sammelregeln mit; eigene Karten weiter erst ab 500
+- **Diagnosewerte (Punkt 237):** Gruppen auch aus der HA-Kategorie „Diagnose“ (nur unbenutzte, Muster trifft nur solche), deutsche Endungen wie `_signalstarke` oder `_paket_id`
+- **Regelwerk-Check (Punkt 238):** beim Zusammenlegen keine doppelte Notiz mehr
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b1 (Beta)
 - **Regelwerk-Check im Reiter Regeln (Punkt 232):** prüft das bestehende Regelwerk – Gegenstück zum Reiter Empfehlungen, der nur neue Regeln vorschlägt. Kasten über der Tabelle mit Zählern und „Regeln vorher → nachher“, neue Spalte „Empfehlung“ mit einem Chip je Befund
   - rot: Regel unwirksam (setzt nirgends einen Wert) oder teilweise unwirksam (ein anderer Regeltyp hat Vorrang und setzt einen anderen Wert)

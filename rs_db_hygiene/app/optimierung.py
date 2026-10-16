@@ -6,7 +6,8 @@ Alles rechnet auf dem Probelauf (Analyse-Cache + aktuelle Regeln), ohne neue Abf
                 zusätzliche Löschmenge sofort (aus den Tageshistogrammen) und Ersparnis im Prognosezeitraum.
   vorschlaege() Regelvorschläge nach der Analyse: Gruppen (Diagnose-Endungen), einzelne Entitäten (Vielschreiber,
                 große Attribute, nirgends verwendet, deaktiviert, Uhrzeit), zusammengefasst je Klasse (Punkt 208), je
-                Integration (Punkt 205) oder Namensmuster; verwaiste ohne Regel, Event-Typen ohne Event-Regel.
+                Integration (Punkt 205) oder Namensmuster; wo klasse/herkunft nicht sicher sind, eine Sammelregel mit den
+                unbenutzten Entitäten (Punkte 233/234); verwaiste ohne Regel, Event-Typen ohne Event-Regel.
                 Leitplanken: nie Energie- oder Helfer-Quellen, nie geschützte Entitäten oder Zähler, nie die Langzeit;
                 nur wo heute keine eigene Kurzzeit gilt (Standard bzw. HA-Standard) und der Vorschlag kürzer ist.
   verdichte()   Punkt 171: Muster mit Platzhaltern, die genau eine Auswahl von Entity-IDs treffen.
@@ -27,15 +28,16 @@ VIEL_PRO_TAG = 2000          # ab hier „Vielschreiber“ (≈ alle 43 s ein ne
 VIEL_SEHR = 10000            # ab hier Vorschlag 14 statt 30 Tage
 ATTR_PRO_TAG = 2_000_000     # Attribute ab 2 MB je Tag
 UNBENUTZT_PRO_TAG = 500      # nirgends verwendet und mindestens so viele Zeilen je Tag
+UNBENUTZT_BUENDEL = 100      # Punkt 236: ab hier zählen unbenutzte Entitäten für Bündel (klasse, herkunft, Sammelregel) mit
 GRUPPE_MIN = 3               # Mindestzahl Entitäten einer Gruppe
 GRUPPE_PRO_TAG = 1000        # Mindestzuwachs einer Gruppe (Zeilen je Tag)
 EVENT_PRO_TAG = 1000         # Event-Typen ab so vielen Events je Tag
 VERWAIST_MIN_ZEILEN = 10000  # verwaiste Altdaten ab dieser Menge (States + 5-Min + Langzeit)
 TAGE = {"gruppe": "7d", "viel": "30d", "viel_sehr": "14d", "attribute": "30d", "unbenutzt": "14d", "deaktiviert": "30d",
         "verwaist": "30d", "event": "14d", "herkunft": "30d", "uhrzeit": "1d"}
-# Punkt 205: ab so vielen Einzelvorschlägen einer Integration eine herkunft-Regel statt vieler entity-Regeln; nicht für
-# Sammel-Integrationen, unter denen ganz verschiedene Geräte und Helfer stehen
-HERKUNFT_MIN = 5
+# Punkt 205: ab so vielen Einzelvorschlägen einer Integration eine herkunft-Regel statt vieler entity-Regeln (Punkt 234:
+# 3 statt 5); nicht für Sammel-Integrationen, unter denen ganz verschiedene Geräte und Helfer stehen (auch keine Sammelregel)
+HERKUNFT_MIN = 3
 HERKUNFT_NIE = ("mqtt", "esphome", "template", "group", "automation", "script", "scene", "statistics", "utility_meter",
                 "integration", "derivative", "filter", "min_max", "threshold", "trend", "history_stats", "zha", "zwave_js",
                 "knx", "modbus", "rest", "command_line", "sql", "homeassistant")
@@ -48,7 +50,13 @@ UHRZEIT_PLATTFORMEN = ("time_date",)   # Punkt 208: Uhrzeit-/Datumssensoren, Ver
 # Endungen typischer Diagnose-Entitäten (Funk, Laufzeit, Netz, Systemwerte) – Grundlage der Gruppen
 DIAGNOSE_ENDUNGEN = ("rssi", "linkquality", "signal_strength", "wifi_signal", "signal", "uptime", "last_seen", "last_restart",
                      "ip", "ip_address", "ssid", "bssid", "mac", "mac_address", "heap", "free_heap", "free_memory", "loop_time",
-                     "cpu_load", "lqi", "snr", "noise", "connected_clients", "boot_time", "last_boot", "restart_reason")
+                     "cpu_load", "lqi", "snr", "noise", "connected_clients", "boot_time", "last_boot", "restart_reason",
+                     # Punkt 237: deutsche Namen
+                     "signalstarke", "wlan_signal", "wifi_signalstarke", "paket_id", "packet_id", "letzter_neustart",
+                     "ip_adresse", "betriebszeit")
+# Punkt 237: Endungen von Diagnose-Entitäten (entity_category diagnostic) außerhalb der Liste – mindestens so viele Wortteile
+# oder Zeichen, damit kurze Endungen wie _max oder _id nicht künftige fremde Entitäten treffen
+DIAG_MIN_TEILE, DIAG_MIN_ZEICHEN, DIAG_MAX_TEILE = 2, 8, 3
 _ID = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z0-9_]+)\b")
 REFERENZ_DATEIEN = ("lovelace", "lovelace_dashboards", "energy", "core.config_entries", "automations", "scripts", "scenes")
 IGNORIERT_DATEI = "optimierungen_ignoriert.json"
@@ -281,6 +289,39 @@ def _anzahl(n, ein, mehr):
     return f"{n:,} {ein if n == 1 else mehr}".replace(",", ".")
 
 
+# Punkt 232 (offener Teil, 0.5.6b2): Erweitern statt neu – bestehende Regel gleichen Typs, in die ein Vorschlag passt
+ERWEITERN_TYPEN = ("entity", "glob", "klasse", "herkunft", "event")
+
+
+def _erweiterbar(vorschlag, bestand, pl, hist, ziel):
+    """Bestehende Regel gleichen Typs, in die der Vorschlag passt: Kurzzeit gleich lang oder kürzer (die Ersparnis
+    bleibt mindestens), keine Schutz-, E:- oder Ausnahme-Regel. Bevorzugt: ohne eigene Langzeit (Empfehlungen fassen
+    die Langzeit sonst nie an), dann die längste Kurzzeit (gleich vor kürzer), dann aktiv, dann die Reihenfolge. Wirkung mit allen Mustern gerechnet (nur der Zuwachs
+    durch die neuen Muster – für die bisherigen Treffer ändert sich nichts)."""
+    typ, tv = vorschlag["typ"], rg.in_tagen(vorschlag["kurzzeit"])
+    if typ not in ERWEITERN_TYPEN or tv is None:
+        return None
+    kand = []
+    for i, r in enumerate(bestand["regeln"]):
+        if r["typ"] != typ or r["id"].startswith("E:") or r["name"].startswith("Ausnahme: "):
+            continue
+        tr = rg.in_tagen(r["kurzzeit"])
+        if tr is None or tr > tv or all(m in r["muster"] for m in vorschlag["muster"]):
+            continue
+        kand.append((r["langzeit"] is not None, -tr, not r["aktiv"], i, r))
+    if not kand:
+        return None
+    *_s, r = min(kand, key=lambda k: k[:4])
+    neu = {**r, "aktiv": True, "muster": r["muster"] + [m for m in vorschlag["muster"] if m not in r["muster"]]}
+    w = event_wirkung(neu, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(neu, pl, bestand, hist, ziel=ziel)
+    if not w["gewinnt"]:
+        return None
+    return {"id": r["id"], "name": r["name"], "aktiv": r["aktiv"], "kurzzeit": r["kurzzeit"], "langzeit": r["langzeit"],
+            "gleich": r["kurzzeit"] == vorschlag["kurzzeit"] and r["langzeit"] is None,
+            "muster_neu": [m for m in vorschlag["muster"] if m not in r["muster"]],
+            "loesch_bytes": w["loesch_bytes"], "ersparnis_bytes": w["ersparnis_bytes"]}
+
+
 def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
     ents = [e for e in pl.get("entitaeten", [])]
     reg = registry_info(config)
@@ -296,20 +337,26 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
     def kurz_wirksam(e):
         return ((e["werte"] or {}).get("kurzzeit") or {}).get("tage")
 
+    ablehnung = {"grund": None}   # warum neu() zuletzt nichts vorgeschlagen hat (Begründung der Sammelregel, Punkt 233)
+
     def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz=""):
         regel = {"id": "VORSCHLAG", "name": name, "typ": typ, "muster": muster, "aktiv": False, "notiz": notiz,
                  "kurzzeit": kurzzeit, "attribute": None, "langzeit": None}
         norm = rg.normalisiere({"regeln": [regel], "events": {}})["regeln"][0]
         w = event_wirkung(norm, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(norm, pl, bestand, hist, ziel=ziel, mit_ents=True)
+        ablehnung["grund"] = None
         if not w["gewinnt"] or w["ersparnis_bytes"] <= 0 and not w["loesch_bytes"]:
+            ablehnung["grund"] = "verlaengert" if w.get("verlaengert") else "spart_nichts"
             return None
         # Punkte 205/208: herkunft/klasse haben Rang vor vielschreiber – nie vorschlagen, wenn sie irgendwo verlängern
         if typ in ("herkunft", "klasse") and (w.get("verlaengert") or w["ersparnis_bytes"] <= 0):
+            ablehnung["grund"] = "verlaengert" if w.get("verlaengert") else "spart_nichts"
             return None
         if w.get("verlaengert"):   # Punkte 205/208: herkunft/klasse haben Rang vor vielschreiber und können verlängern
             gruende = gruende + [f"⚠ verlängert die Kurzzeit von {_anzahl(w['verlaengert'], 'Entität', 'Entitäten')}, "
                                  "für die heute eine kürzere Regel gilt (Rang) – in der Maske prüfen"]
         vorhanden = regeln_muster.get((typ, tuple(sorted(muster))))
+        erweitern = None if vorhanden else _erweiterbar(norm, bestand, pl, hist, ziel)
         # passive Regeln, die schon (einen Teil) der Treffer abdecken – der Vorschlag ist dann vielleicht nur „einschalten“
         passiv = []
         if typ != "event":
@@ -319,6 +366,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
                     passiv.append({"id": p["id"], "anzahl": n_, "kurzzeit": p["kurzzeit"]})
         v = {"id": vid, "art": art, "titel": titel, "gruende": gruende, "ignoriert": vid in ignoriert,
              "regel": regel, "vorhanden": ({"id": vorhanden["id"], "aktiv": vorhanden["aktiv"]} if vorhanden else None),
+             "erweitern": erweitern,
              "passiv": passiv,
              **{k: w[k] for k in ("anzahl", "anzahl_geschuetzt", "anzahl_ueberstimmt", "gewinnt", "zuwachs_tag", "bestand",
                                   "loesch_bytes", "ersparnis_bytes")},
@@ -333,8 +381,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         if not _frei(e, ktx):
             continue
         end = _endung(e["entity_id"])
-        diag = (reg.get(e["entity_id"]) or {}).get("kategorie") == "diagnostic"
-        if end and (diag or end in DIAGNOSE_ENDUNGEN):
+        if end:
             gruppen.setdefault((e["domain"], end), []).append(e)
     tg = _tage_von(TAGE["gruppe"])
     for (dom, end), l in sorted(gruppen.items(), key=lambda kv: -sum(x["rows_24h"] or 0 for x in kv[1])):
@@ -348,14 +395,64 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         if v:
             vergeben.update(e["entity_id"] for e in l)
 
+    # Punkt 237: Diagnose-Entitäten (Kategorie diagnostic) mit Endungen außerhalb der Liste → glob-Regel, nur für unbenutzte
+    # und nur, wenn das Muster heute ausschließlich solche Entitäten ändert (Gegenprobe über alle aktiven Entitäten)
+    if verwendet is not None:
+        regel_von = {r["id"]: r for r in bestand["regeln"]}
+
+        def diag_frei(e):
+            return (_frei(e, ktx) and e["entity_id"] not in verwendet and (kurz_wirksam(e) or 0) > tg
+                    and (reg.get(e["entity_id"]) or {}).get("kategorie") == "diagnostic")
+
+        def unberuehrt(e):
+            """Ändert eine neue glob-Regel (am Ende, 7 Tage, ohne Langzeit) für diese Entität nichts?"""
+            if e.get("schutz") or (kurz_wirksam(e) or 0) == tg:
+                return True
+            r = regel_von.get(((e["werte"] or {}).get("kurzzeit") or {}).get("regel")) or {}
+            return r.get("typ") in ("schutz", "entity", "glob") or str(r.get("id", "")).startswith("E:")
+
+        def enden(eid):
+            teile = eid.split(".", 1)[1].split("_")
+            for k in range(1, min(DIAG_MAX_TEILE, len(teile) - 1) + 1):
+                end = "_".join(teile[-k:])
+                if k >= DIAG_MIN_TEILE or len(end) >= DIAG_MIN_ZEICHEN:
+                    yield end
+
+        alle_end = {}   # Muster → alle aktiven Entitäten ohne Zähler, die es träfe
+        dg = {}
+        for e in ents:
+            if e["status"] != "aktiv" or (e.get("state_class") or "").startswith("total"):
+                continue
+            kandidat = e["entity_id"] not in vergeben and not _endung(e["entity_id"]) and diag_frei(e)
+            for end in enden(e["entity_id"]):
+                m = f'{e["domain"]}.*_{end}'
+                alle_end.setdefault(m, []).append(e)
+                if kandidat:
+                    dg.setdefault(m, []).append(e)
+        for m, l in sorted(dg.items(), key=lambda kv: (-sum(x["rows_24h"] or 0 for x in kv[1]), -len(kv[0]))):
+            l = [e for e in l if e["entity_id"] not in vergeben]
+            if len(l) < GRUPPE_MIN or sum(e["rows_24h"] or 0 for e in l) < GRUPPE_PRO_TAG:
+                continue
+            if not all(diag_frei(e) or unberuehrt(e) for e in alle_end[m]):
+                continue
+            end = m.split(".*_", 1)[1]
+            v = neu(f"gruppe:{m}", "gruppe", f"Gruppe {m}", "glob", [m], TAGE["gruppe"],
+                    [f"{len(l)} Diagnose-Entitäten (Kategorie diagnostic) mit Endung _{end}, nirgends verwendet, ohne eigene Kurzzeit",
+                     "das Muster trifft heute nur solche Entitäten – künftige mit derselben Endung kämen hinzu"],
+                    f"Diagnose {m} – 7 Tage", "Empfehlung des RS DB HM: Diagnosewerte braucht man selten länger als eine Woche")
+            if v:
+                vergeben.update(e["entity_id"] for e in l)
+
     # 2. einzelne Entitäten: Vielschreiber, große Attribute, nirgends verwendet, deaktiviert
-    einzeln = []
+    # Punkt 236: unbenutzte mit 100–499 Zeilen je Tag (schwach) zählen nur für Bündel (klasse, herkunft, Sammelregel)
+    einzeln, schwach = [], []
     for e in sorted(ents, key=lambda x: -(x["rows_24h"] or 0)):
         eid = e["entity_id"]
         if eid in vergeben or not _frei(e, ktx):
             continue
         ri = reg.get(eid) or {}
         n, gruende, tage = e["rows_24h"] or 0, [], []
+        unbenutzt = verwendet is not None and eid not in verwendet and e["domain"] not in NIE_UNBENUTZT
         if ri.get("deaktiviert") and (e["rows"] or 0) > 0:
             gruende.append("in HA deaktiviert – schreibt nichts mehr, Altdaten bleiben sonst bis purge_keep_days")
             tage.append(TAGE["deaktiviert"])
@@ -365,13 +462,15 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         if (e.get("attr_zuwachs_tag") or 0) >= ATTR_PRO_TAG:
             gruende.append(f"große Attribute: {e['attr_zuwachs_tag'] / 1e6:.1f} MB je Tag".replace(".", ","))
             tage.append(TAGE["attribute"])
-        if verwendet is not None and n >= UNBENUTZT_PRO_TAG and eid not in verwendet and e["domain"] not in NIE_UNBENUTZT:
+        if unbenutzt and n >= UNBENUTZT_PRO_TAG:
             gruende.append("nirgends verwendet (nicht in Dashboards, Automationen, Skripten, Templates, Helfern, Energie)")
             tage.append(TAGE["unbenutzt"])
         if (e.get("plattform") or ri.get("platform")) in UHRZEIT_PLATTFORMEN and n:   # Punkt 208
             gruende.append("Uhrzeit/Datum: der Verlauf hat keinen Nutzen")
             tage.append(TAGE["uhrzeit"])
         if not gruende:
+            if unbenutzt and n >= UNBENUTZT_BUENDEL and (kurz_wirksam(e) or 0) > _tage_von(TAGE["unbenutzt"]):
+                schwach.append((eid, TAGE["unbenutzt"], ["nirgends verwendet, unter 500 Zeilen je Tag (nur im Bündel)"]))
             continue
         kz = min(tage, key=_tage_von)
         if (kurz_wirksam(e) or 0) <= _tage_von(kz):
@@ -390,15 +489,46 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         return [f"{z}× {a}" for a, z in sorted(n_.items(), key=lambda kv: -kv[1])]
 
     eidx = {e["entity_id"]: e for e in ents}
+    stark = {x[0] for x in einzeln}
 
     def frei_alle(pruef, kz):
         """Alle freien Entitäten, die eine Muster-Regel mit Kurzzeit kz kürzen würde – nicht nur die Einzelvorschläge."""
         return [e for e in ents if pruef(e) and _frei(e, ktx) and (kurz_wirksam(e) or 0) > _tage_von(kz)]
 
+    def buendel(l, wo):
+        """Erste Begründung eines Bündels: Einzelvorschläge und schwache Kandidaten (Punkt 236)."""
+        st = sum(1 for x in l if x[0] in stark)
+        sw = f"{len(l) - st} {'weitere ' if st else ''}unbenutzte mit 100–499 Zeilen je Tag"
+        t = f"{wo}: " + (_anzahl(st, 'Einzelvorschlag', 'Einzelvorschläge') + (f" und {sw}" if len(l) > st else "") if st else sw)
+        return t + " – eine Regel statt vieler"
+
+    def sammelregel(schl, wo, frei, rest, benutzt, l, kz, typ):
+        """Punkte 233/234: die Muster-Regel (klasse/herkunft) ist nicht möglich – zu viele der übrigen werden verwendet oder
+        sie verlängert irgendwo → Sammelregel (entity) mit allen unbenutzten freien Entitäten, die Daten haben. Trifft keine
+        verwendete und verlängert nie (nur Entitäten ohne eigene Kurzzeit); künftige Entitäten erfasst sie nicht."""
+        ids = sorted(e["entity_id"] for e in frei if e["entity_id"] not in verwendet and (e["rows"] or 0) > 0)
+        if len(ids) < GRUPPE_MIN:
+            return
+        if len(benutzt) > KLASSE_VERWENDET * len(rest):
+            grund = (f"{typ}-Regel nicht möglich: von den übrigen {len(rest)} werden {len(benutzt)} verwendet"
+                     + (f" (z. B. {', '.join(benutzt[:3])})" if benutzt else ""))
+        elif ablehnung["grund"] == "verlaengert":
+            grund = f"{typ}-Regel nicht möglich: sie verlängert die Kurzzeit von Entitäten mit kürzerer Regel (Rang)"
+        else:
+            grund = f"{typ}-Regel nicht möglich: sie spart nichts"
+        gr = [buendel(l, wo), grund,
+              f"enthält alle {_anzahl(len(ids), 'unbenutzte Entität', 'unbenutzten Entitäten')} ohne eigene Kurzzeit "
+              "(Zähler ausgenommen) – künftige nicht"]
+        vid = f"sammel:{schl}"
+        v = neu(vid, "sammel", f"{wo}, nirgends verwendet", "entity", ids, kz, gr + arten(l),
+                f"{wo}, nirgends verwendet – {rg.anzeige(kz)}", "Empfehlung des RS DB HM: alle unbenutzten Entitäten in einer Regel")
+        if v and vid not in ignoriert:
+            vergeben.update(ids)
+
     # Punkt 208: Einzelvorschläge derselben Klasse (domain|device_class) → eine klasse-Regel, wenn die übrigen freien
     # Entitäten der Klasse (fast) nirgends verwendet werden – sonst träfe die Regel Werte, die jemand nutzt (z. B. power)
     je_kl = {}
-    for x in einzeln:
+    for x in einzeln + schwach:
         e = eidx[x[0]]
         if e.get("device_class"):
             je_kl.setdefault(f'{e["domain"]}|{e["device_class"]}', []).append(x)
@@ -415,23 +545,26 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
                 continue
             benutzt = None
         else:
-            benutzt = sum(1 for e in rest if e["entity_id"] in verwendet)
-            if benutzt > KLASSE_VERWENDET * len(rest):
-                continue
-        gr = [f"{len(l)} Einzelvorschläge der Klasse {k} – eine Regel statt {len(l)}",
-              f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} dieser Klasse ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"]
-        if rest and benutzt is not None:
-            gr.append(f"von den übrigen {len(rest)} werden {benutzt} irgendwo verwendet")
-        vid = f"klasse:{k}"
-        v = neu(vid, "klasse", f"Klasse {k}", "klasse", [k], kz, gr + arten(l), f"Klasse {k} – {rg.anzeige(kz)}",
-                "Empfehlung des RS DB HM")
-        if v and vid not in ignoriert:
-            vergeben.update(x[0] for x in l)
+            benutzt = [e["entity_id"] for e in rest if e["entity_id"] in verwendet]
+        v = None
+        if benutzt is None or len(benutzt) <= KLASSE_VERWENDET * len(rest):
+            gr = [buendel(l, f"Klasse {k}"),
+                  f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} dieser Klasse ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"]
+            if rest and benutzt is not None:
+                gr.append(f"von den übrigen {len(rest)} werden {len(benutzt)} irgendwo verwendet")
+            vid = f"klasse:{k}"
+            v = neu(vid, "klasse", f"Klasse {k}", "klasse", [k], kz, gr + arten(l), f"Klasse {k} – {rg.anzeige(kz)}",
+                    "Empfehlung des RS DB HM")
+            if v and vid not in ignoriert:
+                vergeben.update(x[0] for x in l)
+        if not v and benutzt is not None:
+            sammelregel(f"klasse:{k}", f"Klasse {k}", frei, rest, benutzt, l, kz, "klasse")
 
     # Punkt 205: viele Einzelvorschläge einer Integration → eine herkunft-Regel (trifft alle Entitäten der Integration);
-    # Uhrzeit-Integrationen schon ab einem Vorschlag
+    # Uhrzeit-Integrationen schon ab einem Vorschlag. Punkt 234: Kurzzeit wie bei klasse die längste der Einzelvorschläge,
+    # Verwendungsprüfung wie bei klasse, sonst Sammelregel
     je_pl = {}
-    for x in einzeln:
+    for x in einzeln + schwach:
         p = eidx[x[0]].get("plattform") or (reg.get(x[0]) or {}).get("platform") or ""
         if x[0] not in vergeben and p and p not in HERKUNFT_NIE:
             je_pl.setdefault(p, []).append(x)
@@ -439,21 +572,31 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         uhr = p in UHRZEIT_PLATTFORMEN
         if len(l) < (1 if uhr else HERKUNFT_MIN):
             continue
-        kz = TAGE["uhrzeit" if uhr else "herkunft"]
+        kz = max((x[1] for x in l), key=_tage_von)
         frei = frei_alle(lambda e: e.get("plattform") == p, kz)
-        quellen = sum(1 for e in ents if e.get("plattform") == p and e["status"] == "aktiv"
-                      and not (e.get("state_class") or "").startswith("total")
-                      and (e["entity_id"] in ktx["energie"] or e["entity_id"] in ktx["helfer"]))
-        gr = [f"{_anzahl(len(l), 'Einzelvorschlag', 'Einzelvorschläge')} dieser Integration – eine Regel statt {len(l)}",
-              f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} von {p} ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"] + arten(l)
-        if quellen:
-            gr.append(f"⚠ trifft auch {_anzahl(quellen, 'Quelle', 'Quellen')} von Energie-Dashboard oder Helfern – in der Maske prüfen")
-        vid = f"herkunft:{p}"
-        v = neu(vid, "herkunft", f"Integration {p}", "herkunft", [p], kz, gr, f"Integration {p} – {rg.anzeige(kz)}",
-                "Empfehlung des RS DB HM: eine Regel je Integration statt vieler einzelner")
-        if v and vid not in ignoriert:
-            vergeben.update(x[0] for x in l)
-    einzeln = [x for x in einzeln if x[0] not in vergeben]
+        kand = {x[0] for x in l}
+        rest = [e for e in frei if e["entity_id"] not in kand]
+        benutzt = None if verwendet is None or uhr else [e["entity_id"] for e in rest if e["entity_id"] in verwendet]
+        v = None
+        if benutzt is None or len(benutzt) <= KLASSE_VERWENDET * len(rest):
+            quellen = sum(1 for e in ents if e.get("plattform") == p and e["status"] == "aktiv"
+                          and not (e.get("state_class") or "").startswith("total")
+                          and (e["entity_id"] in ktx["energie"] or e["entity_id"] in ktx["helfer"]))
+            gr = [buendel(l, f"Integration {p}"),
+                  f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} von {p} ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"]
+            if rest and benutzt is not None:
+                gr.append(f"von den übrigen {len(rest)} werden {len(benutzt)} irgendwo verwendet")
+            gr += arten(l)
+            if quellen:
+                gr.append(f"⚠ trifft auch {_anzahl(quellen, 'Quelle', 'Quellen')} von Energie-Dashboard oder Helfern – in der Maske prüfen")
+            vid = f"herkunft:{p}"
+            v = neu(vid, "herkunft", f"Integration {p}", "herkunft", [p], kz, gr, f"Integration {p} – {rg.anzeige(kz)}",
+                    "Empfehlung des RS DB HM: eine Regel je Integration statt vieler einzelner")
+            if v and vid not in ignoriert:
+                vergeben.update(x[0] for x in l)
+        if not v and benutzt is not None:
+            sammelregel(f"herkunft:{p}", f"Integration {p}", frei, rest, benutzt, l, kz, "herkunft")
+    einzeln = [x for x in einzeln if x[0] not in vergeben]   # schwache ohne Bündel entfallen (Punkt 236)
 
     # gleichartige Einzelvorschläge (gleiche Kurzzeit) zu Mustern verdichten, die nur Kandidaten treffen
     for kz in sorted({k for _e, k, _g in einzeln}, key=_tage_von):

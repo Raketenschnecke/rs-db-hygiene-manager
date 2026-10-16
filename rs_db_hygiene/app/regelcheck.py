@@ -242,7 +242,9 @@ def zusammengelegt(gruppe, name=None):
             name = " + ".join(r["name"] for r in gruppe)
             if len(name) > 80:
                 name = f"{erste['name']} (+{len(gruppe) - 1} zusammengelegt)"
-    notiz = " · ".join(dict.fromkeys(r["notiz"] for r in gruppe if r["notiz"]))
+    notizen = list(dict.fromkeys(r["notiz"] for r in gruppe if r["notiz"]))
+    # Punkt 238: Notizen weglassen, die schon in einer anderen stecken („Empfehlung des RS DB HM“ in „… HM: eine Regel …“)
+    notiz = " · ".join(n for n in notizen if not any(n != m and n in m for m in notizen))
     return {**erste, "name": name, "muster": muster, "notiz": notiz}
 
 
