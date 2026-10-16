@@ -4,6 +4,19 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.5
+Zusammenfassung der Testversionen 0.5.5b1 bis 0.5.5b14 (Einzelheiten darunter). Nach dem Update startet einmal eine neue Analyse (neuer Aufbau des Analyse-Speichers).
+- **Neue Regeltypen:** `herkunft` (alles einer Integration, z. B. `unifi`) und `vielschreiber` (ab einer Schwelle in Zeilen je Tag, mit Hysterese – wer dazugehört, bleibt bis unter 80 % der Schwelle)
+- **HA-Standard als Auffangregel:** Kurzzeit einstellbar; Hinweis im Reiter Empfehlungen nur bei der Grundeinstellung 10 Tage
+- **Empfehlungen:** Vorschläge je Integration und je Geräteklasse statt vieler Einzelregeln; Kasten „Wer schreibt am meisten?“; Mehrfachauswahl mit „als passive Regeln anlegen“, „als aktive Regeln anlegen …“ (mit Warnprüfung) und „zu einer Regel zusammenfassen …“; Ersparnis unter 1 GB in MB; FAQ „In welcher Reihenfolge lege ich Regeln an?“
+- **Prognose-Chart** an den DB-Größe-Kacheln, mit Vergangenheit und HA-Standard
+- **Rangnummer der Regeln** (Stufe.Position) und einheitlich „X hat Vorrang vor: Y – Wert“
+- **Tab Löschen:** Rückstand in Läufen, Spalte „Überhang (weitere Läufe)“ statt „fällig“ (zählte die States nicht), „Summe (excl. Attribute)“, Status als farbige Chips, Erklärung „Integration fehlt“
+- **Reiter Events:** eine Spalte „Vorhaltezeit“ (Wert, Regel, wirksame Tage); Hinweis auf Event-Typen ohne eigene Event-Regel
+- **Tooltips:** eigene Anzeige nach dem Schema „**Thema:** Inhalt“, kontextbezogen, Bedienhinweise je in eigener Zeile
+- Zuwachs je Tag aus den 7 vollen Tagen vor heute; deaktivierte Entitäten mit eigenem Status; Spalte „Speicher frei (MB)“
+- Die Integration ändert sich nur in der Versionsnummer; ihr Update über HACS ist optional
+
 ## 0.5.5b14 (Beta)
 - **„hat Vorrang vor“ (Punkt 225):** einheitlich statt „überstimmt“ bzw. „gewinnt vor“, mit dem Wert der unterlegenen Regel – z. B. „EV:alle hat Vorrang vor: HA:standard – 90 Tage“; in der Regelmaske „R07 hat Vorrang (bei 12 Entitäten)“
 - **Reiter Events (Punkte 226/227):** Regel, Vorhaltezeit und wirksame Tage in einer Spalte „Vorhaltezeit“ wie im Tab Entitäten, mit gemeinsamem Filter; Spalte Prognose entfällt
