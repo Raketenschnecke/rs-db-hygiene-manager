@@ -1075,6 +1075,11 @@ new ResizeObserver(() => document.documentElement.style.setProperty("--kleb-h", 
 function tabelleUnten() {
   const pad = parseFloat(getComputedStyle($("main")).paddingBottom) || 0;
   document.querySelectorAll("main section:not([hidden]) > .tabelle").forEach(t => {
+    // nur die letzte Tabelle eines Reiters – steht darunter eine weitere (Löschprotokolle: Läufe über Monatssumme), gilt der
+    // Standard; sonst schrumpfte die obere auf ihre Mindesthöhe (0.5.6b3)
+    let weitere = false;
+    for (let s = t.nextElementSibling; s; s = s.nextElementSibling) if (s.matches(".tabelle") || s.querySelector(".tabelle")) weitere = true;
+    if (weitere) { if (t.style.getPropertyValue("--unten")) t.style.removeProperty("--unten"); return; }
     let h = pad + 2;
     for (let s = t.nextElementSibling; s; s = s.nextElementSibling) {
       if (s.hidden || s.offsetParent === null) continue;
