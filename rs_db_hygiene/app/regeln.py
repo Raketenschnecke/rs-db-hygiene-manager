@@ -84,7 +84,7 @@ SCHUTZ_WERTE = {"kurzzeit": "global", "attribute": None, "langzeit": "unbegrenzt
 HA_STANDARD_ID = "HA:standard"
 HA_STANDARD_TAGE = 10           # Voreinstellung des Recorders (purge_keep_days)
 HA_STANDARD = {"id": HA_STANDARD_ID, "typ": "ha_standard", "muster": ["*"],
-               "name": f"HA-Standard: alles {HA_STANDARD_TAGE} Tage, Langzeit unbegrenzt",
+               "name": f"HA-Standard – {HA_STANDARD_TAGE}T/∞",   # Punkt 241
                "notiz": (f"Bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (purge_keep_days {HA_STANDARD_TAGE}): "
                          f"States, 5-Min-Statistik, Attribute und Events nach {HA_STANDARD_TAGE} Tagen, Langzeitstatistik nie. "
                          "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur passiv schaltbar."),
@@ -97,10 +97,44 @@ def ha_standard(kurzzeit, aktiv):
     if kurzzeit == HA_STANDARD["kurzzeit"]:
         return {**HA_STANDARD, "aktiv": aktiv}
     t = anzeige(kurzzeit)
-    return {**HA_STANDARD, "aktiv": aktiv, "kurzzeit": kurzzeit, "name": f"HA-Standard: alles {t}, Langzeit unbegrenzt",
+    return {**HA_STANDARD, "aktiv": aktiv, "kurzzeit": kurzzeit, "name": name_mit_suffix("HA-Standard", {**HA_STANDARD, "kurzzeit": kurzzeit}),
             "notiz": (f"Auffangregel nach dem Vorbild von Home Assistant (Grundeinstellung purge_keep_days {HA_STANDARD_TAGE}), Kurzzeit auf {t} gestellt: "
                       f"States, 5-Min-Statistik, Attribute und Events nach {t}, Langzeitstatistik nie. "
                       "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur Kurzzeit einstellbar und passiv schaltbar.")}
+
+
+# Punkt 241: Suffix der Vorhaltedauer im Regelnamen „– 30T/2J“ (Kurzzeit/Langzeit; unbegrenzt bzw. ohne eigene Langzeit ∞,
+# Event-Regeln nur die Vorhaltezeit). Beim Speichern einer Regel ersetzt es ein vorhandenes Suffix (alt „– 30 Tage / 1 Jahr“,
+# „7d/unbegrenzt“ oder neu), ein Zusatz in Klammern dahinter („(vor R07)“) bleibt erhalten.
+_EINH_KURZ = {"d": "T", "w": "W", "m": "M", "j": "J"}
+_DAUER = r"(?:\d+\s*(?:Tage?|Wochen?|Monate?|Jahre?|[TWMJdwmj])|unbegrenzt|global|keine|∞)"
+_SUFFIX = re.compile(rf"(?:\s+[–-]\s+{_DAUER}(?:\s*/\s*{_DAUER})*|\s+{_DAUER}\s*/\s*{_DAUER})(\s*\([^()]*\))?\s*$")
+
+
+def wert_kurz(w, leer="∞"):
+    if w is None or w == "":
+        return leer
+    if w == "unbegrenzt":
+        return "∞"
+    if w == "keine":
+        return "0T"
+    m = re.match(r"^(\d+)([dwmj])$", str(w))
+    return f"{m.group(1)}{_EINH_KURZ[m.group(2)]}" if m else str(w)
+
+
+def suffix(r):
+    k = wert_kurz(r.get("kurzzeit"), "global")
+    return k if r.get("typ") == "event" else f"{k}/{wert_kurz(r.get('langzeit'))}"
+
+
+def name_mit_suffix(name, r):
+    name = (name or "").strip()
+    m = _SUFFIX.search(name)
+    if m:
+        name = (name[:m.start()] + (m.group(1) or "")).strip()
+    return f"{name} – {suffix(r)}" if name else suffix(r)
+
+
 VERWAIST_ARTEN = {"alle", "geloescht", "ohne_spur", "deaktiviert"}
 # Status aus der Analyse → Art-Wort der Regel; „alle“ umfasst nur die echten Verwaisten, nicht die Deaktivierten (Punkt 186)
 VERWAIST_STATUS = {"verwaist_geloescht": "geloescht", "verwaist": "ohne_spur"}

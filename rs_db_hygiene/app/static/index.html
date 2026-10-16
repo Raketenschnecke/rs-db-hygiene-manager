@@ -207,7 +207,7 @@ input[type=number] { width: 72px; }
 .tabs button[class*="rf-"] { border-top-color: color-mix(in srgb, var(--rf) 75%, var(--reiter)); }
 .tabs button.an[class*="rf-"] { color: color-mix(in srgb, var(--rf) 70%, var(--text)); border-top-color: var(--rf); }
 /* Eigener Scrollbereich bis zur Fensterhöhe: darin bleibt der Tabellenkopf stehen */
-.tabelle { overflow: auto; max-height: calc(100vh - var(--kleb-h) - 56px); min-height: 240px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.tabelle { overflow: auto; max-height: calc(100vh - var(--kleb-h) - var(--unten, 56px));   /* --unten: Punkt 240, tabelleUnten() */ min-height: 240px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 table { border-collapse: separate; border-spacing: 0; width: 100%; }
 thead { position: sticky; top: 0; z-index: 2; }
 th, td { padding: 6px 9px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
@@ -435,6 +435,7 @@ input[type=checkbox].wahl { width: 16px; height: 16px; margin: 0; cursor: pointe
 .loeschkasten { display: grid; gap: 8px; margin-bottom: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 .loeschkasten .sperre { color: var(--warn); }
 /* Punkt 155 (0.5.3): Kasten im Tab Löschen klebt unter dem Kopfbereich – oben verschwindet der Text, die Knopfzeile bleibt ganz sichtbar */
+#lUmfang { display: inline-flex; gap: 8px; align-items: center; margin-left: 10px; vertical-align: middle; }   /* Punkt 229 */
 #lKasten { position: sticky; top: calc(var(--kleb-h) - var(--lk-ueber, 0px)); z-index: 4; }
 #tab-loeschen .tabelle { max-height: calc(100vh - var(--kleb-h) - var(--lk-sicht, 0px) - 56px); }
 /* die Seite muss weit genug scrollen können, damit der Kasten oben „einrastet“ */
@@ -536,10 +537,11 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       <span style="flex:1"></span>
       <a href="#" data-csv="probe">CSV</a>
     </div>
-    <div class="leiste" data-leiste="loeschen" hidden>
-      <label>Umfang <select id="lRegel"><option value="">alle aktiven Regeln</option></select></label>
+    <!-- Punkt 229: Umfang und „Plan neu laden“ stehen im Kasten neben „Jetzt ausführen“; hier liegen sie nur zwischen zwei
+         Neubauten des Kastens (Auswahl und Ereignisse bleiben erhalten). Punkt 163: Tabellen-Knöpfe über der Tabelle -->
+    <div id="lAblage" hidden>
+      <select id="lRegel" aria-label="Umfang des Laufs" title="Umfang: alle aktiven Regeln oder nur eine Regel"><option value="">alle aktiven Regeln</option></select>
       <button id="lNeu" title="Plan aus der aktuellen Analyse und den aktiven Regeln neu berechnen">Plan neu laden</button>
-      <!-- Punkt 163 (0.5.4): Knöpfe zur Tabelle stehen direkt über der Tabelle (unter dem Kasten) -->
     </div>
     <div class="leiste" data-leiste="protokoll" hidden>
       <button id="pNeu">Neu laden</button>
@@ -1011,6 +1013,20 @@ const HILFE_ERSPARNIS = "Wie viel kleiner die DB auf Dauer durch diese Regel ble
 const SNAME = { global: "global", wie_kurzzeit: "wie Kurzzeit", unbegrenzt: "unbegrenzt", keine: "keine" };
 const EINH = { d: "Tage", w: "Wochen", m: "Monate", j: "Jahre" };
 const EINH1 = { d: "Tag", w: "Woche", m: "Monat", j: "Jahr" };   // Einzahl: „1 Woche“ statt „1 Wochen“
+// Punkt 241: Suffix der Vorhaltedauer im Regelnamen „– 30T/2J“ (Kurzzeit/Langzeit; unbegrenzt bzw. ohne eigene Langzeit ∞,
+// Event-Regeln nur die Vorhaltezeit) – wie regeln.name_mit_suffix(); ersetzt ein altes Suffix, „(vor R07)“ dahinter bleibt
+const EINH_KURZ = { d: "T", w: "W", m: "M", j: "J" };
+const wertKurz = (w, leer = "∞") => w == null || w === "" ? leer : w === "unbegrenzt" ? "∞" : w === "keine" ? "0T"
+  : String(w).replace(/^(\d+)([dwmj])$/, (_, n, e) => n + EINH_KURZ[e]);
+const regelSuffix = r => r.typ === "event" ? wertKurz(r.kurzzeit, "global") : `${wertKurz(r.kurzzeit, "global")}/${wertKurz(r.langzeit)}`;
+const _DAUER = "(?:\\d+\\s*(?:Tage?|Wochen?|Monate?|Jahre?|[TWMJdwmj])|unbegrenzt|global|keine|∞)";
+const SUFFIX_RE = new RegExp(`(?:\\s+[–-]\\s+${_DAUER}(?:\\s*/\\s*${_DAUER})*|\\s+${_DAUER}\\s*/\\s*${_DAUER})(\\s*\\([^()]*\\))?\\s*$`);
+function nameMitSuffix(name, r) {
+  let n = (name || "").trim();
+  const m = SUFFIX_RE.exec(n);
+  if (m) n = (n.slice(0, m.index) + (m[1] || "")).trim();
+  return n ? `${n} – ${regelSuffix(r)}` : regelSuffix(r);
+}
 const wertAnzeige = v => v == null ? "" : (SNAME[v] || v.replace(/^(\d+)([dwmj])$/, (_, n, e) => `${n} ${n === "1" ? EINH1[e] : EINH[e]}`));
 
 // ---- Mehrfachsortierung (Punkt 74): Klick = nur nach dieser Spalte, Umschalt+Klick = weitere Stufe → Richtung umkehren → entfernen
@@ -1054,6 +1070,23 @@ function par() {
 
 // Höhe der klebenden Leiste für den Scrollbereich der Tabellen
 new ResizeObserver(() => document.documentElement.style.setProperty("--kleb-h", $("#klebend").offsetHeight + "px")).observe($("#klebend"));
+// Punkt 240: Platz unter einer Tabelle (Text darunter + Polster von main) von ihrer Höhe abziehen – sonst lässt sich die Seite
+// weiter scrollen, als die Tabelle hoch ist, und ihr Kopf (Gruppenzeile) verschwindet unter der klebenden Leiste
+function tabelleUnten() {
+  const pad = parseFloat(getComputedStyle($("main")).paddingBottom) || 0;
+  document.querySelectorAll("main section:not([hidden]) > .tabelle").forEach(t => {
+    let h = pad + 2;
+    for (let s = t.nextElementSibling; s; s = s.nextElementSibling) {
+      if (s.hidden || s.offsetParent === null) continue;
+      const cs = getComputedStyle(s);
+      h += s.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+    }
+    const css = Math.ceil(h) + "px";
+    if (t.style.getPropertyValue("--unten") !== css) t.style.setProperty("--unten", css);
+  });
+}
+new ResizeObserver(tabelleUnten).observe($("main"));
+window.addEventListener("resize", tabelleUnten);
 // Punkt 155 (0.5.3): Tab Löschen – der Kasten bleibt beim Scrollen so stehen, dass nur seine letzte Zeile (Knopf „Jetzt ausführen“) sichtbar ist
 new ResizeObserver(() => {
   const k = $("#lKasten"), z = k.lastElementChild; if (!z || k.offsetParent === null) return;
@@ -2573,7 +2606,7 @@ async function legeRegelnAn(eintraege, aktiv) {
       const basis = `EV:${v.regel.muster[0].replace(/[*?\[\]]/g, "") || "muster"}`;
       id = basis; let k = 2; while (liste.some(x => x.id === id)) id = `${basis}_${k++}`;
     }
-    const r = { ...v.regel, id, aktiv };
+    const r = { ...v.regel, id, aktiv, name: nameMitSuffix(v.regel.name, v.regel) };   // Punkt 241
     liste.push(r); neu.push(r);
   }
   if (!neu.length) return meldung("Empfehlungen", `Nichts anzulegen – für alle ausgewählten Vorschläge gibt es schon eine Regel:\n${schon.join("\n")}`);
@@ -2609,13 +2642,12 @@ async function legeRegelnAn(eintraege, aktiv) {
 const DAUER_TAGE = { d: 1, w: 7, m: 30, j: 365 };
 const dauerTage = w => { const m = /^(\d+)([dwmj])$/.exec(w || ""); return m ? +m[1] * DAUER_TAGE[m[2]] : Infinity; };
 function sammelName(regel, anzahl, alleDiagnose) {
-  const kz = wertAnzeige(regel.kurzzeit);
-  // z. B. sensor.*_rssi, sensor.*_uptime → „Diagnose: rssi, uptime – 7 Tage“ bzw. „sensor: rssi, uptime – 7 Tage“
+  // z. B. sensor.*_rssi, sensor.*_uptime → „Diagnose: rssi, uptime – 7T/∞“ bzw. „sensor: rssi, uptime – 7T/∞“ (Punkt 241)
   const end = regel.muster.map(m => /^([a-z_]+)\.\*_([^*?\[\]]+)$/.exec(m));
   if (regel.typ === "glob" && end.every(Boolean) && new Set(end.map(x => x[1])).size === 1)
-    return `${alleDiagnose ? "Diagnose" : end[0][1]}: ${end.map(x => x[2]).join(", ")} – ${kz}`;
+    return nameMitSuffix(`${alleDiagnose ? "Diagnose" : end[0][1]}: ${end.map(x => x[2]).join(", ")}`, regel);
   const teile = regel.muster.slice(0, 3).join(", ") + (regel.muster.length > 3 ? ` … (+${regel.muster.length - 3})` : "");
-  return `${anzahl} Empfehlungen: ${teile} – ${kz}`;
+  return nameMitSuffix(`${anzahl} Empfehlungen: ${teile}`, regel);   // Punkt 241
 }
 async function fasseZusammen(gew) {
   const familie = v => ["entity", "glob"].includes(v.regel.typ) ? "glob" : v.regel.typ;
@@ -2662,7 +2694,7 @@ async function fasseZusammen(gew) {
 // ---- Punkt 194: Wer schreibt am meisten? – Stufen Top N, je Stufe eine Regel statt vieler
 async function ladePareto() {
   const box = $("#paretoInhalt"), tage = +$("#paretoTage").value;
-  box.innerHTML = `<span class="sub">berechne …</span>`;
+  if (!S.pareto) box.innerHTML = `<span class="sub">berechne …</span>`;   // Punkt 240: alten Inhalt stehen lassen – sonst springt die Seite
   try {
     const p = await api(`pareto?tage=${tage}&` + par());
     S.pareto = p;
@@ -2690,14 +2722,18 @@ $("#paretoInhalt").addEventListener("click", ev => {
   const p = S.pareto, n = +b.dataset.top, s = p.stufen.find(x => x.top === n); if (!s) return;
   const kz = `${p.tage}d`, notiz = `aus „Wer schreibt am meisten?“: Top ${n} (${s.anteil} % des Zuwachses)`;
   if (b.dataset.pareto === "viel")
-    return bearbeiteRegel(-1, { typ: "vielschreiber", muster: [String(s.schwelle)], name: `Vielschreiber ab ${zahl(s.schwelle)} Zeilen/Tag – ${wertAnzeige(kz)}`,
+    return bearbeiteRegel(-1, { typ: "vielschreiber", muster: [String(s.schwelle)], name: nameMitSuffix(`Vielschreiber ab ${zahl(s.schwelle)} Zeilen/Tag`, { kurzzeit: kz }),
       kurzzeit: kz, aktiv: false, notiz, typManuell: true });
   const ids = p.kandidaten.slice(0, n).map(k => k.entity_id);
-  bearbeiteRegel(-1, { typ: "entity", muster: ids, name: `Top ${n} Vielschreiber – ${wertAnzeige(kz)}`, kurzzeit: kz, aktiv: false, notiz, typManuell: true });
+  bearbeiteRegel(-1, { typ: "entity", muster: ids, name: nameMitSuffix(`Top ${n} Vielschreiber`, { kurzzeit: kz }), kurzzeit: kz, aktiv: false, notiz, typManuell: true });
 });
 async function ladeOpt() {
   $("#optHaStd").hidden = !(haStandardAktiv() && haStdKurzzeit() === HA_STD_KZ);   // Punkte 181, 210: nur aktiv und 10 Tage
-  T.opt.leer = "berechne Vorschläge …"; T.opt.daten([]);
+  // Punkt 240: beim Neuberechnen die bisherigen Zeilen stehen lassen – eine leere Tabelle macht die Seite kurz niedriger, der
+  // Browser springt nach oben (z. B. nach dem Speichern neuer Regeln)
+  const y = window.scrollY;
+  if (S.opt?.length) { S.optInfo = `<span class="sub">berechne neu …</span>`; T.opt.zeige(); }
+  else { T.opt.leer = "berechne Vorschläge …"; T.opt.daten([]); }
   ladePareto();   // Punkt 194
   try {
     const r = await api("optimierungen?" + par());
@@ -2709,6 +2745,8 @@ async function ladeOpt() {
     T.opt.leer = r.fehler || "keine Vorschläge – alles mit eigener Kurzzeit geregelt";
     T.opt.daten(S.opt.filter(v => $("#oIgnoriert").checked || !v.ignoriert));
   } catch (e) { T.opt.leer = e.message; T.opt.daten([]); }
+  // Punkt 240: ist die Seite beim Neuaufbau (Kacheln, Kasten oben) trotzdem nach oben gesprungen, die Position zurückholen
+  requestAnimationFrame(() => { if (window.scrollY < y - 2) window.scrollTo(0, y); });
 }
 $("#oNeu").onclick = ladeOpt;
 $("#optHaStd").addEventListener("click", ev => {
@@ -3695,6 +3733,7 @@ function bearbeiteRegel(i, vorlage) {
           "Trotzdem speichern")) return;
       }
       if (x.aktiv && !await warnPruefung(x)) return;
+      x.name = nameMitSuffix(x.name, x);   // Punkt 241: Suffix „– 30T/2J“ nach den gespeicherten Werten
       const l = [...S.regeln.regeln]; if (neu) l.push(x); else l[i] = x;
       try { await speichereRegeln({ ...S.regeln, regeln: l }); $("#dlg").close(); } catch (e) { $("#dlgFehler").textContent = e.message; }
     }, true]]);
@@ -3957,12 +3996,21 @@ function planZeilen(p) {
     const lauf = laeufe.size === 1 ? [...laeufe][0] : [...laeufe].every(x => !ohne(x)) ? (laeufe.has("teilweise") ? "teilweise" : "vollständig") : "teilweise";
     const summe = z.states + z.kurz + z.lts + z.events;
     // Punkt 219: Überhang = was dieser Lauf löschen müsste, wegen der Obergrenzen aber in weitere Läufe fällt
+    // Punkt 230: 5M hat dasselbe keep_days wie die States (gekoppelt) – in der Zelle nur K (ohne States-Teil: K aus dem 5-Min-Teil)
     return { ...z, regel: [...z.regeln].join(", "), lauf, summe, ueberhang: Math.max(0, z.faellig - summe), hinweis: [...new Set(z.hinweise)].join(" · "),
-      vorhaltung: z.teile.map(t => `${KURZ[t.art]} ${t.alle ? "alle" : t.keep_days != null ? t.keep_days + " d" : "–"}${t.art === "states" && t.keep_days != null && t.kurzzeit != null && t.keep_days !== t.kurzzeit ? ` (Ziel ${t.kurzzeit} d)` : ""}`).join(" · ") };
+      vorhaltung: teileAnzeige(z.teile).map(t => `${KURZ[t.art]} ${t.alle ? "alle" : t.keep_days != null ? t.keep_days + " d" : "–"}${t.art === "states" && t.keep_days != null && t.kurzzeit != null && t.keep_days !== t.kurzzeit ? ` (Ziel ${t.kurzzeit} d)` : ""}`).join(" · ") };
   });
 }
+// Punkt 230: States und 5-Min-Statistik als ein Teil „Kurzzeit“ – eigene 5-Min-Zeile nur bei abweichendem Status (z. B. übersprungen)
+function teileAnzeige(teile) {
+  const st = teile.find(t => t.art === "states"), k = teile.find(t => t.art === "kurz");
+  if (!k) return teile;
+  if (!st) return teile.map(t => t === k ? { ...k, art: "states", nurKurz: true } : t);
+  if (k.lauf !== st.lauf) return teile;
+  return teile.filter(t => t !== k).map(t => t === st ? { ...st, kurzZeilen: k.zeilen, kurzGesamt: k.gesamt } : t);
+}
 // Punkt 113 (0.4.10): Tooltip je Zelle „Vorhaltung · in diesem Lauf“ – eine Zeile je Teil mit den Werten dieser Zeile
-const TEIL_NAME = { states: "States (Kurzzeit, Attribute folgen)", kurz: "5-Min-Statistik (folgt der Kurzzeit)", lts: "Langzeit (Stundenstatistik)", events: "Events" };
+const TEIL_NAME = { states: "States (Kurzzeit, Attribute folgen)", kurz: "5-Min-Statistik (gleiches keep_days wie die States)", lts: "Langzeit (Stundenstatistik)", events: "Events" };
 const TEIL_WEG = { states: "recorder.purge_entities", kurz: "rs_db_hygiene.purge", lts: "rs_db_hygiene.purge", events: "rs_db_hygiene.purge" };
 // Punkt 222 (0.5.5b13): was „Integration fehlt“ bedeutet – Tooltip im Löschplan (Spalte Hinweis, Kasten oben)
 const INTEGRATION_FEHLT = "Integration fehlt: 5-Min-Statistik, Langzeit und Events löscht der RS DB Hygiene Manager nicht selbst, sondern über die Integration RS DB Hygiene (Dienst rs_db_hygiene.purge). Das geht nur, wenn die Integration in Home Assistant installiert und betriebsbereit ist.\n" +
@@ -3983,8 +4031,13 @@ const tageText = d => `${zahl(d)} ${d === 1 ? "Tag" : "Tage"}`;
 const grenzTag = d => { const x = new Date(); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - d); return x.toLocaleDateString("de-DE"); };
 const grenzText = (d, exakt) => exakt ? `vor dem ${grenzTag(d)}, 0:00 (${d ? `${tageText(d)} voll + heute` : "alles bis auf heute"})` : `älter als ${tageText(d)}`;
 function teilText(t, mitStatus) {
-  const name = TEIL_NAME[t.art] || t.art, weg = t.exakt && t.art === "states" ? "rs_db_hygiene.purge_states" : TEIL_WEG[t.art] || "";
-  const menge = t.zeilen != null && t.gesamt != null && t.lauf !== "vollständig" && t.zeilen !== t.gesamt
+  // Punkt 230: zusammengefasster Teil Kurzzeit (States + 5-Min-Statistik, Attribute folgen den States)
+  const zus = t.kurzZeilen != null || t.nurKurz;
+  const name = zus ? "Kurzzeit (States, 5-Min-Statistik, Attribute)" : TEIL_NAME[t.art] || t.art;
+  const weg = t.nurKurz ? TEIL_WEG.kurz : t.exakt && t.art === "states" ? "rs_db_hygiene.purge_states" : TEIL_WEG[t.art] || "";
+  const menge = t.kurzZeilen != null ? (t.zeilen || t.kurzZeilen ? ` · ca. ${zahl(t.zeilen || 0)} States + ${zahl(t.kurzZeilen || 0)} 5-Min-Zeilen` : "")
+    : t.nurKurz ? (t.zeilen ? ` · ca. ${zahl(t.zeilen)} 5-Min-Zeilen (keine alten States)` : "")
+    : t.zeilen != null && t.gesamt != null && t.lauf !== "vollständig" && t.zeilen !== t.gesamt
     ? ` · ca. ${zahl(t.zeilen)} von ${zahl(t.gesamt)} fälligen Zeilen` : t.zeilen ? ` · ca. ${zahl(t.zeilen)} Zeilen` : "";
   const status = mitStatus ? ` – ${t.lauf || ""}` : "";
   let was;
@@ -3999,12 +4052,13 @@ function teilText(t, mitStatus) {
 // 5-Min übersprungen → Chip „teilweise“), sagt die erste Zeile, welcher Teil wie läuft. Darunter je Teil eine Zeile.
 const TEIL_KURZ = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
 const vorhaltungTip = r => {
-  const status = [...new Set(r.teile.map(t => t.lauf))];
+  const tl = teileAnzeige(r.teile);   // Punkt 230
+  const status = [...new Set(tl.map(t => t.lauf))];
   const kopf = status.length > 1 && !status.includes(r.lauf)
-    ? `${r.lauf}: In diesem Lauf wird nur ein Teil gelöscht – ${r.teile.map(t => `${TEIL_KURZ[t.art] || t.art} ${t.lauf}`).join(", ")}.`
+    ? `${r.lauf}: In diesem Lauf wird nur ein Teil gelöscht – ${tl.map(t => `${t.kurzZeilen != null || t.nurKurz ? "Kurzzeit" : TEIL_KURZ[t.art] || t.art} ${t.lauf}`).join(", ")}.`
     : LART_TEXT[r.lauf] || r.lauf;
   // kontextbezogen: erklärt wird nur der Status im Chip, nicht die übrigen Status der Teile
-  return [kopf, "", ...r.teile.map(t => teilText(t, status.length > 1))].join("\n");
+  return [kopf, "", ...tl.map(t => teilText(t, status.length > 1))].join("\n");
 };
 const blockSpalte = (k, titel, hilfe, breite = 115) => ({ k, titel, hilfe, typ: "zahl", n: 1, breite, wert: r => r[k],
   zelle: r => r[k] == null ? "–" : (k === "attr_zeilen" && r.attr_obergrenze ? "≤ " : "") + zahl(r[k]), csv: r => r[k] ?? "", summe: anzahlSumme(r => r[k]) });
@@ -4031,7 +4085,7 @@ T.loesch = new LokaleTabelle({
       tip: r => STATUS_TEXT[r.status] ? `Entität ${STATUS_TEXT[r.status]}` : "Event-Typ",
       optionen: l => [...new Set(l.map(r => r.status || "–"))].map(x => [x, STATUS_TEXT[x] || x]) },
     { k: "lauf", titel: "Vorhaltung (in diesem Lauf)", typ: "auswahl", breite: 230, wert: r => r.lauf,
-      hilfe: "K = States (keep_days an recorder.purge_entities), 5M = 5-Min-Statistik, L = Langzeit, EV = Events. vollständig: alles außerhalb der Vorhaltezeit · teilweise: nur die ältesten Tage bzw. bis zur Obergrenze · nächster Lauf: passt nicht mehr unter die Obergrenze · übersprungen: Integration fehlt. Einzelheiten je Zeile im Tooltip der Zelle.",
+      hilfe: "K = Kurzzeit (States, 5-Min-Statistik und Attribute – gleiches keep_days), L = Langzeit, EV = Events; 5M nur, wenn die 5-Min-Statistik einen anderen Status hat (z. B. übersprungen). vollständig: alles außerhalb der Vorhaltezeit · teilweise: nur die ältesten Tage bzw. bis zur Obergrenze · nächster Lauf: passt nicht mehr unter die Obergrenze · übersprungen: Integration fehlt. Einzelheiten je Zeile im Tooltip der Zelle.",
       tip: vorhaltungTip,
       zelle: r => `${esc(r.vorhaltung)} · <span class="chip ${LART_CHIP[r.lauf] || "warn"}">${esc(r.lauf)}</span>`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
       optionen: () => Object.keys(LART).map(x => [x, x]),
@@ -4156,6 +4210,10 @@ $("#tLaeufe").addEventListener("click", ev => {
   T.detail.daten(zeilen);
 });
 
+// Punkt 229: Umfang-Auswahl und „Plan neu laden“ rechts neben „Jetzt ausführen“ – vor dem Neubau des Kastens in die Ablage,
+// danach an den Platz #lUmfang (auch bei Fehler, damit sie erreichbar bleiben)
+function umfangAblegen() { $("#lAblage").append($("#lRegel"), $("#lNeu")); }
+function umfangEinsetzen() { const z = $("#lUmfang"); if (z) z.append($("#lRegel"), $("#lNeu")); }
 async function ladeLoeschen() {
   const regel = $("#lRegel").value;
   const k = $("#lKasten");
@@ -4198,6 +4256,7 @@ async function ladeLoeschen() {
     const zg = p.summe.zu_gross ? `<div class="sperre">⚠ ${zahl(p.summe.zu_gross)} Entitäten haben schon am ältesten Tag mehr Zeilen als die Obergrenze und kämen sonst nie an die Reihe.
       <label style="margin-left:6px"><input type="checkbox" id="lAusnahme" ${p.ausnahme ? "checked" : ""}> für diesen Lauf einmalig erlauben (nur ihr ältester Tag)</label>
       <span class="sub">Dauerhaft: App-Option „loeschen_max_zeilen“ erhöhen.</span></div>` : "";
+    umfangAblegen();
     k.innerHTML = `
       <div>${p.freigegeben ? `<span class="chip" title="${esc(`Schalter „Löschen freigegeben“: ${SCHALTER_ORT}. Wirkt nach dem Speichern sofort.`)}">Hauptschalter an</span>`
           : `<span class="chip warn" title="${esc(`„Löschen freigegeben“ einschalten: ${SCHALTER_ORT}. Wirkt nach dem Speichern sofort, ohne Neustart der App.`)}">Hauptschalter aus</span>`}
@@ -4221,10 +4280,12 @@ async function ladeLoeschen() {
       ${zg}
       ${ris}
       ${p.sperren.map(s => `<div class="sperre">⚠ ${esc(s)}</div>`).join("")}
-      <div><button class="gefahr" id="lStart" ${p.sperren.length ? "disabled" : ""}
-          title="${esc(`Löscht den ganzen Plan des gewählten Umfangs (${p.nur_regel ? `Regel ${p.nur_regel}` : "alle aktiven Regeln"}: ${su.zeilen ? `ca. ${zahl(su.zeilen)} Zeilen` : "nichts zu löschen"}). Die Filter der Tabelle wirken nur auf die Anzeige.`)}">Jetzt ausführen</button>
-        ${p.nur_regel ? `<span class="sub" style="margin-left:10px">Umfang: nur Regel ${esc(p.nur_regel)} – andere aktive Regeln bleiben in diesem Lauf außen vor.</span>` : ""}</div>`;
-    // Punkt 162 (0.5.3): kein „Letzter Lauf …“ mehr neben dem Knopf (steht im Reiter Löschprotokolle); Punkt 161: Tooltip und Umfang-Hinweis
+      <div class="lumfang"><button class="gefahr" id="lStart" ${p.sperren.length ? "disabled" : ""}
+          title="${esc(`Löscht den ganzen Plan des gewählten Umfangs (${p.nur_regel ? `nur Regel ${p.nur_regel} – andere aktive Regeln bleiben in diesem Lauf außen vor` : "alle aktiven Regeln"}: ${su.zeilen ? `ca. ${zahl(su.zeilen)} Zeilen` : "nichts zu löschen"}). Die Filter der Tabelle wirken nur auf die Anzeige.`)}">Jetzt ausführen</button>
+        <span id="lUmfang"></span></div>`;
+    // Punkt 162 (0.5.3): kein „Letzter Lauf …“ mehr neben dem Knopf (steht im Reiter Löschprotokolle); Punkt 161: Tooltip;
+    // Punkt 229: Umfang-Text neben dem Knopf entfällt, Auswahl und „Plan neu laden“ stehen dort
+    umfangEinsetzen();
 
     $("#lStart").onclick = starteLoeschen;
     const ab = $("#lAusnahme"); if (ab) ab.onchange = () => { S.loeschAusnahme = ab.checked; ladeLoeschen(); };
@@ -4234,7 +4295,9 @@ async function ladeLoeschen() {
     });
     T.loesch.daten(planZeilen(p));
   } catch (e) {
-    k.innerHTML = `<div class="fehler">${esc(e.message)}</div>`;
+    umfangAblegen();
+    k.innerHTML = `<div class="fehler">${esc(e.message)}</div><div class="lumfang"><span id="lUmfang"></span></div>`;
+    umfangEinsetzen();
   }
 }
 // ---- Reiter Löschprotokolle (Punkt 45; Name seit Punkt 158)
@@ -4266,6 +4329,13 @@ async function ladeProtokoll() {
   const k = $("#pKopf");
   try {
     const [laeufe, summe] = await Promise.all([api("loeschen/protokoll"), api("loeschen/summe")]);
+    // Punkt 228: Ist seit dem letzten Laden ein neuer Lauf dazugekommen (auch bei geschlossener GUI, z. B. Nachtlauf), stehen
+    // beide Tabellen wieder im Ausgangszustand – Sortierung und Filter zurück, oben anfangen
+    const neuester = laeufe.length ? Math.max(...laeufe.map(l => l.start)) : 0, gesehen = +speicher.lies("dbh_lauf_gesehen", "0");
+    if (neuester > gesehen) {
+      if (gesehen) for (const t of [T.laeufe, T.summe]) { t.resetFilter(); const sc = t.el.closest(".tabelle"); if (sc) sc.scrollTop = 0; }
+      speicher.schreib("dbh_lauf_gesehen", String(neuester));
+    }
     T.laeufe.daten(laeufe); T.summe.daten(summe);
     const tage = +(S.status?.optionen?.protokoll_tage ?? 365);
     const erster = laeufe.length ? Math.min(...laeufe.map(l => l.start)) : null;

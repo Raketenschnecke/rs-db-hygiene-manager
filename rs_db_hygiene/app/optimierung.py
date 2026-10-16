@@ -32,7 +32,6 @@ UNBENUTZT_BUENDEL = 100      # Punkt 236: ab hier zählen unbenutzte Entitäten 
 GRUPPE_MIN = 3               # Mindestzahl Entitäten einer Gruppe
 GRUPPE_PRO_TAG = 1000        # Mindestzuwachs einer Gruppe (Zeilen je Tag)
 EVENT_PRO_TAG = 1000         # Event-Typen ab so vielen Events je Tag
-VERWAIST_MIN_ZEILEN = 10000  # verwaiste Altdaten ab dieser Menge (States + 5-Min + Langzeit)
 TAGE = {"gruppe": "7d", "viel": "30d", "viel_sehr": "14d", "attribute": "30d", "unbenutzt": "14d", "deaktiviert": "30d",
         "verwaist": "30d", "event": "14d", "herkunft": "30d", "uhrzeit": "1d"}
 # Punkt 205: ab so vielen Einzelvorschlägen einer Integration eine herkunft-Regel statt vieler entity-Regeln (Punkt 234:
@@ -339,13 +338,14 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
 
     ablehnung = {"grund": None}   # warum neu() zuletzt nichts vorgeschlagen hat (Begründung der Sammelregel, Punkt 233)
 
-    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz=""):
+    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz="", immer=False):
         regel = {"id": "VORSCHLAG", "name": name, "typ": typ, "muster": muster, "aktiv": False, "notiz": notiz,
                  "kurzzeit": kurzzeit, "attribute": None, "langzeit": None}
+        regel["name"] = rg.name_mit_suffix(name, regel)   # Punkt 241: „– 14T/∞“ statt „– 14 Tage“
         norm = rg.normalisiere({"regeln": [regel], "events": {}})["regeln"][0]
         w = event_wirkung(norm, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(norm, pl, bestand, hist, ziel=ziel, mit_ents=True)
         ablehnung["grund"] = None
-        if not w["gewinnt"] or w["ersparnis_bytes"] <= 0 and not w["loesch_bytes"]:
+        if not immer and (not w["gewinnt"] or w["ersparnis_bytes"] <= 0 and not w["loesch_bytes"]):   # immer: Punkt 239
             ablehnung["grund"] = "verlaengert" if w.get("verlaengert") else "spart_nichts"
             return None
         # Punkte 205/208: herkunft/klasse haben Rang vor vielschreiber – nie vorschlagen, wenn sie irgendwo verlängern
@@ -618,15 +618,25 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             neu(f"entitaet:{eid}", "entitaet", eid, "entity", [eid], kz, gruende, f"{eid} – {rg.anzeige(kz)}",
                 "Empfehlung des RS DB HM")
 
-    # 3. verwaiste Entitäten ohne verwaist-Regel
+    # 3. verwaiste Entitäten: Punkt 239 – immer vorschlagen, solange keine aktive verwaist-Regel existiert (ohne Mengenschwelle
+    # und Ersparnisprüfung, auch ohne Verwaiste: vorbeugend für künftige)
     if not any(r["typ"] == "verwaist" and r["aktiv"] for r in bestand["regeln"]):
         alt = [e for e in ents if rg.ist_verwaist(e["status"]) and not e.get("schutz")]
         menge = sum((e["rows"] or 0) + (e["kurz_rows"] or 0) for e in alt)
-        if alt and menge >= VERWAIST_MIN_ZEILEN:
-            neu("verwaist:alle", "verwaist", "verwaiste Entitäten", "verwaist", ["alle"], TAGE["verwaist"],
-                [f"{len(alt)} verwaiste Entitäten ohne Regel; ihre States und 5-Min-Statistik bleiben sonst bis purge_keep_days",
-                 "Langzeit bleibt unverändert (unbegrenzt) – lässt sich in der Maske ändern"],
-                "Verwaiste – 30 Tage", "Empfehlung des RS DB HM: 30 Tage Frist, falls eine Entität nur umbenannt wurde")
+        if alt:
+            jetzt = time.time()
+            tage = [(jetzt - e["last_ts"]) / 86400 for e in alt if e.get("last_ts")]
+            alter = (f", letzter Wert vor {round(min(tage))}–{round(max(tage))} Tagen" if tage and round(min(tage)) != round(max(tage))
+                     else f", letzter Wert vor {round(tage[0])} Tagen" if tage else "")
+            gr = [f"{_anzahl(len(alt), 'verwaiste Entität', 'verwaiste Entitäten')} ohne Regel, {_anzahl(menge, 'Zeile', 'Zeilen')} "
+                  f"(States + 5-Min){alter}; sie bleiben sonst bis purge_keep_days"]
+        else:
+            gr = ["vorbeugend: derzeit keine verwaisten Entitäten – die Regel greift, sobald eine Entität verschwindet"]
+        gr.append("Langzeit bleibt unverändert (unbegrenzt) – lässt sich in der Maske ändern")
+        v = neu("verwaist:alle", "verwaist", "verwaiste Entitäten", "verwaist", ["alle"], TAGE["verwaist"], gr,
+                "Verwaiste – 30 Tage", "Empfehlung des RS DB HM: 30 Tage Frist, falls eine Entität nur umbenannt wurde", immer=True)
+        if v and alt:
+            v["gruende"].insert(1, f"heute fällig: {_anzahl(v['loesch_zeilen'], 'Zeile', 'Zeilen')} – der Rest nach Ablauf der 30 Tage")
 
     # 4. Event-Typen mit viel Volumen ohne Event-Regel
     te = _tage_von(TAGE["event"])

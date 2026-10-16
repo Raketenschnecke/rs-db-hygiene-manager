@@ -22,7 +22,7 @@
      "aktiv": false, "kurzzeit": "30d", "attribute": null, "langzeit": null, "notiz": "Entitäten, die es in HA nicht mehr gibt"},
     {"id": "EV:call_service", "name": "Events call_service", "typ": "event", "muster": ["call_service"],
      "aktiv": false, "kurzzeit": "7d", "attribute": null, "langzeit": null, "notiz": "Dienstaufrufe (call_service)"},
-    {"id": "HA:standard", "name": "HA-Standard: alles 10 Tage, Langzeit unbegrenzt", "typ": "ha_standard", "muster": ["*"],
+    {"id": "HA:standard", "name": "HA-Standard – 10T/∞", "typ": "ha_standard", "muster": ["*"],
      "aktiv": true, "kurzzeit": "10d", "attribute": null, "langzeit": "unbegrenzt",
      "notiz": "Bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (purge_keep_days 10). Nicht löschbar, nur passiv schaltbar."}
   ]

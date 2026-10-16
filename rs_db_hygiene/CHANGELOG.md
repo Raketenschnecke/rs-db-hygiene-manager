@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b3 (Beta)
+- **Regelnamen (Punkt 241):** beim Speichern bekommt der Name das Suffix der Vorhaltedauer „– 30T/2J“ (Kurzzeit/Langzeit, ∞ = unbegrenzt, Event-Regeln „– 7T“); ein altes Suffix wird ersetzt. Gilt für alle Regeln, auch Schutz und HA-Standard („HA-Standard – 90T/∞“), und für alle Namen aus Empfehlungen und Regelwerk-Check
+- **Tab Löschen (Punkt 229):** Umfang-Auswahl und „Plan neu laden“ stehen direkt neben „Jetzt ausführen“, der Umfang-Text daneben entfällt
+- **5-Min-Statistik (Punkt 230):** wird im Löschlauf immer mit demselben keep_days wie die States der Entität gelöscht (auch bei Obergrenze); die Spalte Vorhaltung zeigt nur noch K und L
+- **Löschprotokolle (Punkt 228):** nach einem neuen Lauf stehen Sortierung und Filter der Tabellen wieder im Ausgangszustand – auch nach dem Nachtlauf
+- **Empfehlungen:** Regel für verwaiste Entitäten erscheint immer, solange keine aktive verwaist-Regel existiert (Punkt 239); Tabellenkopf bleibt beim Scrollen sichtbar, nach dem Speichern springt die Seite nicht mehr nach oben (Punkt 240)
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b2 (Beta)
 - **Erweitern statt neu (Punkt 232):** passt ein Vorschlag in eine bestehende Regel gleichen Typs, bietet der Reiter Empfehlungen „In Rxx aufnehmen …“ an (⚠, wenn die Zielregel die Langzeit kürzt); bei der Massenauswahl fragt die App, ob aufgenommen oder neu angelegt wird
 - **Sammelregel (Punkte 233/234):** ist eine Klassen- oder Integrationsregel nicht sicher (zu viele der Entitäten werden verwendet, oder sie verlängert die Kurzzeit anderer), schlagen die Empfehlungen eine Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration vor

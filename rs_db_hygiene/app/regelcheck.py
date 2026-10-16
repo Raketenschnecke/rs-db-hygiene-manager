@@ -162,6 +162,10 @@ def folgen(aenderung, bestand):
 def variante(titel, aenderung, ctx, erklaerung=""):
     """Eine Variante samt Bewertung: wirkungsneutral oder mit den Unterschieden."""
     bestand = ctx["bestand"]
+    # Punkt 241: gespeicherte Regeln bekommen das Suffix der Vorhaltedauer „– 30T/2J“ (auch bei geänderten Werten)
+    if aenderung.get("setzen"):
+        aenderung = {**aenderung, "setzen": [r if r["typ"] == "ha_standard" else {**r, "name": rg.name_mit_suffix(r["name"], r)}
+                                             for r in aenderung["setzen"]]}
     neu = _anwenden(bestand, aenderung)
     alt_r = {r["id"]: r for r in bestand["regeln"]}
     betroffen = [alt_r[i] for i in aenderung.get("entfernen") or [] if i in alt_r]
@@ -237,7 +241,7 @@ def zusammengelegt(gruppe, name=None):
     if not name:
         if erste["typ"] == "herkunft":
             liste = ", ".join(muster[:4]) + (f" … (+{len(muster) - 4})" if len(muster) > 4 else "")
-            name = f"Integrationen {liste} – {_wertetext(erste)}"
+            name = f"Integrationen {liste}"
         else:
             name = " + ".join(r["name"] for r in gruppe)
             if len(name) > 80:
@@ -245,7 +249,7 @@ def zusammengelegt(gruppe, name=None):
     notizen = list(dict.fromkeys(r["notiz"] for r in gruppe if r["notiz"]))
     # Punkt 238: Notizen weglassen, die schon in einer anderen stecken („Empfehlung des RS DB HM“ in „… HM: eine Regel …“)
     notiz = " · ".join(n for n in notizen if not any(n != m and n in m for m in notizen))
-    return {**erste, "name": name, "muster": muster, "notiz": notiz}
+    return {**erste, "name": rg.name_mit_suffix(name, erste), "muster": muster, "notiz": notiz}   # Punkt 241
 
 
 def zusammenlegen_variante(gruppe, ctx, name=None):

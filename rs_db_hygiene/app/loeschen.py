@@ -130,8 +130,13 @@ def _histogramme(cache_pfad):
     h = {}
     for mid, tag, n in con.execute("SELECT metadata_id, tag, n FROM st_tage"):
         h.setdefault(mid, []).append((tag, n))
+    # Punkt 230: 5-Min-Statistik je Tag – für den an die States gekoppelten 5-Min-Auftrag
+    lid_von = dict(con.execute("SELECT entity_id, lts_id FROM entitaet"))
+    hk = {}
+    for lid, tag, n in con.execute("SELECT lts_id, tag, n FROM kurz_tage"):
+        hk.setdefault(lid, []).append((tag, n))
     con.close()
-    return int(info["heute_tag"]), mid_von, h
+    return int(info["heute_tag"]), mid_von, h, lid_von, hk
 
 
 def _alt_zaehler(h, heute):
@@ -157,7 +162,7 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
     grenze_b = grenze if grenze_b is None else grenze_b
     min_tage = 0 if exakt else MIN_KEEP_DAYS
     pkd = int(pl["stand"]["purge_keep_days"])
-    heute, mid_von, hist = _histogramme(cache_pfad)
+    heute, mid_von, hist, lid_von, hist_kurz = _histogramme(cache_pfad)
     kandidaten, regeln, wartend = [], {}, {}
     for e in pl["entitaeten"]:
         if e.get("schutz"):                  # Punkt 111: geschützt – nie im Plan (zusätzlich zu global/unbegrenzt)
@@ -235,10 +240,24 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
     # Ab 0.4.3 (Punkt 82) mit eigener Obergrenze: Bis dahin bekam B nur den Rest der States-Grenze und kam bei großem
     # States-Rückstand nie an die Reihe (Nachtlauf 11.10.2026: 0,8 Mio. B-Zeilen „nächster Lauf“).
     auftraege_b = plan_b(pl, pkd, nur_regel, exakt)
+    # Punkt 230: Der 5-Min-Auftrag folgt dem States-Auftrag derselben Entität in diesem Lauf – gleiches keep_days (auch
+    # bei Obergrenze „teilweise“ oder Ausnahme); wartet der States-Teil auf den nächsten Lauf, wartet auch die 5-Min-Statistik
+    st_von = {c["entity_id"]: c for c in eintraege}
+    for a in auftraege_b:
+        c = st_von.get(a["name"]) if a["art"] == "kurz" else None
+        if c is None or c["keep_days"] == a["keep_days"]:
+            continue
+        if c["keep_days"] is None:
+            a.update(wartet=True, gekoppelt=True)      # bleibt fällig (zeilen), wird in diesem Lauf nicht ausgeführt
+        else:
+            alt_k, _a = _alt_zaehler(hist_kurz.get(lid_von.get(a["name"]), []), heute)
+            a.update(keep_days=c["keep_days"], zeilen=min(a["zeilen"], alt_k(c["keep_days"])), gekoppelt=True)
     rest = grenze_b
     for a in sorted(auftraege_b, key=lambda a: (a["zeilen"], a["name"])):
         if not stufe_b:      # Punkt 52: ohne Integration nicht einplanen und nicht mitzählen
             a["art_lauf"] = "übersprungen"
+        elif a.get("wartet"):    # Punkt 230: States derselben Entität folgen erst im nächsten Lauf
+            a["art_lauf"] = "nächster Lauf"
         elif a["zeilen"] <= rest:
             a["art_lauf"] = "vollständig"
         elif rest > 0:
@@ -248,7 +267,7 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
         # Punkt 75 (0.4.4): was davon in diesem Lauf gelöscht wird (bei „teilweise“ der Rest der Obergrenze)
         a["zeilen_lauf"] = (a["zeilen"] if a["art_lauf"] == "vollständig" else min(rest, a["zeilen"]) if a["art_lauf"] == "teilweise" else 0)
         if stufe_b:
-            rest -= min(rest, a["zeilen"])
+            rest -= a["zeilen_lauf"]
         r = regeln.setdefault(a["regel"], {"regel": a["regel"], "entitaeten": 0, "zeilen": 0, "zeilen_gesamt": 0})
         r["zeilen"] += a["zeilen_lauf"]
         r["zeilen_gesamt"] += a["zeilen"]
@@ -319,7 +338,8 @@ MAX_KEEP_DAYS_B = MAX_KEEP_DAYS     # Punkt 79: wie die States 20 Jahre (bis 0.4
 def plan_b(pl, pkd, nur_regel=None, exakt=False):
     """Aufträge für 5-Min-Statistik, Langzeit (je statistic_id = entity_id) und Events (je Event-Typ).
 
-    - 5-Min-Statistik folgt der Kurzzeit; nur wenn sie kürzer als purge_keep_days ist (sonst löscht HA selbst).
+    - 5-Min-Statistik folgt der Kurzzeit; nur wenn sie kürzer als purge_keep_days ist (sonst löscht HA selbst). In plan()
+      danach an das keep_days des States-Auftrags derselben Entität gekoppelt (Punkt 230).
     - Langzeit: Tage aus der Regel; „keine“ = alle Zeilen (bei Verwaisten zusätzlich statistics_meta).
     - Events: Vorhaltezeit je Typ, nur wenn kürzer als purge_keep_days.
     Zeilen = Löschmenge sofort aus dem Probelauf (Tagesbasis).
