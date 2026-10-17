@@ -708,7 +708,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
             <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt; nur Anzeige, keine Löschung über den RS DB Hygiene Manager (Löschen nur aus Home Assistant möglich)</td></tr>
-            <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern. Die Langzeit rühren die Empfehlungen nur in einer eigenen Art an: Die Empfehlung <b>Langzeit</b> ist eine Sammelregel mit 90 Tagen Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit). Die Spalte „Wirkt auf“ zeigt, ob ein Vorschlag die Kurzzeit, die Langzeit oder beide setzt; „Treffer“ lassen sich nicht summieren, weil dieselbe Entität in mehreren Vorschlägen stehen kann.</td></tr>
+            <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern. Die Langzeit rühren die Empfehlungen nur in einer eigenen Art an: Die Empfehlung <b>Langzeit</b> ist eine Sammelregel mit 1 Jahr Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit). Die Spalte „Wirkt auf“ zeigt, ob ein Vorschlag die Kurzzeit, die Langzeit oder beide setzt; „Treffer“ lassen sich nicht summieren, weil dieselbe Entität in mehreren Vorschlägen stehen kann.</td></tr>
             <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten, optimieren (Spalte Regelwerk-Check/Empfehlungen); Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen; der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> prüft das Regelwerk. Beim Speichern bekommt der Name die Vorhaltedauer als Suffix, z. B. „– 30T/2J“ (Kurzzeit/Langzeit, ∞ = unbegrenzt; Event-Regeln nur „– 7T“).</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“ (daneben der Umfang – alle aktiven Regeln oder nur eine – und „Plan neu laden“); der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
             <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Pause wegen eines Backups; ein Klick auf einen Lauf zeigt die Einzelheiten je Entität; dazu die Monatssumme je Entität</td></tr>
@@ -869,7 +869,7 @@ actions:
         <h3 id="h-faq-langzeit">Wie begrenze ich die Langzeitstatistik?</h3>
         <p>Die Langzeitstatistik (Stundenstatistik) löscht Home Assistant nie selbst. Pro Entität mit Statistik kommen 24 Zeilen am Tag dazu, rund 0,7 MB im Jahr; bei mehreren tausend Entitäten summiert sich das über die Jahre. Die Langzeit wird getrennt von der Kurzzeit geregelt: Eine Regel, die nur die Langzeit setzt, lässt die Kurzzeit unverändert. Das Löschen der Langzeit läuft über die Integration <i>RS DB Hygiene</i>.</p>
         <ol>
-          <li><b>Gezielt:</b> Regeln für Klassen, Integrationen oder einzelne Entitäten mit der Langzeit, die sie brauchen (z. B. Temperatur 5 Jahre), oder „unbegrenzt“ für alles, was dauerhaft bleiben soll. Die Empfehlung der Art <b>Langzeit</b> schlägt eine Sammelregel mit 90 Tagen für alle nirgends verwendeten Entitäten vor. „Verwendet“ erkennt die App nur an den Konfigurationsdateien (Dashboards, Automationen, Skripte, Szenen, Templates, Helfer, Energie); wer Werte nur im Verlauf ansieht oder in anderen Programmen (z. B. Grafana, Node-RED) nutzt, prüft die Treffer vorher und legt die Regel zunächst passiv an.</li>
+          <li><b>Gezielt:</b> Regeln für Klassen, Integrationen oder einzelne Entitäten mit der Langzeit, die sie brauchen (z. B. Temperatur 5 Jahre), oder „unbegrenzt“ für alles, was dauerhaft bleiben soll. Die Empfehlung der Art <b>Langzeit</b> schlägt eine Sammelregel mit 1 Jahr für alle nirgends verwendeten Entitäten vor. „Verwendet“ erkennt die App nur an den Konfigurationsdateien (Dashboards, Automationen, Skripte, Szenen, Templates, Helfer, Energie); wer Werte nur im Verlauf ansieht oder in anderen Programmen (z. B. Grafana, Node-RED) nutzt, prüft die Treffer vorher und legt die Regel zunächst passiv an.</li>
           <li><b>Auffangnetz („Lumpensammler“):</b> Im Dialog der Regel <a class="hverweis" href="#h-ha-standard">HA-Standard</a> die Langzeit auf einen Wert wie 1 Jahr stellen. Sie gilt für alle Entitäten, für die keine andere Regel eine Langzeit setzt – auch für künftige. Zähler (<code>state_class: total</code> bzw. <code>total_increasing</code>) behalten ihre Langzeit immer; <i>schutz</i>-Regeln gehen vor.</li>
         </ol>
         <p>Der Rang gilt je Wert getrennt: Eine gezielte Regel mit längerer Langzeit gewinnt gegen das Auffangnetz. Als Auffangnetz keine glob-Regel <code>*</code> anlegen – sie steht im Rang vor klasse- und integration-Regeln und überstimmt deren Langzeit.</p>
@@ -2257,7 +2257,7 @@ function zeigeZeilen(zeilen) {
   requestAnimationFrame(weiter);
 }
 // Filter ausgeblendeter Spalten wirken nicht (Punkt 23)
-const unsichtbareFilter = () => Object.keys(S.f).filter(k => S.f[k] && k !== "device_id" && k !== "plattform" &&
+const unsichtbareFilter = () => Object.keys(S.f).filter(k => S.f[k] && k !== "device_id" && k !== "plattform" && k !== "liste" &&
   !S.sichtbar.has(k === "herkunft_art" ? "herkunft" : k));
 function zeigeTreffer(r) {
   const bis = S.limit ? Math.min(S.offset + S.limit, r.gesamt) : r.gesamt;
@@ -2266,6 +2266,7 @@ function zeigeTreffer(r) {
   $("#trefferzeile").innerHTML = "" +
     (S.f.device_id ? `<span class="filterchip">Gerät: ${esc(S.geraetName || S.f.device_id)}<button id="geraetWeg" aria-label="Gerätefilter entfernen">✕</button></span>` : "") +
     (S.f.plattform ? `<span class="filterchip">Integration: ${esc(S.f.plattform)}<button id="plattformWeg" aria-label="Filter Integration entfernen">✕</button></span>` : "") +   // Punkt 205
+    (S.f.liste ? `<span class="filterchip">Empfehlung: ${esc(S.listeName || "Liste")}<button id="listeWeg" aria-label="Filter Empfehlung entfernen">✕</button></span>` : "") +
     (aus.length ? `<span class="chip warn" title="${esc(aus.map(k => SPALTE[k === "herkunft_art" ? "herkunft" : k][1]).join(", "))}">${aus.length} Filter in ausgeblendeten Spalten wirken nicht</span>` : "");
   $("#trefferzeile").hidden = !$("#trefferzeile").innerHTML.trim();
   $("#seite").textContent = `${zahl(r.gesamt ? S.offset + 1 : 0)}–${zahl(bis)} von ${zahl(r.gesamt)}`;
@@ -2276,6 +2277,7 @@ function zeigeTreffer(r) {
 $("#trefferzeile").addEventListener("click", ev => {
   if (ev.target.closest("#geraetWeg")) { S.geraetName = ""; setzeFilter("device_id", "", true); }
   if (ev.target.closest("#plattformWeg")) setzeFilter("plattform", "", true);
+  if (ev.target.closest("#listeWeg")) setzeFilter("liste", "", true);
 });
 async function ladeEntitaeten() {
   const p = par();
@@ -2758,7 +2760,7 @@ async function ladePareto() {
       p.stufen.map(s => `<tr><td>${s.alle ? `alle ${zahl(s.top)}` : zahl(s.top)}</td><td class="n">${zahl(s.zeilen_tag)}</td>
         <td><div class="pareto-balken" title="${zahl(s.anteil)} % der ${zahl(p.gesamt_zeilen_tag)} Zeilen je Tag aller nicht verwaisten Entitäten"><span style="width:${Math.min(100, s.anteil)}%"></span><b>${zahl(s.anteil)} %</b></div></td>
         <td class="n" title="Zeilen je Tag der ${zahl(s.top)}. Entität – eine Vielschreiber-Regel ab dieser Schwelle trifft mindestens diese ${zahl(s.top)}">≥ ${zahl(s.schwelle)}</td>
-        <td class="n">${gb(s.ersparnis_bytes)}</td>
+        <td class="n">${gbmb(s.ersparnis_bytes)}</td>
         <td class="aktion"><button data-pareto="viel" data-top="${s.top}" title="Regeltyp vielschreiber ab ${zahl(s.schwelle)} Zeilen je Tag – wirkt dynamisch auch auf künftige Vielschreiber. Trifft auch Entitäten außerhalb der Kandidaten (z. B. Helfer-Quellen ohne Zähler), sofern keine genauere Regel gilt – die Vorschau in der Maske zeigt die genaue Wirkung.">als Vielschreiber-Regel</button>
           <button data-pareto="entity" data-top="${s.top}" title="Regeltyp entity mit genau diesen ${zahl(s.top)} Entity-IDs – fest, neue Vielschreiber fallen nicht darunter">als entity-Regel</button></td></tr>`).join("") +
       `</tbody></table>`;
@@ -2829,6 +2831,7 @@ $("#tOpt").addEventListener("click", async ev => {
   }
   if (was === "ansehen") {
     document.querySelector('#tabs button[data-tab="ent"]').click();
+    setzeFilter("liste", "", false);
     if (v.regel.typ === "verwaist") { setzeFilter("entity_id", "", false); return setzeFilter("status", "verwaist", true); }
     // Punkte 205/208: Integration als Filter-Chip (wie Gerät), Klasse über die Spalte Klasse und das Domain-Feld
     setzeFilter("plattform", v.regel.typ === "herkunft" ? v.regel.muster[0] : "", false);
@@ -2842,7 +2845,14 @@ $("#tOpt").addEventListener("click", async ev => {
       return setzeFilter("device_class", dc, true);
     }
     if (v.regel.typ === "herkunft") { setzeFilter("entity_id", "", false); return setzeFilter("device_class", "", true); }
-    return setzeFilter("entity_id", v.regel.muster.length === 1 ? v.regel.muster[0] : "", true);
+    if (v.regel.muster.length === 1) return setzeFilter("entity_id", v.regel.muster[0], true);
+    // mehrere Entitäten (Sammelregeln, Langzeit-Empfehlung): ID-Liste beim Server ablegen und danach filtern
+    setzeFilter("entity_id", "", false);
+    try {
+      const { schluessel } = await postJson("idliste", { ids: v.regel.muster });
+      S.listeName = v.titel || "Empfehlung";
+      return setzeFilter("liste", schluessel, true);
+    } catch (e) { return meldung("Empfehlungen", e.message); }
   }
   try {
     await postJson("optimierungen/ignorieren", { id: v.id, ignorieren: was === "ignorieren" });
@@ -3991,7 +4001,7 @@ function vorschauHtml(v, ohneWert, x) {
   const z2 = ohneWert ? `<div class="sub">Noch kein Wert gesetzt – Wirkung erscheint, sobald Kurzzeit oder Langzeit gewählt ist.</div>`
     : x.typ === "schutz" ? `<div class="sub">Schutz-Regel: diese Daten werden nie gekürzt.</div>`
     : v.anzahl ? `<div class="kz"><span>wirkt bei <b>${zahl(v.gewinnt)}</b></span><span>sofort zusätzlich löschbar <b>${zahl(loesch)}</b> Zeilen (${mb(v.loesch_bytes)})</span>` +
-      `<span>${ersp >= 0 ? "Ersparnis" : "Mehrbedarf"} im Prognosezeitraum (${jahreText(zielJahre())}) <b>${gb(Math.abs(ersp))}</b></span></div>` +
+      `<span>${ersp >= 0 ? "Ersparnis" : "Mehrbedarf"} im Prognosezeitraum (${jahreText(zielJahre())}) <b>${gbmb(Math.abs(ersp))}</b>${v.ersparnis_kurz_bytes === undefined ? "" : ` <span class="sub">(Kurzzeit ${gbmb(v.ersparnis_kurz_bytes)} · Langzeit ${gbmb(v.ersparnis_lang_bytes)})</span>`}</span></div>` +
       (v.verlaengert ? `<div class="risiko">Bei ${mzahl(v.verlaengert, "Entität", "Entitäten")} bewahrt die Regel länger auf als heute.</div>` : "") +
       (!x.aktiv ? `<div class="sub">Regel ist passiv – die Werte zeigen, was sie aktiv bewirken würde.</div>` : "")
     : "";

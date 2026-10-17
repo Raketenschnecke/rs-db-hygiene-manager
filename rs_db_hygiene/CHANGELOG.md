@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b8 (Beta)
+- **„Ansehen“ bei mehreren Entitäten (Punkt 251):** in Empfehlungen mit mehr als einer Entität (z. B. Langzeit nirgends verwendeter Entitäten, Sammelregeln) zeigt „Ansehen“ jetzt nur die betroffenen Entitäten; Chip „Empfehlung: …“ mit ✕ über der Tabelle
+- **Langzeit-Empfehlung (Punkt 252):** der Vorschlagswert für die Langzeit nirgends verwendeter Entitäten ist 1 Jahr statt 90 Tage
+- **Ersparnis in MB und getrennt (Punkt 253):** die Vorschau „Neue Regel“ zeigt die Ersparnis ab unter 1 GB in MB und getrennt nach Kurzzeit und Langzeit; ebenso die Ersparnis im Kasten „Wer schreibt am meisten?“
+
 ## 0.5.6b7 (Beta)
 - **Langzeit begrenzen (Punkt 249):** die Regel HA-Standard hat jetzt auch eine einstellbare Langzeit (Dauer oder unbegrenzt) und wird damit zum „Lumpensammler“ für alle Entitäten ohne eigene Langzeit-Regel. Zähler behalten ihre Langzeit immer. Neue Empfehlung der Art „Langzeit“: Sammelregel mit 90 Tagen Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit); Spalte „Wirkt auf“ in den Empfehlungen
 - **Ersparnis mit Langzeit (Punkt 248):** die Vorschau „Neue Regel“ und die Empfehlungen rechnen die Langzeit jetzt in die Ersparnis ein (bisher nur in „sofort löschbar“)

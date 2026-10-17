@@ -35,7 +35,7 @@ GRUPPE_PRO_TAG = 1000        # Mindestzuwachs einer Gruppe (Zeilen je Tag)
 EVENT_PRO_TAG = 1000         # Event-Typen ab so vielen Events je Tag
 TAGE = {"gruppe": "7d", "viel": "30d", "viel_sehr": "14d", "attribute": "30d", "unbenutzt": "14d", "deaktiviert": "30d",
         "verwaist": "30d", "event": "14d", "herkunft": "30d", "uhrzeit": "1d",
-        "langzeit_unbenutzt": "90d"}   # Punkt 249: Langzeit nirgends verwendeter Entitäten
+        "langzeit_unbenutzt": "1j"}   # Punkt 249 (252: 1 Jahr statt 90 Tage): Langzeit nirgends verwendeter Entitäten
 # Punkt 205: ab so vielen Einzelvorschlägen einer Integration eine herkunft-Regel statt vieler entity-Regeln (Punkt 234:
 # 3 statt 5); nicht für Sammel-Integrationen, unter denen ganz verschiedene Geräte und Helfer stehen (auch keine Sammelregel)
 HERKUNFT_MIN = 3
@@ -132,7 +132,7 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
     ziel = int(ziel or (pl.get("stand") or {}).get("ziel_tage") or pkd)
     treffer, geschuetzt, von, getroffen = [], [], {}, []
     w = {"ueberstimmt": 0, "gewinnt": 0, "zuwachs_tag": 0, "bestand": 0, "loesch_states": 0, "loesch_kurz": 0,
-         "loesch_lts": 0, "loesch_bytes": 0, "ersparnis_bytes": 0, "verlaengert": 0}
+         "loesch_lts": 0, "loesch_bytes": 0, "ersparnis_bytes": 0, "ersparnis_kurz_bytes": 0, "ersparnis_lang_bytes": 0, "verlaengert": 0}
     for e in _vorfilter(regel, pl.get("entitaeten", [])):
         x = allein.loese_e(e)
         if x["geschuetzt"]:
@@ -167,6 +167,7 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
                 d = min(alt["kurzzeit"], ziel) - min(neu["kurzzeit"], ziel)
                 pro_tag = (e["rows_24h"] or 0) * pl_.B_STATE + (pl_.KURZ_PRO_TAG * pl_.B_KURZ if lid else 0) + (e.get("attr_zuwachs_tag") or 0)
                 w["ersparnis_bytes"] += d * pro_tag
+                w["ersparnis_kurz_bytes"] += d * pro_tag   # Punkt 253: getrennt ausgewiesen
                 w["verlaengert"] += d < 0
         if g["langzeit"]["regel"] == regel["id"] and lid and neu["langzeit"] is not None:
             ll = max(0, pl_._aelter(hist["lts"], lid, heute - neu["langzeit"]) - (e["loeschbar"]["lts"] or 0))
@@ -180,6 +181,7 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
                     return (lts_jetzt + pl_.LTS_PRO_TAG * ziel) if tage is None else pl_.LTS_PRO_TAG * tage
                 d = lts_prog(alt["langzeit"]) - lts_prog(neu["langzeit"])
                 w["ersparnis_bytes"] += d * pl_.B_LTS
+                w["ersparnis_lang_bytes"] += d * pl_.B_LTS
                 w["verlaengert"] += d < 0
     treffer.sort(key=lambda t: -(t["rows_24h"] or 0))
     return {"anzahl": len(treffer), "treffer": treffer[:beispiele], "anzahl_geschuetzt": len(geschuetzt),
@@ -381,6 +383,7 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
              "passiv": passiv,
              **{k: w[k] for k in ("anzahl", "anzahl_geschuetzt", "anzahl_ueberstimmt", "gewinnt", "zuwachs_tag", "bestand",
                                   "loesch_bytes", "ersparnis_bytes")},
+             **{k: w[k] for k in ("ersparnis_kurz_bytes", "ersparnis_lang_bytes") if k in w},   # Punkt 253: Events ohne Langzeit haben sie nicht
              "loesch_zeilen": w.get("loesch_states", 0) + w.get("loesch_kurz", 0) + w.get("loesch_lts", 0) + w.get("loesch_events", 0),
              "beispiele": [t["entity_id"] for t in w["treffer"][:6]]}
         out.append(v)

@@ -5,6 +5,7 @@ Ab 0.2.0 Löschlauf Stufe A: Kurzzeit-States per recorder.purge_entities, nur ma
 """
 import asyncio
 import csv
+import hashlib
 import io
 import json
 import logging
@@ -462,9 +463,18 @@ def _mit_labels(r):
     return r
 
 
+# Ansehen einer Empfehlung mit mehreren Entitäten: die ID-Liste wäre als GET-Parameter zu lang, daher legt die Oberfläche sie
+# vorab ab (POST /api/idliste) und filtert mit f_liste=<Schlüssel>; gehalten werden die letzten 20 Listen
+_IDLISTEN = {}
+
+
 def _gefiltert(r, q, fehler_ziel=None):
     _mit_labels(r)
     such = (q.get("q") or "").lower()
+    liste_k = (q.get("f_liste") or "").strip()
+    liste = _IDLISTEN.get(liste_k) if liste_k else None
+    if liste_k and liste is None and fehler_ziel is not None:
+        fehler_ziel["liste"] = "Liste nicht mehr vorhanden, bitte „Ansehen“ erneut wählen"
     domain, status_f, regel_f = q.get("domain"), q.get("status"), q.get("regel")
     hinweis = q.get("hinweis") == "1"
     spalten_ok, fehler, _aktiv = spaltenfilter.baue(q)
@@ -475,6 +485,8 @@ def _gefiltert(r, q, fehler_ziel=None):
         if not spalten_ok(e):
             continue
         if such and such not in e["entity_id"]:
+            continue
+        if liste is not None and e["entity_id"] not in liste:
             continue
         if domain and e["domain"] != domain:
             continue
@@ -703,6 +715,16 @@ async def optimierungen(request):
     t0 = time.time()
     liste = await asyncio.to_thread(rechne)
     return web.json_response({"vorschlaege": liste, "stand": r["stand"], "dauer_s": round(time.time() - t0, 2)})
+
+
+async def idliste_ablegen(request):
+    ids = frozenset(str(i) for i in ((await request.json()).get("ids") or []))
+    schl = hashlib.md5("\n".join(sorted(ids)).encode()).hexdigest()[:12]
+    _IDLISTEN.pop(schl, None)
+    _IDLISTEN[schl] = ids
+    while len(_IDLISTEN) > 20:
+        del _IDLISTEN[next(iter(_IDLISTEN))]
+    return web.json_response({"schluessel": schl})
 
 
 async def optimierung_ignorieren(request):
@@ -1168,6 +1190,7 @@ def erstelle_app():
         web.post("/api/regeln/pruefen", regel_pruefen),
         web.get("/api/optimierungen", optimierungen),
         web.post("/api/optimierungen/ignorieren", optimierung_ignorieren),
+        web.post("/api/idliste", idliste_ablegen),
         web.get("/api/regelcheck", regelcheck_lesen),
         web.post("/api/regelcheck/vorschau", regelcheck_vorschau),
         web.post("/api/regelcheck/uebernehmen", regelcheck_uebernehmen),
