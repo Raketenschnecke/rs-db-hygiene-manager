@@ -191,6 +191,7 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
             continue
         kandidaten.append({"entity_id": e["entity_id"], "regel": rid, "status": e["status"], "kurzzeit_tage": k,
                            "zeilen_gesamt": gesamt, "alt": alt, "hinweis": hinweis,
+                           "kurz_wert": w.get("wert"),   # Punkt 242: Wert der Regel mit der vom User gewählten Einheit (z. B. „6m“)
                            # über den ältesten Tag hinaus ändert sich nichts mehr (begrenzt die Suche bei 20 Jahren)
                            "obergrenze_tage": min(pkd - 1, MAX_KEEP_DAYS, heute - aeltester),
                            # Punkt 63: Attributzeilen aus der Attribut-Analyse (bei „teilweise“ höchstens so viele)
@@ -355,7 +356,7 @@ def plan_b(pl, pkd, nur_regel=None, exakt=False):
             continue
         k = werte.get("kurzzeit") or {}
         if k.get("regel") and (not nur_regel or k["regel"] == nur_regel) and (k.get("tage") or 0) < pkd and lo_.get("kurz"):
-            out.append({"art": "kurz", "name": e["entity_id"], "regel": k["regel"], "status": e["status"],
+            out.append({"art": "kurz", "name": e["entity_id"], "regel": k["regel"], "status": e["status"], "wert": k.get("wert"),
                         "keep_days": max(min_tage, k.get("tage") or 0), "alle": False, "mit_meta": False,
                         "zeilen": lo_["kurz"], "hinweis": "Untergrenze 1 Tag" if not k.get("tage") and not exakt else ""})
         lz = werte.get("langzeit") or {}
@@ -363,7 +364,7 @@ def plan_b(pl, pkd, nur_regel=None, exakt=False):
             alle = lz["tage"] == 0
             if not alle and lz["tage"] > MAX_KEEP_DAYS_B:
                 continue
-            out.append({"art": "lts", "name": e["entity_id"], "regel": lz["regel"], "status": e["status"],
+            out.append({"art": "lts", "name": e["entity_id"], "regel": lz["regel"], "status": e["status"], "wert": lz.get("wert"),
                         "keep_days": None if alle else lz["tage"], "alle": alle, "mit_meta": alle and rg.ist_verwaist(e["status"]),   # Punkt 186: Deaktivierte behalten ihren Statistik-Eintrag
                         "zeilen": lo_["lts"], "hinweis": ("Langzeit „keine“ – samt statistics_meta" if alle and rg.ist_verwaist(e["status"])
                                                           else "Langzeit „keine“ – alle Stundenwerte" if alle else "")})
@@ -373,7 +374,7 @@ def plan_b(pl, pkd, nur_regel=None, exakt=False):
         regel = ev.get("regel") or "Events"      # ab 0.3.1 die Event-Regel (EV:…)
         if nur_regel and nur_regel != regel:
             continue
-        out.append({"art": "events", "name": ev["event_type"], "regel": regel, "status": "",
+        out.append({"art": "events", "name": ev["event_type"], "regel": regel, "status": "", "wert": ev.get("wert"),
                     "keep_days": max(min_tage, ev["tage"]), "alle": False, "mit_meta": False,
                     "zeilen": ev["loeschbar"], "hinweis": ""})
     return out
@@ -623,6 +624,10 @@ class Lauf:
                      # Punkt 83: auf welchem Analyse-Stand der Plan beruht
                      "analyse_zeit": p.get("analyse_zeit"), "analyse_vorher": bool(p.get("analyse_vorher")),
                      "kennung": p["kennung"], "geplant_zeilen": p["summe"]["zeilen"], "geloescht": 0,
+                     # Punkt 243: ab hier zählt die Summe eines Laufs die Attributzeilen mit (ältere Läufe ohne dieses Feld bleiben unverändert)
+                     "geplant_attr": p["summe"].get("attr_zeilen") or 0,
+                     # Punkt 242: Wert der Regel je Entität bzw. Event-Typ und Datenart (Einheit nach Wahl des Users) für „K 7T/L 1J“
+                     "vorhaltung": self._vorhaltung(p),
                      # Punkt 200 (0.5.5b12): alles Fällige beim Start – Rest danach = fällig − gelöscht (je Obergrenze)
                      "faellig_states": p["summe"].get("zeilen_states_gesamt"),
                      "faellig_b": sum((p["summe"].get("zeilen_b") or {}).values()) if p.get("stufe_b") else 0,
@@ -650,6 +655,19 @@ class Lauf:
                   _dauer(time.time() - self.start), f["paket"], f["pakete"], f.get("aktuell", ""), _z(weg), _z(vorher_summe),
                   100 * weg // vorher_summe if vorher_summe else 100, _z(rest), _z(f["geloescht"]), _z(ziel),
                   100 * f["geloescht"] // ziel if ziel else 100, f" · {f['backup']}" if f.get("backup") else "")
+
+    @staticmethod
+    def _vorhaltung(p):
+        """Punkt 242: {Entität bzw. Event-Typ: {states|kurz|lts|events: Regelwert wie „6m“}} – die Pakete kennen nur keep_days in Tagen,
+        die Anzeige „K 7T/L 1J“ braucht die vom User gewählte Einheit der Regel."""
+        v = {}
+        for c in p.get("entitaeten") or []:
+            if c.get("kurz_wert"):
+                v.setdefault(c["entity_id"], {})["states"] = c["kurz_wert"]
+        for a in p.get("auftraege_b") or []:
+            if a.get("wert"):
+                v.setdefault(a["name"], {})[a["art"]] = a["wert"]
+        return v
 
     def _grenze(self, tage):
         """Löschgrenze für keep_days tage: lokale Mitternacht (exakt) oder wie bisher jetzt − tage × 24 h."""

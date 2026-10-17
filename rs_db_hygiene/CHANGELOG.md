@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b6 (Beta)
+- **Löschtabellen einheitlich (Punkt 243):** Spaltenfolge in allen Löschtabellen Summe | States | 5-Min | Attribute | Events | Langzeit (Plan, Läufe, Lauf-Details, Monatssumme, Entitäten; bei Prognosen je Regel Summe | States | Attribute | Events | Langzeit). Die Summe enthält jetzt immer die Attribute; im Plan keine „≤“-Kennzeichnung mehr, in den Lauf-Details entfällt „Rest“. Läufe aus früheren Versionen bleiben unverändert (Summe ohne Attribute)
+- **Vorhaltedauer im Löschprotokoll (Punkt 242):** die Spalte „keep_days“ heißt „Vorhaltedauer“ und zeigt „K 7T/L 1J“ (K = States, 5-Min, Attribute, Events; L = Langzeit; Einheit wie in der Regel gewählt, „alle“ bei vollständigem Löschen); ältere Läufe zeigen Tage
+- **„integration“ statt „herkunft“ (Punkt 246):** der Regeltyp heißt in der Anzeige „integration“ (Typ-Spalte, Filter, Regelmaske, Rang-Texte, Empfehlungen, Regelwerk-Check); der interne Schlüssel „herkunft“ bleibt, keine Migration
+- **Integration (Punkt 244):** der Sensor „DB-Größe“ übernimmt neue Werte höchstens alle 30 Minuten
+
 ## 0.5.6b5 (Beta)
 - **Hilfe überarbeitet (Punkt 247):** Reiter „Hilfe“ auf den aktuellen Stand gebracht, u. a. FAQ „In welcher Reihenfolge lege ich Regeln an?“ (6 Schritte), neues Kapitel „Regelwerk-Check“, Sprungziele jetzt unter der klebenden Leiste sichtbar; Erwähnungen von purge_keep_days und configuration.yaml verlinken auf „Home Assistant vorbereiten“; Versionsangaben aus dem Hilfetext entfernt
 - Die Integration ändert sich nur in der Versionsnummer

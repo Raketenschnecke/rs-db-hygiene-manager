@@ -1,6 +1,8 @@
 """Status-Sensoren der App RS DB Hygiene Manager."""
 from __future__ import annotations
 
+import time
+
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfInformation
 
@@ -20,6 +22,9 @@ SENSOREN = {
     "letzte_attribut_analyse": (SensorDeviceClass.TIMESTAMP, None, None, None, True),
 }
 
+# Punkt 244 (0.5.6b6): Sekunden, höchstens so oft übernimmt der Sensor einen neuen Wert (der Koordinator läuft weiter alle 30 s)
+DROSSELUNG = {"db_groesse": 1800}
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = entry.runtime_data
@@ -36,7 +41,16 @@ class DbhSensor(DbhEntitaet, SensorEntity):
             self._attr_options = optionen
         if diagnose:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._drossel = DROSSELUNG.get(schluessel)
+        self._gehalten = None      # zuletzt übernommener Wert
+        self._uebernommen = None   # monotone Zeit der letzten Übernahme
 
     @property
     def native_value(self):
-        return self._wert()[0]
+        wert = self._wert()[0]
+        if not self._drossel:
+            return wert
+        jetzt = time.monotonic()
+        if wert is not None and (self._uebernommen is None or jetzt - self._uebernommen >= self._drossel):
+            self._gehalten, self._uebernommen = wert, jetzt
+        return self._gehalten

@@ -506,16 +506,17 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         """Punkte 233/234: die Muster-Regel (klasse/herkunft) ist nicht möglich – zu viele der übrigen werden verwendet oder
         sie verlängert irgendwo → Sammelregel (entity) mit allen unbenutzten freien Entitäten, die Daten haben. Trifft keine
         verwendete und verlängert nie (nur Entitäten ohne eigene Kurzzeit); künftige Entitäten erfasst sie nicht."""
+        anzeige = "Integrations-" if typ == "herkunft" else f"{typ}-"   # Punkt 246
         ids = sorted(e["entity_id"] for e in frei if e["entity_id"] not in verwendet and (e["rows"] or 0) > 0)
         if len(ids) < GRUPPE_MIN:
             return
         if len(benutzt) > KLASSE_VERWENDET * len(rest):
-            grund = (f"{typ}-Regel nicht möglich: von den übrigen {len(rest)} werden {len(benutzt)} verwendet"
+            grund = (f"{anzeige}Regel nicht möglich: von den übrigen {len(rest)} werden {len(benutzt)} verwendet"
                      + (f" (z. B. {', '.join(benutzt[:3])})" if benutzt else ""))
         elif ablehnung["grund"] == "verlaengert":
-            grund = f"{typ}-Regel nicht möglich: sie verlängert die Kurzzeit von Entitäten mit kürzerer Regel (Rang)"
+            grund = f"{anzeige}Regel nicht möglich: sie verlängert die Kurzzeit von Entitäten mit kürzerer Regel (Rang)"
         else:
-            grund = f"{typ}-Regel nicht möglich: sie spart nichts"
+            grund = f"{anzeige}Regel nicht möglich: sie spart nichts"
         gr = [buendel(l, wo), grund,
               f"enthält alle {_anzahl(len(ids), 'unbenutzte Entität', 'unbenutzten Entitäten')} ohne eigene Kurzzeit "
               "(Zähler ausgenommen) – künftige nicht"]

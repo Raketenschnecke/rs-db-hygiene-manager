@@ -204,7 +204,7 @@ def normalisiere(daten):
             regeln.append(ha_standard(kz, r.get("aktiv", True) is not False))
             continue
         if typ not in TYP_RANG:
-            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft, vielschreiber, verwaist oder event sein")
+            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft (Anzeige: integration), vielschreiber, verwaist oder event sein")
         roh = r.get("muster") or []
         if isinstance(roh, str):
             roh = re.split(r"[\n,]", roh)
@@ -219,7 +219,7 @@ def normalisiere(daten):
                 raise RegelFehler(f"{rid}: vielschreiber braucht genau eine Schwelle in Zeilen je Tag (Zahl ≥ 1), z. B. 500")
             muster = [_SCHWELLE.match(zahlen[0]).group(1)] + [m for m in muster if m not in zahlen]
         if typ == "herkunft" and any(not _EVENT_MUSTER.match(m) for m in muster):   # gleiche Zeichen wie Event-Typen
-            raise RegelFehler(f"{rid}: herkunft-Muster sind Integrationen wie unifi oder mobile_app (Kleinbuchstaben, Ziffern, _ . * ?)")
+            raise RegelFehler(f"{rid}: Muster vom Typ herkunft (Anzeige: integration) sind Integrationen wie unifi oder mobile_app (Kleinbuchstaben, Ziffern, _ . * ?)")
         neu = {"id": rid, "name": str(r.get("name") or rid), "typ": typ, "muster": muster,
                "aktiv": r.get("aktiv", True) is not False, "notiz": str(r.get("notiz") or "")}
         for art in WERTE:

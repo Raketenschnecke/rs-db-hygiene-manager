@@ -240,7 +240,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                                  for art in rg.WERTE},
                        "loeschbar": loesch, "prognose_bytes": sum(prog.values()), "prognose_teile": prog,
                        # Punkt 63: Block „Löschmenge sofort“ als flache Felder (Server-Filter, Sortierung, Summen)
-                       "loesch_summe": loesch["states"] + loesch["kurz"] + loesch["lts"], "loesch_states": loesch["states"],
+                       "loesch_summe": loesch["states"] + loesch["kurz"] + loesch["lts"] + (loesch["attr_zeilen"] or 0), "loesch_states": loesch["states"],   # Punkt 243: inkl. Attribute
                        "loesch_kurz": loesch["kurz"], "loesch_lts": loesch["lts"], "loesch_attr_zeilen": loesch["attr_zeilen"],
                        # Punkt 197 (0.5.5b9): Platz der Löschmenge sofort in Bytes – States, 5-Min, Langzeit und Attribute
                        "loesch_mb": (loesch["states"] * B_STATE + loesch["kurz"] * B_KURZ + loesch["lts"] * B_LTS

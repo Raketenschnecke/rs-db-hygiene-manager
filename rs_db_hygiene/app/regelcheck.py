@@ -401,7 +401,7 @@ def befunde(pl, bestand, ignoriert=()):
         l.sort(key=lambda r: pos[r["id"]])
         v = zusammenlegen_variante(l, ctx)
         out.append(_befund(ctx, "zusammen", "gelb", [r["id"] for r in l], f"zusammenlegen ({len(l)})",
-                           f"Regeln {', '.join(r['id'] for r in l)}: zusammenlegen (Typ {typ}, gleiche Werte {_wertetext(l[0])})",
+                           f"Regeln {', '.join(r['id'] for r in l)}: zusammenlegen (Typ {'integration' if typ == 'herkunft' else typ}, gleiche Werte {_wertetext(l[0])})",
                            [f"{', '.join(r['id'] for r in l)}: gleicher Typ, gleiche Werte – eine Regel mit allen Mustern genügt",
                             "Im Dialog lässt sich die Auswahl einschränken und der Name ändern."],
                            [v], name_vorschlag=zusammengelegt(l)["name"]))

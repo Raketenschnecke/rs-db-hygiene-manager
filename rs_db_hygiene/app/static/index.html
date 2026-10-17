@@ -898,7 +898,7 @@ actions:
     <div class="trefferzeile" id="trefferRegeln"></div>
     <div class="tabelle"><table id="tRegeln" class="baustein"></table></div>
     <p class="sub" id="globalText" hidden></p>
-    <p class="sub" id="standardText">Rang: entity › glob › klasse › herkunft › vielschreiber, innerhalb eines Typs die Reihenfolge hier. Jeder der drei Werte wird für sich aufgelöst.</p>
+    <p class="sub" id="standardText">Rang: entity › glob › klasse › integration › vielschreiber, innerhalb eines Typs die Reihenfolge hier. Jeder der drei Werte wird für sich aufgelöst.</p>
   </section>
   <section id="tab-probe" hidden>
     <div class="trefferzeile" id="trefferProbe"></div>
@@ -1026,6 +1026,8 @@ const HA_ICON = `<svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label=
 const STATUS_TITEL = "Entitäts-Status";   // 0.5.3: eindeutig neben der Spalte „Entität“ (entity_id)
 const STATUS_HILFE = "Zustand der Entität in HA (aktiv / deaktiviert / verwaist / verwaist (gelöscht)), nicht der Regel";
 const SONDER = { kurzzeit: ["global", "keine"], attribute: ["wie_kurzzeit", "keine"], langzeit: ["unbegrenzt", "keine"] };
+// Punkt 246 (0.5.6b6): Anzeigename des Regeltyps „herkunft“ ist „integration“ (interner Schlüssel unverändert)
+const typName = t => t === "herkunft" ? "integration" : t;
 const REGELTYPEN = ["entity", "glob", "klasse", "herkunft", "vielschreiber", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111); herkunft/vielschreiber ab 0.5.5b9 (Punkte 196/193)
 // Punkt 127 (0.5.3): Regel HA-Standard – feste ID, nur aktiv/passiv, nicht löschbar, im Regel-Dialog nicht wählbar
 const HA_STD = "HA:standard";
@@ -1607,7 +1609,7 @@ const HILFE = {
     "Nach „Ersparnis (Dauerbetrieb)“ sortieren, um die Hebel zu sehen; Regeln mit 0 Entitäten treffen nichts, oder andere Regeln haben überall Vorrang."],
   optimierungen: ["Empfehlungen",
     "Regelvorschläge, die die App aus der letzten Analyse ableitet – ohne neue Abfrage der Datenbank und ohne dass etwas gelöscht wird. Vorgeschlagen wird nur eine kürzere Kurzzeit für Daten, für die heute keine eigene Regel gilt; die Langzeit bleibt unverändert.",
-    "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Klasse (mehrere Vorschläge derselben Geräteklasse, z. B. sensor|frequency, als eine klasse-Regel) · Integration (ab 5 Vorschlägen einer Integration wie proxmoxve eine herkunft-Regel mit 30 Tagen – sie trifft alle Entitäten der Integration ohne eigene Kurzzeit, auch künftige) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt; gilt nicht für Automationen und Skripte –, in HA deaktiviert, Uhrzeit-Sensoren mit 1 Tag) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt (unter 1 GB in MB). ⚠ heißt: Die Regel würde wegen ihres Rangs für einige Entitäten eine heute kürzere Kurzzeit verlängern. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
+    "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Klasse (mehrere Vorschläge derselben Geräteklasse, z. B. sensor|frequency, als eine klasse-Regel) · Integration (ab 5 Vorschlägen einer Integration wie proxmoxve eine Integrations-Regel mit 30 Tagen – sie trifft alle Entitäten der Integration ohne eigene Kurzzeit, auch künftige) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt; gilt nicht für Automationen und Skripte –, in HA deaktiviert, Uhrzeit-Sensoren mit 1 Tag) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt (unter 1 GB in MB). ⚠ heißt: Die Regel würde wegen ihres Rangs für einige Entitäten eine heute kürzere Kurzzeit verlängern. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
     "Nach Ersparnis sortiert von oben abarbeiten: „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; Treffer und Wirkung zeigt die Vorschau dort. Was nicht passt, „ignorieren“ – die App merkt es sich. Mehrere ausgewählte Vorschläge: „als passive Regeln anlegen“, „als aktive Regeln anlegen …“ (mit Warnprüfung, wirkt ab dem nächsten Löschlauf) oder „zu einer Regel zusammenfassen …“ – gleiche Regeltypen werden eine Regel, entity und glob gemeinsam eine glob-Regel; ergibt sich genau eine Regel, öffnet sich die Regelmaske."],
   passiv: ["Passive Regeln mitrechnen",
     "Rechnet passive Regeln (z. B. R23 Einzelfallprüfung) so, als wären sie aktiv.",
@@ -1896,8 +1898,8 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["kurzzeit", WNAME.kurzzeit, 0, "wert", "", 200, "wirksame Kurzzeit und ihre Quelle (Regel oder Std.) – gilt für States, 5-Min-Statistik und Attribute"],
   ["langzeit", WNAME.langzeit, 0, "wert", "", 190, "wirksame Langzeit und ihre Quelle (Regel oder Std.) – gilt für die Stundenstatistik"],
   // Punkt 63: Block „Löschmenge sofort“ wie in der Monatssumme – Summe, davon je Tabelle, dahinter die Attributzeilen
-  ["loesch_summe", "Summe (States + 5-Min + Langzeit)", 1, "zahl", ">0", 175,
-    "Zeilen, die ein Lauf sofort löschen würde (Bestand): States + 5-Min-Statistik + Langzeit. Gegenstück: Ersparnis (Dauerbetrieb) im Tab Prognosen je Regel."],
+  ["loesch_summe", "Summe", 1, "zahl", ">0", 175,
+    "Zeilen, die ein Lauf sofort löschen würde (Bestand): States + 5-Min-Statistik + Attribute + Langzeit (Attribute nur mit Attribut-Analyse). Gegenstück: Ersparnis (Dauerbetrieb) im Tab Prognosen je Regel."],
   // Punkt 197 (0.5.5b9): ersetzt die Spalte „Attribute (MB)“ – Platz der ganzen Löschmenge sofort
   // Punkt 209 (0.5.5b12): „Speicher“ statt „Platz“
   ["loesch_mb", "Speicher frei (MB)", 1, "zahl", ">1 (MB)", 125,
@@ -1905,8 +1907,8 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["loesch_states", "States", 1, "zahl", ">0", 100, "Zeilen in states außerhalb der Kurzzeit"],
   ["loesch_kurz", "5-Min-Statistik", 1, "zahl", ">0", 150, "Zeilen in statistics_short_term außerhalb der Kurzzeit"],
   ["loesch_lts", "Langzeit", 1, "zahl", ">0", 100, "Stundenstatistik außerhalb der Langzeit-Vorhaltezeit"],
-  ["loesch_attr_zeilen", "Attributzeilen (mit den States)", 1, "zahl", ">0", 150,
-    "Attributzeilen, die mit den States wegfallen (zuletzt vor der Kurzzeit-Grenze benutzt) – nicht in der Summe; aus der Attribut-Analyse"],
+  ["loesch_attr_zeilen", "Attribute", 1, "zahl", ">0", 150,
+    "Attributzeilen, die mit den States wegfallen (zuletzt vor der Kurzzeit-Grenze benutzt) – in der Summe enthalten; aus der Attribut-Analyse"],
   ["attr_bytes", "Bestand (Attribute · MB)", 1, "zahl", ">10 (MB)", 115,
     "Platz der Attribute dieser Entität heute, inkl. Index (Filter in MB)."],
   ["attr_zuwachs_tag", "Zuwachs/Tag (Attribute · MB)", 1, "zahl", ">0,1 (MB)", 140,
@@ -1922,7 +1924,7 @@ const SPALTENGRUPPEN = [
   ["Stammdaten", "stamm", ["entity_id", "herkunft", "device_class", "labels", "status"]],
   ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]],
   ["Istzustand", "ist", ["first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
-  ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"]],
+  ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"]],
 ];
 const SPALTEN = SPALTENGRUPPEN.flatMap(([, , ks]) => ks.map(k => SPALTEN_ROH.find(s => s[0] === k)));
 if (SPALTEN.length !== SPALTEN_ROH.length || SPALTEN.includes(undefined)) throw new Error("SPALTENGRUPPEN passt nicht zu SPALTEN_ROH");
@@ -1958,7 +1960,7 @@ const ANSICHTEN_ENT = {
   Standard: SPALTEN.map(s => s[0]).filter(k => !ATTR_SPALTEN.includes(k)),
   // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
   "States & Statistik": ["entity_id", "herkunft", "device_class", "status", "kurzzeit", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
-                         "loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_lts"],
+                         "loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"],
   Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen", "loesch_mb"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
 };
@@ -2088,9 +2090,9 @@ function zeigeSummen(su) {
     last_ts: zelle(datum(g.last_ts), datum(a.last_ts), `spätester Zeitstempel – ${GEF}`),
     rows: zz("rows", `Zeilen in states – ${GEF}`), rows_24h: zz("rows_24h", `neue Zeilen in states je Tag (Ø 7 volle Tage) – ${GEF}`),
     kurz_rows: zz("kurz_rows", `Zeilen 5-Min-Statistik – ${GEF}`), lts_rows: zz("lts_rows", `Zeilen Langzeit – ${GEF}`),
-    loesch_summe: zz("loesch_summe", `Zeilen sofort löschbar (States + 5-Min + Langzeit) – ${GEF}`),
+    loesch_summe: zz("loesch_summe", `Zeilen sofort löschbar (States + 5-Min + Attribute + Langzeit) – ${GEF}`),
     loesch_states: zz("loesch_states", `States sofort löschbar – ${GEF}`), loesch_kurz: zz("loesch_kurz", `5-Min-Statistik sofort löschbar – ${GEF}`),
-    loesch_lts: zz("loesch_lts", `Langzeit sofort löschbar – ${GEF}`), loesch_attr_zeilen: zz("loesch_attr_zeilen", `Attributzeilen, die mit den States wegfallen – ${GEF}`),
+    loesch_lts: zz("loesch_lts", `Langzeit sofort löschbar – ${GEF}`), loesch_attr_zeilen: zz("loesch_attr_zeilen", `Attributzeilen, die mit den States wegfallen (in der Summe enthalten) – ${GEF}`),
     attr_bytes: zelle(mbz(g.attr_bytes), mbz(a.attr_bytes), `Attribute Bestand in MB – ${GEF}`),
     attr_zuwachs_tag: zelle(mbz(g.attr_zuwachs_tag), mbz(a.attr_zuwachs_tag), `Attribute Zuwachs pro Tag in MB – ${GEF}`),
     attr_avg: zelle(g.attr_avg == null ? "–" : zahl(g.attr_avg), a.attr_avg == null ? "–" : zahl(a.attr_avg), `Ø Größe einer Attributzeile in Byte – ${GEF}`),
@@ -2345,7 +2347,7 @@ const regelIndex = r => S.regeln.regeln.indexOf(r);
 // Punkt 199 (0.5.5b10): Rang „Stufe.Position“ – Stufe nach Typ (Schutz 0, E: 1, entity 2 … verwaist 7, event 8, HA-Standard 99),
 // Position innerhalb der Stufe in der Reihenfolge der Regelliste (aktive und passive, damit die Nummer beim Umschalten bleibt)
 const RANG_STUFE = { schutz: 0, entity: 2, glob: 3, klasse: 4, herkunft: 5, vielschreiber: 6, verwaist: 7, event: 8, ha_standard: 99 };
-const RANG_NAME = { 0: "Schutz", 1: "eigene Vorhaltezeit (E:)", 2: "entity", 3: "glob", 4: "klasse", 5: "herkunft", 6: "vielschreiber", 7: "verwaist", 8: "event", 99: "HA-Standard" };
+const RANG_NAME = { 0: "Schutz", 1: "eigene Vorhaltezeit (E:)", 2: "entity", 3: "glob", 4: "klasse", 5: "integration", 6: "vielschreiber", 7: "verwaist", 8: "event", 99: "HA-Standard" };
 const rangStufe = r => r.typ === "schutz" ? 0 : String(r.id).startsWith("E:") ? 1 : RANG_STUFE[r.typ] ?? 50;
 const RANG_CACHE = new WeakMap();
 function regelRang(id) {
@@ -2393,7 +2395,7 @@ T.regeln = new LokaleTabelle({
       summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nangezeigt: aktiv ${zahl(g.filter(r => r.aktiv).length)} · passiv ${zahl(g.filter(r => !r.aktiv).length)}\nalle: aktiv ${zahl(a.filter(r => r.aktiv).length)} · passiv ${zahl(a.filter(r => !r.aktiv).length)}`] },
     // Punkt 199: Rang „Stufe.Position“ – Sortierung nach Rang zeigt die tatsächliche Vorrangfolge; ▲ tauscht mit der vorigen Regel derselben Stufe
     { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 90, mitte: 1, wert: r => regelRang(r.id)?.sort ?? regelIndex(r),
-      hilfe: "Stufe.Position: Stufe nach Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), Position innerhalb der Stufe. Kleinere Zahl = höherer Rang. Je Wert gewinnt unter den passenden aktiven Regeln die mit dem höchsten Rang.",
+      hilfe: "Stufe.Position: Stufe nach Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), Position innerhalb der Stufe. Kleinere Zahl = höherer Rang. Je Wert gewinnt unter den passenden aktiven Regeln die mit dem höchsten Rang.",
       zelle: r => {
         const g = regelRang(r.id) || {}, chip = rangChip(r.id);
         if (r.id.startsWith("E:") || r.typ === "ha_standard") return chip;   // E: und HA-Standard: Position ohne Bedeutung bzw. fest
@@ -2412,14 +2414,14 @@ T.regeln = new LokaleTabelle({
           (p.ueberstimmt ? `<span class="chip" title="${esc(`Andere Regel hat Vorrang: bei ${mzahl(p.ueberstimmt, "Entität", "Entitäten")} für mindestens einen Wert\nDetails: Klick auf die Entität im Tab Entitäten`)}">${zahl(p.ueberstimmt)}× andere Regel hat Vorrang</span>` : "") +
           (ueber.length ? `<span class="chip warn" title="${esc(ueber.map(([eid, ids]) => `${eid}: ${ids.join(" › ")}`).join("\n"))}">Überschneidung</span>` : "");
       } },
-    { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => r.typ, csv: r => r.typ,
+    { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => typName(r.typ), csv: r => typName(r.typ),
       // Punkt 111: Schloss bei Schutz; Punkt 106: Warnung bei Platzhaltern in einer entity-Regel
       zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
         : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, Kurzzeit einstellbar, passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
-        : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : r.typ,
-      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · herkunft: Integration wie unifi · vielschreiber: ab n Zeilen je Tag · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
-      optionen: () => TYPEN_TABELLE.map(t => [t, t]),
-      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nje Typ: ${TYPEN_TABELLE.map(t => `${t} ${zahl(g.filter(r => r.typ === t).length)}`).join(" · ")}`] },
+        : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : typName(r.typ),
+      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · integration: Integration (Plattform) wie unifi · vielschreiber: ab n Zeilen je Tag · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
+      optionen: () => TYPEN_TABELLE.map(t => [typName(t), typName(t)]),
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nje Typ: ${TYPEN_TABELLE.map(t => `${typName(t)} ${zahl(g.filter(r => r.typ === t).length)}`).join(" · ")}`] },
     { k: "muster", titel: "Muster", typ: "text", breite: 260, wert: r => r.muster.join(" "), tip: r => r.muster.join("\n"),
       zelle: r => r.typ === "vielschreiber"   // Punkt 193: Schwelle lesbar, Einschränkung dahinter
         ? `<span class="mono">≥ ${esc(zahl(+r.muster[0]))} Zeilen/Tag</span>${r.muster.length > 1 ? ` <span class="sub mono">${esc(r.muster.slice(1, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}` : ""}`
@@ -2447,7 +2449,7 @@ T.probe = new LokaleTabelle({
   // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
   // Punkt 224 (0.5.5b14): Block „Löschmenge sofort“ entfällt – die steht in Kacheln, Tab Entitäten und Tab Löschen
   gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
-    ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]]],
+    ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_events", "ersparnis_lts"]]],
   fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
   zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)}: Klick öffnet die Regelmaske"` : "",
@@ -2466,10 +2468,10 @@ T.probe = new LokaleTabelle({
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_states, zelle: r => gb(r.ersparnis_states), csv: r => r.ersparnis_states, summe: gbSumme(r => r.ersparnis_states) },
     { k: "ersparnis_attr", titel: "Attribute (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus den Attributen – sie gehören zur Kurzzeit (States, 5-Min, Attribute)",
       typ: "gb", n: 1, breite: 130, wert: r => r.ersparnis_attr, zelle: r => gb(r.ersparnis_attr), csv: r => r.ersparnis_attr, summe: gbSumme(r => r.ersparnis_attr) },
-    { k: "ersparnis_lts", titel: "Langzeit (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus der Stundenstatistik (über die Langzeit)",
-      typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_lts, zelle: r => gb(r.ersparnis_lts), csv: r => r.ersparnis_lts, summe: gbSumme(r => r.ersparnis_lts) },
     { k: "ersparnis_events", titel: "Events (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Events (über Event-Regeln)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_events || 0, zelle: r => gb(r.ersparnis_events || 0), csv: r => r.ersparnis_events || 0, summe: gbSumme(r => r.ersparnis_events || 0) },
+    { k: "ersparnis_lts", titel: "Langzeit (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus der Stundenstatistik (über die Langzeit)",
+      typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_lts, zelle: r => gb(r.ersparnis_lts), csv: r => r.ersparnis_lts, summe: gbSumme(r => r.ersparnis_lts) },
   ],
 });
 T.lts = new LokaleTabelle({
@@ -2714,7 +2716,7 @@ async function fasseZusammen(gew) {
   }
   const w = await frageWahl("Zusammenfassen", `Die ${mzahl(gew.length, "Empfehlung", "Empfehlungen")} lassen sich nicht in eine einzige Regel fassen ` +
     `(eine Regel hat genau einen Typ${jeKz ? " und eine Kurzzeit" : ""}). Vorschlag – ${mzahl(eintraege.length, "Regel", "Regeln")}:\n\n` +
-    eintraege.map(x => `• ${x.regel.typ} · ${wertAnzeige(x.regel.kurzzeit)} · ${x.regel.muster.length} Muster: ${x.titel}${x.vorhanden ? ` (gibt es schon: ${x.vorhanden.id})` : ""}`).join("\n") +
+    eintraege.map(x => `• ${typName(x.regel.typ)} · ${wertAnzeige(x.regel.kurzzeit)} · ${x.regel.muster.length} Muster: ${x.titel}${x.vorhanden ? ` (gibt es schon: ${x.vorhanden.id})` : ""}`).join("\n") +
     "\n\nPassiv anlegen oder gleich aktiv (mit Warnprüfung)?", "Passiv anlegen", "Aktiv anlegen …");
   if (w === "nein") return;
   return legeRegelnAn(eintraege, w === "extra");
@@ -3340,7 +3342,7 @@ async function ladeRegeln() {
   const ids = new Set(S.regeln.regeln.map(x => x.id));
   [...S.auswahl].forEach(id => ids.has(id) || S.auswahl.delete(id));   // entfernte Regeln aus der Auswahl
   const st = S.regeln.standard;
-  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › herkunft › vielschreiber › verwaist › HA-Standard, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
+  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › integration › vielschreiber › verwaist › HA-Standard, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
     `Für verwaiste Entitäten gelten E:- und entity-Regeln sowie Regeln vom Typ verwaist. ` +
     `Regeln vom Typ event setzen die ${EV_NAME} (Logbuch) je Event-Typ – genauer Name vor Platzhalter. ` +
     `Standard ohne Regel: ${WNAME.kurzzeit} ${wertAnzeige(st.kurzzeit)}, ${WNAME.langzeit} ${wertAnzeige(st.langzeit)}.`;
@@ -3676,7 +3678,7 @@ function zeigeHaStandard(r) {
 }
 // Punkt 175 (0.5.4): Typen mit Klartext; bei neuen Regeln wird der Typ aus den Mustern abgeleitet, solange er nicht von Hand gewählt wurde
 const TYP_TEXT = { entity: "entity – einzelne Entitäten (genaue ID)", glob: "glob – Namensmuster mit * und ?", klasse: "klasse – Geräteklasse (domain|device_class)",
-  herkunft: "herkunft – Integration (z. B. unifi)", vielschreiber: "vielschreiber – ab n Zeilen je Tag",
+  herkunft: "integration – Integration (Plattform) der Entität, z. B. unifi", vielschreiber: "vielschreiber – ab n Zeilen je Tag",
   verwaist: "verwaist – nur verwaiste und deaktivierte Entitäten", event: "event – Vorhaltezeit je Event-Typ", schutz: "schutz – nie kürzen" };
 // Punkte 172/173: kompakte Liste aller Entitäten (je Analyse-Stand einmal geladen)
 async function entListe() {
@@ -3994,7 +3996,7 @@ function ketteTip(r) {
   const k = r.kette || {}, wn = { kurzzeit: WNAME.kurzzeit, langzeit: WNAME.langzeit, events: EV_NAME };
   const gew = { kurzzeit: r.regel_k, langzeit: r.regel_l, events: r.regel_e };
   const z = Object.keys(wn).filter(a => gew[a]).map(a => `${wn[a]}: ${rangVon(gew[a])}${(k[a] || []).length ? ` hat Vorrang vor ${k[a].map(ketteGlied).join(", ")}` : " – keine andere Regel trifft"}`);
-  return z.length ? z.join("\n") + "\n\nRang Stufe.Position: 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard" : "";
+  return z.length ? z.join("\n") + "\n\nRang Stufe.Position: 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard" : "";
 }
 function planZeilen(p) {
   const zeilen = {};
@@ -4022,10 +4024,11 @@ function planZeilen(p) {
   return Object.values(zeilen).map(z => {
     const laeufe = new Set(z.teile.map(t => t.lauf));
     const lauf = laeufe.size === 1 ? [...laeufe][0] : [...laeufe].every(x => !ohne(x)) ? (laeufe.has("teilweise") ? "teilweise" : "vollständig") : "teilweise";
-    const summe = z.states + z.kurz + z.lts + z.events;
+    const basis = z.states + z.kurz + z.lts + z.events;
+    const summe = basis + (z.attr_zeilen || 0);   // Punkt 243: Summe inkl. Attribute
     // Punkt 219: Überhang = was dieser Lauf löschen müsste, wegen der Obergrenzen aber in weitere Läufe fällt
     // Punkt 230: 5M hat dasselbe keep_days wie die States (gekoppelt) – in der Zelle nur K (ohne States-Teil: K aus dem 5-Min-Teil)
-    return { ...z, regel: [...z.regeln].join(", "), lauf, summe, ueberhang: Math.max(0, z.faellig - summe), hinweis: [...new Set(z.hinweise)].join(" · "),
+    return { ...z, regel: [...z.regeln].join(", "), lauf, summe, ueberhang: Math.max(0, z.faellig - basis), hinweis: [...new Set(z.hinweise)].join(" · "),
       vorhaltung: teileAnzeige(z.teile).map(t => `${KURZ[t.art]} ${t.alle ? "alle" : t.keep_days != null ? t.keep_days + " d" : "–"}${t.art === "states" && t.keep_days != null && t.kurzzeit != null && t.keep_days !== t.kurzzeit ? ` (Ziel ${t.kurzzeit} d)` : ""}`).join(" · ") };
   });
 }
@@ -4089,12 +4092,12 @@ const vorhaltungTip = r => {
   return [kopf, "", ...tl.map(t => teilText(t, status.length > 1))].join("\n");
 };
 const blockSpalte = (k, titel, hilfe, breite = 115) => ({ k, titel, hilfe, typ: "zahl", n: 1, breite, wert: r => r[k],
-  zelle: r => r[k] == null ? "–" : (k === "attr_zeilen" && r.attr_obergrenze ? "≤ " : "") + zahl(r[k]), csv: r => r[k] ?? "", summe: anzahlSumme(r => r[k]) });
+  zelle: r => r[k] == null ? "–" : zahl(r[k]), csv: r => r[k] ?? "", summe: anzahlSumme(r => r[k]) });
 T.loesch = new LokaleTabelle({
   id: "#tLoesch", treffer: "#trefferLoesch", schluessel: "dbh_breiten_loesch2", einheit: "Entitäten bzw. Event-Typen im Plan", sortStd: { k: "summe", desc: true },
   // Punkt 148 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Stammdaten", "stamm", ["entity_id", "regel", "status"]], ["Vorhaltezeiten", "vorh", ["lauf"]],
-    ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "attr_zeilen", "lts", "events"]],
+    ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "attr_zeilen", "events", "lts"]],
     // Punkt 221 (0.5.5b13): Überhang als eigene Gruppe im Rot des Istzustands – optisch getrennt von der Löschmenge dieses Laufs
     ["Überhang", "ist", ["ueberhang"]]],
   fix: ["entity_id"],
@@ -4118,13 +4121,13 @@ T.loesch = new LokaleTabelle({
       zelle: r => `${esc(r.vorhaltung)} · <span class="chip ${LART_CHIP[r.lauf] || "warn"}">${esc(r.lauf)}</span>`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
       optionen: () => Object.keys(LART).map(x => [x, x]),
       summe: (g, a) => [zahl(g.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), zahl(a.filter(r => !["nächster Lauf", "übersprungen"].includes(r.lauf)).length), "Einträge, die dieser Lauf bearbeitet (ohne „nächster Lauf“ und „übersprungen“) – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
-    // Punkt 221 (0.5.5b13): Untertitel „excl. Attribute“ bzw. „zus. zu Summe“, Attributzeilen direkt hinter der 5-Min-Statistik
-    blockSpalte("summe", "Summe (excl. Attribute)", "Summe aus States, 5-Min-Statistik, Langzeit und Events (ohne Attributzeilen) – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt", 140),
+    // Punkt 243 (0.5.6b6): einheitliche Spaltenfolge Summe | States | 5-Min | Attribute | Events | Langzeit, Summe inkl. Attribute
+    blockSpalte("summe", "Summe", "Summe aus States, 5-Min-Statistik, Attributen, Events und Langzeit – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt. Die Attribute sind eine Obergrenze (bei „teilweise“ höchstens so viele).", 140),
     blockSpalte("states", "States", "Zeilen in states (recorder.purge_entities)"),
     blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)", 145),
-    blockSpalte("attr_zeilen", "Attributzeilen (zus. zu Summe)", "Attributzeilen, die mit den States wegfallen – zusätzlich zur Summe, nicht darin enthalten; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele (≤)", 150),
-    blockSpalte("lts", "Langzeit", "Stundenstatistik (Integration RS DB Hygiene)"),
+    blockSpalte("attr_zeilen", "Attribute", "Attributzeilen, die mit den States wegfallen – in der Summe enthalten; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele", 150),
     blockSpalte("events", "Events", "Events dieses Typs (Integration RS DB Hygiene)"),
+    blockSpalte("lts", "Langzeit", "Stundenstatistik (Integration RS DB Hygiene)"),
     // Punkt 219 (0.5.5b13): ersetzt „fällig (insgesamt)“ – Summe + Überhang = alles Fällige (= Löschmenge sofort)
     blockSpalte("ueberhang", "Überhang (weitere Läufe)", "alles, was dieser Lauf löschen müsste, wegen der Obergrenzen aber in weitere Löschläufe fällt – Summe + Überhang = alles Fällige (Löschmenge sofort); bei „vollständig“ 0", 140),
     { k: "hinweis", titel: "Hinweis", typ: "text", breite: 200, wert: r => r.hinweis || "", zelle: r => esc(r.hinweis || ""), csv: r => r.hinweis || "",
@@ -4135,12 +4138,17 @@ T.loesch = new LokaleTabelle({
 // Punkt 116 (0.4.10): „1:20 min (1 Pause)“
 const backupText = r => `${dauerText(r.backup_warte_s)} (${zahl(r.backup_pausen || 1)} ${(r.backup_pausen || 1) === 1 ? "Pause" : "Pausen"})`;
 const LSTATUS = { fertig: "fertig", "läuft": "läuft", Fehler: "Fehler", abgebrochen: "abgebrochen", unterbrochen: "unterbrochen", "nicht gestartet": "nicht gestartet" };
+const laufSpalte = (k, t) => ({ k: "lauf_" + k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 115, wert: r => laufArt(r, k), zelle: r => zahl(laufArt(r, k)), csv: r => laufArt(r, k), summe: anzahlSumme(r => laufArt(r, k)) });
+// Punkt 243: Läufe ab 0.5.6b6 tragen geplant_attr – nur bei ihnen zählen Summe und „geplant“ die Attributzeilen mit
+const mitAttr = r => r.geplant_attr !== undefined;
+const laufSumme = r => (r.geloescht || 0) + (mitAttr(r) ? r.attr_geloescht || 0 : 0);
+const geplantLauf = r => (r.geplant_zeilen || 0) + (mitAttr(r) ? r.geplant_attr || 0 : 0);
 T.laeufe = new LokaleTabelle({
   id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true },
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt", "rest"]],
-    ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_lts", "lauf_events", "lauf_attr"]]],
+    ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_attr", "lauf_events", "lauf_lts"]]],
   fix: ["start"],
   leer: "noch kein Löschlauf",
   spalten: [
@@ -4157,28 +4165,39 @@ T.laeufe = new LokaleTabelle({
       hilfe: "manuell = Tab „Löschen“; automatik = aus HA (Knopf, Dienst oder Automation über die Integration RS DB Hygiene)", optionen: () => [["manuell", "manuell"], ["automatik", "automatik"]] },
     { k: "status", titel: "Ergebnis", typ: "auswahl", breite: 110, wert: r => r.status, csv: r => r.status, optionen: () => Object.keys(LSTATUS).map(x => [x, x]),
       zelle: r => r.status === "fertig" ? "fertig" : `<span class="${r.status === "läuft" ? "" : "fehler"}">${esc(r.status)}</span>` },
-    { k: "geplant_zeilen", titel: "geplant (Schätzung)", typ: "zahl", n: 1, breite: 140, wert: r => r.geplant_zeilen, zelle: r => zahl(r.geplant_zeilen), csv: r => r.geplant_zeilen, summe: anzahlSumme(r => r.geplant_zeilen),
-      hilfe: "Schätzung aus der Analyse auf Tagesbasis zum Zeitpunkt des Plans – gelöscht wird nach genauer Zählung, dazu kommen seit der Analyse gealterte Zeilen" },
+    { k: "geplant_zeilen", titel: "geplant (Schätzung)", typ: "zahl", n: 1, breite: 140, wert: r => geplantLauf(r), zelle: r => zahl(geplantLauf(r)), csv: r => geplantLauf(r), summe: anzahlSumme(r => geplantLauf(r)),
+      hilfe: "Schätzung aus der Analyse auf Tagesbasis zum Zeitpunkt des Plans (ab Punkt 243 inkl. Attribute) – gelöscht wird nach genauer Zählung, dazu kommen seit der Analyse gealterte Zeilen" },
     // Punkt 59: genau gezählt vor jedem Paket bzw. Auftrag = eigentlicher Vergleichswert zu „gelöscht“
     { k: "gezaehlt", titel: "gezählt", typ: "zahl", n: 1, breite: 110, wert: r => gezaehltLauf(r), zelle: r => zahl(gezaehltLauf(r)), csv: r => gezaehltLauf(r), summe: anzahlSumme(r => gezaehltLauf(r)),
-      hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“" },
+      hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen (ohne Attribute) – Vergleichswert zu „gelöscht“" },
     // Punkt 200 (0.5.5b12): Rückstand nach dem Lauf = beim Start fällig − gelöscht, dazu die geschätzte Zahl weiterer Läufe
     { k: "rest", titel: "Rest danach (≈ Läufe)", typ: "zahl", n: 1, breite: 140, wert: r => laufRest(r)?.zeilen ?? null,
       zelle: r => { const x = laufRest(r); return x ? `${zahl(x.zeilen)}${x.laeufe ? ` <span class="sub">(≈ ${zahl(x.laeufe)})</span>` : ""}` : "–"; },
       csv: r => laufRest(r)?.zeilen ?? "", tip: r => { const x = laufRest(r); return x ? `nach diesem Lauf noch fällig: ${zahl(x.zeilen)} Zeilen – bei gleicher Obergrenze ≈ ${mzahl(x.laeufe, "weiterer Lauf", "weitere Läufe")} (Schätzung; neue Zeilen kommen täglich dazu)` : ""; },
       hilfe: "Was beim Start des Laufs insgesamt fällig war, abzüglich des Gelöschten, und wie viele Läufe das bei gleicher Obergrenze ungefähr noch braucht. Erst ab 0.5.5b12 erfasst; ältere Läufe „–“." },
-    { k: "geloescht", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 130, wert: r => r.geloescht, zelle: r => zahl(r.geloescht), csv: r => r.geloescht, summe: anzahlSumme(r => r.geloescht) },
-    // Punkt 63: Block wie in der Monatssumme – davon je Tabelle, dahinter die gemessenen Attributzeilen (nicht in der Summe)
-    ...[["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
-      k: "lauf_" + k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 115, wert: r => laufArt(r, k), zelle: r => zahl(laufArt(r, k)), csv: r => laufArt(r, k), summe: anzahlSumme(r => laufArt(r, k)) })),
-    { k: "lauf_attr", titel: "Attributzeilen (mit den States)", typ: "zahl", n: 1, breite: 150, hilfe: "im Lauf gemessen: Attributzeilen, die HA mit den States gelöscht hat (ab 0.4.0) – nicht in der Summe",
+    // Punkt 243: Summe | States | 5-Min | Attribute | Events | Langzeit; die Summe zählt ab dieser Version die Attribute mit (ältere Läufe unverändert)
+    { k: "geloescht", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 130, wert: r => laufSumme(r), zelle: r => zahl(laufSumme(r)), csv: r => laufSumme(r), summe: anzahlSumme(r => laufSumme(r)),
+      hilfe: "Gelöscht insgesamt: States + 5-Min-Statistik + Attribute + Events + Langzeit. Läufe aus früheren Versionen zeigen die Summe ohne Attribute." },
+    ...[["states", "States"], ["kurz", "5-Min-Statistik"]].map(([k, t]) => laufSpalte(k, t)),
+    { k: "lauf_attr", titel: "Attribute", typ: "zahl", n: 1, breite: 115, hilfe: "im Lauf gemessen: Attributzeilen, die HA mit den States gelöscht hat (ab 0.4.0) – in der Summe enthalten (Läufe aus früheren Versionen: nicht)",
       wert: r => r.attr_geloescht ?? null, zelle: r => r.attr_geloescht == null ? "–" : zahl(r.attr_geloescht), csv: r => r.attr_geloescht ?? "", summe: anzahlSumme(r => r.attr_geloescht || 0) },
+    ...[["events", "Events"], ["lts", "Langzeit"]].map(([k, t]) => laufSpalte(k, t)),
     { k: "pakete", titel: "Aufrufe", typ: "zahl", n: 1, breite: 80, wert: r => r.pakete.filter(p => p.gesendet.length).length,
       zelle: r => zahl(r.pakete.filter(p => p.gesendet.length).length), csv: r => r.pakete.filter(p => p.gesendet.length).length },
     { k: "fehler", titel: "Meldung", typ: "text", breite: 280, wert: r => r.fehler || "", zelle: r => esc(r.fehler || ""), csv: r => r.fehler || "" },
   ],
   zeileAttr: r => `class="klick" data-lauf="${r.start}"`,
 });
+// Punkt 242 (0.5.6b6): „K 7T/L 1J“ – K für States, 5-Min-Statistik, Attribute und Events, L für die Langzeit; die Einheit steht im Wert der
+// Regel (z. B. „6m“ → „6M“, „400d“ → „400T“, keine Umrechnung); weicht keep_days davon ab (teilweise/Nachzug) oder fehlt der Wert
+// (Läufe aus früheren Versionen), steht keep_days in Tagen
+const EINHEIT_TAGE = { d: 1, w: 7, m: 30, j: 365 };
+const wertTage = w => { const m = /^(\d+)([dwmj])$/.exec(w || ""); return m ? +m[1] * EINHEIT_TAGE[m[2]] : null; };
+function vorhaltedauer(teile) {
+  const einzeln = t => t.alle ? "alle" : t.tage == null ? "–" : t.wert && wertTage(t.wert) === t.tage ? wertKurz(t.wert) : t.tage + "T";
+  const k = teile.states || teile.kurz || teile.events, l = teile.lts;
+  return [k && "K " + einzeln(k), l && "L " + einzeln(l)].filter(Boolean).join("/");
+}
 // Punkt 200 (0.5.5b12): wie loeschen.laeufe_noetig – je Obergrenze aufgerundet, die längere zählt
 const laeufeNoetig = (states, b, g, gb) => Math.max(states > 0 && g ? Math.ceil(states / g) : 0, b > 0 && (gb ?? g) ? Math.ceil(b / (gb ?? g)) : 0);
 function laufRest(r) {
@@ -4200,16 +4219,17 @@ $("#tLaeufe").addEventListener("click", ev => {
   // Punkt 63: je Entität bzw. Event-Typ eine Zeile mit dem Block
   const je = {};
   for (const p of r.pakete) for (const [eid, v] of Object.entries(p.je_entitaet || {})) {
-    const z = je[eid] ||= { states: 0, kurz: 0, lts: 0, events: 0, attr: null, rest: 0, keep: [], ergebnis: new Set() };
+    const z = je[eid] ||= { states: 0, kurz: 0, lts: 0, events: 0, attr: null, rest: 0, teile: {}, ergebnis: new Set() };
     const g = Math.max(0, (v.vorher || 0) - (v.nachher || 0));
     z[p.art || "states"] += g; z.rest += v.nachher || 0;
     if (v.attr_geloescht != null) z.attr = (z.attr || 0) + v.attr_geloescht;
-    z.keep.push(`${KURZ[p.art || "states"]} ${p.alle ? "alle" : p.keep_days + " d"}`); if (p.ergebnis) z.ergebnis.add(p.ergebnis);
+    z.teile[p.art || "states"] = { wert: ((r.vorhaltung || {})[eid] || {})[p.art || "states"], tage: p.keep_days, alle: p.alle };
+    if (p.ergebnis) z.ergebnis.add(p.ergebnis);
   }
-  const zeilen = Object.entries(je).map(([eid, z]) => ({ entity_id: eid, keep: z.keep.join(" · "), summe: z.states + z.kurz + z.lts + z.events,
+  const zeilen = Object.entries(je).map(([eid, z]) => ({ entity_id: eid, keep: vorhaltedauer(z.teile), summe: z.states + z.kurz + z.lts + z.events + (mitAttr(r) ? z.attr || 0 : 0),
     states: z.states, kurz: z.kurz, lts: z.lts, events: z.events, attr_zeilen: z.attr, rest: z.rest, ergebnis: [...z.ergebnis].join(", ") }));
   dialog(`Löschlauf ${zeit(r.start)} – ${r.status}`,
-    `<p>Umfang: ${esc(r.nur_regel || "alle aktiven Regeln")} · Obergrenze ${obergrenzeText(r)} · purge_keep_days ${zahl(r.purge_keep_days)}${r.exakt ? " · Grenze lokale Mitternacht" : ""}${r.analyse_zeit ? ` · Analyse ${zeit(r.analyse_zeit)}${r.analyse_vorher ? " (vorher neu gestartet)" : ""}` : ""} · gelöscht ${zahl(r.geloescht)} von geplant ca. ${zahl(r.geplant_zeilen)}${r.ende ? ` · Dauer ${dauerText(r.ende - r.start)}` : ""}${r.backup_warte_s ? `, davon <b>${backupText(r)}</b> auf Backup gewartet` : ""}</p>
+    `<p>Umfang: ${esc(r.nur_regel || "alle aktiven Regeln")} · Obergrenze ${obergrenzeText(r)} · purge_keep_days ${zahl(r.purge_keep_days)}${r.exakt ? " · Grenze lokale Mitternacht" : ""}${r.analyse_zeit ? ` · Analyse ${zeit(r.analyse_zeit)}${r.analyse_vorher ? " (vorher neu gestartet)" : ""}` : ""} · gelöscht ${zahl(laufSumme(r))} von geplant ca. ${zahl(geplantLauf(r))}${r.ende ? ` · Dauer ${dauerText(r.ende - r.start)}` : ""}${r.backup_warte_s ? `, davon <b>${backupText(r)}</b> auf Backup gewartet` : ""}</p>
      ${uebersprungenText(r)}
      ${r.fehler ? `<p class="fehler">${esc(r.fehler)}</p>` : ""}
      <div class="trefferzeile" id="trefferDetail"></div>
@@ -4220,18 +4240,18 @@ $("#tLaeufe").addEventListener("click", ev => {
   T.detail = new LokaleTabelle({
     id: "#tDetail", treffer: "#trefferDetail", schluessel: "dbh_breiten_detail", einheit: "Entitäten bzw. Event-Typen", sortStd: { k: "summe", desc: true },
     // Punkt 150 (0.5.3): Look & Feel wie Tab Entitäten
-    gruppen: [["Stammdaten", "stamm", ["entity_id", "keep"]], ["Gelöscht", "loesch", ["summe", "states", "kurz", "lts", "events", "attr_zeilen", "rest"]]],
+    gruppen: [["Stammdaten", "stamm", ["entity_id", "keep"]], ["Gelöscht", "loesch", ["summe", "states", "kurz", "attr_zeilen", "events", "lts"]]],
     fix: ["entity_id"],
     leer: "keine Entität gesendet",
     spalten: [
       { k: "entity_id", titel: "Entität / Typ", typ: "text", fest: 1, breite: 300, wert: x => x.entity_id, zelle: x => `<span class="mono">${esc(x.entity_id)}</span>`, csv: x => x.entity_id,
         summe: (g, a) => [zahl(g.length), zahl(a.length)] },
-      { k: "keep", titel: "keep_days", typ: "text", breite: 150, wert: x => x.keep, zelle: x => esc(x.keep), csv: x => x.keep },
-      blockSpalte("summe", "Summe (Zeilen)", "Summe aus States, 5-Min-Statistik, Langzeit und Events", 130),
+      { k: "keep", titel: "Vorhaltedauer", typ: "text", breite: 150, wert: x => x.keep, zelle: x => esc(x.keep), csv: x => x.keep,
+        hilfe: "K = Kurzzeit (gilt für States, 5-Min-Statistik, Attribute und Events), L = Langzeit; Einheit wie in der Regel gewählt (T Tage, W Wochen, M Monate, J Jahre), „alle“ = alles gelöscht. Läufe aus früheren Versionen zeigen Tage." },
+      blockSpalte("summe", "Summe (Zeilen)", mitAttr(r) ? "Summe aus States, 5-Min-Statistik, Attributen, Events und Langzeit" : "Summe aus States, 5-Min-Statistik, Events und Langzeit (dieser Lauf stammt aus einer früheren Version – ohne Attribute)", 130),
       blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term", 145),
-      blockSpalte("lts", "Langzeit", "Stundenstatistik"), blockSpalte("events", "Events", "Events dieses Typs"),
-      blockSpalte("attr_zeilen", "Attributzeilen (mit den States)", "im Lauf gemessen – nicht in der Summe", 150),
-      blockSpalte("rest", "Rest", "alte Zeilen nach dem Lauf", 90),
+      blockSpalte("attr_zeilen", "Attribute", "im Lauf gemessen – Attributzeilen, die HA mit den States gelöscht hat", 150),
+      blockSpalte("events", "Events", "Events dieses Typs"), blockSpalte("lts", "Langzeit", "Stundenstatistik"),
       { k: "ergebnis", titel: "Ergebnis", typ: "text", breite: 140, wert: x => x.ergebnis, zelle: x => esc(x.ergebnis), csv: x => x.ergebnis },
     ],
   });
@@ -4332,11 +4352,13 @@ async function ladeLoeschen() {
 const gezaehltLauf = r => (r.pakete || []).reduce((s, p) => s + (p.vorher || 0), 0);
 const laufArt = (r, art) => (r.pakete || []).filter(p => (p.art || "states") === art).reduce((s, p) => s + (p.geloescht || 0), 0);
 const artZeilen = (r, k) => k === "states" ? (r.states ?? r.zeilen - (r.kurz || 0) - (r.lts || 0) - (r.events || 0)) : (r[k] || 0);
+const monatSumme = r => (r.zeilen || 0) + (r.attr_zeilen || 0);   // Punkt 243: Summe inkl. Attribute
+const monatSpalte = (k, t) => ({ k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 120, wert: r => artZeilen(r, k), zelle: r => zahl(artZeilen(r, k)), csv: r => artZeilen(r, k), summe: anzahlSumme(r => artZeilen(r, k)) });
 T.summe = new LokaleTabelle({
   id: "#tSumme", treffer: "#trefferSumme", schluessel: "dbh_breiten_summe", einheit: "Einträgen (Entität × Monat)", sortStd: { k: "zeilen", desc: true },
   seiten: [50, 250, 1000, 2500], seiteStd: 250,   // Punkt 70
   // Punkt 151 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Stammdaten", "stamm", ["entity_id", "monat"]], ["Gelöscht", "loesch", ["zeilen", "states", "kurz", "lts", "events", "attr_zeilen"]]],
+  gruppen: [["Stammdaten", "stamm", ["entity_id", "monat"]], ["Gelöscht", "loesch", ["zeilen", "states", "kurz", "attr_zeilen", "events", "lts"]]],
   fix: ["entity_id"],
   leer: "noch nichts gelöscht",
   spalten: [
@@ -4344,12 +4366,12 @@ T.summe = new LokaleTabelle({
       summe: (g, a) => [zahl(new Set(g.map(r => r.entity_id)).size), zahl(new Set(a.map(r => r.entity_id)).size), `Anzahl verschiedener Entitäten bzw. Event-Typen – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nEinträge (Entität × Monat): ${zahl(g.length)}`] },
     { k: "monat", titel: "Monat", typ: "auswahl", breite: 110, wert: r => r.monat, zelle: r => esc(r.monat.split("-").reverse().join(".")), csv: r => r.monat,
       optionen: l => [...new Set(l.map(r => r.monat))].sort().reverse().map(m => [m, m.split("-").reverse().join(".")]) },
-    { k: "zeilen", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 140, hilfe: "Je Entität bzw. Event-Typ. Ab 0.4.4 bei Paketen mit genau einer Entität die tatsächlich gelöschte Zahl; bei größeren Paketen vorher − nachher je Entität – das kann wenige Zeilen unter der Lauf-Summe liegen, weil während des Laufs weitere Zeilen über die Altersgrenze rutschen und mitgelöscht werden.", wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
+    { k: "zeilen", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 140, hilfe: "Je Entität bzw. Event-Typ; States + 5-Min-Statistik + Attribute + Events + Langzeit (Attribute ab 0.4.0 gemessen). Bei Paketen mit genau einer Entität die tatsächlich gelöschte Zahl, bei größeren Paketen vorher − nachher je Entität – das kann wenige Zeilen unter der Lauf-Summe liegen, weil während des Laufs weitere Zeilen über die Altersgrenze rutschen und mitgelöscht werden.", wert: r => monatSumme(r), zelle: r => zahl(monatSumme(r)), csv: r => monatSumme(r), summe: anzahlSumme(r => monatSumme(r)) },
     // je Tabelle (ab 0.3.0); Einträge aus 0.2.x kennen nur States
-    ...[["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => ({
-      k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 120, wert: r => artZeilen(r, k), zelle: r => zahl(artZeilen(r, k)), csv: r => artZeilen(r, k), summe: anzahlSumme(r => artZeilen(r, k)) })),
-    { k: "attr_zeilen", titel: "Attributzeilen (mit den States)", typ: "zahl", n: 1, breite: 150, hilfe: "gemessen ab 0.4.0 – nicht in der Summe",
+    ...[["states", "States"], ["kurz", "5-Min-Statistik"]].map(([k, t]) => monatSpalte(k, t)),
+    { k: "attr_zeilen", titel: "Attribute", typ: "zahl", n: 1, breite: 115, hilfe: "gemessen ab 0.4.0 – in der Summe enthalten",
       wert: r => r.attr_zeilen || 0, zelle: r => zahl(r.attr_zeilen || 0), csv: r => r.attr_zeilen || 0, summe: anzahlSumme(r => r.attr_zeilen || 0) },
+    ...[["events", "Events"], ["lts", "Langzeit"]].map(([k, t]) => monatSpalte(k, t)),
     { k: "laeufe", titel: "Läufe (Anzahl)", typ: "zahl", n: 1, breite: 100, wert: r => r.laeufe, zelle: r => zahl(r.laeufe), csv: r => r.laeufe },
   ],
 });
@@ -4367,8 +4389,8 @@ async function ladeProtokoll() {
     T.laeufe.daten(laeufe); T.summe.daten(summe);
     const tage = +(S.status?.optionen?.protokoll_tage ?? 365);
     const erster = laeufe.length ? Math.min(...laeufe.map(l => l.start)) : null;
-    const gesamt = summe.reduce((x, r) => x + r.zeilen, 0);
-    k.innerHTML = `<div><b>${zahl(laeufe.length)} Läufe</b>${erster ? ` seit ${zeit(erster)}` : ""} · <b>${zahl(laeufe.reduce((x, l) => x + (l.geloescht || 0), 0))} Zeilen gelöscht</b> (in den aufbewahrten Läufen)
+    const gesamt = summe.reduce((x, r) => x + monatSumme(r), 0);
+    k.innerHTML = `<div><b>${zahl(laeufe.length)} Läufe</b>${erster ? ` seit ${zeit(erster)}` : ""} · <b>${zahl(laeufe.reduce((x, l) => x + laufSumme(l), 0))} Zeilen gelöscht</b> (in den aufbewahrten Läufen)
       · insgesamt laut Monatssumme ${zahl(gesamt)} Zeilen</div>
       <div class="sub">Aufbewahrung: ${tage ? `${zahl(tage)} Tage` : "unbegrenzt"} (App-Option „protokoll_tage“). Ältere Läufe werden nach jedem Lauf und beim Start der App gelöscht;
         die Monatssumme je Entität bleibt erhalten. Klick auf einen Lauf zeigt jede Entität mit alten Zeilen vorher und nachher.</div>`;
