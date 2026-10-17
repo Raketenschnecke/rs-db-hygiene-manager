@@ -195,7 +195,7 @@ input[type=number] { width: 72px; }
 .hilfe pre { font-family: var(--mono); font-size: 12.5px; background: var(--chip); padding: 8px 10px; border-radius: 6px; overflow-x: auto; margin: 4px 0 10px; }
 /* Verweise innerhalb der Hilfe; Sprungziel kurz hervorheben, nicht unter der Kopfzeile verschwinden */
 .hilfe a.hverweis { color: var(--accent); text-decoration: underline dotted; }
-.hilfe [id^="h-"] { scroll-margin-top: 12px; }
+.hilfe [id^="h-"] { scroll-margin-top: calc(var(--kleb-h, 0px) + 12px); }   /* Sprungziel nicht unter der klebenden Leiste */
 .hilfe .hziel { animation: hziel 2s ease-out; border-radius: 4px; }
 @keyframes hziel { from { background: var(--accent-weak); } to { background: transparent; } }
 .hilfe-rang { font-weight: 700; font-size: 15px; padding: 6px 10px; background: var(--accent-weak); color: var(--accent); border-radius: 8px; display: inline-block; }
@@ -593,127 +593,148 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       </nav>
 
       <details open id="h-worum"><summary>1. Worum geht es?</summary>
-        <p>Home Assistant speichert alles, was passiert, in seiner Datenbank (Recorder, Datei <code>home-assistant_v2.db</code>). Ohne Pflege wächst sie stetig.
-          Der <b>RS DB Hygiene Manager</b> zeigt, was wie viel Platz belegt. Mit <b>Regeln</b> legst du fest, wie lange welche Daten aufbewahrt werden.
-          Ein <b>Löschlauf</b> entfernt dann nur, was älter ist als diese Zeit.</p>
-        <p>Die App liest die Datenbank <b>nur lesend</b>. Gelöscht wird ausschließlich über die Dienste von Home Assistant, und nur, wenn du es erlaubst.</p>
+        <p>Home Assistant speichert alles, was passiert, in seiner SQLite-Datenbank (Recorder, Datei <code>home-assistant_v2.db</code>). Ohne Pflege wächst sie stetig.
+          Der <b>RS DB Hygiene Manager</b> zeigt, was wie viel Platz belegt.</p>
+        <p>Mit <b>Regeln</b> legst du fest, wie lange welche Daten aufbewahrt werden. Mit Vorhaltezeiten von 1 Tag bis unendlich – wenn es sein muss pro Entität. Du entscheidest selbst!</p>
+        <p>Ein <b>Löschlauf</b> entfernt dann nur, was älter ist als diese Zeit.</p>
+        <p>Die App selbst arbeitet <b>nur lesend</b>. Gelöscht wird ausschließlich über die Dienste von Home Assistant: der RS DB Hygiene Manager formuliert Löschaufträge und übergibt diese an Home Assistant zur Ausführung (und nur, wenn du es über die App-Konfiguration erlaubst).</p>
       </details>
 
       <details open id="h-start"><summary>2. Erste Schritte</summary>
-        <p>Neu hier? Zuerst Home Assistant und die App einrichten: <a class="hverweis" href="#h-faq-erstinbetrieb">FAQ: Erstinbetriebnahme</a>.</p>
+        <p>Neu hier? Zuerst Home Assistant und die App einrichten: <a class="hverweis" href="#h-faq-erstinbetrieb">FAQ: Erstinbetriebnahme</a>. In der App-GUI:</p>
         <ol>
-          <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 4–10 min). Nachts läuft die Analyse automatisch. Ist eine Analyse veraltet (älter als 26 h bzw. die Attribut-Analyse älter als 7 Tage), trägt der Knopf ein gelbes Ausrufezeichen; sein Tooltip zeigt den Stand beider Analysen.</li>
-          <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird).</li>
-          <li><b>Tab Entitäten:</b> nach „Zuwachs“ (Zeilen je Tag) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
-          <li><b>Regel anlegen</b> (Tab Regeln → „Neue Regel“) und zunächst <b>passiv</b> lassen. Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert.</li>
+          <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 2–10 min).</li>
+          <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird). Ein Klick auf eine DB-Größe-Kachel öffnet den Verlauf „Zuwachs-Prognose der DB“: die bisherige Größe und die Prognosen für aktive Regeln, alle Regeln und ohne Regeln.</li>
+          <li><b>Tab Entitäten:</b> für den ersten Überblick nach „Zuwachs“ (Zeilen je Tag) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
+          <li><b>Tab Empfehlungen:</b> Die App schlägt Regeln vor; „Übernehmen …“ legt sie passiv an. Hinweise zum Vorgehen: <a class="hverweis" href="#h-faq-reihenfolge">In welcher Reihenfolge lege ich Regeln an?</a></li>
+          <li><b>Tab Regeln:</b> Wirkung der einzelnen Regeln analysieren (ggf. zunächst <b>passiv</b> lassen). Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert. Beim Optimieren hilft der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a>.</li>
           <li>Passt die Wirkung, die Regel <b>aktiv</b> schalten.</li>
-          <li><b>Tab Löschen:</b> Plan ansehen und „Jetzt ausführen“. Voraussetzung ist der Hauptschalter „Löschen freigegeben“ in der App-Konfiguration.</li>
-          <li>Nach dem Lauf startet automatisch eine neue Analyse. Kleiner wird die Datei erst nach einem <b>Repack</b> (siehe <a class="hverweis" href="#h-faq-repack">FAQ: Warum wird die Datei nach dem Löschen nicht kleiner?</a>).</li>
+          <li><b>Tab Löschen:</b> Die Tabelle zeigt, was die aktiven Regeln löschen würden. Der Button „Jetzt ausführen“ startet die Abarbeitung aller Regeln und löscht die entsprechenden Daten aus der HA-SQLite-DB.</li>
+          <li><b>Tab Löschprotokolle:</b> Hier sind die Übersichten und Detailprotokolle aller Löschläufe übersichtlich aufbereitet.</li>
         </ol>
-        <p class="sub"><b>Tipp:</b> Lieber mit wenigen Regeln für die großen Schreiber anfangen als mit vielen kleinen. Geräte einer Art (z. B. Präsenzmelder) findest du schnell über die Spalte <b>Labels</b> im Tab Entitäten.</p>
+        <p class="sub"><b>Tipp für Schnelleinsteiger:</b></p>
+        <ul>
+          <li>Bei Bedarf zunächst Schutzregeln für Entitäten mit besonders schützenswerten Daten (Meteo-Daten, PV-Daten, Stromzähler) setzen.</li>
+          <li>Dann mit wenigen Regeln für die großen Schreiber anfangen (<b>Tab Empfehlungen / Kasten „Wer schreibt am meisten?“</b>).</li>
+          <li>Danach nach und nach die Empfehlungsliste abarbeiten.</li>
+          <li>Im Tab Regeln die Empfehlungen der App zur Regeloptimierung prüfen und umsetzen.</li>
+          <li>Ready to Go!</li>
+        </ul>
       </details>
 
-      <details open id="h-daten"><summary>3. Welche Daten gibt es? (Datenarten)</summary>
+      <details open id="h-daten"><summary>3. Welche Daten gibt es? (Datenarten, HA-Grundlagen)</summary>
         <table>
           <thead><tr><th>Datenart</th><th>Tabelle</th><th>Was ist das?</th><th>Vorhaltezeit</th></tr></thead>
           <tbody>
-            <tr><td><b>States</b></td><td><code>states</code></td><td>Jeder Zustandswechsel einer Entität, z. B. 21,3 °C → 21,4 °C. Grundlage für den Verlauf (History). Meist der größte Posten.</td><td>Kurzzeit</td></tr>
-            <tr><td><b>Attribute</b></td><td><code>state_attributes</code></td><td>Zusatzangaben zu einem State, z. B. Einheit, Vorhersagen, Farben. Gleiche Attribute werden nur einmal gespeichert.</td><td>keine eigene – sie verschwinden mit den States, die sie benutzen (folgen der Kurzzeit)</td></tr>
-            <tr><td><b>5-Min-Statistik</b></td><td><code>statistics_short_term</code></td><td>Mittel-, Min- und Max-Werte bzw. Zählerstände alle 5 Minuten, nur für Entitäten mit <code>state_class</code>.</td><td>Kurzzeit</td></tr>
+            <tr><td><b>States</b></td><td><code>states</code></td><td>Jeder Zustandswechsel einer Entität, z. B. 21,3 °C → 21,4 °C verursacht eine neue Datenzeile in der DB. Grundlage für den Verlauf (History). Meist der größte Posten.</td><td>Kurzzeit</td></tr>
+            <tr><td><b>Attribute</b></td><td><code>state_attributes</code></td><td>Zusatzangaben zu einem State, z. B. Einheit, Vorhersagen, Farben, Metadaten. Gleiche Attribute werden nur einmal gespeichert.</td><td>keine eigene – sie verschwinden mit den States, die sie benutzen (folgen der Kurzzeit)</td></tr>
+            <tr><td><b>5-Min-Statistik</b></td><td><code>statistics_short_term</code></td><td>Mittel-, Min- und Max-Werte bzw. Zählerstände alle 5 Minuten, nur für Entitäten mit definierter <code>state_class</code>.</td><td>Kurzzeit</td></tr>
             <tr><td><b>Langzeitstatistik</b></td><td><code>statistics</code></td><td>Dieselben Werte stündlich zusammengefasst. Grundlage für Energie-Dashboard und Statistik-Diagramme über Monate und Jahre.</td><td>Langzeit</td></tr>
             <tr><td><b>Events</b></td><td><code>events</code></td><td>Ereignisse wie „Automation ausgelöst“, „Dienst aufgerufen“. Grundlage für das <b>Logbuch</b>.</td><td>Vorhaltezeit (Events) je Event-Typ</td></tr>
           </tbody>
         </table>
-        <p>Die <b>Kurzzeit</b> gilt also für States, 5-Min-Statistik und Attribute gemeinsam. Die <b>Langzeit</b> gilt nur für die Stundenstatistik.</p>
+        <p>Zusammengefasst gibt es also drei Gruppen von Vorhaltezeiträumen, die unabhängig voneinander verwaltet werden können:</p>
+        <ol>
+          <li><b>Kurzzeit</b> (umfasst States, 5-Min-Statistik und Attribute gemeinsam),</li>
+          <li><b>Langzeit</b> (Stundenstatistik),</li>
+          <li><b>Events</b>.</li>
+        </ol>
       </details>
 
       <details id="h-werte"><summary>4. Werte einer Vorhaltezeit</summary>
         <table>
           <thead><tr><th>Wert</th><th>Bedeutung</th></tr></thead>
           <tbody>
-            <tr><td><b>global</b></td><td>Wie Home Assistant selbst: <code>purge_keep_days</code> aus der <code>configuration.yaml</code> (derzeit <span data-live="pkd">–</span>). Wichtig: global heißt nicht „nie“ – HA löscht nach dieser Zeit.</td></tr>
-            <tr><td><b>Dauer</b> (z. B. 30 Tage, 2 Wochen, 6 Monate, 1 Jahr)</td><td>Ältere Daten werden gelöscht, immer ganze <b>Kalendertage</b>: Es bleiben der laufende Tag und so viele volle Tage davor. Beispiel 14 Tage am 11.10.: alles vor dem 27.9., 0:00 Uhr wird gelöscht. Eine Kurzzeit länger als <code>purge_keep_days</code> wirkt erst, wenn <code>purge_keep_days</code> mindestens so groß ist.</td></tr>
+            <tr><td><b>global</b></td><td>entspricht der Home-Assistant-Konfiguration: <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days</code></a> aus der <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>configuration.yaml</code></a> (z. B. 3.650 Tage = 10 Jahre). Wichtig: global heißt nicht „nie“ – HA hat immer Vorrang und löscht nach dieser Zeit.</td></tr>
+            <tr><td><b>Dauer</b> (z. B. 30 Tage, 2 Wochen, 6 Monate, 1 Jahr)</td><td>Ältere Daten werden gelöscht, immer ganze <b>Kalendertage</b>: Es bleiben der laufende Tag und die vollen Tage der konfigurierten Dauer in der SQLite-DB stehen. Beispiel 14 Tage am 11.10.: alles vor dem 27.9., 0:00 Uhr wird gelöscht. Eine Kurzzeit länger als <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days</code></a> ist unwirksam, da HA Vorrang hat und gemäß <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days</code></a> löscht.</td></tr>
             <tr><td><b>keine</b> (Kurzzeit)</td><td>Alles löschen – nur bei Regeln vom Typ <i>verwaist</i> erlaubt (siehe <a class="hverweis" href="#h-verwaist">Verwaiste Entitäten</a>). Gelöscht wird alles vor <b>heute 0:00 Uhr</b>; die Zeilen von heute folgen im nächsten Lauf.</td></tr>
             <tr><td><b>unbegrenzt</b> (Langzeit)</td><td>Nie löschen. Das ist der Standard: HA löscht die Langzeitstatistik nie selbst.</td></tr>
             <tr><td><b>keine</b> (Langzeit)</td><td>Alle Stundenwerte löschen; bei verwaisten Entitäten auch den Statistik-Eintrag selbst.</td></tr>
           </tbody>
         </table>
-        <p id="h-kalendertage"><b>Kalendertage:</b> Die Grenze ist immer Mitternacht (Ortszeit), egal wann der Lauf startet. Das braucht die Integration <i>RS DB Hygiene</i> ab 0.4.5; mit einer älteren Version gilt „jetzt minus Tage“ (der Tab Löschen zeigt dann „Grenze: jetzt − keep_days“). HA selbst löscht nach <code>purge_keep_days</code> weiter ab dem Zeitpunkt seines Purge, nicht ab Mitternacht.</p>
-        <p><b>purge_keep_days:</b> Der Wert steht in der <code>configuration.yaml</code> unter <code>recorder:</code>. Die App-Option „purge_keep_days (Vorgabe)“ sollte auf <b>0</b> stehen. Ein eigener Wert wirkt nur, wenn er kleiner ist, und nur in der App.</p>
+        <p id="h-kalendertage"><b>Kalendertage:</b> Die Grenze ist immer Mitternacht (Ortszeit), egal wann der Lauf startet. Das braucht die Integration <i>RS DB Hygiene</i> (HA selbst löscht übrigens nach <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days</code></a> weiter ab dem Zeitpunkt seines Purge, nicht ab Mitternacht).</p>
       </details>
 
       <details id="h-regeln"><summary>5. Regeln und Rangfolge</summary>
-        <p>Eine Regel sagt: <i>Für diese Entitäten gilt diese Kurzzeit und/oder diese Langzeit.</i> Setzt eine Regel einen Wert nicht, bleibt er frei für die nächste passende Regel.</p>
+        <p>Eine Regel sagt: <i>Für diese Entitäten (oder Entitäten, die den definierten Typen/Klassen/Mustern entsprechen) gilt die hier definierte Vorhaltezeit für Kurzzeit und/oder Langzeit.</i> Alle Daten, die sich außerhalb dieser Zeitfenster befinden, werden gelöscht.</p>
         <table>
           <thead><tr><th>Typ</th><th>Muster</th><th>Gilt für</th><th>Beispiel</th></tr></thead>
           <tbody>
-            <tr><td><b>🔒 schutz</b></td><td>Platzhalter <code>*</code> und <code>?</code></td><td>alle (auch verwaiste und Zähler)</td><td><code>sensor.rs_meteo_*</code> – wird nie gekürzt</td></tr>
-            <tr><td><b>E:</b> (eigene Regel)</td><td>genau eine Entität</td><td>aktive und verwaiste</td><td>Tab Entitäten → Entität anklicken → „Eigene Regel“</td></tr>
-            <tr><td><b>entity</b></td><td>exakte Entity-IDs, <b>keine Platzhalter</b></td><td>aktive und verwaiste</td><td><code>sensor.wohnzimmer_temperatur</code></td></tr>
-            <tr><td><b>glob</b></td><td>Platzhalter <code>*</code> und <code>?</code></td><td>nur aktive</td><td><code>sensor.*_uptime*</code></td></tr>
-            <tr><td><b>klasse</b></td><td><code>domain|device_class</code></td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
-            <tr id="h-herkunft"><td><b>herkunft</b> (ab 0.5.5b9)</td><td>Integration (<code>platform</code> der Registry), Platzhalter erlaubt – Auswahl aus der Liste</td><td>nur aktive</td><td><code>unifi</code>, <code>mobile_app</code></td></tr>
-            <tr id="h-vielschreiber"><td><b>vielschreiber</b> (ab 0.5.5b9)</td><td>eine Zahl = Schwelle in Zeilen je Tag, optional zusätzlich Entity-Muster mit Platzhaltern</td><td>nur aktive, die mindestens so viel schreiben</td><td><code>1000</code> bzw. <code>1000</code> + <code>sensor.*</code></td></tr>
-            <tr><td><b>verwaist</b></td><td><code>alle</code>, <code>geloescht</code>, <code>ohne_spur</code>, <code>deaktiviert</code> oder Platzhalter</td><td>nur verwaiste und deaktivierte</td><td><code>*</code></td></tr>
-            <tr><td><b>event</b></td><td>Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
-            <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>fest <code>*</code></td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage (einstellbar), Langzeit unbegrenzt</td></tr>
+            <tr><td><b>🔒 schutz</b></td><td>Regel zum Schutz vor Datenlöschung (Muster möglich, Platzhalter <code>*</code> und <code>?</code>)</td><td>alle (auch verwaiste und Zähler)</td><td><code>sensor.rs_meteo_*</code> – wird nie gekürzt</td></tr>
+            <tr><td><b>E:</b> (eigene Regel)</td><td>wirkt auf genau eine Entität</td><td>aktive und verwaiste</td><td>Tab Entitäten → Entität anklicken → „Eigene Regel“</td></tr>
+            <tr><td><b>entity</b></td><td>Regel, die ausschließlich auf exakte Entity-IDs wirkt (mehrere Entity-IDs möglich, <b>keine Platzhalter möglich</b>)</td><td>aktive und verwaiste</td><td><code>sensor.wohnzimmer_temperatur</code></td></tr>
+            <tr><td><b>glob</b></td><td>Regel, die auf konfigurierbare Muster wirkt (Platzhalter <code>*</code> und <code>?</code>)</td><td>nur aktive</td><td><code>sensor.*_uptime*</code></td></tr>
+            <tr><td><b>klasse</b></td><td>Regel, die auf Klassen wirkt (Muster: <code>domain|device_class</code>)</td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
+            <tr id="h-integration"><td><b>integration</b></td><td>Regel mit Wirkung auf ganze Integrationen. Auswahlliste, die die Auswahl aller Geräte und Entitäten einer oder mehrerer HA-Integrationen erlaubt</td><td>nur aktive</td><td><code>unifi</code>, <code>mobile_app</code></td></tr>
+            <tr id="h-vielschreiber"><td><b>vielschreiber</b></td><td>Regel wirkt auf Schwellwerte für die Schreibintensität (Zeilen/24 h) und greift bei Entitäten oberhalb des Schwellwerts; optional zusätzlich Entity-Muster mit Platzhaltern</td><td>nur aktive, die mindestens so viel schreiben</td><td><code>1000</code> bzw. <code>1000</code> + <code>sensor.*</code></td></tr>
+            <tr><td><b>verwaist</b></td><td>säubert die SQLite-DB von Datenleichen (Datensätze ohne dazugehörige HA-Entitäten)</td><td>nur verwaiste und deaktivierte</td><td><code>*</code></td></tr>
+            <tr><td><b>event</b></td><td>Regel wirkt ausschließlich auf Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
+            <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>nicht löschbare, aber im Vorhaltezeitraum konfigurierbare Standardregel (bildet bei Erstinstallation das Standardverhalten von HA ab)</td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage (einstellbar), Langzeit unbegrenzt</td></tr>
           </tbody>
         </table>
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
         <p>Treffen mehrere aktive Regeln dieselbe Entität, gewinnt je Wert (Kurzzeit und Langzeit getrennt) die mit dem höchsten Rang:</p>
-        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › herkunft › vielschreiber › verwaist › HA-Standard</p>
-        <p>Die Typen <b>herkunft</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter; wer schon dazugehört, bleibt, bis sein Zuwachs unter 80 % der Schwelle sinkt (Hysterese, damit Entitäten nahe der Schwelle nicht zwischen kurzer und langer Kurzzeit pendeln). Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
-        <p id="h-rangnummer"><b>Rangnummer (ab 0.5.5b10):</b> Im Reiter Regeln und in der Löschtabelle steht neben jeder Regel ihr Rang als <b>Stufe.Position</b> – die Stufe nach dem Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 herkunft, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), die Position innerhalb der Stufe nach der Reihenfolge der Liste. Kleinere Zahl = höherer Rang; <code>3.2</code> ist die zweite glob-Regel. Der Tooltip in der Löschtabelle zeigt, gegen welche Regeln eine Regel bei dieser Entität gewonnen hat (je Wert getrennt).</p>
+        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › integration › vielschreiber › verwaist › HA-Standard</p>
+        <p>Die Typen <b>integration</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter; wer schon dazugehört, bleibt, bis sein Zuwachs unter 80 % der Schwelle sinkt (Hysterese, damit Entitäten nahe der Schwelle nicht zwischen kurzer und langer Kurzzeit pendeln). Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
+        <p id="h-rangnummer"><b>Rangnummer:</b> Im Reiter Regeln und in der Löschtabelle steht neben jeder Regel ihr Rang als <b>Stufe.Position</b> – die Stufe nach dem Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), die Position innerhalb der Stufe nach der Reihenfolge der Liste. Kleinere Zahl = höherer Rang; <code>3.2</code> ist die zweite glob-Regel. Der Tooltip in der Löschtabelle zeigt, gegen welche Regeln eine Regel bei dieser Entität gewonnen hat (je Wert getrennt).</p>
         <p>Innerhalb desselben Typs gewinnt die Regel, die <b>weiter oben in der Liste</b> steht. Die Reihenfolge änderst du im Tab Regeln mit den Pfeilen.</p>
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
           <li><b>Platzhalter nur bei glob (und schutz):</b> Bei entity wird <code>*</code> wörtlich genommen; die Regel trifft dann nichts. Die App warnt beim Speichern.</li>
-          <li><b>Zähler-Schutz:</b> glob-, klasse-, herkunft- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
+          <li><b>Zähler-Schutz:</b> glob-, klasse-, integration- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
-          <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>, ab 0.5.3):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<code>purge_keep_days: 10</code>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Ab 0.5.5b7 ist die Kurzzeit einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events; die Langzeit bleibt unbegrenzt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
+          <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days: 10</code></a>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Die Kurzzeit ist einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events; die Langzeit bleibt unbegrenzt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
           <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob eine andere Regel irgendwo Vorrang hat. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
         </ul>
         <h3 id="h-passiv">Aktiv und passiv</h3>
-        <p><b>Passive</b> Regeln wirken nicht, auch nicht beim Löschen. Mit „passive Regeln mitrechnen“ (unter dem Kachelraster) siehst du, was sie bewirken würden. Siehe auch <a class="hverweis" href="#h-faq-passiv">FAQ: Warum steht in der Löschtabelle nie „passiv“?</a></p>
+        <p><b>Passive</b> Regeln werden in Löschläufen ignoriert. Mit „passive Regeln mitrechnen“ (unter dem Kachelraster) kannst du allerdings simulieren, was sie bewirken würden. Siehe auch <a class="hverweis" href="#h-faq-passiv">FAQ: Warum steht in der Löschtabelle nie „passiv“?</a></p>
         <h3 id="h-verwaist">Verwaiste Entitäten</h3>
-        <p>Verwaist ist eine Entität, die Daten in der DB hat, in HA aber nicht mehr existiert, meist nach Umbenennen oder Entfernen. Empfehlung: Regel vom Typ <i>verwaist</i> mit <b>30 Tagen</b> statt „keine“. So lässt sich eine versehentlich umbenannte Entität noch zurückholen. Taucht eine Entität beim Löschlauf wieder auf (z. B. Wetterwarnungen), wird sie übersprungen.</p>
-        <p><b>Deaktiviert</b> (ab 0.5.5b5) ist eine Entität, die in der Registry steht, aber abgeschaltet ist und deshalb keinen Zustand mehr hat. Sie gilt nicht als verwaist: Die Art <code>alle</code> trifft sie nicht, dafür gibt es in der Regel vom Typ <i>verwaist</i> die Art <code>deaktiviert</code>. glob- und klasse-Regeln gelten für sie weiter; die Art-Regel steht im Rang dahinter. Ihre Langzeitstatistik bleibt auch bei Langzeit „keine“ mit dem Statistik-Eintrag erhalten, damit nach dem Wiedereinschalten nichts fehlt.</p>
+        <p>Verwaist ist eine Entität, die Daten in der DB hat, in HA aber nicht mehr existiert, meist nach Umbenennen oder Entfernen. <b>Empfehlung:</b> Regel vom Typ <i>verwaist</i> mit <b>30 Tagen</b> statt „keine“. So lässt sich eine versehentlich umbenannte Entität noch zurückholen. Taucht eine Entität beim Löschlauf wieder auf (z. B. Wetterwarnungen), wird sie übersprungen.</p>
+        <p><b>Deaktiviert</b> ist eine Entität, die in der Registry steht, aber abgeschaltet ist und deshalb keinen Zustand mehr hat. Sie gilt nicht als verwaist: Die Art <code>alle</code> trifft sie nicht, dafür gibt es in der Regel vom Typ <i>verwaist</i> die Art <code>deaktiviert</code>. glob- und klasse-Regeln gelten für sie weiter; die Art-Regel steht im Rang dahinter. Ihre Langzeitstatistik bleibt auch bei Langzeit „keine“ mit dem Statistik-Eintrag erhalten, damit nach dem Wiedereinschalten nichts fehlt.</p>
+        <h3 id="h-regelcheck">Regelwerk-Check</h3>
+        <p>Der Kasten <b>Regelwerk-Check</b> über der Tabelle im Reiter Regeln prüft das bestehende Regelwerk – das Gegenstück zu den Empfehlungen, die neue Regeln vorschlagen. Die Befunde stehen als Chips in der Spalte „Empfehlung“:</p>
+        <ul>
+          <li><b>rot:</b> Fehler oder Konflikt, z. B. eine Regel, die nichts bewirkt, oder Vorrang zwischen Typen, der eine Regel aushebelt;</li>
+          <li><b>gelb:</b> Verdichtung, z. B. ein Muster doppelt, Regeln mit gleichen Werten zusammenlegen, Platzhalter statt langer Listen;</li>
+          <li><b>grau:</b> Hinweis, z. B. ein totes Muster oder eine meist überstimmte Regel.</li>
+        </ul>
+        <p>Ein Klick auf den Chip zeigt Begründung und Wirkung, wo möglich mit „Übernehmen“. Jede Variante ist auf allen Entitäten durchgerechnet: Sie ist entweder „wirkungsneutral“ oder nennt die Entitäten, bei denen sich etwas ändert. Vor dem Übernehmen sichert die App die Regeln. „Bewusst so“ blendet einen Befund aus; die Zähler im Kasten filtern die Tabelle nach Befunden.</p>
       </details>
 
       <details id="h-reiter"><summary>6. Die Reiter</summary>
         <table>
           <thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
           <tbody>
-            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort; ab 0.5.3), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
+            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
-            <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt</td></tr>
-            <tr><td><b>Empfehlungen</b> (ab 0.5.4)</td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert.</td></tr>
-            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten; Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen</td></tr>
-            <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“; der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
-            <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Einzelheiten (auch die Pause wegen eines Backups) und die Monatssumme je Entität</td></tr>
-            <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: Löschmenge sofort (Bestand) und Ersparnis im Dauerbetrieb (Zufluss)</td></tr>
+            <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt; nur Anzeige, keine Löschung über den RS DB Hygiene Manager (Löschen nur aus Home Assistant möglich)</td></tr>
+            <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert.</td></tr>
+            <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten, optimieren (Spalte Regelwerk-Check/Empfehlungen); Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen; der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> prüft das Regelwerk. Beim Speichern bekommt der Name die Vorhaltedauer als Suffix, z. B. „– 30T/2J“ (Kurzzeit/Langzeit, ∞ = unbegrenzt; Event-Regeln nur „– 7T“).</td></tr>
+            <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“ (daneben der Umfang – alle aktiven Regeln oder nur eine – und „Plan neu laden“); der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
+            <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Pause wegen eines Backups; ein Klick auf einen Lauf zeigt die Einzelheiten je Entität; dazu die Monatssumme je Entität</td></tr>
+            <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: prognostizierte Ersparnis im Dauerbetrieb (Wachstum der SQLite-DB)</td></tr>
             <tr><td><b>Hilfe</b></td><td>diese Seite</td></tr>
           </tbody>
         </table>
-        <p><b>Prognosezeitraum</b> (unter dem Kachelraster): Er wirkt nur auf die Prognose (wie groß wird die DB nach 1, 2, … Jahren). Die Spalten „wirksam“ und die Löschmenge sofort rechnen immer mit <code>purge_keep_days</code>, wie der Löschlauf.</p>
+        <p><b>Prognosezeitraum</b> (unter dem Kachelraster): Er wirkt nur auf die Prognose (wie groß wird die DB nach 1, 2, … Jahren). Die Spalten „wirksam“ und die Löschmenge sofort rechnen immer mit <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days</code></a>, wie der Löschlauf.</p>
       </details>
 
       <details id="h-lauf"><summary>7. Der Löschlauf</summary>
         <ul>
           <li><b>Voraussetzung:</b> Hauptschalter „Löschen freigegeben“ (App-Konfiguration). Für Läufe aus HA (Knopf, Dienst, Automation) zusätzlich „Automatik freigegeben“.</li>
-          <li><b>Stufe A – States:</b> über HAs Purge für Entitäten (<code>rs_db_hygiene.purge_states</code>, dieselbe Arbeit wie <code>recorder.purge_entities</code>, aber bis Mitternacht, siehe <a class="hverweis" href="#h-kalendertage">Kalendertage</a>); HA entfernt dabei nicht mehr benutzte Attribute mit.</li>
-          <li><b>Stufe B – 5-Min-Statistik, Langzeit, Events:</b> über die Integration <i>RS DB Hygiene</i>; läuft zuerst und hat eine eigene Obergrenze.</li>
-          <li><b>Obergrenzen je Lauf:</b> States 5 Mio. Zeilen, Statistik und Events 2 Mio. (App-Konfiguration). Was nicht mehr passt, folgt im nächsten Lauf; große Entitäten werden schrittweise nachgezogen.</li>
+          <li><b>States und Attribute:</b> über HAs Purge für Entitäten (<code>rs_db_hygiene.purge_states</code>, dieselbe Arbeit wie <code>recorder.purge_entities</code>, aber für ganze Kalendertage, siehe <a class="hverweis" href="#h-kalendertage">Kalendertage</a>); HA entfernt dabei nicht mehr benutzte Attribute mit.</li>
+          <li><b>5-Min-Statistik, Langzeit, Events:</b> über die Integration <i>RS DB Hygiene</i>; läuft zuerst und hat eine eigene Obergrenze.</li>
+          <li><b>Obergrenzen je Lauf:</b> States 5 Mio. Zeilen, Statistik und Events 2 Mio. (App-Konfiguration). Was nicht mehr passt (Spalte Überhang), folgt im nächsten Lauf (manuell oder durch eine HA-Automation gestartet).</li>
           <li>Vor jedem Paket zählt die App genau nach. Die App selbst schreibt nie in die Datenbank. Im App-Protokoll steht jede Minute der Fortschritt.</li>
-          <li>Läufe aus HA analysieren vorher neu, wenn die Analyse älter als 6 h ist.</li>
-          <li><b>Abbrechen:</b> „Nach diesem Paket abbrechen“. Was HA schon übernommen hat, löscht HA zu Ende.</li>
+          <li>Vor einem Löschlauf startet die App zunächst eine Analyse, wenn die letzte Analyse älter als 6 h ist.</li>
+          <li><b>Abbrechen:</b> „Nach diesem Paket abbrechen“. Was HA schon übernommen hat, löscht HA zu Ende, danach bricht der Löschlauf ab.</li>
           <li><b>HA-Neustart oder Backup während eines Laufs:</b> siehe <a class="hverweis" href="#h-faq-neustart">FAQ: HA-Neustart</a> und <a class="hverweis" href="#h-faq-backup">FAQ: Backup</a>.</li>
         </ul>
       </details>
 
       <details id="h-sicher"><summary>8. Sicherheit</summary>
         <ul>
-          <li>Ohne Hauptschalter wird nichts gelöscht.</li>
+          <li>Ohne aktivierten Hauptschalter (App-Konfiguration → „Löschen freigegeben“) wird nichts gelöscht.</li>
           <li>Vor dem Lauf zeigt der Tab Löschen <b>Risiken</b>: Energie-Dashboard, Zähler, sehr kurze Kurzzeit, Quellen von Helfern (history_stats, statistics …), System-Events.</li>
           <li><b>Backups:</b> Ein HA-Backup sperrt die Datenbank. Ein laufender Löschlauf wartet so lange (höchstens 2 Stunden) und macht danach von selbst weiter, das Backup bleibt in Ordnung. Ein neuer Lauf startet erst nach dem Backup (siehe <a class="hverweis" href="#h-faq-backup">FAQ: Backup während eines Löschlaufs</a>).</li>
           <li>Gelöschte Daten lassen sich nicht wiederherstellen – nur aus einem Backup mit Datenbank.</li>
@@ -724,17 +745,17 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         <!-- Punkt 134 (0.5.3): erste FAQ – Ziel des Warnbanners „Recorder nicht für die App eingerichtet“ (Punkt 133) -->
         <h3 id="h-faq-erstinbetrieb">Wie richte ich die App beim ersten Mal ein? (Erstinbetriebnahme)</h3>
         <p>Drei Schritte. Schritt 1 und 2 sind Pflicht, Schritt 3 nur, wenn Löschen und Verdichten automatisch laufen sollen.</p>
-        <p><b>1. Home Assistant vorbereiten (<code>configuration.yaml</code>)</b><br>
+        <p id="h-faq-ha-vorbereiten"><b>1. Home Assistant vorbereiten (<code>configuration.yaml</code>)</b><br>
           Ohne diese Einträge löscht HA selbst alle Daten nach 10 Tagen, deine Regeln kämen nie zum Zug. Ergänze den Abschnitt <code>recorder:</code> (oder passe ihn an):</p>
 <pre>recorder:
   purge_keep_days: 7300   # 20 Jahre – so lange bleibt alles, wofür keine Regel gilt
   auto_purge: false       # HA löscht nicht mehr selbst, das übernimmt die App
   auto_repack: false      # HA verdichtet nicht mehr selbst, das übernimmt die Automation in Schritt 3</pre>
-        <p>Dann unter Entwicklerwerkzeuge → YAML „Konfiguration prüfen“ und HA neu starten. Die App erwartet mindestens 3650 Tage (10 Jahre); fehlt etwas, zeigt sie oben einen gelben Hinweis.</p>
+        <p>Dann unter Entwicklerwerkzeuge → YAML „Konfiguration prüfen“ und HA neu starten. Die App erwartet mindestens 3650 Tage (10 Jahre); ist der Zeitraum kürzer, zeigt sie oben einen gelben Hinweis.</p>
         <p><b>2. Die App einstellen</b><br>Einstellungen → Apps → RS DB Hygiene Manager → Konfiguration:</p>
         <ul>
           <li><b>Löschen freigegeben (Hauptschalter):</b> einschalten, sobald du wirklich löschen willst. Solange er aus ist, löscht die App nichts.</li>
-          <li><b>Automatik freigegeben:</b> nur einschalten, wenn Löschläufe aus HA starten sollen (Schritt 3).</li>
+          <li><b>Automatik freigegeben:</b> nur erforderlich, wenn Löschläufe aus HA gesteuert werden sollen (Schritt 3).</li>
           <li><b>Uhrzeit der nächtlichen Analyse:</b> vor den Löschlauf legen, z. B. 02:15 bei einem Löschlauf um 03:00.</li>
           <li>Alles andere kann so bleiben.</li>
         </ul>
@@ -742,7 +763,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         <p><b>3. Optional: automatisch löschen und verdichten</b><br>Wer nur von Hand im Reiter Löschen arbeitet, braucht diesen Schritt nicht.</p>
         <p><i>a) Integration installieren:</i> HACS → ⋮ → Benutzerdefinierte Repositories → <code>https://github.com/Raketenschnecke/rs-db-hygiene-manager</code>, Typ „Integration“.
           „RS DB Hygiene“ herunterladen und HA neu starten. HA findet die App selbst: Einstellungen → Geräte &amp; Dienste → „Entdeckt“ → Hinzufügen.</p>
-        <p><i>b) Automation „Löschlauf“</i> – startet jede Nacht um 03:00 einen Löschlauf und meldet das Ergebnis:</p>
+        <p><i>b) Automation (Beispiel) „Löschlauf“</i> – startet jede Nacht um 03:00 einen Löschlauf und meldet das Ergebnis:</p>
 <pre>alias: RS DB Hygiene – Löschlauf
 mode: single
 triggers:
@@ -825,23 +846,25 @@ actions:
           <li>Im Reiter Löschprotokolle steht in der Spalte „Backup-Pause“, wie lange der Lauf gewartet hat.</li>
         </ul>
         <h3 id="h-faq-global">Was bedeutet „global“ genau?</h3>
-        <p><code>purge_keep_days</code> aus der <code>configuration.yaml</code> (derzeit <span data-live="pkd">–</span>). Ändert sich der Wert dort, übernimmt HA ihn erst nach einem Neustart. Siehe auch <a class="hverweis" href="#h-werte">Werte einer Vorhaltezeit</a>.</p>
+        <p><a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days</code></a> aus der <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>configuration.yaml</code></a> (derzeit <span data-live="pkd">–</span>). Ändert sich der Wert dort, übernimmt HA ihn erst nach einem Neustart. Siehe auch <a class="hverweis" href="#h-werte">Werte einer Vorhaltezeit</a>.</p>
         <h3 id="h-faq-events">Brauche ich Events?</h3>
         <p>Nur für das Logbuch („Aktivität“). Verlauf, Statistik und Energie-Dashboard kommen ohne Events aus. Große, wenig genutzte Typen wie <code>call_service</code> kurz halten.</p>
         <h3 id="h-faq-attribute">Was ist mit Attributen, die ich lange brauche?</h3>
-        <p>Attribute folgen der Kurzzeit. Wichtige Werte daraus in eigene Entitäten überführen (z. B. Template-Sensoren). Dann kann die Kurzzeit der Quelle kurz bleiben.</p>
+        <p>Attribute folgen der Kurzzeit: Sie werden genauso behandelt wie States und 5-Min-Statistik. Brauchst du wichtige Werte daraus für Langzeitaufzeichnungen, überführe sie in eigene Entitäten (z. B. mit Template-Sensoren). Dann kann die Kurzzeit der Quelle kurz bleiben.</p>
         <h3 id="h-faq-vorn">Wie fange ich mit den Regeln von vorn an?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Auf Startregeln zurücksetzen</b>. Alle Regeln werden durch die Startliste ersetzt (alle passiv außer <a class="hverweis" href="#h-ha-standard">HA-Standard</a>). Vorher sichert die App die bisherigen Regeln; unter „Sicherungen“ lässt sich jeder Stand wiederherstellen (die letzten 10 bleiben). Ein Stand mit genau dem Inhalt der Startliste trägt den Vermerk „= Startregeln“ – wer zweimal hintereinander zurücksetzt, findet die eigenen Regeln in der älteren Sicherung. Gesperrt, solange ein Löschlauf läuft.</p>
         <h3 id="h-faq-empfehlungen">Nach dem Zurücksetzen sind die Empfehlungen fast leer – warum?</h3>
-        <p>In den Startregeln ist <a class="hverweis" href="#h-ha-standard">HA-Standard</a> aktiv: Alles ohne eigene Regel behält seine Daten nur 10 Tage. Der Reiter Empfehlungen schlägt nur Vorhaltezeiten vor, die kürzer sind als die heute wirksame. Vielschreiber, große Attribute, nirgends verwendete, deaktivierte und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage) entfallen deshalb; übrig bleiben die Diagnose-Gruppen (7 Tage). Der Reiter weist darauf hin, solange HA-Standard aktiv ist und auf 10 Tagen steht; mit längerer Kurzzeit erscheinen die Vorschläge wieder, soweit sie kürzer sind. Ist die Regel <code>HA:standard</code> passiv, gilt wieder „global“ (purge_keep_days), und die Vorschläge erscheinen nach „Neu berechnen“ wieder.</p>
+        <p>In den Startregeln ist <a class="hverweis" href="#h-ha-standard">HA-Standard</a> aktiv: Alles ohne eigene Regel behält seine Daten nur 10 Tage. Der Reiter Empfehlungen schlägt nur Vorhaltezeiten vor, die kürzer sind als die heute wirksame. Vielschreiber, große Attribute, nirgends verwendete, deaktivierte und verwaiste Entitäten (14–30 Tage) sowie Event-Typen (14 Tage) entfallen deshalb; übrig bleiben die Diagnose-Gruppen (7 Tage). Der Reiter weist darauf hin, solange HA-Standard aktiv ist und auf 10 Tagen steht; mit längerer Kurzzeit erscheinen die Vorschläge wieder, soweit sie kürzer sind. Ist die Regel <code>HA:standard</code> passiv, gilt wieder „global“ (<a class="hverweis" href="#h-faq-ha-vorbereiten">purge_keep_days</a>), und die Vorschläge erscheinen nach „Neu berechnen“ wieder.</p>
         <!-- Punkt 214 (0.5.5b12): Strategie beim Aufbau der Regeln, verlinkt neben dem Kasten „Wer schreibt am meisten?“ -->
         <h3 id="h-faq-reihenfolge">In welcher Reihenfolge lege ich Regeln an?</h3>
-        <p>Welche Regel gewinnt, entscheidet allein der <a class="hverweis" href="#h-rang">Rang</a> – nicht die Reihenfolge, in der die Regeln entstanden sind. Die Reihenfolge bestimmt aber, was die Empfehlungen und „Wer schreibt am meisten?“ vorschlagen: Beide betrachten nur Entitäten ohne eigene Kurzzeit. Bewährt hat sich: <b>Erst die gezielten Regeln, dann die Vielschreiber-Regel als Auffangnetz:</b></p>
+        <p>Welche Regel gewinnt, entscheidet allein der <a class="hverweis" href="#h-rang">Rang</a> (erst die Stufe nach dem Typ, dann die Position in der Liste) – nicht die Reihenfolge, in der du die Regeln anlegst. Die Reihenfolge bestimmt aber, was die Empfehlungen und „Wer schreibt am meisten?“ vorschlagen: Beide betrachten nur Entitäten ohne eigene Kurzzeit und schlagen nur Zeiten vor, die kürzer sind als die heute wirksame. Bewährt hat sich der Weg vom Groben zum Feinen: <b>erst Schutz und Auffangnetz, dann die gezielten Regeln, zuletzt die Ausnahmen.</b> Neue Regeln zunächst passiv anlegen und mit „passive Regeln mitrechnen“ prüfen.</p>
         <ol>
-          <li>Bekannte Gruppen als glob oder klasse anlegen, z. B. die Diagnose-Gruppen mit 7 Tagen.</li>
-          <li>Herkunftsregeln für Monitoring-Integrationen (unifi, proxmoxve, frigate, opnsense …). Bei Integrationen mit lauten Entitäten die Kurzzeit gleich kurz wählen oder bewusst kurz halten.</li>
-          <li>Neu berechnen und im Kasten „Wer schreibt am meisten?“ die Schwelle für die Vielschreiber-Regel auf den Rest bestimmen.</li>
-          <li>In der Löschtabelle mit den Rangnummern und dem Tooltip „hat Vorrang vor …“ prüfen, ob irgendwo eine Herkunftsregel eine kürzere Vielschreiber-Regel überstimmt.</li>
+          <li><b>Schutz und Auffangnetz:</b> Daten, die nie gekürzt werden dürfen (z. B. Energie), als <i>schutz</i>-Regel. Dann die Kurzzeit von <a class="hverweis" href="#h-ha-standard">HA-Standard</a> auf den Wert stellen, der für alles ohne eigene Regel gelten soll (z. B. 90 Tage); sie fängt auch Zähler und Events auf. Solange HA-Standard auf 10 Tagen steht, bleiben die Empfehlungen fast leer (<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a>).</li>
+          <li><b>Bekannte Gruppen:</b> Diagnose-Gruppen (z. B. <code>*_rssi</code>, <code>*_uptime</code>) als glob mit 7 Tagen, Geräte einer Art als klasse (<code>domain|device_class</code>). Die Empfehlungen schlagen beides vor.</li>
+          <li><b>Integrationen (Typ integration):</b> Regeln für laute Monitoring-Integrationen (unifi, proxmoxve, frigate, opnsense …); bei lauten Entitäten die Kurzzeit gleich kurz wählen. Passt eine integration- oder klasse-Regel nicht, weil zu viele ihrer Entitäten verwendet werden, bieten die Empfehlungen eine <b>Sammelregel</b> an; gibt es schon eine passende Regel, bieten sie „In R… aufnehmen“ statt einer neuen.</li>
+          <li><b>Vielschreiber als dynamischer Rest:</b> Neu berechnen und im Kasten „Wer schreibt am meisten?“ die Schwelle bestimmen. Die vielschreiber-Regel steht im Rang hinter entity, glob, klasse und integration; sie fängt nur auf, was keine genauere Regel hat.</li>
+          <li><b>Ausnahmen:</b> Was länger gebraucht wird, bekommt eine entity-Regel (oder eine E:-Regel im Tab Entitäten); sie steht im Rang vor allen Mustern und kann deshalb jederzeit später dazukommen. Für verwaiste Entitäten eine verwaist-Regel mit 30 Tagen (die App schlägt sie immer vor, solange keine aktiv ist).</li>
+          <li><b>Aufräumen und prüfen:</b> Der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> im Reiter Regeln findet doppelte, wirkungslose und zusammenlegbare Regeln. In der Löschtabelle zeigen die Rangnummern und der Tooltip „hat Vorrang vor …“, ob z. B. eine integration-Regel eine kürzere vielschreiber-Regel überstimmt.</li>
         </ol>
         <h3 id="h-faq-export">Wie nehme ich meine Regeln auf eine andere Installation mit?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>

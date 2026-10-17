@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b5 (Beta)
+- **Hilfe überarbeitet (Punkt 247):** Reiter „Hilfe“ auf den aktuellen Stand gebracht, u. a. FAQ „In welcher Reihenfolge lege ich Regeln an?“ (6 Schritte), neues Kapitel „Regelwerk-Check“, Sprungziele jetzt unter der klebenden Leiste sichtbar; Erwähnungen von purge_keep_days und configuration.yaml verlinken auf „Home Assistant vorbereiten“; Versionsangaben aus dem Hilfetext entfernt
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b4 (Beta)
 - **Korrektur Löschprotokolle:** die Tabelle „Läufe“ war seit 0.5.6b3 auf ihre Mindesthöhe geschrumpft und zeigte keine Zeilen; die Höhenbegrenzung aus Punkt 240 gilt jetzt nur für die letzte Tabelle eines Reiters
 - Die Integration ändert sich nur in der Versionsnummer
