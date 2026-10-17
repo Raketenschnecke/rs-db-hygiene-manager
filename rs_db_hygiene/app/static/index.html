@@ -669,7 +669,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
             <tr id="h-vielschreiber"><td><b>vielschreiber</b></td><td>Regel wirkt auf Schwellwerte für die Schreibintensität (Zeilen/24 h) und greift bei Entitäten oberhalb des Schwellwerts; optional zusätzlich Entity-Muster mit Platzhaltern</td><td>nur aktive, die mindestens so viel schreiben</td><td><code>1000</code> bzw. <code>1000</code> + <code>sensor.*</code></td></tr>
             <tr><td><b>verwaist</b></td><td>säubert die SQLite-DB von Datenleichen (Datensätze ohne dazugehörige HA-Entitäten)</td><td>nur verwaiste und deaktivierte</td><td><code>*</code></td></tr>
             <tr><td><b>event</b></td><td>Regel wirkt ausschließlich auf Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
-            <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>nicht löschbare, aber im Vorhaltezeitraum konfigurierbare Standardregel (bildet bei Erstinstallation das Standardverhalten von HA ab)</td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage (einstellbar), Langzeit unbegrenzt</td></tr>
+            <tr><td><b><svg class="ha-icon" viewBox="0 0 24 24" role="img" aria-label="Home Assistant"><title>Home Assistant</title><path d="M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z"/></svg> HA-Standard</b></td><td>nicht löschbare, aber im Vorhaltezeitraum konfigurierbare Standardregel (bildet bei Erstinstallation das Standardverhalten von HA ab)</td><td>alles: Entitäten (auch verwaiste und Zähler) und alle Events</td><td><code>HA:standard</code> – Kurzzeit und Events 10 Tage, Langzeit unbegrenzt (beides einstellbar; bei Zählern bleibt die Langzeit immer unbegrenzt)</td></tr>
           </tbody>
         </table>
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
@@ -681,9 +681,9 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
           <li><b>Platzhalter nur bei glob (und schutz):</b> Bei entity wird <code>*</code> wörtlich genommen; die Regel trifft dann nichts. Die App warnt beim Speichern.</li>
-          <li><b>Zähler-Schutz:</b> glob-, klasse-, integration- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der nur die Kurzzeit kürzt).</li>
+          <li><b>Zähler-Schutz:</b> glob-, klasse-, integration- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der bei Zählern nur die Kurzzeit kürzt – ihre Langzeit bleibt immer unbegrenzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
-          <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days: 10</code></a>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Die Kurzzeit ist einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events; die Langzeit bleibt unbegrenzt. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
+          <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days: 10</code></a>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Die Kurzzeit ist einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events. Auch die <b>Langzeit</b> ist einstellbar (Voreinstellung unbegrenzt): Mit z. B. 1 Jahr wird die Regel zum <b>Lumpensammler</b> für die Stundenstatistik aller Entitäten ohne eigene Langzeit-Regel, <a class="hverweis" href="#h-faq-langzeit">Wie begrenze ich die Langzeit?</a> Die Langzeit der Zähler bleibt dabei immer erhalten. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen und unbegrenzter Langzeit. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
           <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob eine andere Regel irgendwo Vorrang hat. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
         </ul>
         <h3 id="h-passiv">Aktiv und passiv</h3>
@@ -708,7 +708,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
             <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt; nur Anzeige, keine Löschung über den RS DB Hygiene Manager (Löschen nur aus Home Assistant möglich)</td></tr>
-            <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern; die Langzeit bleibt unverändert.</td></tr>
+            <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern. Die Langzeit rühren die Empfehlungen nur in einer eigenen Art an: Die Empfehlung <b>Langzeit</b> ist eine Sammelregel mit 90 Tagen Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit). Die Spalte „Wirkt auf“ zeigt, ob ein Vorschlag die Kurzzeit, die Langzeit oder beide setzt; „Treffer“ lassen sich nicht summieren, weil dieselbe Entität in mehreren Vorschlägen stehen kann.</td></tr>
             <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten, optimieren (Spalte Regelwerk-Check/Empfehlungen); Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen; der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> prüft das Regelwerk. Beim Speichern bekommt der Name die Vorhaltedauer als Suffix, z. B. „– 30T/2J“ (Kurzzeit/Langzeit, ∞ = unbegrenzt; Event-Regeln nur „– 7T“).</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“ (daneben der Umfang – alle aktiven Regeln oder nur eine – und „Plan neu laden“); der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
             <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Pause wegen eines Backups; ein Klick auf einen Lauf zeigt die Einzelheiten je Entität; dazu die Monatssumme je Entität</td></tr>
@@ -859,13 +859,20 @@ actions:
         <h3 id="h-faq-reihenfolge">In welcher Reihenfolge lege ich Regeln an?</h3>
         <p>Welche Regel gewinnt, entscheidet allein der <a class="hverweis" href="#h-rang">Rang</a> (erst die Stufe nach dem Typ, dann die Position in der Liste) – nicht die Reihenfolge, in der du die Regeln anlegst. Die Reihenfolge bestimmt aber, was die Empfehlungen und „Wer schreibt am meisten?“ vorschlagen: Beide betrachten nur Entitäten ohne eigene Kurzzeit und schlagen nur Zeiten vor, die kürzer sind als die heute wirksame. Bewährt hat sich der Weg vom Groben zum Feinen: <b>erst Schutz und Auffangnetz, dann die gezielten Regeln, zuletzt die Ausnahmen.</b> Neue Regeln zunächst passiv anlegen und mit „passive Regeln mitrechnen“ prüfen.</p>
         <ol>
-          <li><b>Schutz und Auffangnetz:</b> Daten, die nie gekürzt werden dürfen (z. B. Energie), als <i>schutz</i>-Regel. Dann die Kurzzeit von <a class="hverweis" href="#h-ha-standard">HA-Standard</a> auf den Wert stellen, der für alles ohne eigene Regel gelten soll (z. B. 90 Tage); sie fängt auch Zähler und Events auf. Solange HA-Standard auf 10 Tagen steht, bleiben die Empfehlungen fast leer (<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a>).</li>
+          <li><b>Schutz und Auffangnetz:</b> Daten, die nie gekürzt werden dürfen (z. B. Energie), als <i>schutz</i>-Regel. Dann die Kurzzeit von <a class="hverweis" href="#h-ha-standard">HA-Standard</a> auf den Wert stellen, der für alles ohne eigene Regel gelten soll (z. B. 90 Tage); sie fängt auch Zähler und Events auf. Ebenso lässt sich dort die Langzeit begrenzen (z. B. 1 Jahr, <a class="hverweis" href="#h-faq-langzeit">Wie begrenze ich die Langzeit?</a>). Solange HA-Standard auf 10 Tagen steht, bleiben die Empfehlungen fast leer (<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a>).</li>
           <li><b>Bekannte Gruppen:</b> Diagnose-Gruppen (z. B. <code>*_rssi</code>, <code>*_uptime</code>) als glob mit 7 Tagen, Geräte einer Art als klasse (<code>domain|device_class</code>). Die Empfehlungen schlagen beides vor.</li>
           <li><b>Integrationen (Typ integration):</b> Regeln für laute Monitoring-Integrationen (unifi, proxmoxve, frigate, opnsense …); bei lauten Entitäten die Kurzzeit gleich kurz wählen. Passt eine integration- oder klasse-Regel nicht, weil zu viele ihrer Entitäten verwendet werden, bieten die Empfehlungen eine <b>Sammelregel</b> an; gibt es schon eine passende Regel, bieten sie „In R… aufnehmen“ statt einer neuen.</li>
           <li><b>Vielschreiber als dynamischer Rest:</b> Neu berechnen und im Kasten „Wer schreibt am meisten?“ die Schwelle bestimmen. Die vielschreiber-Regel steht im Rang hinter entity, glob, klasse und integration; sie fängt nur auf, was keine genauere Regel hat.</li>
           <li><b>Ausnahmen:</b> Was länger gebraucht wird, bekommt eine entity-Regel (oder eine E:-Regel im Tab Entitäten); sie steht im Rang vor allen Mustern und kann deshalb jederzeit später dazukommen. Für verwaiste Entitäten eine verwaist-Regel mit 30 Tagen (die App schlägt sie immer vor, solange keine aktiv ist).</li>
           <li><b>Aufräumen und prüfen:</b> Der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> im Reiter Regeln findet doppelte, wirkungslose und zusammenlegbare Regeln. In der Löschtabelle zeigen die Rangnummern und der Tooltip „hat Vorrang vor …“, ob z. B. eine integration-Regel eine kürzere vielschreiber-Regel überstimmt.</li>
         </ol>
+        <h3 id="h-faq-langzeit">Wie begrenze ich die Langzeitstatistik?</h3>
+        <p>Die Langzeitstatistik (Stundenstatistik) löscht Home Assistant nie selbst. Pro Entität mit Statistik kommen 24 Zeilen am Tag dazu, rund 0,7 MB im Jahr; bei mehreren tausend Entitäten summiert sich das über die Jahre. Die Langzeit wird getrennt von der Kurzzeit geregelt: Eine Regel, die nur die Langzeit setzt, lässt die Kurzzeit unverändert. Das Löschen der Langzeit läuft über die Integration <i>RS DB Hygiene</i>.</p>
+        <ol>
+          <li><b>Gezielt:</b> Regeln für Klassen, Integrationen oder einzelne Entitäten mit der Langzeit, die sie brauchen (z. B. Temperatur 5 Jahre), oder „unbegrenzt“ für alles, was dauerhaft bleiben soll. Die Empfehlung der Art <b>Langzeit</b> schlägt eine Sammelregel mit 90 Tagen für alle nirgends verwendeten Entitäten vor. „Verwendet“ erkennt die App nur an den Konfigurationsdateien (Dashboards, Automationen, Skripte, Szenen, Templates, Helfer, Energie); wer Werte nur im Verlauf ansieht oder in anderen Programmen (z. B. Grafana, Node-RED) nutzt, prüft die Treffer vorher und legt die Regel zunächst passiv an.</li>
+          <li><b>Auffangnetz („Lumpensammler“):</b> Im Dialog der Regel <a class="hverweis" href="#h-ha-standard">HA-Standard</a> die Langzeit auf einen Wert wie 1 Jahr stellen. Sie gilt für alle Entitäten, für die keine andere Regel eine Langzeit setzt – auch für künftige. Zähler (<code>state_class: total</code> bzw. <code>total_increasing</code>) behalten ihre Langzeit immer; <i>schutz</i>-Regeln gehen vor.</li>
+        </ol>
+        <p>Der Rang gilt je Wert getrennt: Eine gezielte Regel mit längerer Langzeit gewinnt gegen das Auffangnetz. Als Auffangnetz keine glob-Regel <code>*</code> anlegen – sie steht im Rang vor klasse- und integration-Regeln und überstimmt deren Langzeit.</p>
         <h3 id="h-faq-export">Wie nehme ich meine Regeln auf eine andere Installation mit?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Exportieren</b> lädt die Regeln als JSON-Datei herunter. In der anderen Installation dort <b>Importieren …</b> wählen: Die App prüft die Datei, zeigt, wie viele Regeln (davon aktiv) sie enthält, und ersetzt die Regeln erst nach Rückfrage – vorher mit Sicherung. Regeln für Entitäten, die es dort nicht gibt, treffen einfach nichts.</p>
       </details>
@@ -1585,7 +1592,7 @@ const HILFE = {
     "Den größten Schreibern (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren) eine kürzere Kurzzeit geben."],
   c_lts: ["Langzeit",
     "Zeilen der Langzeit (Stundenstatistik, 1 h) in der Tabelle statistics.",
-    "Standard ist „unbegrenzt“: HA löscht Langzeitstatistik nie selbst; die Löschmenge sofort ist daher meist 0.",
+    "Ohne Regel „unbegrenzt“: HA löscht Langzeitstatistik nie selbst; die Löschmenge sofort ist daher 0, solange keine Regel (oder die Langzeit von HA-Standard) sie begrenzt.",
     "Langzeit nur für nicht mehr benötigte Entitäten verkürzen – bei Zählern verschwindet sonst die Historie im Energie-Dashboard."],
   c_events: ["Events",
     "Zeilen in der Tabelle events (Logbuch: Automation ausgelöst, Aktionen, Registry …).",
@@ -1608,7 +1615,7 @@ const HILFE = {
     "Entitäten: wie viele Entitäten diese Regel tatsächlich bestimmt (nur wo sie den Vorrang gewinnt) · Entitäten mit Kurzzeit bzw. Langzeit aus dieser Regel: bei wie vielen Entitäten der Wert aus dieser Regel stammt (Anzahl, keine Zeilen) · Löschmenge sofort: was ein scharfer Lauf jetzt löschen würde (bei Regeln länger als purge_keep_days = {pkd} Tage steht 0) · Ersparnis (Dauerbetrieb): wie viel kleiner die DB über den Prognosezeitraum von {ziel} bleibt, aufgeteilt in States und Attribute. Beispiel R21: 0 Zeilen sofort, trotzdem Ersparnis auf Dauer.",
     "Nach „Ersparnis (Dauerbetrieb)“ sortieren, um die Hebel zu sehen; Regeln mit 0 Entitäten treffen nichts, oder andere Regeln haben überall Vorrang."],
   optimierungen: ["Empfehlungen",
-    "Regelvorschläge, die die App aus der letzten Analyse ableitet – ohne neue Abfrage der Datenbank und ohne dass etwas gelöscht wird. Vorgeschlagen wird nur eine kürzere Kurzzeit für Daten, für die heute keine eigene Regel gilt; die Langzeit bleibt unverändert.",
+    "Regelvorschläge, die die App aus der letzten Analyse ableitet – ohne neue Abfrage der Datenbank und ohne dass etwas gelöscht wird. Vorgeschlagen wird nur eine kürzere Kurzzeit für Daten, für die heute keine eigene Regel gilt; die Langzeit nur in der Art „Langzeit“ (nirgends verwendete Entitäten, Spalte „Wirkt auf“).",
     "Arten: Gruppe (gleichartige Entitäten, z. B. Diagnosewerte wie *_rssi oder gleich benannte Messwerte, als ein Muster) · Klasse (mehrere Vorschläge derselben Geräteklasse, z. B. sensor|frequency, als eine klasse-Regel) · Integration (ab 5 Vorschlägen einer Integration wie proxmoxve eine Integrations-Regel mit 30 Tagen – sie trifft alle Entitäten der Integration ohne eigene Kurzzeit, auch künftige) · Entität (Vielschreiber, große Attribute, nirgends verwendet – also in keinem Dashboard, keiner Automation, keinem Skript, Template, Helfer oder im Energie-Dashboard genannt; gilt nicht für Automationen und Skripte –, in HA deaktiviert, Uhrzeit-Sensoren mit 1 Tag) · Verwaiste ohne verwaist-Regel · Event-Typen mit viel Volumen ohne Event-Regel. Nie vorgeschlagen werden Zähler, geschützte Entitäten und Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen. Löschmenge sofort: was die Regel zusätzlich zu den heutigen Regeln sofort löschen würde. Ersparnis: um wie viel die DB im Prognosezeitraum von {ziel} kleiner bleibt (unter 1 GB in MB). ⚠ heißt: Die Regel würde wegen ihres Rangs für einige Entitäten eine heute kürzere Kurzzeit verlängern. „passiv: R09“ heißt, eine vorhandene passive Regel deckt diese Daten schon ab – dann genügt es oft, sie einzuschalten.",
     "Nach Ersparnis sortiert von oben abarbeiten: „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; Treffer und Wirkung zeigt die Vorschau dort. Was nicht passt, „ignorieren“ – die App merkt es sich. Mehrere ausgewählte Vorschläge: „als passive Regeln anlegen“, „als aktive Regeln anlegen …“ (mit Warnprüfung, wirkt ab dem nächsten Löschlauf) oder „zu einer Regel zusammenfassen …“ – gleiche Regeltypen werden eine Regel, entity und glob gemeinsam eine glob-Regel; ergibt sich genau eine Regel, öffnet sich die Regelmaske."],
   passiv: ["Passive Regeln mitrechnen",
@@ -1837,7 +1844,7 @@ Klick: Linie ein-/ausblenden">bisher (seit ${vlTagDatum(st, alleH[0][0])})<b>${g
     <div class="vl-leg">${legH}${leg}</div>
     <p class="sub">Rechnung: Vom heutigen Bestand bleibt je Monat, was nach der wirksamen Vorhaltezeit noch nicht fällig ist (Überfälliges fällt im ersten Monat weg);
       dazu kommt der Zufluss aus der Schreibrate (Mittel der letzten 7 vollen Tage). Grau rechnet fest mit HA-Standard 10 Tage (Grundeinstellung von HA).
-      Gelb und Grün rechnen mit HA-Standard in der eingestellten Kurzzeit (${esc(wertAnzeige(st.ha_kurzzeit || "10d"))}) – Grün immer, Gelb nur, wenn die Regel aktiv ist
+      Gelb und Grün rechnen mit HA-Standard in der eingestellten Kurzzeit (${esc(wertAnzeige(st.ha_kurzzeit || "10d"))}) und Langzeit (${esc(wertAnzeige(st.ha_langzeit || "unbegrenzt"))}) – Grün immer, Gelb nur, wenn die Regel aktiv ist
       (${st.ha_aktiv ? "ist sie" : "ist sie nicht"}${!st.ha_aktiv && st.mit_passiven ? ", Haken „passive Regeln mitrechnen“ gesetzt" : ""}); ohne HA-Standard bleibt, was keine Regel hat, purge_keep_days (${zahl(st.purge_keep_days)} Tage).
       ${st.rest_bytes >= 0 ? `${gb(st.rest_bytes)} der Datei ordnet die Analyse keiner Zeile zu (andere Tabellen, freier Platz) – als fester Betrag angenommen.`
         : `Die Zeilenschätzung liegt ${gb(-st.rest_bytes)} über der Datei; der Verlauf ist um diesen festen Betrag korrigiert.`} Anders als die Kachel „Prognose“ (eingeschwungener Zustand) startet
@@ -2417,7 +2424,7 @@ T.regeln = new LokaleTabelle({
     { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => typName(r.typ), csv: r => typName(r.typ),
       // Punkt 111: Schloss bei Schutz; Punkt 106: Warnung bei Platzhaltern in einer entity-Regel
       zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
-        : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, Kurzzeit einstellbar, passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
+        : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, Kurzzeit und Langzeit einstellbar (Auffangregel), passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
         : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : typName(r.typ),
       hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · integration: Integration (Plattform) wie unifi · vielschreiber: ab n Zeilen je Tag · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
       optionen: () => TYPEN_TABELLE.map(t => [typName(t), typName(t)]),
@@ -2492,7 +2499,8 @@ T.lts = new LokaleTabelle({
 });
 // ---- Punkt 176 (0.5.4): Empfehlungen (bis 0.5.4b7 „Optimierungen“) – Regelvorschläge aus der letzten Analyse
 // Punkte 205/208 (0.5.5b11): Vorschläge je Integration (herkunft) und je Klasse
-const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", sammel: "Sammelregel", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events" };
+const wirktAuf = r => r.regel.langzeit && r.regel.kurzzeit ? "Kurz- und Langzeit" : r.regel.langzeit ? "Langzeit" : "Kurzzeit";
+const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", sammel: "Sammelregel", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events", langzeit: "Langzeit" };
 // Punkt 207: Ersparnis unter 1 GB in MB, sonst GB
 const gbmb = b => b == null ? "–" : Math.abs(b) < 1e9 ? mb(b) : gb(b);
 const optStatus = v => v.vorhanden ? `<span class="chip regel regelklick" data-regel-edit="${esc(v.vorhanden.id)}" title="Regel mit genau diesem Muster gibt es schon (${v.vorhanden.aktiv ? "aktiv" : "passiv"}) – Klick öffnet sie">${esc(v.vorhanden.id)} ${v.vorhanden.aktiv ? "" : "passiv"}</span>`
@@ -2525,9 +2533,9 @@ async function erweitereRegeln(vorschlaege) {
 }
 T.opt = new LokaleTabelle({
   id: "#tOpt", treffer: "#trefferOpt", schluessel: "dbh_breiten_opt", einheit: "Vorschläge", sortStd: { k: "ersparnis", desc: true },
-  gruppen: [["Vorschlag", "stamm", ["wahl", "art", "titel", "typ", "muster"]], ["Vorhaltezeit", "vorh", ["kurzzeit"]], ["Istzustand", "ist", ["anzahl", "zuwachs_tag"]],
+  gruppen: [["Vorschlag", "stamm", ["wahl", "art", "wirkt", "titel", "typ", "muster"]], ["Vorhaltezeit (Vorschlag)", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["anzahl"]],
     ["Löschmenge sofort", "loesch", ["loesch_zeilen", "loesch_mb"]], ["Prognose", "prog", ["ersparnis"]]],
-  fix: ["wahl", "art", "titel"],
+  fix: ["wahl", "art", "wirkt", "titel"],
   leer: "keine Vorschläge – entweder ist alles geregelt, oder es fehlt noch eine Analyse",
   spalten: [
     // Punkt 195 (0.5.5b9): Massenauswahl wie in den Tabs Entitäten, Events und Regeln
@@ -2537,22 +2545,30 @@ T.opt = new LokaleTabelle({
       summe: () => [S.auswahlOpt.size ? `${zahl(S.auswahlOpt.size)} ✓` : "", "–"] },
     { k: "art", titel: "Art", typ: "auswahl", breite: 90, wert: r => OPT_ART[r.art] || r.art, zelle: r => esc(OPT_ART[r.art] || r.art), csv: r => r.art,
       optionen: () => Object.values(OPT_ART).map(a => [a, a]), summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Vorschläge – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
+    // Punkt 249: worauf zielt der Vorschlag – Kurzzeit (States, 5-Min, Attribute, Events), Langzeit (Stundenstatistik) oder beides
+    { k: "wirkt", titel: "Wirkt auf", typ: "auswahl", breite: 95, wert: r => wirktAuf(r), csv: r => wirktAuf(r),
+      zelle: r => `<span class="chip ${wirktAuf(r) === "Langzeit" ? "regel" : ""}" title="${esc(wirktAuf(r) === "Langzeit" ? "setzt nur die Langzeit (Stundenstatistik); die Kurzzeit bleibt unverändert" : "setzt die Kurzzeit (States, 5-Min-Statistik, Attribute bzw. Events)" + (r.regel.langzeit ? " und die Langzeit" : "; die Langzeit bleibt unverändert"))}">${esc(wirktAuf(r))}</span>`,
+      optionen: () => [["Kurzzeit", "Kurzzeit"], ["Langzeit", "Langzeit"], ["Kurz- und Langzeit", "Kurz- und Langzeit"]],
+      hilfe: "Kurzzeit: States, 5-Min-Statistik, Attribute bzw. Events · Langzeit: Stundenstatistik · Zum Filtern: Auswahl in der Filterzeile" },
     { k: "titel", titel: "Vorschlag", typ: "text", fest: 1, breite: 330, wert: r => r.titel, zelle: r => `<span class="mono">${esc(r.titel)}</span>`, csv: r => r.titel },
     { k: "typ", titel: "Regeltyp", typ: "auswahl", breite: 85, wert: r => r.regel.typ, zelle: r => esc(r.regel.typ), csv: r => r.regel.typ,
       optionen: l => [...new Set(l.map(r => r.regel.typ))].map(t => [t, t]) },
     { k: "muster", titel: "Muster", typ: "text", breite: 220, wert: r => r.regel.muster.join(" "), tip: r => r.regel.muster.join("\n"),
       zelle: r => `<span class="mono">${esc(r.regel.muster.join(", "))}</span>`, csv: r => r.regel.muster.join(", ") },
-    { k: "kurzzeit", titel: "Kurzzeit (Vorschlag)", typ: "auswahl", breite: 120, wert: r => wertAnzeige(r.regel.kurzzeit), zelle: r => esc(wertAnzeige(r.regel.kurzzeit)),
+    { k: "kurzzeit", titel: WNAME.kurzzeit, typ: "auswahl", breite: 200, wert: r => wertAnzeige(r.regel.kurzzeit), zelle: r => esc(wertAnzeige(r.regel.kurzzeit)),
       csv: r => r.regel.kurzzeit, optionen: l => [...new Set(l.map(r => wertAnzeige(r.regel.kurzzeit)))].map(v => [v, v]),
-      hilfe: "vorgeschlagene Kurzzeit (States, 5-Min-Statistik, Attribute bzw. Events); die Langzeit bleibt unverändert" },
-    { k: "anzahl", titel: "Treffer", typ: "zahl", n: 1, breite: 80, wert: r => r.anzahl, zelle: r => zahl(r.anzahl), csv: r => r.anzahl, summe: anzahlSumme(r => r.anzahl),
+      hilfe: "vorgeschlagene Kurzzeit (States, 5-Min-Statistik, Attribute bzw. Events); leer = die Kurzzeit bleibt unverändert" },
+    { k: "langzeit", titel: WNAME.langzeit, typ: "auswahl", breite: 190, wert: r => wertAnzeige(r.regel.langzeit), zelle: r => esc(wertAnzeige(r.regel.langzeit)),
+      csv: r => r.regel.langzeit, optionen: l => [...new Set(l.map(r => wertAnzeige(r.regel.langzeit)))].map(v => [v, v]),
+      hilfe: "vorgeschlagene Langzeit (Stundenstatistik); leer = die Langzeit bleibt unverändert. Punkt 249: Empfehlungen der Art „Langzeit“ setzen nur diese" },
+    { k: "anzahl", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => r.anzahl, zelle: r => zahl(r.anzahl), csv: r => r.anzahl,
+      summe: () => ["–", "–", "Treffer lassen sich nicht summieren: Dieselbe Entität kann in mehreren Vorschlägen stehen (z. B. Kurzzeit und Langzeit)"],
       hilfe: "Entitäten bzw. Event-Typen, die das Muster trifft (Zähler sind bei glob und klasse ausgenommen)" },
-    { k: "zuwachs_tag", titel: "Zuwachs (Zeilen pro Tag)", typ: "zahl", n: 1, breite: 120, wert: r => r.zuwachs_tag, zelle: r => zahl(r.zuwachs_tag), csv: r => r.zuwachs_tag, summe: anzahlSumme(r => r.zuwachs_tag) },
-    { k: "loesch_zeilen", titel: "Zeilen", typ: "zahl", n: 1, breite: 110, hilfe: "zusätzlich zu den heutigen Regeln sofort löschbar (States, 5-Min-Statistik bzw. Events)",
+    { k: "loesch_zeilen", titel: "Zeilen", typ: "zahl", n: 1, breite: 110, hilfe: "zusätzlich zu den heutigen Regeln sofort löschbar (States, 5-Min-Statistik, Langzeit bzw. Events) – die Langzeit zählt nur, wenn die Regel selbst eine Langzeit setzt",
       wert: r => r.loesch_zeilen, zelle: r => zahl(r.loesch_zeilen), csv: r => r.loesch_zeilen, summe: anzahlSumme(r => r.loesch_zeilen) },
-    { k: "loesch_mb", titel: "Speicher (MB)", typ: "zahl", n: 1, breite: 110, hilfe: "Speicher der zusätzlichen Löschmenge sofort (wird nach einem Repack frei) – Punkt 209",
+    { k: "loesch_mb", titel: "Speicher (MB)", typ: "zahl", n: 1, breite: 110, hilfe: "Speicher der zusätzlichen Löschmenge sofort inkl. Langzeit (wird nach einem Repack frei) – Punkt 209",
       wert: r => Math.round(r.loesch_bytes / 1e6), zelle: r => mb(r.loesch_bytes), csv: r => Math.round(r.loesch_bytes), summe: (g, a) => [mb(g.reduce((x, r) => x + r.loesch_bytes, 0)), mb(a.reduce((x, r) => x + r.loesch_bytes, 0))] },
-    { k: "ersparnis", titel: "Ersparnis (Prognosezeitraum)", typ: "gb", n: 1, einheit: 1, breite: 150, hilfe: "wie viel kleiner die DB im Prognosezeitraum bleibt, verglichen mit den heutigen Regeln – unter 1 GB in MB; Filter in GB, z. B. >0,05. Summe: alle Vorschläge zusammen (überschneiden sie sich, ist die echte Ersparnis kleiner)",
+    { k: "ersparnis", titel: "Ersparnis (Prognosezeitraum)", typ: "gb", n: 1, einheit: 1, breite: 150, hilfe: "wie viel kleiner die DB im Prognosezeitraum bleibt, verglichen mit den heutigen Regeln, inkl. Langzeit (wenn die Regel eine setzt) – unter 1 GB in MB; Filter in GB, z. B. >0,05. Summe: alle Vorschläge zusammen (überschneiden sie sich, ist die echte Ersparnis kleiner)",
       wert: r => r.ersparnis_bytes, zelle: r => gbmb(r.ersparnis_bytes), csv: r => Math.round(r.ersparnis_bytes),
       summe: (g, a) => [gbmb(g.reduce((x, r) => x + (r.ersparnis_bytes || 0), 0)), gbmb(a.reduce((x, r) => x + (r.ersparnis_bytes || 0), 0))] },
     { k: "gruende", titel: "Begründung", typ: "text", breite: 380, wert: r => r.gruende.join(" · "), tdKlasse: "gruende",
@@ -2680,6 +2696,8 @@ function sammelName(regel, anzahl, alleDiagnose) {
   return nameMitSuffix(`${anzahl} Empfehlungen: ${teile}`, regel);   // Punkt 241
 }
 async function fasseZusammen(gew) {
+  if (gew.some(v => v.art === "langzeit") && !gew.every(v => v.art === "langzeit"))   // Punkt 249: Langzeit-Empfehlungen setzen keine Kurzzeit
+    return meldung("Zusammenfassen", "Langzeit-Empfehlungen setzen nur die Langzeit und lassen sich nicht mit Kurzzeit-Empfehlungen in einer Regel zusammenfassen. Bitte getrennt auswählen.");
   const familie = v => ["entity", "glob"].includes(v.regel.typ) ? "glob" : v.regel.typ;
   const kzs = [...new Set(gew.map(v => v.regel.kurzzeit))].sort((a, b) => dauerTage(a) - dauerTage(b));
   let jeKz = false;
@@ -3108,7 +3126,7 @@ const massenWahl = art => wertBlock(art, null, true, "", []).replace('<option va
   '<option value="=" selected>– unverändert lassen –</option><option value="">– nicht setzen –</option>');
 function massenWerteAnwenden(r, kz, lz) {
   if (r.typ === "schutz") return { neu: r, geaendert: false, grund: "Schutz-Regel: Werte fest (global/unbegrenzt)" };   // Punkt 111
-  if (r.typ === "ha_standard") return { neu: r, geaendert: false, grund: "HA-Standard: Kurzzeit nur im eigenen Dialog einstellbar (Klick auf die Regel), Langzeit fest unbegrenzt" };   // Punkte 127/190
+  if (r.typ === "ha_standard") return { neu: r, geaendert: false, grund: "HA-Standard: Kurzzeit und Langzeit nur im eigenen Dialog einstellbar (Klick auf die Regel)" };   // Punkte 127/190
   const neu = { ...r }, gruende = [];
   if (kz !== "=") {
     if (r.typ === "event" && (kz == null || kz === "keine")) gruende.push("Event-Regel braucht eine Vorhaltezeit (global oder Dauer)");
@@ -3651,15 +3669,15 @@ async function baueKlassenWahl(box, ta, w = WAHLLISTE.klasse) {
 // Punkt 127: Regel HA-Standard – Erklärung und Schalter aktiv/passiv, kein Entfernen; Punkt 190: Kurzzeit einstellbar (nur Dauer)
 const HA_STD_KZ = "10d";   // Grundeinstellung von HA (purge_keep_days 10)
 const haStdKurzzeit = () => S.regeln?.regeln?.find(r => r.id === HA_STD)?.kurzzeit || HA_STD_KZ;
+const haStdLangzeit = () => S.regeln?.regeln?.find(r => r.id === HA_STD)?.langzeit || "unbegrenzt";   // Punkt 249
 function zeigeHaStandard(r) {
   dialog(`Regel ${r.id}`, `
     <p><b>${HA_ICON} ${esc(r.name)}</b></p>
     <p>Diese Regel bildet das Löschverhalten von Home Assistant in der <b>Grundeinstellung</b> ab (Recorder <span class="mono">purge_keep_days: 10</span>).
       Die Kurzzeit lässt sich ändern – dann ist sie eine <b>Auffangregel</b> für alles ohne eigene Regel, z. B. 90 Tage:</p>
     ${wertBlock("kurzzeit", r.kurzzeit, false, `gilt auch für ${EV_NAME} (alle Event-Typen) · Grundeinstellung 10 Tage`, ["global", "keine"])}
-    <ul>
-      <li><b>${WNAME.langzeit}:</b> unbegrenzt (fest) – HA löscht die Langzeitstatistik nie</li>
-    </ul>
+    ${wertBlock("langzeit", r.langzeit || "unbegrenzt", false, "Lumpensammler: erfasst alle Entitäten, für die keine andere Regel eine Langzeit setzt · Grundeinstellung unbegrenzt (HA löscht die Langzeitstatistik nie)", ["keine"], true)}
+    <p class="sub">Zähler (state_class total…) behalten ihre Langzeit immer – die Energiestatistik bleibt unberührt. Schutzregeln gehen ebenfalls vor.</p>
     <p class="sub">Sie gilt für alles, wofür keine andere Regel einen Wert setzt – auch für verwaiste Entitäten und Zähler, wie bei HA selbst.
       Sie hat den niedrigsten Rang: Jede andere Regel geht vor, die Position in der Liste spielt keine Rolle. Anders als HA löscht die App bis zur lokalen Mitternacht (volle Kalendertage).</p>
     <p class="sub">Die Regel lässt sich nicht entfernen, nur passiv schalten. Passiv gilt ohne Regel wieder „global“ (purge_keep_days).
@@ -3668,11 +3686,12 @@ function zeigeHaStandard(r) {
     <div id="dlgFehler" class="fehler"></div>`, [
     ["Abbrechen", () => $("#dlg").close()],
     ["Speichern", async () => {
-      const aktiv = $("#rAktiv").checked, kurzzeit = wertLesen($("#dlgInhalt .wertwahl"));
+      const aktiv = $("#rAktiv").checked, kurzzeit = wertLesen($('#dlgInhalt .wertwahl[data-art="kurzzeit"]')), langzeit = wertLesen($('#dlgInhalt .wertwahl[data-art="langzeit"]'));
       if (!/^[1-9]\d*[dwmj]$/.test(kurzzeit || "")) return $("#dlgFehler").textContent = "Kurzzeit braucht eine Dauer von mindestens 1 (Tage, Wochen, Monate, Jahre).";
-      if (aktiv === r.aktiv && kurzzeit === r.kurzzeit) return $("#dlg").close();
-      if (aktiv && !await warnPruefung({ ...r, aktiv: true, kurzzeit })) return;
-      try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.map(x => x.id === r.id ? { ...x, aktiv, kurzzeit } : x) }); $("#dlg").close(); }
+      if (!/^[1-9]\d*[dwmj]$/.test(langzeit || "") && langzeit !== "unbegrenzt") return $("#dlgFehler").textContent = "Langzeit braucht eine Dauer von mindestens 1 oder „unbegrenzt“.";
+      if (aktiv === r.aktiv && kurzzeit === r.kurzzeit && langzeit === (r.langzeit || "unbegrenzt")) return $("#dlg").close();
+      if (aktiv && !await warnPruefung({ ...r, aktiv: true, kurzzeit, langzeit })) return;
+      try { await speichereRegeln({ ...S.regeln, regeln: S.regeln.regeln.map(x => x.id === r.id ? { ...x, aktiv, kurzzeit, langzeit } : x) }); $("#dlg").close(); }
       catch (e) { $("#dlgFehler").textContent = e.message; }
     }, true]]);
 }
@@ -4404,7 +4423,7 @@ async function starteLoeschen() {
   // Punkt 127: Mit aktiver Regel HA-Standard löscht die App wie HA in der Grundeinstellung – vorher deutlich darauf hinweisen
   if (haStandardAktiv() && !await frage("⚠ Die App läuft im HA-Standard",
     `Die Regel ${HA_STD} (HA-Standard) ist aktiv. Für alles ohne eigene Regel löscht dieser Lauf${haStdKurzzeit() === HA_STD_KZ ? " wie Home Assistant in der Grundeinstellung" : ""}:\n\n` +
-    `• ${WNAME.kurzzeit}: alles älter als ${wertAnzeige(haStdKurzzeit())}\n• ${EV_NAME}: alle Event-Typen älter als ${wertAnzeige(haStdKurzzeit())}\n• ${WNAME.langzeit}: bleibt unbegrenzt\n\n` +
+    `• ${WNAME.kurzzeit}: alles älter als ${wertAnzeige(haStdKurzzeit())}\n• ${EV_NAME}: alle Event-Typen älter als ${wertAnzeige(haStdKurzzeit())}\n• ${WNAME.langzeit}: ${haStdLangzeit() === "unbegrenzt" ? "bleibt unbegrenzt" : "alles älter als " + wertAnzeige(haStdLangzeit()) + " (Zähler ausgenommen)"}\n\n` +
     `Längere Vorhaltezeiten (z. B. purge_keep_days 7300) wirken dann nur dort, wo eine eigene Regel gilt. ` +
     `Wenn das nicht gewollt ist: abbrechen und die Regel ${HA_STD} im Tab „Regeln“ passiv schalten.\n\nTrotzdem weiter?`, "Weiter")) return;
   const umfang = p.nur_regel ? `Regel ${p.nur_regel}` : "alle aktiven Regeln";
@@ -4554,6 +4573,12 @@ function tipZurueck() {
   TIP.weg = []; TIP.ziel = null;
   if (TIP.el.matches(":popover-open")) TIP.el.hidePopover();
 }
+// Punkt 250: Klick, Taste und Mausrad blenden den Tooltip nur aus; die title bleiben weg, bis der Zeiger das Element verlässt
+// (mouseout) – sonst zeigt der Browser sofort seinen eigenen Tooltip, weil der Zeiger noch auf dem Element steht
+function tipVerbergen() {
+  clearTimeout(TIP.timer);
+  if (TIP.el.matches(":popover-open")) TIP.el.hidePopover();
+}
 function tipZeigen() {
   if (!TIP.ziel || !TIP.text) return;
   TIP.el.innerHTML = tipSchema(TIP.ziel, TIP.text).map(z => z.trim() ? `<div>${tipZeile(z)}</div>` : `<div class="tip-luecke"></div>`).join("");
@@ -4583,7 +4608,7 @@ document.addEventListener("mouseover", ev => {
 });
 document.addEventListener("mousemove", ev => { if (TIP.ziel && !TIP.el.matches(":popover-open")) { TIP.x = ev.clientX; TIP.y = ev.clientY; } });
 document.addEventListener("mouseout", ev => { if (TIP.ziel && !TIP.ziel.contains(ev.relatedTarget)) tipZurueck(); });
-["mousedown", "keydown", "wheel"].forEach(t => document.addEventListener(t, tipZurueck, true));
+["mousedown", "keydown", "wheel"].forEach(t => document.addEventListener(t, tipVerbergen, true));
 </script>
 </body>
 </html>

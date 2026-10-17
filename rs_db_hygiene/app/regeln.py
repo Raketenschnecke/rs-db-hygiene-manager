@@ -91,16 +91,20 @@ HA_STANDARD = {"id": HA_STANDARD_ID, "typ": "ha_standard", "muster": ["*"],
                "kurzzeit": f"{HA_STANDARD_TAGE}d", "attribute": None, "langzeit": "unbegrenzt"}
 
 
-def ha_standard(kurzzeit, aktiv):
+def ha_standard(kurzzeit, aktiv, langzeit="unbegrenzt"):
     """Punkt 190: Regel HA-Standard mit einstellbarer Kurzzeit (Dauer, gilt auch für Events). Bei 10 Tagen wie HA_STANDARD;
-    sonst Auffangregel nach diesem Vorbild – Name und Notiz nennen den eingestellten Wert. Muster, Typ und Langzeit bleiben fest."""
-    if kurzzeit == HA_STANDARD["kurzzeit"]:
+    sonst Auffangregel nach diesem Vorbild – Name und Notiz nennen den eingestellten Wert. Muster und Typ bleiben fest.
+    Punkt 249: auch die Langzeit ist einstellbar (Dauer oder unbegrenzt) – dann fängt die Regel alles ein, was keine
+    andere Regel für die Langzeit erfasst („Lumpensammler“)."""
+    if kurzzeit == HA_STANDARD["kurzzeit"] and langzeit == "unbegrenzt":
         return {**HA_STANDARD, "aktiv": aktiv}
-    t = anzeige(kurzzeit)
-    return {**HA_STANDARD, "aktiv": aktiv, "kurzzeit": kurzzeit, "name": name_mit_suffix("HA-Standard", {**HA_STANDARD, "kurzzeit": kurzzeit}),
+    t, lt = anzeige(kurzzeit), anzeige(langzeit)
+    basis = {**HA_STANDARD, "kurzzeit": kurzzeit, "langzeit": langzeit}
+    lang = "Langzeitstatistik nie" if langzeit == "unbegrenzt" else f"Langzeitstatistik nach {lt}"
+    return {**HA_STANDARD, "aktiv": aktiv, "kurzzeit": kurzzeit, "langzeit": langzeit, "name": name_mit_suffix("HA-Standard", basis),
             "notiz": (f"Auffangregel nach dem Vorbild von Home Assistant (Grundeinstellung purge_keep_days {HA_STANDARD_TAGE}), Kurzzeit auf {t} gestellt: "
-                      f"States, 5-Min-Statistik, Attribute und Events nach {t}, Langzeitstatistik nie. "
-                      "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur Kurzzeit einstellbar und passiv schaltbar.")}
+                      f"States, 5-Min-Statistik, Attribute und Events nach {t}, {lang}. "
+                      "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur Kurzzeit und Langzeit einstellbar und passiv schaltbar.")}
 
 
 # Punkt 241: Suffix der Vorhaltedauer im Regelnamen „– 30T/2J“ (Kurzzeit/Langzeit; unbegrenzt bzw. ohne eigene Langzeit ∞,
@@ -201,7 +205,10 @@ def normalisiere(daten):
             kz = pruefe_wert("kurzzeit", r.get("kurzzeit") or HA_STANDARD["kurzzeit"])
             if not _DAUER.match(kz):
                 raise RegelFehler(f"{rid}: Kurzzeit braucht eine Dauer (n d/w/m/j), nicht „{kz}“")
-            regeln.append(ha_standard(kz, r.get("aktiv", True) is not False))
+            lz = pruefe_wert("langzeit", r.get("langzeit") or "unbegrenzt")      # Punkt 249
+            if lz != "unbegrenzt" and not _DAUER.match(lz):
+                raise RegelFehler(f"{rid}: Langzeit braucht eine Dauer (n d/w/m/j) oder unbegrenzt, nicht „{lz}“")
+            regeln.append(ha_standard(kz, r.get("aktiv", True) is not False, lz))
             continue
         if typ not in TYP_RANG:
             raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft (Anzeige: integration), vielschreiber, verwaist oder event sein")
@@ -503,6 +510,8 @@ class Aufloeser:
             if zaehler and r["typ"] not in ("entity", "verwaist", "schutz", "ha_standard"):
                 geschuetzt.append(r["id"])
                 continue
+            if zaehler and r["typ"] == "ha_standard":     # Punkt 249: Zähler behalten ihre Langzeit immer (Energiestatistik), auch bei Standard-Langzeit mit Dauer
+                setzt = [a for a in setzt if a != "langzeit"]
             if r["typ"] == "schutz" and not ergebnis.get("schutz"):
                 ergebnis["schutz"] = r["id"]      # Punkt 111: geschützt (Schloss in der GUI, Ausschluss im Löschplan)
             for a in setzt:

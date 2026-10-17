@@ -8,7 +8,8 @@ Alles rechnet auf dem Probelauf (Analyse-Cache + aktuelle Regeln), ohne neue Abf
                 große Attribute, nirgends verwendet, deaktiviert, Uhrzeit), zusammengefasst je Klasse (Punkt 208), je
                 Integration (Punkt 205) oder Namensmuster; wo klasse/herkunft nicht sicher sind, eine Sammelregel mit den
                 unbenutzten Entitäten (Punkte 233/234); verwaiste ohne Regel, Event-Typen ohne Event-Regel.
-                Leitplanken: nie Energie- oder Helfer-Quellen, nie geschützte Entitäten oder Zähler, nie die Langzeit;
+                Leitplanken: nie Energie- oder Helfer-Quellen, nie geschützte Entitäten oder Zähler, die Langzeit nur
+                in der eigenen Empfehlung „Langzeit“ (Punkt 249, nirgends verwendete Entitäten);
                 nur wo heute keine eigene Kurzzeit gilt (Standard bzw. HA-Standard) und der Vorschlag kürzer ist.
   verdichte()   Punkt 171: Muster mit Platzhaltern, die genau eine Auswahl von Entity-IDs treffen.
 """
@@ -33,7 +34,8 @@ GRUPPE_MIN = 3               # Mindestzahl Entitäten einer Gruppe
 GRUPPE_PRO_TAG = 1000        # Mindestzuwachs einer Gruppe (Zeilen je Tag)
 EVENT_PRO_TAG = 1000         # Event-Typen ab so vielen Events je Tag
 TAGE = {"gruppe": "7d", "viel": "30d", "viel_sehr": "14d", "attribute": "30d", "unbenutzt": "14d", "deaktiviert": "30d",
-        "verwaist": "30d", "event": "14d", "herkunft": "30d", "uhrzeit": "1d"}
+        "verwaist": "30d", "event": "14d", "herkunft": "30d", "uhrzeit": "1d",
+        "langzeit_unbenutzt": "90d"}   # Punkt 249: Langzeit nirgends verwendeter Entitäten
 # Punkt 205: ab so vielen Einzelvorschlägen einer Integration eine herkunft-Regel statt vieler entity-Regeln (Punkt 234:
 # 3 statt 5); nicht für Sammel-Integrationen, unter denen ganz verschiedene Geräte und Helfer stehen (auch keine Sammelregel)
 HERKUNFT_MIN = 3
@@ -170,6 +172,15 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
             ll = max(0, pl_._aelter(hist["lts"], lid, heute - neu["langzeit"]) - (e["loeschbar"]["lts"] or 0))
             w["loesch_lts"] += ll
             w["loesch_bytes"] += ll * pl_.B_LTS
+            if e["status"] == "aktiv":
+                # Ersparnis im Prognosezeitraum wie der Probelauf: Langzeit „unbegrenzt“ = Bestand + Zuwachs über `ziel` Tage
+                lts_jetzt = e["lts_rows"] or 0
+
+                def lts_prog(tage):
+                    return (lts_jetzt + pl_.LTS_PRO_TAG * ziel) if tage is None else pl_.LTS_PRO_TAG * tage
+                d = lts_prog(alt["langzeit"]) - lts_prog(neu["langzeit"])
+                w["ersparnis_bytes"] += d * pl_.B_LTS
+                w["verlaengert"] += d < 0
     treffer.sort(key=lambda t: -(t["rows_24h"] or 0))
     return {"anzahl": len(treffer), "treffer": treffer[:beispiele], "anzahl_geschuetzt": len(geschuetzt),
             "geschuetzt": geschuetzt[:beispiele], "anzahl_ueberstimmt": w.pop("ueberstimmt"),
@@ -338,9 +349,9 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
 
     ablehnung = {"grund": None}   # warum neu() zuletzt nichts vorgeschlagen hat (Begründung der Sammelregel, Punkt 233)
 
-    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz="", immer=False):
+    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz="", immer=False, langzeit=None):
         regel = {"id": "VORSCHLAG", "name": name, "typ": typ, "muster": muster, "aktiv": False, "notiz": notiz,
-                 "kurzzeit": kurzzeit, "attribute": None, "langzeit": None}
+                 "kurzzeit": kurzzeit, "attribute": None, "langzeit": langzeit}
         regel["name"] = rg.name_mit_suffix(name, regel)   # Punkt 241: „– 14T/∞“ statt „– 14 Tage“
         norm = rg.normalisiere({"regeln": [regel], "events": {}})["regeln"][0]
         w = event_wirkung(norm, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(norm, pl, bestand, hist, ziel=ziel, mit_ents=True)
@@ -648,6 +659,33 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         neu(f"event:{typ}", "event", f"Events {typ}", "event", [typ], TAGE["event"],
             [f"{ev['pro_tag']:,} Events je Tag ohne eigene Event-Regel".replace(",", "."),
              "Events braucht nur das Logbuch („Aktivität“)"], f"Events {typ} – 14 Tage", "Empfehlung des RS DB HM")
+
+    # 5. Punkt 249: Langzeit (Stundenstatistik) nirgends verwendeter Entitäten – Sammelregel nur mit Langzeit; der Rest (auch künftige
+    # Entitäten) wird über die Langzeit der Regel HA:standard aufgefangen („Lumpensammler“)
+    if verwendet is not None:
+        lz = TAGE["langzeit_unbenutzt"]
+        lz_tage = _tage_von(lz)
+        ids = []
+        for e in ents:
+            eid = e["entity_id"]
+            if (e["status"] != "aktiv" or e.get("schutz") or (e.get("state_class") or "").startswith("total") or not e.get("lts_rows")
+                    or eid in verwendet or e["domain"] in NIE_UNBENUTZT or eid in ktx["energie"] or eid in ktx["helfer"]):
+                continue
+            wl = (e["werte"] or {}).get("langzeit") or {}
+            if wl.get("regel") not in (None, rg.HA_STANDARD_ID):
+                continue
+            if wl.get("tage") is None or wl["tage"] > lz_tage:
+                ids.append(eid)
+        if len(ids) >= GRUPPE_MIN:
+            gewaehlt = set(ids)
+            zeilen = sum(e["lts_rows"] for e in ents if e["entity_id"] in gewaehlt)
+            gr = [f"{_anzahl(len(ids), 'Entität', 'Entitäten')} nirgends verwendet (nicht in Dashboards, Automationen, Skripten, Templates, Helfern, Energie), "
+                  f"Langzeit heute unbegrenzt bzw. länger als {rg.anzeige(lz)} ({_anzahl(zeilen, 'Stundenzeile', 'Stundenzeilen')})",
+                  "setzt nur die Langzeit – die Kurzzeit bleibt unverändert; Zähler, Energie-/Helfer-Quellen und geschützte Entitäten ausgenommen",
+                  "künftige Entitäten erfasst die Regel nicht – dafür Langzeit der Regel HA:standard einstellen (Lumpensammler)"]
+            neu("langzeit:unbenutzt", "langzeit", "Langzeit nirgends verwendeter Entitäten", "entity", sorted(ids), None, gr,
+                f"Langzeit nirgends verwendet – {rg.anzeige(lz)}", "Empfehlung des RS DB HM: Stundenstatistik ohne Nutzen begrenzen",
+                langzeit=lz)
 
     out.sort(key=lambda v: (-(v["ersparnis_bytes"] or 0), -(v["zuwachs_tag"] or 0)))   # Punkt 207: bei Gleichstand Zuwachs
     return out

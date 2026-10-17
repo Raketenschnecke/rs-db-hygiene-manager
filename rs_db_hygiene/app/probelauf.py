@@ -420,5 +420,5 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     rest = int(info["db_bytes"]) - bestand
     return {"stand": {"analyse_zeit": float(info["analyse_zeit"]), "db_bytes": int(info["db_bytes"]), "purge_keep_days": pkd,
                       "ziel_tage": ziel, "mit_passiven": mit_passiven,
-                      "ha_kurzzeit": ha_regel["kurzzeit"], "ha_aktiv": bool(ha_regel.get("aktiv")), "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand},
+                      "ha_kurzzeit": ha_regel["kurzzeit"], "ha_langzeit": ha_regel.get("langzeit") or "unbegrenzt", "ha_aktiv": bool(ha_regel.get("aktiv")), "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand},
             "tage": tage, "werte": {k: [round(rest + v) for v in r] for k, r in werte.items()}}
