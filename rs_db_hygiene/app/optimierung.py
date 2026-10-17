@@ -27,13 +27,13 @@ import regeln as rg
 # Schwellen der Vorschläge
 VIEL_PRO_TAG = 2000          # ab hier „Vielschreiber“ (≈ alle 43 s ein neuer Wert)
 VIEL_SEHR = 10000            # ab hier Vorschlag 14 statt 30 Tage
-ATTR_PRO_TAG = 2_000_000     # Attribute ab 2 MB je Tag
+ATTR_PROGNOSE_MIN = 100_000_000   # Punkt 254: Empfehlung „Attribute“ ab 100 MB Zuwachs im Prognosezeitraum je Entität (Zuwachs/Tag × wirksame Attribut-Tage)
 UNBENUTZT_PRO_TAG = 500      # nirgends verwendet und mindestens so viele Zeilen je Tag
 UNBENUTZT_BUENDEL = 100      # Punkt 236: ab hier zählen unbenutzte Entitäten für Bündel (klasse, herkunft, Sammelregel) mit
 GRUPPE_MIN = 3               # Mindestzahl Entitäten einer Gruppe
 GRUPPE_PRO_TAG = 1000        # Mindestzuwachs einer Gruppe (Zeilen je Tag)
 EVENT_PRO_TAG = 1000         # Event-Typen ab so vielen Events je Tag
-TAGE = {"gruppe": "7d", "viel": "30d", "viel_sehr": "14d", "attribute": "30d", "unbenutzt": "14d", "deaktiviert": "30d",
+TAGE = {"gruppe": "7d", "viel": "30d", "viel_sehr": "14d", "attribute": "14d", "unbenutzt": "14d", "deaktiviert": "30d",
         "verwaist": "30d", "event": "14d", "herkunft": "30d", "uhrzeit": "1d",
         "langzeit_unbenutzt": "1j"}   # Punkt 249 (252: 1 Jahr statt 90 Tage): Langzeit nirgends verwendeter Entitäten
 # Punkt 205: ab so vielen Einzelvorschlägen einer Integration eine herkunft-Regel statt vieler entity-Regeln (Punkt 234:
@@ -68,9 +68,11 @@ IGNORIERT_DATEI = "optimierungen_ignoriert.json"
 _HIST = {"schl": None}
 
 
-def histogramme(cache_pfad):
-    """Tageshistogramme States, 5-Min, Langzeit und heute_tag/pkd – je Cache-Stand einmal gelesen."""
-    schl = os.path.getmtime(cache_pfad) if os.path.exists(cache_pfad) else None
+def histogramme(cache_pfad, attr_pfad=None):
+    """Tageshistogramme States, 5-Min, Langzeit und heute_tag/pkd – je Cache-Stand einmal gelesen.
+    Punkt 254: mit attr_pfad zusätzlich die Attributzeilen je Tag der letzten Nutzung (für die Löschmenge einer Attribut-Regel)."""
+    schl = (os.path.getmtime(cache_pfad) if os.path.exists(cache_pfad) else None,
+            os.path.getmtime(attr_pfad) if attr_pfad and os.path.exists(attr_pfad) else None)
     if _HIST["schl"] != schl:
         con = sqlite3.connect(f"file:{cache_pfad}?mode=ro", uri=True)
         info = dict(con.execute("SELECT schluessel, wert FROM info"))
@@ -80,6 +82,16 @@ def histogramme(cache_pfad):
                      lts=pl_._histogramm(con, "SELECT lts_id, tag, n FROM lts_tage"),
                      ids=dict(con.execute("SELECT entity_id, metadata_id FROM entitaet")),
                      lids=dict(con.execute("SELECT entity_id, lts_id FROM entitaet")))
+        attr = {}
+        if attr_pfad and os.path.exists(attr_pfad):
+            try:
+                ac = sqlite3.connect(f"file:{attr_pfad}?mode=ro", uri=True)
+                for mid, tag, b, z in ac.execute("SELECT metadata_id, tag, bytes, zeilen FROM attr_tage WHERE art = 'letzt'"):
+                    attr.setdefault(mid, []).append((tag, b, z))
+                ac.close()
+            except sqlite3.Error:
+                attr = {}
+        _HIST["attr"] = attr
         try:   # ab Cache-Version 3: Events je Typ und Tag
             _HIST["ev"] = pl_._histogramm(con, "SELECT event_type, tag, n FROM ev_tage")
         except sqlite3.OperationalError:
@@ -132,7 +144,8 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
     ziel = int(ziel or (pl.get("stand") or {}).get("ziel_tage") or pkd)
     treffer, geschuetzt, von, getroffen = [], [], {}, []
     w = {"ueberstimmt": 0, "gewinnt": 0, "zuwachs_tag": 0, "bestand": 0, "loesch_states": 0, "loesch_kurz": 0,
-         "loesch_lts": 0, "loesch_bytes": 0, "ersparnis_bytes": 0, "ersparnis_kurz_bytes": 0, "ersparnis_lang_bytes": 0, "verlaengert": 0}
+         "loesch_lts": 0, "loesch_attr": 0, "loesch_bytes": 0, "ersparnis_bytes": 0, "ersparnis_kurz_bytes": 0, "ersparnis_lang_bytes": 0,
+         "ersparnis_attr_bytes": 0, "verlaengert": 0}
     for e in _vorfilter(regel, pl.get("entitaeten", [])):
         x = allein.loese_e(e)
         if x["geschuetzt"]:
@@ -165,10 +178,28 @@ def wirkung(regel, pl, bestand, hist, ziel=None, beispiele=12, mit_ents=False):
             w["loesch_bytes"] += ls * pl_.B_STATE + lk * pl_.B_KURZ
             if e["status"] == "aktiv":
                 d = min(alt["kurzzeit"], ziel) - min(neu["kurzzeit"], ziel)
-                pro_tag = (e["rows_24h"] or 0) * pl_.B_STATE + (pl_.KURZ_PRO_TAG * pl_.B_KURZ if lid else 0) + (e.get("attr_zuwachs_tag") or 0)
+                pro_tag = (e["rows_24h"] or 0) * pl_.B_STATE + (pl_.KURZ_PRO_TAG * pl_.B_KURZ if lid else 0)
                 w["ersparnis_bytes"] += d * pro_tag
                 w["ersparnis_kurz_bytes"] += d * pro_tag   # Punkt 253: getrennt ausgewiesen
                 w["verlaengert"] += d < 0
+        # Punkt 254: Attribute haben einen eigenen Wert (höchstens die Kurzzeit) – ihre Ersparnis folgt den wirksamen Tagen und
+        # gehört der Regel, die Kurzzeit oder Attribute setzt
+        if (g["kurzzeit"]["regel"] == regel["id"] or g["attribute"]["regel"] == regel["id"]) and e["status"] == "aktiv" \
+                and alt["attribute"] is not None and neu["attribute"] is not None:
+            da = min(alt["attribute"], ziel) - min(neu["attribute"], ziel)
+            ersp_attr = da * (e.get("attr_zuwachs_tag") or 0)
+            w["ersparnis_bytes"] += ersp_attr
+            w["ersparnis_attr_bytes"] += ersp_attr   # Punkt 254: getrennt von Kurzzeit und Langzeit ausgewiesen
+            w["verlaengert"] += da < 0 and not (g["kurzzeit"]["regel"] == regel["id"] and alt["kurzzeit"] is not None
+                                                  and min(alt["kurzzeit"], ziel) - min(neu["kurzzeit"], ziel) < 0)
+        if hist.get("attr") and g["attribute"]["regel"] == regel["id"] and neu["attribute"] is not None:
+            # Löschmenge sofort der Attribute (nur wo diese Regel den Attribut-Wert setzt): Attributzeilen, die zuletzt vor der neuen Grenze
+            # benutzt wurden, abzüglich dessen, was heute schon fällig ist (Attribut-Analyse nötig)
+            al = max(neu["attribute"], pl_.MIN_KEEP_DAYS)
+            lza = max(0, pl_._aelter_zeilen(hist["attr"], mid, heute - al) - (e["loeschbar"].get("attr_zeilen") or 0))
+            lba = max(0, pl_._aelter_bytes(hist["attr"], mid, heute - al) * pl_.B_ATTR_FAKTOR - (e["loeschbar"].get("attr_bytes") or 0))
+            w["loesch_attr"] += lza
+            w["loesch_bytes"] += lba
         if g["langzeit"]["regel"] == regel["id"] and lid and neu["langzeit"] is not None:
             ll = max(0, pl_._aelter(hist["lts"], lid, heute - neu["langzeit"]) - (e["loeschbar"]["lts"] or 0))
             w["loesch_lts"] += ll
@@ -297,6 +328,11 @@ def _tage_von(wert):
     return rg.in_tagen(wert)
 
 
+def _de(x):
+    """Zahl mit einer Nachkommastelle und deutschem Komma (nur für Zahlen, nie für Texte mit Entity-IDs)."""
+    return f"{x:.1f}".replace(".", ",")
+
+
 def _anzahl(n, ein, mehr):
     return f"{n:,} {ein if n == 1 else mehr}".replace(",", ".")
 
@@ -351,9 +387,9 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
 
     ablehnung = {"grund": None}   # warum neu() zuletzt nichts vorgeschlagen hat (Begründung der Sammelregel, Punkt 233)
 
-    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz="", immer=False, langzeit=None):
+    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz="", immer=False, langzeit=None, attribut=None):
         regel = {"id": "VORSCHLAG", "name": name, "typ": typ, "muster": muster, "aktiv": False, "notiz": notiz,
-                 "kurzzeit": kurzzeit, "attribute": None, "langzeit": langzeit}
+                 "kurzzeit": kurzzeit, "attribute": attribut, "langzeit": langzeit}
         regel["name"] = rg.name_mit_suffix(name, regel)   # Punkt 241: „– 14T/∞“ statt „– 14 Tage“
         norm = rg.normalisiere({"regeln": [regel], "events": {}})["regeln"][0]
         w = event_wirkung(norm, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(norm, pl, bestand, hist, ziel=ziel, mit_ents=True)
@@ -383,8 +419,9 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
              "passiv": passiv,
              **{k: w[k] for k in ("anzahl", "anzahl_geschuetzt", "anzahl_ueberstimmt", "gewinnt", "zuwachs_tag", "bestand",
                                   "loesch_bytes", "ersparnis_bytes")},
-             **{k: w[k] for k in ("ersparnis_kurz_bytes", "ersparnis_lang_bytes") if k in w},   # Punkt 253: Events ohne Langzeit haben sie nicht
-             "loesch_zeilen": w.get("loesch_states", 0) + w.get("loesch_kurz", 0) + w.get("loesch_lts", 0) + w.get("loesch_events", 0),
+             **{k: w[k] for k in ("ersparnis_kurz_bytes", "ersparnis_lang_bytes", "ersparnis_attr_bytes") if k in w},   # Punkt 253: Events ohne Langzeit haben sie nicht
+             "loesch_zeilen": (w.get("loesch_states", 0) + w.get("loesch_kurz", 0) + w.get("loesch_lts", 0) + w.get("loesch_events", 0)
+                               + w.get("loesch_attr", 0)),
              "beispiele": [t["entity_id"] for t in w["treffer"][:6]]}
         out.append(v)
         return v
@@ -473,9 +510,6 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         if n >= VIEL_PRO_TAG:
             gruende.append(f"Vielschreiber: {n:,} Zeilen je Tag (Ø 7 volle Tage, ≈ alle {max(1, round(86400 / n))} s)".replace(",", "."))
             tage.append(TAGE["viel_sehr" if n >= VIEL_SEHR else "viel"])
-        if (e.get("attr_zuwachs_tag") or 0) >= ATTR_PRO_TAG:
-            gruende.append(f"große Attribute: {e['attr_zuwachs_tag'] / 1e6:.1f} MB je Tag".replace(".", ","))
-            tage.append(TAGE["attribute"])
         if unbenutzt and n >= UNBENUTZT_PRO_TAG:
             gruende.append("nirgends verwendet (nicht in Dashboards, Automationen, Skripten, Templates, Helfern, Energie)")
             tage.append(TAGE["unbenutzt"])
@@ -689,6 +723,34 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             neu("langzeit:unbenutzt", "langzeit", "Langzeit nirgends verwendeter Entitäten", "entity", sorted(ids), None, gr,
                 f"Langzeit nirgends verwendet – {rg.anzeige(lz)}", "Empfehlung des RS DB HM: Stundenstatistik ohne Nutzen begrenzen",
                 langzeit=lz)
+
+    # 6. Punkt 254: Attribute mit großem Zuwachs – Sammelregel (entity, gilt auch für Zähler) nur mit Attribut-Wert; Kurzzeit und Langzeit
+    # bleiben unverändert, die States werden nicht gelöscht. Nur Entitäten, deren Attribut-Wert heute vom Attribut-Standard kommt
+    # (nicht von einer Regel – auch nicht von Schutz-Regeln mit „Attribute mitschützen“) und länger als der Vorschlag ist.
+    at = TAGE["attribute"]
+    at_tage = _tage_von(at)
+    ziel_t = int(ziel or (pl.get("stand") or {}).get("ziel_tage") or hist["pkd"])
+    gross = []
+    for e in ents:
+        wa = (e["werte"] or {}).get("attribute") or {}
+        if e["status"] != "aktiv" or not e["rows_24h"] or wa.get("regel") is not None or wa.get("tage") is None or wa["tage"] <= at_tage:
+            continue
+        if (e.get("attr_zuwachs_tag") or 0) * min(wa["tage"], ziel_t) >= ATTR_PROGNOSE_MIN:
+            gross.append(e)
+    if gross:
+        gross.sort(key=lambda e: -(e["attr_zuwachs_tag"] or 0))
+        ids = sorted(e["entity_id"] for e in gross)
+        summe_tag = sum(e["attr_zuwachs_tag"] for e in gross)
+        top = ", ".join(f"{e['entity_id']} ({_de(e['attr_zuwachs_tag'] / 1e6)} MB/Tag)" for e in gross[:3])
+        gr = [f"{_anzahl(len(ids), 'Entität', 'Entitäten')} mit großem Attribut-Zuwachs: zusammen {_de(summe_tag / 1e6)} MB je Tag, jede Entität allein "
+              f"mindestens {ATTR_PROGNOSE_MIN / 1e6:.0f} MB im Prognosezeitraum",
+              f"größte: {top}",
+              "setzt nur den Attribut-Wert – Kurzzeit und Langzeit bleiben unverändert, die States werden nicht gelöscht; die Attribute werden nach der "
+              "Frist von den States getrennt (braucht die Integration RS DB Hygiene ab 0.5.6b9)",
+              "ausgenommen: Entitäten mit eigenem Attribut-Wert in einer Regel und Schutz-Regeln mit „Attribute mitschützen“"]
+        neu("attribute:gross", "attribute", "Attribute mit großem Zuwachs", "entity", ids, None, gr,
+            f"Attribute groß – A {rg.anzeige(at)}", "Empfehlung des RS DB HM: Attribute mit großem Zuwachs früher von den States trennen",
+            attribut=at)
 
     out.sort(key=lambda v: (-(v["ersparnis_bytes"] or 0), -(v["zuwachs_tag"] or 0)))   # Punkt 207: bei Gleichstand Zuwachs
     return out

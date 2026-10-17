@@ -635,7 +635,8 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
         </table>
         <p>Zusammengefasst gibt es also drei Gruppen von Vorhaltezeiträumen, die unabhängig voneinander verwaltet werden können:</p>
         <ol>
-          <li><b>Kurzzeit</b> (umfasst States, 5-Min-Statistik und Attribute gemeinsam),</li>
+          <li><b>Kurzzeit</b> (States und 5-Min-Statistik gemeinsam),</li>
+          <li><b>Attribute</b> (eigene Frist, Voreinstellung „wie Kurzzeit“ – mit einem Wert wie 30 Tage werden sie danach von den States getrennt, die States bleiben bis zu ihrer Kurzzeit),</li>
           <li><b>Langzeit</b> (Stundenstatistik),</li>
           <li><b>Events</b>.</li>
         </ol>
@@ -850,7 +851,7 @@ actions:
         <h3 id="h-faq-events">Brauche ich Events?</h3>
         <p>Nur für das Logbuch („Aktivität“). Verlauf, Statistik und Energie-Dashboard kommen ohne Events aus. Große, wenig genutzte Typen wie <code>call_service</code> kurz halten.</p>
         <h3 id="h-faq-attribute">Was ist mit Attributen, die ich lange brauche?</h3>
-        <p>Attribute folgen der Kurzzeit: Sie werden genauso behandelt wie States und 5-Min-Statistik. Brauchst du wichtige Werte daraus für Langzeitaufzeichnungen, überführe sie in eigene Entitäten (z. B. mit Template-Sensoren). Dann kann die Kurzzeit der Quelle kurz bleiben.</p>
+        <p>Attribute haben eine eigene Frist: den <b>Attribut-Standard</b> (Voreinstellung „wie Kurzzeit“, im Reiter Regeln unter der Tabelle einstellbar; sinnvoll sind z. B. 30 Tage) oder den Attribut-Wert einer Regel. Nach dieser Frist trennt die App die Attribute von den States (die States selbst bleiben bis zu ihrer Kurzzeit); die Attributzeilen, die dann niemand mehr braucht, entfernt sie. Wirksam ist nie mehr als die Kurzzeit. Brauchst du die Attribute länger, setze in der Regel einen längeren Attribut-Wert, bei einer <b>Schutz</b>-Regel die Option „Attribute mitschützen“. Für Langzeitaufzeichnungen überführe wichtige Werte in eigene Entitäten (z. B. mit Template-Sensoren). Das Trennen läuft über die Integration RS DB Hygiene (ab 0.5.6b9).</p>
         <h3 id="h-faq-vorn">Wie fange ich mit den Regeln von vorn an?</h3>
         <p>Reiter Regeln → <b>Regeln verwalten …</b> → <b>Auf Startregeln zurücksetzen</b>. Alle Regeln werden durch die Startliste ersetzt (alle passiv außer <a class="hverweis" href="#h-ha-standard">HA-Standard</a>). Vorher sichert die App die bisherigen Regeln; unter „Sicherungen“ lässt sich jeder Stand wiederherstellen (die letzten 10 bleiben). Ein Stand mit genau dem Inhalt der Startliste trägt den Vermerk „= Startregeln“ – wer zweimal hintereinander zurücksetzt, findet die eigenen Regeln in der älteren Sicherung. Gesperrt, solange ein Löschlauf läuft.</p>
         <h3 id="h-faq-empfehlungen">Nach dem Zurücksetzen sind die Empfehlungen fast leer – warum?</h3>
@@ -897,7 +898,7 @@ actions:
     <div class="trefferzeile" id="trefferOpt"></div>
     <div class="tabelle"><table id="tOpt" class="baustein"></table></div>
     <p class="sub" id="optText">Vorschläge aus der letzten Analyse – nur für Daten ohne eigene Kurzzeit (Standard bzw. HA-Standard), nie für Zähler, geschützte Entitäten,
-      Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen; die Langzeit bleibt unverändert. „Übernehmen …“ öffnet die Regelmaske
+      Quellen des Energie-Dashboards oder von Helfern, die aus dem Verlauf rechnen; die Langzeit bleibt unverändert. Ausnahme: die Empfehlung „Attribute“ setzt nur den Attribut-Wert (Kurzzeit bleibt, die States bleiben). „Übernehmen …“ öffnet die Regelmaske
       ausgefüllt und <b>passiv</b> – erst nach dem Speichern und Einschalten wirkt die Regel.</p>
   </section>
   <section id="tab-regeln" hidden>
@@ -905,6 +906,7 @@ actions:
     <div class="trefferzeile" id="trefferRegeln"></div>
     <div class="tabelle"><table id="tRegeln" class="baustein"></table></div>
     <p class="sub" id="globalText" hidden></p>
+    <div class="hinweisbox" id="attrStandardBox"></div>   <!-- Punkt 254: Attribut-Standard -->
     <p class="sub" id="standardText">Rang: entity › glob › klasse › integration › vielschreiber, innerhalb eines Typs die Reihenfolge hier. Jeder der drei Werte wird für sich aufgelöst.</p>
   </section>
   <section id="tab-probe" hidden>
@@ -1021,8 +1023,9 @@ const speicher = { // Browser-Speicher nur für Komfort; darf fehlen
 };
 // Ab 0.3.4 (Punkt 61) gibt es keinen eigenen Wert „Attribute“ mehr: Attribute werden mit den Kurzzeit-States gelöscht
 const WERTE = ["kurzzeit", "langzeit"];
+const WERTE_MASKE = ["kurzzeit", "attribute", "langzeit"];   // Punkt 254: Regelmaske mit Attributen (HA-Standard-Dialog bleibt bei WERTE)
 // Punkt 67: einheitliche Beschriftung – was Kurzzeit und Langzeit umfassen
-const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min, Attribute)", attribute: "Attribute", langzeit: "Langzeit (Stundenstatistik, 1 h)" };
+const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min)", attribute: "Attribute (von den States getrennt)", langzeit: "Langzeit (Stundenstatistik, 1 h)" };
 const EV_NAME = "Vorhaltezeit (Events)";
 // Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / deaktiviert / verwaist / verwaist_geloescht)
 const STATUS_TEXT = { aktiv: "aktiv", deaktiviert: "deaktiviert", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
@@ -1050,8 +1053,11 @@ const EINH1 = { d: "Tag", w: "Woche", m: "Monat", j: "Jahr" };   // Einzahl: „
 const EINH_KURZ = { d: "T", w: "W", m: "M", j: "J" };
 const wertKurz = (w, leer = "∞") => w == null || w === "" ? leer : w === "unbegrenzt" ? "∞" : w === "keine" ? "0T"
   : String(w).replace(/^(\d+)([dwmj])$/, (_, n, e) => n + EINH_KURZ[e]);
-const regelSuffix = r => r.typ === "event" ? wertKurz(r.kurzzeit, "global") : `${wertKurz(r.kurzzeit, "global")}/${wertKurz(r.langzeit)}`;
-const _DAUER = "(?:\\d+\\s*(?:Tage?|Wochen?|Monate?|Jahre?|[TWMJdwmj])|unbegrenzt|global|keine|∞)";
+// Punkt 254: Regel nur mit Attribut-Wert (ohne Kurz- und Langzeit) → „A 14T“ – wie regeln.suffix()
+const regelSuffix = r => r.typ === "event" ? wertKurz(r.kurzzeit, "global")
+  : !r.kurzzeit && !r.langzeit && r.attribute && r.attribute !== "wie_kurzzeit" ? "A " + wertKurz(r.attribute)
+  : `${wertKurz(r.kurzzeit, "global")}/${wertKurz(r.langzeit)}`;
+const _DAUER = "(?:(?:A\\s*)?\\d+\\s*(?:Tage?|Wochen?|Monate?|Jahre?|[TWMJdwmj])|unbegrenzt|global|keine|∞)";
 const SUFFIX_RE = new RegExp(`(?:\\s+[–-]\\s+${_DAUER}(?:\\s*/\\s*${_DAUER})*|\\s+${_DAUER}\\s*/\\s*${_DAUER})(\\s*\\([^()]*\\))?\\s*$`);
 function nameMitSuffix(name, r) {
   let n = (name || "").trim();
@@ -1600,7 +1606,7 @@ const HILFE = {
     "Große, wenig genutzte Typen wie call_service kurz halten (Startwert 7 Tage)."],
   c_attr: ["Attribute (Zeilen)",
     "Attributzeilen in state_attributes; darunter der Platz inkl. Index.",
-    "Attribute haben keine eigene Vorhaltezeit: Sie folgen der Kurzzeit (States, 5-Min, Attribute) und fallen mit deren States weg. Genau nur nach einer Attribut-Analyse; ohne sie steht hier „fehlt“.",
+    "Attribute haben einen eigenen Wert (Regel oder Attribut-Standard, höchstens die Kurzzeit): Nach dieser Frist werden sie von den States getrennt, sonst fallen sie mit deren States weg. Genau nur nach einer Attribut-Analyse; ohne sie steht hier „fehlt“.",
     "Attribut-Analyse nach größeren Regeländerungen neu starten. Werte aus Attributen, die lange gebraucht werden, in eigene Entitäten (z. B. Template-Sensoren) überführen."],
   c_verwaist: ["Verwaist",
     "Istzustand: Entitäten mit Daten in der DB, die weder in der Registry noch als aktueller Zustand existieren, darunter ihre Zeilen. Löschmenge sofort: Zeilen nach Regeln vom Typ „verwaist“. Prognose: Langzeit-Zeilen, die dauerhaft bleiben.",
@@ -1902,7 +1908,8 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["last_ts", "letzter (States, 5-Min, Langzeit)", 0, "datum", "<8.10.2026", 150,
     "spätester Zeitstempel über States, 5-Min-Statistik und Langzeit. Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
   ["lts_rows", "Langzeit (Zeilen)", 1, "zahl", ">0", 110, "Zeilen in statistics (Stundenstatistik, Langzeit) dieser Entität"],
-  ["kurzzeit", WNAME.kurzzeit, 0, "wert", "", 200, "wirksame Kurzzeit und ihre Quelle (Regel oder Std.) – gilt für States, 5-Min-Statistik und Attribute"],
+  ["kurzzeit", WNAME.kurzzeit, 0, "wert", "", 200, "wirksame Kurzzeit und ihre Quelle (Regel oder Std.) – gilt für States und 5-Min-Statistik (die Attribute haben einen eigenen Wert, Spalte Attribute)"],
+  ["attribute", WNAME.attribute, 0, "wert", "", 200, "wirksamer Attribut-Wert und seine Quelle (Regel oder Attribut-Standard) – nach dieser Frist werden die Attribute von den States getrennt, höchstens die Kurzzeit"],
   ["langzeit", WNAME.langzeit, 0, "wert", "", 190, "wirksame Langzeit und ihre Quelle (Regel oder Std.) – gilt für die Stundenstatistik"],
   // Punkt 63: Block „Löschmenge sofort“ wie in der Monatssumme – Summe, davon je Tabelle, dahinter die Attributzeilen
   ["loesch_summe", "Summe", 1, "zahl", ">0", 175,
@@ -1929,7 +1936,7 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
 // Punkt 132 (0.5.3): je Gruppe eine Farbe (Klasse gr-<id>); „Aktuell“ heißt wie die Kachelzeile „Istzustand“ und ist rot wie sie
 const SPALTENGRUPPEN = [
   ["Stammdaten", "stamm", ["entity_id", "herkunft", "device_class", "labels", "status"]],
-  ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]],
+  ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]],
   ["Istzustand", "ist", ["first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
   ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"]],
 ];
@@ -1966,7 +1973,7 @@ const ATTR_SPALTEN = ["attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_anteil
 const ANSICHTEN_ENT = {
   Standard: SPALTEN.map(s => s[0]).filter(k => !ATTR_SPALTEN.includes(k)),
   // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
-  "States & Statistik": ["entity_id", "herkunft", "device_class", "status", "kurzzeit", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
+  "States & Statistik": ["entity_id", "herkunft", "device_class", "status", "kurzzeit", "attribute", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
                          "loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"],
   Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen", "loesch_mb"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
@@ -2092,6 +2099,7 @@ function zeigeSummen(su) {
       `Entitäten mit mindestens einem Label – ${GEF}` + vgl(`${zahl(g.label_namen || 0)} verschiedene Labels`, `${zahl(a.label_namen || 0)} verschiedene Labels`)),
     status: anz(`Anzahl Entitäten – ${GEF}` + vgl(`aktiv ${zahl(g.aktiv)} · deaktiviert ${zahl(g.deaktiviert || 0)} · verwaist ${zahl(g.verwaist)}`, `aktiv ${zahl(a.aktiv)} · deaktiviert ${zahl(a.deaktiviert || 0)} · verwaist ${zahl(a.verwaist)}`)),
     kurzzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "kurzzeit"), teil(a, "kurzzeit"))),
+    attribute: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "attribute"), teil(a, "attribute"))),
     langzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "langzeit"), teil(a, "langzeit"))),
     first_ts: zelle(datum(g.first_ts), datum(a.first_ts), `frühester Zeitstempel – ${GEF}`),
     last_ts: zelle(datum(g.last_ts), datum(a.last_ts), `spätester Zeitstempel – ${GEF}`),
@@ -2113,8 +2121,8 @@ function zeigeSummen(su) {
 }
 function fuelleWertOptionen(opt) {
   if (!opt) return;
-  for (const art of WERTE) {
-    const sel = $(`#tEntKopf select[data-f="${art}"]`); if (!sel) continue;
+  for (const art of [...WERTE, "attribute"]) {
+    const sel = $(`#tEntKopf select[data-f="${art}"]`); if (!sel || !opt[art]) continue;
     const alt = S.f[art] || "";
     sel.innerHTML = `<option value="">alle</option><option value="std">nur Standard (Std.)</option>` +
       (opt[art].regeln.length ? `<optgroup label="aus Regel">${opt[art].regeln.map(r => `<option value="regel:${esc(r)}">${esc(r)}</option>`).join("")}</optgroup>` : "") +
@@ -2226,6 +2234,7 @@ const ZELLEN = {
   lts_rows: e => `<td class="n">${e.lts_rows ? zahl(e.lts_rows) : "–"}</td>`,
   kurz_rows: e => `<td class="n">${e.kurz_rows ? zahl(e.kurz_rows) : "–"}</td>`,   // Punkt 135
   kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit, "kurzzeit")}</td>`,
+  attribute: e => `<td>${wertZelle((e.werte || {}).attribute, "attribute")}</td>`,
   langzeit: e => `<td>${wertZelle((e.werte || {}).langzeit, "langzeit")}</td>`,
   ...Object.fromEntries(["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"].map(k =>
     [k, e => `<td class="n">${e[k] == null ? "–" : zahl(e[k])}</td>`])),
@@ -2378,7 +2387,7 @@ const rangChip = id => { const g = regelRang(id); return g ? `<span class="rang"
 const trefferVon = r => { const x = (S.probe?.regeln || []).find(p => p.regel === r.id); return x ? x.entitaeten : (r.aktiv || S.probe?.stand?.mit_vorgemerkten ? 0 : null); };
 const wertSpalte = art => ({
   k: art, titel: WNAME[art], typ: "auswahl", breite: art === "kurzzeit" ? 200 : 190, wert: r => wertAnzeige(r[art]),
-  hilfe: art === "kurzzeit" ? `gilt für States, 5-Min-Statistik und Attribute; bei Regeln vom Typ event: ${EV_NAME}` : "gilt für die Stundenstatistik",
+  hilfe: art === "kurzzeit" ? `gilt für States und 5-Min-Statistik; bei Regeln vom Typ event: ${EV_NAME}` : art === "attribute" ? "nach dieser Frist werden die Attribute von den States getrennt (höchstens die Kurzzeit); leer = Attribut-Standard; bei Schutz-Regeln „wie Kurzzeit“ = Attribute mitgeschützt" : "gilt für die Stundenstatistik",
   zelle: r => r[art] == null ? `<span class="sub">–</span>` : esc(wertAnzeige(r[art])),
   csv: r => r[art] ?? "", tip: r => r[art] == null ? "nicht gesetzt – Standard oder andere Regel" : wertAnzeige(r[art]),
   optionen: l => [["__gesetzt", "gesetzt"], ["__leer", "nicht gesetzt"], ...[...new Set(l.map(r => r[art]).filter(v => v != null))]
@@ -2390,7 +2399,7 @@ const T = {};
 T.regeln = new LokaleTabelle({
   id: "#tRegeln", treffer: "#trefferRegeln", schluessel: "dbh_breiten_regeln", einheit: "Regeln", sortStd: { k: "rang" },
   // Punkt 145 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["treffer"]],
+  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]], ["Istzustand", "ist", ["treffer"]],
     ["Regelwerk-Check", "loesch", ["empfehlung"]]],   // Punkt 232: Farbe wie der Reiter Empfehlungen
   fix: ["wahl", "aktiv", "rang", "id"],
   leer: "keine Regeln",
@@ -2436,7 +2445,7 @@ T.regeln = new LokaleTabelle({
         ? `<span class="mono">≥ ${esc(zahl(+r.muster[0]))} Zeilen/Tag</span>${r.muster.length > 1 ? ` <span class="sub mono">${esc(r.muster.slice(1, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}` : ""}`
         : `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}`,
       csv: r => r.muster.join(", "), summe: anzahlSumme(r => r.muster.length) },
-    wertSpalte("kurzzeit"), wertSpalte("langzeit"),
+    wertSpalte("kurzzeit"), wertSpalte("attribute"), wertSpalte("langzeit"),
     { k: "treffer", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => trefferVon(r),
       zelle: r => { const t = trefferVon(r); return t == null ? `<span class="sub" title="passiv – mit „passive Regeln mitrechnen“ sichtbar">–</span>` : zahl(t); },
       tip: () => "Entitäten, für die diese Regel mindestens einen Wert bestimmt", csv: r => trefferVon(r) ?? "", summe: anzahlSumme(r => trefferVon(r)) },
@@ -2468,7 +2477,7 @@ T.probe = new LokaleTabelle({
     { k: "name", titel: "Name", typ: "text", breite: 220, wert: r => r.name, zelle: r => esc(r.name), csv: r => r.name },
     ...[["entitaeten", "Entitäten (gesamt)", "Entitäten, für die diese Regel mindestens einen Wert bestimmt (nur wo sie den Vorrang gewinnt)"],
         // Punkt 101 (0.4.8): Anzahl Entitäten, nicht Zeilen – das sagt jetzt der Titel
-        ["kurzzeit", "Kurzzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Kurzzeit (States, 5-Min-Statistik und Attribute) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"],
+        ["kurzzeit", "Kurzzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Kurzzeit (States und 5-Min-Statistik) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"],
         ["langzeit", "Langzeit (Entitäten aus Regel)", "bei wie vielen Entitäten die Langzeit (Stundenstatistik, 1 h) aus dieser Regel stammt – Anzahl Entitäten, keine Zeilen"]].map(([k, t, h]) => (
       { k, titel: t, hilfe: h, typ: "zahl", n: 1, breite: k === "entitaeten" ? 100 : 130, wert: r => r[k], zelle: r => zahl(r[k]), csv: r => r[k], summe: anzahlSumme(r => r[k]) })),
     { k: "ersparnis_bytes", titel: "Summe (Dauerbetrieb · GB)", hilfe: HILFE_ERSPARNIS, typ: "gb", n: 1, breite: 160, wert: r => r.ersparnis_bytes,
@@ -2501,8 +2510,9 @@ T.lts = new LokaleTabelle({
 });
 // ---- Punkt 176 (0.5.4): Empfehlungen (bis 0.5.4b7 „Optimierungen“) – Regelvorschläge aus der letzten Analyse
 // Punkte 205/208 (0.5.5b11): Vorschläge je Integration (herkunft) und je Klasse
-const wirktAuf = r => r.regel.langzeit && r.regel.kurzzeit ? "Kurz- und Langzeit" : r.regel.langzeit ? "Langzeit" : "Kurzzeit";
-const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", sammel: "Sammelregel", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events", langzeit: "Langzeit" };
+const wirktAuf = r => !r.regel.kurzzeit && !r.regel.langzeit && r.regel.attribute ? "Attribute"   // Punkt 254
+  : r.regel.langzeit && r.regel.kurzzeit ? "Kurz- und Langzeit" : r.regel.langzeit ? "Langzeit" : "Kurzzeit";
+const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", sammel: "Sammelregel", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events", langzeit: "Langzeit", attribute: "Attribute" };
 // Punkt 207: Ersparnis unter 1 GB in MB, sonst GB
 const gbmb = b => b == null ? "–" : Math.abs(b) < 1e9 ? mb(b) : gb(b);
 const optStatus = v => v.vorhanden ? `<span class="chip regel regelklick" data-regel-edit="${esc(v.vorhanden.id)}" title="Regel mit genau diesem Muster gibt es schon (${v.vorhanden.aktiv ? "aktiv" : "passiv"}) – Klick öffnet sie">${esc(v.vorhanden.id)} ${v.vorhanden.aktiv ? "" : "passiv"}</span>`
@@ -2549,9 +2559,9 @@ T.opt = new LokaleTabelle({
       optionen: () => Object.values(OPT_ART).map(a => [a, a]), summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Vorschläge – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     // Punkt 249: worauf zielt der Vorschlag – Kurzzeit (States, 5-Min, Attribute, Events), Langzeit (Stundenstatistik) oder beides
     { k: "wirkt", titel: "Wirkt auf", typ: "auswahl", breite: 95, wert: r => wirktAuf(r), csv: r => wirktAuf(r),
-      zelle: r => `<span class="chip ${wirktAuf(r) === "Langzeit" ? "regel" : ""}" title="${esc(wirktAuf(r) === "Langzeit" ? "setzt nur die Langzeit (Stundenstatistik); die Kurzzeit bleibt unverändert" : "setzt die Kurzzeit (States, 5-Min-Statistik, Attribute bzw. Events)" + (r.regel.langzeit ? " und die Langzeit" : "; die Langzeit bleibt unverändert"))}">${esc(wirktAuf(r))}</span>`,
+      zelle: r => `<span class="chip ${wirktAuf(r) === "Langzeit" ? "regel" : ""}" title="${esc(wirktAuf(r) === "Attribute" ? "setzt nur den Attribut-Wert: die Attribute werden nach der Frist von den States getrennt, Kurzzeit und Langzeit bleiben unverändert" : wirktAuf(r) === "Langzeit" ? "setzt nur die Langzeit (Stundenstatistik); die Kurzzeit bleibt unverändert" : "setzt die Kurzzeit (States, 5-Min-Statistik, Attribute bzw. Events)" + (r.regel.langzeit ? " und die Langzeit" : "; die Langzeit bleibt unverändert"))}">${esc(wirktAuf(r))}</span>`,
       optionen: () => [["Kurzzeit", "Kurzzeit"], ["Langzeit", "Langzeit"], ["Kurz- und Langzeit", "Kurz- und Langzeit"]],
-      hilfe: "Kurzzeit: States, 5-Min-Statistik, Attribute bzw. Events · Langzeit: Stundenstatistik · Zum Filtern: Auswahl in der Filterzeile" },
+      hilfe: "Kurzzeit: States, 5-Min-Statistik bzw. Events (Attribute folgen ihr, solange keine Regel einen Attribut-Wert setzt) · Langzeit: Stundenstatistik · Zum Filtern: Auswahl in der Filterzeile" },
     { k: "titel", titel: "Vorschlag", typ: "text", fest: 1, breite: 330, wert: r => r.titel, zelle: r => `<span class="mono">${esc(r.titel)}</span>`, csv: r => r.titel },
     { k: "typ", titel: "Regeltyp", typ: "auswahl", breite: 85, wert: r => r.regel.typ, zelle: r => esc(r.regel.typ), csv: r => r.regel.typ,
       optionen: l => [...new Set(l.map(r => r.regel.typ))].map(t => [t, t]) },
@@ -2559,7 +2569,7 @@ T.opt = new LokaleTabelle({
       zelle: r => `<span class="mono">${esc(r.regel.muster.join(", "))}</span>`, csv: r => r.regel.muster.join(", ") },
     { k: "kurzzeit", titel: WNAME.kurzzeit, typ: "auswahl", breite: 200, wert: r => wertAnzeige(r.regel.kurzzeit), zelle: r => esc(wertAnzeige(r.regel.kurzzeit)),
       csv: r => r.regel.kurzzeit, optionen: l => [...new Set(l.map(r => wertAnzeige(r.regel.kurzzeit)))].map(v => [v, v]),
-      hilfe: "vorgeschlagene Kurzzeit (States, 5-Min-Statistik, Attribute bzw. Events); leer = die Kurzzeit bleibt unverändert" },
+      hilfe: "vorgeschlagene Kurzzeit (States, 5-Min-Statistik bzw. Events; Attribute folgen ihr höchstens); leer = die Kurzzeit bleibt unverändert" },
     { k: "langzeit", titel: WNAME.langzeit, typ: "auswahl", breite: 190, wert: r => wertAnzeige(r.regel.langzeit), zelle: r => esc(wertAnzeige(r.regel.langzeit)),
       csv: r => r.regel.langzeit, optionen: l => [...new Set(l.map(r => wertAnzeige(r.regel.langzeit)))].map(v => [v, v]),
       hilfe: "vorgeschlagene Langzeit (Stundenstatistik); leer = die Langzeit bleibt unverändert. Punkt 249: Empfehlungen der Art „Langzeit“ setzen nur diese" },
@@ -3269,7 +3279,7 @@ function wertWahl(art, wert, mitNull, ohne = []) {
   const m = /^(\d+)([dwmj])$/.exec(wert || "");
   const modus = wert == null ? "" : m ? "dauer" : wert;
   const aus = modus === "dauer" ? "" : "disabled";
-  const opt = [mitNull ? `<option value="">– nicht gesetzt –</option>` : "",
+  const opt = [mitNull ? `<option value="">${art === "attribute" ? `– Attribut-Standard (${esc(wertAnzeige(S.regeln?.attribut_standard) || "wie Kurzzeit")}) –` : "– nicht gesetzt –"}</option>` : "",
     ...SONDER[art].filter(s => !ohne.includes(s)).map(s => `<option value="${s}" ${modus === s ? "selected" : ""}>${SNAME[s]}${s === "keine" && art === "kurzzeit" ? " (nur Typ verwaist)" : ""}</option>`),
     `<option value="dauer" ${modus === "dauer" ? "selected" : ""}>Dauer …</option>`].join("");
   return `<div class="wertwahl" data-art="${art}">
@@ -3283,10 +3293,12 @@ function wertWahl(art, wert, mitNull, ohne = []) {
 // Block je Wert: Beschriftung mit fester Höhe (Name, darunter klein „wirksam …“), dann die beiden Eingabezeilen
 // Punkt 174 (0.5.4): Schnellknöpfe je Wert (schnell = true)
 const SCHNELL = { kurzzeit: [["7d", "7 T"], ["14d", "14 T"], ["30d", "30 T"], ["90d", "90 T"], ["1j", "1 J"], ["global", "global"]],
+                  attribute: [["7d", "7 T"], ["14d", "14 T"], ["30d", "30 T"], ["90d", "90 T"], ["wie_kurzzeit", "wie Kurzzeit"]],
                   langzeit: [["1j", "1 J"], ["2j", "2 J"], ["5j", "5 J"], ["unbegrenzt", "unbegrenzt"]] };
 function wertBlock(art, wert, mitNull, unter, ohne, schnell) {
   // Punkt 61: Attribute haben keinen eigenen Wert mehr – Hinweis an der Kurzzeit
-  const hinweis = art !== "kurzzeit" ? "" : `<div class="sub kzHinweis" style="font-size:11px;margin-top:3px">gilt für States, 5-Min-Statistik und Attribute</div>`;
+  const hinweis = art === "attribute" ? `<div class="sub" style="font-size:11px;margin-top:3px">leer = Attribut-Standard · wirksam höchstens die Kurzzeit</div>`
+    : art !== "kurzzeit" ? "" : `<div class="sub kzHinweis" style="font-size:11px;margin-top:3px">gilt für States und 5-Min-Statistik</div>`;
   const knoepfe = schnell && SCHNELL[art] ? `<div class="schnell">${SCHNELL[art].map(([w, t]) =>
     `<button type="button" data-w="${w}" class="${w === wert ? "an" : ""}" title="${esc(wertAnzeige(w))}">${t}</button>`).join("")}</div>` : "";
   return `<div class="wertblock"><div class="wertkopf"><b>${WNAME[art]}</b>${unter ? `<span>${unter}</span>` : ""}</div>${wertWahl(art, wert, mitNull, ohne)}${knoepfe}${hinweis}</div>`;
@@ -3375,8 +3387,24 @@ async function ladeRegeln() {
     `Regeln vom Typ event setzen die ${EV_NAME} (Logbuch) je Event-Typ – genauer Name vor Platzhalter. ` +
     `Standard ohne Regel: ${WNAME.kurzzeit} ${wertAnzeige(st.kurzzeit)}, ${WNAME.langzeit} ${wertAnzeige(st.langzeit)}.`;
   T.regeln.daten(S.regeln.regeln);
+  zeigeAttrStandard();
   zeigeGlobal();
   ladeRegelCheck();
+}
+// Punkt 254: Attribut-Standard – gilt für alle Entitäten, deren Regel keinen eigenen Attribut-Wert setzt
+function zeigeAttrStandard() {
+  const w = S.regeln.attribut_standard;
+  $("#attrStandardBox").innerHTML = `<b>Attribut-Standard: ${esc(wertAnzeige(w))}</b> – gilt für alle Entitäten, deren Regel keinen eigenen Attribut-Wert setzt.
+    Nach dieser Frist werden die Attribute von den States getrennt (die States bleiben bis zu ihrer Kurzzeit; wirksam höchstens die Kurzzeit).
+    Schutz-Regeln mit „Attribute mitschützen“ sind ausgenommen. <button type="button" id="btnAttrStd">Ändern …</button>`;
+  $("#btnAttrStd").onclick = () => dialog("Attribut-Standard", `<div class="sub">Frist, nach der die Attribute von den States getrennt werden – für alles, was keine Regel mit eigenem Attribut-Wert trifft.
+      Die States selbst bleiben bis zu ihrer Kurzzeit. „wie Kurzzeit“ trennt nichts ab; ein Wert wie 30 Tage spart Platz, ohne States zu löschen.</div>
+    ${wertBlock("attribute", S.regeln.attribut_standard, false, "", ["keine"], true)}<div id="dlgFehler" class="fehler"></div>`, [
+    ["Abbrechen", () => $("#dlg").close()],
+    ["Speichern", async () => {
+      const neu = wertLesen($('#dlgInhalt .wertwahl[data-art="attribute"]'));
+      try { await speichereRegeln({ ...S.regeln, attribut_standard: neu }); $("#dlg").close(); } catch (e) { $("#dlgFehler").textContent = e.message; }
+    }, true]]);
 }
 // Punkt 79: Wie viel ohne eigene Kurzzeit bleibt – „global“ heißt purge_keep_days, bei 7300 also 20 Jahre
 function zeigeGlobal() {
@@ -3747,8 +3775,9 @@ function bearbeiteRegel(i, vorlage) {
       Langzeit „keine“ entfernt auch die Stundenstatistik, die HA sonst für immer behält.</div>
     <div class="sub" id="rEventHinweis" ${r.typ === "event" ? "" : "hidden"}>Event-Regeln setzen nur die <b>Vorhaltezeit der Events</b> (Feld „${EV_NAME}“). Events braucht nur das Logbuch („Aktivität“);
       Verlauf, Statistik und Energie-Dashboard sind nicht betroffen. Bei mehreren passenden Event-Regeln gilt der genaue Name vor Platzhaltern, dann die Reihenfolge.</div>
-    <div class="sub" id="rSchutzHinweis" ${r.typ === "schutz" ? "" : "hidden"}>🔒 <b>Schutz:</b> Kurzzeit „global“ und Langzeit „unbegrenzt“ sind fest. Höchster Rang – vor allen anderen Regeln, auch vor E:-Regeln –, gilt auch für verwaiste Entitäten und Zähler. Der Löschplan schließt diese Entitäten zusätzlich aus. „global“ heißt purge_keep_days: HA selbst löscht nach dieser Zeit.</div>
-    <div class="raster3">${WERTE.map(a => wertBlock(a, r[a], true, "", undefined, true)).join("")}</div>
+    <div class="sub" id="rSchutzHinweis" ${r.typ === "schutz" ? "" : "hidden"}>🔒 <b>Schutz:</b> Kurzzeit „global“ und Langzeit „unbegrenzt“ sind fest; die Attribute schützt die Option darunter. Höchster Rang – vor allen anderen Regeln, auch vor E:-Regeln –, gilt auch für verwaiste Entitäten und Zähler. Der Löschplan schließt diese Entitäten zusätzlich aus. „global“ heißt purge_keep_days: HA selbst löscht nach dieser Zeit.</div>
+    <div class="raster3">${WERTE_MASKE.map(a => wertBlock(a, r[a], true, "", a === "attribute" ? ["keine"] : undefined, true)).join("")}</div>
+    <label id="rSchutzAttrZeile" ${r.typ === "schutz" ? "" : "hidden"} title="An: die Attribute bleiben so lange wie die States. Aus: es gilt der Attribut-Standard bzw. eine andere Regel – die States bleiben trotzdem geschützt."><input type="checkbox" id="rSchutzAttr" ${r.attribute_schutz === false ? "" : "checked"}> 🔒 Attribute mitschützen (aus = Attribute nach dem Attribut-Standard von den States trennen)</label>
     <label><input type="checkbox" id="rAktiv" ${r.aktiv ? "checked" : ""}> aktiv (sonst passiv)</label>
     <label class="feld">Notiz<input id="rNotiz" value="${esc(r.notiz)}" title="${esc(notizLang(r.notiz))}"></label>
     <div id="rVorschau" class="vorschau" aria-live="polite"><span class="sub">Vorschau …</span></div>
@@ -3801,13 +3830,17 @@ function bearbeiteRegel(i, vorlage) {
       muster: $("#rMuster").value.split("\n").map(s => s.trim()).filter(Boolean), aktiv: $("#rAktiv").checked, notiz: $("#rNotiz").value };
     $("#dlgInhalt").querySelectorAll(".wertwahl").forEach(el => x[el.dataset.art] = wertLesen(el));
     if (x.typ === "event") x.attribute = x.langzeit = null;   // Event-Regeln setzen nur die Vorhaltezeit
-    if (x.typ === "schutz") Object.assign(x, { kurzzeit: "global", attribute: null, langzeit: "unbegrenzt" });   // Punkt 111
+    if (x.typ === "schutz") {   // Punkt 111; Punkt 254: Attribute mitschützen
+      const mit = $("#rSchutzAttr").checked;
+      Object.assign(x, { kurzzeit: "global", attribute: mit ? "wie_kurzzeit" : null, attribute_schutz: mit, langzeit: "unbegrenzt" });
+    }
     return x;
   }
   // Punkt 51: Bei Typ event nur die Vorhaltezeit zeigen
   const eventModus = t => {
     $("#rEventHinweis").hidden = t !== "event";
     $("#rSchutzHinweis").hidden = t !== "schutz";   // Punkt 111: bei Schutz sind die Werte fest – Blöcke ausblenden
+    $("#rSchutzAttrZeile").hidden = t !== "schutz";   // Punkt 254
     ["attribute", "langzeit"].forEach(a => { const b = $(`#dlgInhalt .wertwahl[data-art="${a}"]`)?.closest(".wertblock"); if (b) b.hidden = t === "event" || t === "schutz"; });
     const block = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]')?.closest(".wertblock");
     if (block) block.hidden = t === "schutz";
@@ -3996,12 +4029,12 @@ function vorschauHtml(v, ohneWert, x) {
     (v.anzahl_geschuetzt ? `<span title="state_class total/total_increasing: glob- und klasse-Regeln greifen dort nicht">${zahl(v.anzahl_geschuetzt)} Zähler geschützt</span>` : "") +
     (v.anzahl_ueberstimmt ? `<span title="${esc(vorrang.join("\n"))}">${esc(vorrang.slice(0, 2).join(" · ") + (vorrang.length > 2 ? ` … (+${vorrang.length - 2})` : ""))}</span>` : "") +
     (v.anzahl ? `<span>Zuwachs <b>${zahl(v.zuwachs_tag)}</b> ${ev ? "Events" : "Zeilen"}/Tag</span>` : "") + `</div>`;
-  const loesch = (v.loesch_states || 0) + (v.loesch_kurz || 0) + (v.loesch_lts || 0) + (v.loesch_events || 0);
+  const loesch = (v.loesch_states || 0) + (v.loesch_kurz || 0) + (v.loesch_lts || 0) + (v.loesch_events || 0) + (v.loesch_attr || 0);   // Punkt 254: inkl. Attributzeilen
   const ersp = v.ersparnis_bytes || 0;
   const z2 = ohneWert ? `<div class="sub">Noch kein Wert gesetzt – Wirkung erscheint, sobald Kurzzeit oder Langzeit gewählt ist.</div>`
     : x.typ === "schutz" ? `<div class="sub">Schutz-Regel: diese Daten werden nie gekürzt.</div>`
     : v.anzahl ? `<div class="kz"><span>wirkt bei <b>${zahl(v.gewinnt)}</b></span><span>sofort zusätzlich löschbar <b>${zahl(loesch)}</b> Zeilen (${mb(v.loesch_bytes)})</span>` +
-      `<span>${ersp >= 0 ? "Ersparnis" : "Mehrbedarf"} im Prognosezeitraum (${jahreText(zielJahre())}) <b>${gbmb(Math.abs(ersp))}</b>${v.ersparnis_kurz_bytes === undefined ? "" : ` <span class="sub">(Kurzzeit ${gbmb(v.ersparnis_kurz_bytes)} · Langzeit ${gbmb(v.ersparnis_lang_bytes)})</span>`}</span></div>` +
+      `<span>${ersp >= 0 ? "Ersparnis" : "Mehrbedarf"} im Prognosezeitraum (${jahreText(zielJahre())}) <b>${gbmb(Math.abs(ersp))}</b>${v.ersparnis_kurz_bytes === undefined ? "" : ` <span class="sub">(Kurzzeit ${gbmb(v.ersparnis_kurz_bytes)}${v.ersparnis_attr_bytes ? ` · Attribute ${gbmb(v.ersparnis_attr_bytes)}` : ""} · Langzeit ${gbmb(v.ersparnis_lang_bytes)})</span>`}</span></div>` +
       (v.verlaengert ? `<div class="risiko">Bei ${mzahl(v.verlaengert, "Entität", "Entitäten")} bewahrt die Regel länger auf als heute.</div>` : "") +
       (!x.aktiv ? `<div class="sub">Regel ist passiv – die Werte zeigen, was sie aktiv bewirken würde.</div>` : "")
     : "";
@@ -4015,9 +4048,9 @@ async function ladeLts() {
 
 // ================================================ Löschen (Stufe A, Sammelliste 32–37)
 const LART = { "vollständig": "vollständig", "teilweise": "teilweise", "nächster Lauf": "nächster Lauf", "übersprungen": "übersprungen", "Ausnahme": "Ausnahme" };
-const TABNAME = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
+const TABNAME = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events", attr: "Attribute" };
 // Punkt 63: Plantabelle je Entität bzw. Event-Typ mit dem Block „Zeilen dieser Lauf“ (wie die Monatssumme)
-const KURZ = { states: "K", kurz: "5M", lts: "L", events: "EV" };
+const KURZ = { states: "K", kurz: "5M", lts: "L", events: "EV", attr: "A" };
 // Punkt 199: Tooltip je Wert; Punkt 225 (0.5.5b14): „Kurzzeit: R12 (3.2) hat Vorrang vor R30 (4.1) – 30 Tage, HA:standard (99) – 90 Tage“
 const rangVon = id => { const g = regelRang(id); return g ? `${id} (${g.stufe === 99 ? "99" : g.text})` : id; };
 const ketteGlied = x => typeof x === "string" ? rangVon(x) : `${rangVon(x.regel)}${x.anzeige ? ` – ${x.anzeige}` : ""}`;   // bis 0.5.5b13 nur IDs
@@ -4042,7 +4075,14 @@ function planZeilen(p) {
   }
   for (const a of p.auftraege_b || []) {
     const z = zeile(a.name, a.status); z.regeln.add(a.regel);
-    if (a.art === "lts") z.regel_l = a.regel; else if (a.art === "events") z.regel_e = a.regel; else z.regel_k ||= a.regel;   // Punkt 199
+    if (a.art === "lts") z.regel_l = a.regel; else if (a.art === "events") z.regel_e = a.regel; else if (a.art === "attr") z.regel_a = a.regel; else z.regel_k ||= a.regel;   // Punkt 199; Punkt 254: Attribute
+    if (a.art === "attr") {   // Punkt 254: getrennte Attribute zählen in der Spalte Attribute (Attributzeilen), nicht zu den States-Zeilen
+      z.teile.push({ art: a.art, keep_days: a.keep_days, lauf: a.art_lauf, zeilen: a.zeilen_lauf ?? a.zeilen, gesamt: a.zeilen, hinweis: a.hinweis, exakt: p.exakt });
+      if (!ohne(a.art_lauf)) { z.attr_zeilen = (z.attr_zeilen || 0) + (a.zeilen_lauf ?? a.zeilen); z.attr_obergrenze ||= a.art_lauf === "teilweise"; }
+      if (a.hinweis) z.hinweise.push(a.hinweis);
+      if (!p.stufe_b) z.hinweise.push("Integration fehlt");
+      continue;
+    }
     z.teile.push({ art: a.art, keep_days: a.keep_days, alle: a.alle, lauf: a.art_lauf, zeilen: a.zeilen_lauf ?? a.zeilen, gesamt: a.zeilen, mit_meta: a.mit_meta, hinweis: a.hinweis, exakt: p.exakt });
     z[a.art] += ohne(a.art_lauf) ? 0 : (a.zeilen_lauf ?? a.zeilen);   // Punkt 75: bei „teilweise“ nur der Teil dieses Laufs
     // Punkt 222 (0.5.5b13): Übersprungenes (Integration fehlt) ist kein Überhang – auch kein weiterer Lauf löscht es
@@ -4070,8 +4110,8 @@ function teileAnzeige(teile) {
   return teile.filter(t => t !== k).map(t => t === st ? { ...st, kurzZeilen: k.zeilen, kurzGesamt: k.gesamt } : t);
 }
 // Punkt 113 (0.4.10): Tooltip je Zelle „Vorhaltung · in diesem Lauf“ – eine Zeile je Teil mit den Werten dieser Zeile
-const TEIL_NAME = { states: "States (Kurzzeit, Attribute folgen)", kurz: "5-Min-Statistik (gleiches keep_days wie die States)", lts: "Langzeit (Stundenstatistik)", events: "Events" };
-const TEIL_WEG = { states: "recorder.purge_entities", kurz: "rs_db_hygiene.purge", lts: "rs_db_hygiene.purge", events: "rs_db_hygiene.purge" };
+const TEIL_NAME = { states: "States (Kurzzeit)", kurz: "5-Min-Statistik (gleiches keep_days wie die States)", lts: "Langzeit (Stundenstatistik)", events: "Events", attr: "Attribute (von den States getrennt, die States bleiben)" };
+const TEIL_WEG = { states: "recorder.purge_entities", kurz: "rs_db_hygiene.purge", lts: "rs_db_hygiene.purge", events: "rs_db_hygiene.purge", attr: "rs_db_hygiene.purge, Tabelle states_attribute" };
 // Punkt 222 (0.5.5b13): was „Integration fehlt“ bedeutet – Tooltip im Löschplan (Spalte Hinweis, Kasten oben)
 const INTEGRATION_FEHLT = "Integration fehlt: 5-Min-Statistik, Langzeit und Events löscht der RS DB Hygiene Manager nicht selbst, sondern über die Integration RS DB Hygiene (Dienst rs_db_hygiene.purge). Das geht nur, wenn die Integration in Home Assistant installiert und betriebsbereit ist.\n" +
   "Abhilfe: Integration über HACS installieren, in HA einrichten (Einstellungen → Geräte & Dienste) und HA neu starten – auch nach einem Update der Integration.\n" +
@@ -4091,9 +4131,9 @@ const tageText = d => `${zahl(d)} ${d === 1 ? "Tag" : "Tage"}`;
 const grenzTag = d => { const x = new Date(); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - d); return x.toLocaleDateString("de-DE"); };
 const grenzText = (d, exakt) => exakt ? `vor dem ${grenzTag(d)}, 0:00 (${d ? `${tageText(d)} voll + heute` : "alles bis auf heute"})` : `älter als ${tageText(d)}`;
 function teilText(t, mitStatus) {
-  // Punkt 230: zusammengefasster Teil Kurzzeit (States + 5-Min-Statistik, Attribute folgen den States)
+  // Punkt 230: zusammengefasster Teil Kurzzeit (States + 5-Min-Statistik)
   const zus = t.kurzZeilen != null || t.nurKurz;
-  const name = zus ? "Kurzzeit (States, 5-Min-Statistik, Attribute)" : TEIL_NAME[t.art] || t.art;
+  const name = zus ? "Kurzzeit (States, 5-Min-Statistik)" : TEIL_NAME[t.art] || t.art;
   const weg = t.nurKurz ? TEIL_WEG.kurz : t.exakt && t.art === "states" ? "rs_db_hygiene.purge_states" : TEIL_WEG[t.art] || "";
   const menge = t.kurzZeilen != null ? (t.zeilen || t.kurzZeilen ? ` · ca. ${zahl(t.zeilen || 0)} States + ${zahl(t.kurzZeilen || 0)} 5-Min-Zeilen` : "")
     : t.nurKurz ? (t.zeilen ? ` · ca. ${zahl(t.zeilen)} 5-Min-Zeilen (keine alten States)` : "")
@@ -4110,7 +4150,7 @@ function teilText(t, mitStatus) {
 }
 // Punkt 215: oben die Erklärung des Status, der im Chip steht (r.lauf); sind die Teile gemischt (z. B. States vollständig,
 // 5-Min übersprungen → Chip „teilweise“), sagt die erste Zeile, welcher Teil wie läuft. Darunter je Teil eine Zeile.
-const TEIL_KURZ = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
+const TEIL_KURZ = { states: "States", kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events", attr: "Attribute" };
 const vorhaltungTip = r => {
   const tl = teileAnzeige(r.teile);   // Punkt 230
   const status = [...new Set(tl.map(t => t.lauf))];
@@ -4145,7 +4185,7 @@ T.loesch = new LokaleTabelle({
       tip: r => STATUS_TEXT[r.status] ? `Entität ${STATUS_TEXT[r.status]}` : "Event-Typ",
       optionen: l => [...new Set(l.map(r => r.status || "–"))].map(x => [x, STATUS_TEXT[x] || x]) },
     { k: "lauf", titel: "Vorhaltung (in diesem Lauf)", typ: "auswahl", breite: 230, wert: r => r.lauf,
-      hilfe: "K = Kurzzeit (States, 5-Min-Statistik und Attribute – gleiches keep_days), L = Langzeit, EV = Events; 5M nur, wenn die 5-Min-Statistik einen anderen Status hat (z. B. übersprungen). vollständig: alles außerhalb der Vorhaltezeit · teilweise: nur die ältesten Tage bzw. bis zur Obergrenze · nächster Lauf: passt nicht mehr unter die Obergrenze · übersprungen: Integration fehlt. Einzelheiten je Zeile im Tooltip der Zelle.",
+      hilfe: "K = Kurzzeit (States und 5-Min-Statistik – gleiches keep_days), A = Attribute (von den States getrennt, die States bleiben), L = Langzeit, EV = Events; 5M nur, wenn die 5-Min-Statistik einen anderen Status hat (z. B. übersprungen). vollständig: alles außerhalb der Vorhaltezeit · teilweise: nur die ältesten Tage bzw. bis zur Obergrenze · nächster Lauf: passt nicht mehr unter die Obergrenze · übersprungen: Integration fehlt. Einzelheiten je Zeile im Tooltip der Zelle.",
       tip: vorhaltungTip,
       zelle: r => `${esc(r.vorhaltung)} · <span class="chip ${LART_CHIP[r.lauf] || "warn"}">${esc(r.lauf)}</span>`, csv: r => `${r.vorhaltung} · ${r.lauf}`,
       optionen: () => Object.keys(LART).map(x => [x, x]),
@@ -4154,7 +4194,7 @@ T.loesch = new LokaleTabelle({
     blockSpalte("summe", "Summe", "Summe aus States, 5-Min-Statistik, Attributen, Events und Langzeit – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt. Die Attribute sind eine Obergrenze (bei „teilweise“ höchstens so viele).", 140),
     blockSpalte("states", "States", "Zeilen in states (recorder.purge_entities)"),
     blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)", 145),
-    blockSpalte("attr_zeilen", "Attribute", "Attributzeilen, die mit den States wegfallen – in der Summe enthalten; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele", 150),
+    blockSpalte("attr_zeilen", "Attribute", "Attributzeilen, die wegfallen – mit den States oder (Punkt 254) früher, wenn der Attribut-Wert kürzer als die Kurzzeit ist: dann werden sie von den States getrennt und die States bleiben. In der Summe enthalten; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele", 150),
     blockSpalte("events", "Events", "Events dieses Typs (Integration RS DB Hygiene)"),
     blockSpalte("lts", "Langzeit", "Stundenstatistik (Integration RS DB Hygiene)"),
     // Punkt 219 (0.5.5b13): ersetzt „fällig (insgesamt)“ – Summe + Überhang = alles Fällige (= Löschmenge sofort)
@@ -4217,7 +4257,7 @@ T.laeufe = new LokaleTabelle({
   ],
   zeileAttr: r => `class="klick" data-lauf="${r.start}"`,
 });
-// Punkt 242 (0.5.6b6): „K 7T/L 1J“ – K für States, 5-Min-Statistik, Attribute und Events, L für die Langzeit; die Einheit steht im Wert der
+// Punkt 242 (0.5.6b6): „K 7T/L 1J“ – K für States, 5-Min-Statistik und Events, A für Attribute, L für die Langzeit; die Einheit steht im Wert der
 // Regel (z. B. „6m“ → „6M“, „400d“ → „400T“, keine Umrechnung); weicht keep_days davon ab (teilweise/Nachzug) oder fehlt der Wert
 // (Läufe aus früheren Versionen), steht keep_days in Tagen
 const EINHEIT_TAGE = { d: 1, w: 7, m: 30, j: 365 };
@@ -4250,7 +4290,7 @@ $("#tLaeufe").addEventListener("click", ev => {
   for (const p of r.pakete) for (const [eid, v] of Object.entries(p.je_entitaet || {})) {
     const z = je[eid] ||= { states: 0, kurz: 0, lts: 0, events: 0, attr: null, rest: 0, teile: {}, ergebnis: new Set() };
     const g = Math.max(0, (v.vorher || 0) - (v.nachher || 0));
-    z[p.art || "states"] += g; z.rest += v.nachher || 0;
+    if (p.art !== "attr") { z[p.art || "states"] += g; z.rest += v.nachher || 0; }   // Punkt 254: abgetrennte States sind keine gelöschten Zeilen
     if (v.attr_geloescht != null) z.attr = (z.attr || 0) + v.attr_geloescht;
     z.teile[p.art || "states"] = { wert: ((r.vorhaltung || {})[eid] || {})[p.art || "states"], tage: p.keep_days, alle: p.alle };
     if (p.ergebnis) z.ergebnis.add(p.ergebnis);
@@ -4276,7 +4316,7 @@ $("#tLaeufe").addEventListener("click", ev => {
       { k: "entity_id", titel: "Entität / Typ", typ: "text", fest: 1, breite: 300, wert: x => x.entity_id, zelle: x => `<span class="mono">${esc(x.entity_id)}</span>`, csv: x => x.entity_id,
         summe: (g, a) => [zahl(g.length), zahl(a.length)] },
       { k: "keep", titel: "Vorhaltedauer", typ: "text", breite: 150, wert: x => x.keep, zelle: x => esc(x.keep), csv: x => x.keep,
-        hilfe: "K = Kurzzeit (gilt für States, 5-Min-Statistik, Attribute und Events), L = Langzeit; Einheit wie in der Regel gewählt (T Tage, W Wochen, M Monate, J Jahre), „alle“ = alles gelöscht. Läufe aus früheren Versionen zeigen Tage." },
+        hilfe: "K = Kurzzeit (gilt für States, 5-Min-Statistik und Events), A = Attribute, L = Langzeit; Einheit wie in der Regel gewählt (T Tage, W Wochen, M Monate, J Jahre), „alle“ = alles gelöscht. Läufe aus früheren Versionen zeigen Tage." },
       blockSpalte("summe", "Summe (Zeilen)", mitAttr(r) ? "Summe aus States, 5-Min-Statistik, Attributen, Events und Langzeit" : "Summe aus States, 5-Min-Statistik, Events und Langzeit (dieser Lauf stammt aus einer früheren Version – ohne Attribute)", 130),
       blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term", 145),
       blockSpalte("attr_zeilen", "Attribute", "im Lauf gemessen – Attributzeilen, die HA mit den States gelöscht hat", 150),

@@ -1,8 +1,12 @@
 """Regelmodell: Vorhaltezeiten pro Entität.
 
-Ab 0.3.4 (Sammelliste 61): Es gibt keinen eigenen Wert „Attribute“ mehr. Attribute folgen immer der Kurzzeit und werden
-mit den Kurzzeit-States gelöscht (HA räumt dabei nicht mehr benutzte Attributzeilen ab). Ein gesetzter Attribut-Wert
-in der Regeldatei wird beim Laden verworfen (Hinweis im App-Protokoll); der Schlüssel bleibt intern als „wie_kurzzeit“.
+Attribute (Punkt 254, ab 0.5.6b9): Der Wert „Attribute“ ist wieder eigenständig. Es gibt einen Attribut-Standard
+(Schlüssel attribut_standard der Regeldatei, Voreinstellung „wie_kurzzeit“ = Attribute folgen den States wie bisher, z. B. 30d
+spart Platz); jede Regel kann ihn überschreiben (Dauer oder „wie_kurzzeit“). Attribute werden nach dieser Frist von den States getrennt (states.attributes_id = NULL, nur über die
+Integration), die States selbst bleiben bis zu ihrer Kurzzeit. Wirksam ist nie mehr als die Kurzzeit der Entität.
+Schutz-Regeln haben dafür die Option „Attribute mitschützen“ (attribute_schutz, Voreinstellung an = wie bisher):
+an = Attribute bleiben so lange wie die States, aus = es gilt der Attribut-Standard bzw. eine andere Regel.
+(Ab 0.3.4 bis 0.5.6b8 folgten die Attribute immer der Kurzzeit; Sammelliste 61.)
 
   kurzzeit   Rohdaten (states) und 5-Min-Statistik     Standard "global" (= purge_keep_days)
   attribute  Attribute der Rohdaten                     Standard "wie_kurzzeit"
@@ -69,7 +73,8 @@ WERTE = ("kurzzeit", "attribute", "langzeit")
 EINHEIT_TAGE = {"d": 1, "w": 7, "m": 30, "j": 365}
 EINHEIT_NAME = {"d": "Tage", "w": "Wochen", "m": "Monate", "j": "Jahre"}
 SONDERWERTE = {"kurzzeit": {"global", "keine"}, "attribute": {"wie_kurzzeit", "keine"}, "langzeit": {"unbegrenzt", "keine"}}
-STANDARD = {"kurzzeit": "global", "attribute": "wie_kurzzeit", "langzeit": "unbegrenzt"}
+ATTR_STANDARD = "wie_kurzzeit"      # Punkt 254: Voreinstellung des Attribut-Standards (Attribute folgen der Kurzzeit; 30 d o. ä. einstellbar)
+STANDARD = {"kurzzeit": "global", "attribute": ATTR_STANDARD, "langzeit": "unbegrenzt"}
 TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "herkunft": 4, "vielschreiber": 5, "verwaist": 6, "event": 7,
             "ha_standard": 8}
 # Punkte 193/196: wirken wie glob/klasse nur auf nicht verwaiste Entitäten und nie auf Zähler
@@ -79,7 +84,7 @@ _SCHWELLE = re.compile(r"^(?:>=|≥)?\s*(\d{1,9})$")
 # Schwelle und die Entitäten, die bei der vorigen Analyse dazugehörten (gesetzt von halte_vielschreiber)
 HYSTERESE = 0.8
 HALTEN = {}
-SCHUTZ_WERTE = {"kurzzeit": "global", "attribute": None, "langzeit": "unbegrenzt"}   # Punkt 111: fest
+SCHUTZ_WERTE = {"kurzzeit": "global", "langzeit": "unbegrenzt"}   # Punkt 111: fest; Attribute je nach attribute_schutz (Punkt 254)
 # Punkt 127 (0.5.3): Regel „HA-Standard“ – Werte, Name und Notiz fest, nur aktiv/passiv änderbar
 HA_STANDARD_ID = "HA:standard"
 HA_STANDARD_TAGE = 10           # Voreinstellung des Recorders (purge_keep_days)
@@ -111,7 +116,7 @@ def ha_standard(kurzzeit, aktiv, langzeit="unbegrenzt"):
 # Event-Regeln nur die Vorhaltezeit). Beim Speichern einer Regel ersetzt es ein vorhandenes Suffix (alt „– 30 Tage / 1 Jahr“,
 # „7d/unbegrenzt“ oder neu), ein Zusatz in Klammern dahinter („(vor R07)“) bleibt erhalten.
 _EINH_KURZ = {"d": "T", "w": "W", "m": "M", "j": "J"}
-_DAUER = r"(?:\d+\s*(?:Tage?|Wochen?|Monate?|Jahre?|[TWMJdwmj])|unbegrenzt|global|keine|∞)"
+_DAUER = r"(?:(?:A\s*)?\d+\s*(?:Tage?|Wochen?|Monate?|Jahre?|[TWMJdwmj])|unbegrenzt|global|keine|∞)"   # Punkt 254: „A 14T“ = Attribut-Wert
 _SUFFIX = re.compile(rf"(?:\s+[–-]\s+{_DAUER}(?:\s*/\s*{_DAUER})*|\s+{_DAUER}\s*/\s*{_DAUER})(\s*\([^()]*\))?\s*$")
 
 
@@ -127,6 +132,10 @@ def wert_kurz(w, leer="∞"):
 
 
 def suffix(r):
+    # Punkt 254: Regel nur mit Attribut-Wert (ohne Kurz- und Langzeit) → „A 14T“ statt „global/∞“
+    a = r.get("attribute")
+    if r.get("typ") != "event" and not r.get("kurzzeit") and not r.get("langzeit") and a and a != "wie_kurzzeit":
+        return f"A {wert_kurz(a)}"
     k = wert_kurz(r.get("kurzzeit"), "global")
     return k if r.get("typ") == "event" else f"{k}/{wert_kurz(r.get('langzeit'))}"
 
@@ -188,10 +197,14 @@ def anzeige(wert):
 def normalisiere(daten):
     """Prüft und normalisiert eine Regeldatei; wirft RegelFehler."""
     std = dict(STANDARD)
-    for art in WERTE:
+    for art in ("kurzzeit", "langzeit"):
         w = pruefe_wert(art, (daten.get("standard") or {}).get(art, STANDARD[art]))
         std[art] = w or STANDARD[art]
-    std["attribute"] = "wie_kurzzeit"      # Punkt 61: Attribute folgen immer der Kurzzeit
+    # Punkt 254: Attribut-Standard als eigener Schlüssel (fehlt er, 30 Tage); „keine“ gibt es hier nicht
+    at = pruefe_wert("attribute", daten.get("attribut_standard") or ATTR_STANDARD)
+    if at == "keine":
+        raise RegelFehler("Attribut-Standard: „keine“ ist nicht erlaubt (Dauer oder wie_kurzzeit)")
+    std["attribute"] = at
     regeln, ids = [], set()
     for i, r in enumerate(daten.get("regeln") or []):
         rid = str(r.get("id") or f"R{i + 1:02d}")
@@ -231,15 +244,13 @@ def normalisiere(daten):
                "aktiv": r.get("aktiv", True) is not False, "notiz": str(r.get("notiz") or "")}
         for art in WERTE:
             neu[art] = pruefe_wert(art, r.get(art))
-        if typ == "schutz":                   # Punkt 111: Werte fest, unabhängig von der Eingabe
+        if typ == "schutz":                   # Punkt 111: Werte fest; Punkt 254: Attribute mitschützen (Voreinstellung an)
+            schutz_attr = r.get("attribute_schutz", True) is not False
             neu.update(SCHUTZ_WERTE)
-        if neu["attribute"] is not None:      # Punkt 61: eigener Attribut-Wert entfällt
-            if neu["attribute"] != "wie_kurzzeit":
-                _LOG.warning("Regel %s: Attribut-Wert %s verworfen – Attribute folgen ab 0.3.4 immer der Kurzzeit", rid, neu["attribute"])
-            neu["attribute"] = None
-            if not neu["kurzzeit"] and not neu["langzeit"]:
-                _LOG.warning("Regel %s setzte nur Attribute und wurde entfernt", rid)
-                continue
+            neu["attribute"] = "wie_kurzzeit" if schutz_attr else None
+            neu["attribute_schutz"] = schutz_attr
+        if neu["attribute"] == "keine":       # Punkt 254: Attribute ganz ohne Frist gibt es nicht (Mindestfrist 1 Tag)
+            raise RegelFehler(f"{rid}: Attribute „keine“ ist nicht erlaubt (Dauer, wie_kurzzeit oder leer = Attribut-Standard)")
         if neu["kurzzeit"] == "keine" and typ != "verwaist":
             raise RegelFehler(f"{rid}: Kurzzeit „keine“ ist nur beim Regeltyp verwaist erlaubt")
         if typ == "verwaist":
@@ -273,7 +284,7 @@ def normalisiere(daten):
     if HA_STANDARD_ID not in {r["id"] for r in regeln}:
         regeln.append({**HA_STANDARD, "aktiv": False})
     # "events" bleibt leer stehen, damit der Startwert nach dem Löschen der Regel nicht wiederkommt
-    return {"standard": std, "regeln": regeln, "events": {}}
+    return {"standard": std, "attribut_standard": at, "regeln": regeln, "events": {}}
 
 
 def event_regel(daten, typ, purge_keep_days, mit_passiven=False):

@@ -4,7 +4,8 @@ Ab 0.4.0 (Punkt 62) zusätzlich Brücke zur App: Die App meldet sich per Supervi
 die Integration fragt ihren Status ab und stellt Entitäten (Gerät „RS DB Hygiene“), die Dienste
 loeschlauf_starten / analyse_starten / attribut_analyse_starten (ab 0.4.1) und das Event rs_db_hygiene_lauf_beendet für Automationen bereit.
 
-Stellt den Dienst rs_db_hygiene.purge bereit. Er löscht in 5-Min-Statistik, Langzeitstatistik und Events,
+Stellt den Dienst rs_db_hygiene.purge bereit. Er löscht in 5-Min-Statistik, Langzeitstatistik und Events (ab 0.5.6b9 mit
+tabelle states_attribute zusätzlich: Attribute alter States abtrennen, die States bleiben – Punkt 254),
 wofür HA keinen eigenen Dienst je Entität bzw. Event-Typ hat. Ab 0.4.5 (Punkt 121) dazu rs_db_hygiene.purge_states:
 States einzelner Entitäten vor einem exakten Zeitpunkt (z. B. lokale Mitternacht) über HAs PurgeEntitiesTask. Die Arbeit läuft als Aufgabe in der Warteschlange
 des Recorders – wie HAs eigener Purge –, damit es keine Sperrkonflikte gibt und die Caches des Recorders stimmen.
@@ -108,6 +109,10 @@ class PurgeTask(RecorderTask):
             if frei:
                 # wie HAs eigener Purge: gelöschte event_data aus dem Cache nehmen, sonst zeigen neue Events darauf
                 instance.event_data_manager.evict_purged(frei)
+            frei_attr = set(erg.pop("freie_attr_ids", ()))
+            if frei_attr:
+                # Punkt 254: ebenso gelöschte state_attributes (sonst verweisen neue States auf eine gelöschte Zeile)
+                instance.state_attributes_manager.evict_purged(frei_attr)
             if a["mit_meta"] and not a["nur_zaehlen"] and erg["rest"] == 0:
                 # Langzeit „keine“ für Verwaiste / Statistik ohne Entität: samt statistics_meta (HA-Funktion)
                 rec_statistics.clear_statistics(instance, list(a["namen"]))

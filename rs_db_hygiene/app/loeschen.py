@@ -21,6 +21,7 @@ import logging
 import os
 import sqlite3
 import time
+import urllib.error
 import urllib.request
 
 import regeln as rg
@@ -241,6 +242,11 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
     # Ab 0.4.3 (Punkt 82) mit eigener Obergrenze: Bis dahin bekam B nur den Rest der States-Grenze und kam bei großem
     # States-Rückstand nie an die Reihe (Nachtlauf 11.10.2026: 0,8 Mio. B-Zeilen „nächster Lauf“).
     auftraege_b = plan_b(pl, pkd, nur_regel, exakt)
+    # Punkt 254: Hat eine Entität einen eigenen Attribut-Auftrag, gehören ihre Attributzeilen dazu und nicht zum States-Eintrag
+    attr_namen = {a["name"] for a in auftraege_b if a["art"] == "attr"}
+    for c in eintraege:
+        if c["entity_id"] in attr_namen:
+            c["attr_zeilen"] = 0
     # Punkt 230: Der 5-Min-Auftrag folgt dem States-Auftrag derselben Entität in diesem Lauf – gleiches keep_days (auch
     # bei Obergrenze „teilweise“ oder Ausnahme); wartet der States-Teil auf den nächsten Lauf, wartet auch die 5-Min-Statistik
     st_von = {c["entity_id"]: c for c in eintraege}
@@ -331,8 +337,9 @@ def laeufe_noetig(states, b, grenze, grenze_b):
 
 
 # Stufe B: Art im Plan → Tabelle der Mini-Integration
-ART_B = {"kurz": "statistics_short_term", "lts": "statistics", "events": "events"}
-ART_NAME = {"states": "States", "kurz": "5-Min-Statistik", "lts": "Langzeit", "events": "Events"}
+ART_B = {"kurz": "statistics_short_term", "lts": "statistics", "events": "events", "attr": "states_attribute"}
+ART_NAME = {"states": "States", "kurz": "5-Min-Statistik", "lts": "Langzeit", "events": "Events", "attr": "Attribute"}
+ATTR_STANDARD_ID = "A:standard"     # Punkt 254: Attribut-Standard hat keine Regel-ID, im Plan erscheint er unter diesem Namen
 MAX_KEEP_DAYS_B = MAX_KEEP_DAYS     # Punkt 79: wie die States 20 Jahre (bis 0.4.1: 3650)
 
 
@@ -350,6 +357,16 @@ def plan_b(pl, pkd, nur_regel=None, exakt=False):
     out = []
     for e in pl["entitaeten"]:
         werte, lo_ = e.get("werte") or {}, e.get("loeschbar") or {}
+        # Punkt 254: Attribute früher als die States abtrennen (Attribut-Wert kürzer als die Kurzzeit) – auch bei Schutz-Entitäten,
+        # deren Schutz die Attribute nicht umfasst; die States bleiben, nur der Verweis auf die Attribute fällt weg
+        at, kz = werte.get("attribute") or {}, werte.get("kurzzeit") or {}
+        if (at.get("tage") is not None and kz.get("tage") is not None and 0 < at["tage"] < kz["tage"] and at["tage"] < pkd
+                and lo_.get("attr_zeilen") and at["tage"] <= MAX_KEEP_DAYS_B):
+            rid = at.get("regel") or ATTR_STANDARD_ID
+            if not nur_regel or nur_regel == rid:
+                out.append({"art": "attr", "name": e["entity_id"], "regel": rid, "status": e["status"], "wert": at.get("wert"),
+                            "keep_days": at["tage"], "alle": False, "mit_meta": False, "zeilen": lo_["attr_zeilen"],
+                            "hinweis": "Attribute getrennt – States bleiben"})
         if e.get("schutz"):                  # Punkt 111
             continue
         if not e.get("lts_rows") and not e.get("kurz_rows"):
@@ -608,7 +625,10 @@ class Lauf:
         # (ein Lauf über Mitternacht löscht dann nicht plötzlich einen Tag mehr, als geplant und gezählt war)
         self.exakt = bool(p.get("exakt"))
         self.bezug = time.time()
-        self.b_liste = [a for a in p.get("auftraege_b", []) if a.get("art_lauf") not in ("nächster Lauf", "übersprungen")] if p.get("stufe_b") else []
+        alle_b = [a for a in p.get("auftraege_b", []) if a.get("art_lauf") not in ("nächster Lauf", "übersprungen")] if p.get("stufe_b") else []
+        # Punkt 254: Attribute abtrennen läuft nach den States – was die States-Löschung schon mitnimmt, muss nicht erst umgeschrieben werden
+        self.b_liste = [a for a in alle_b if a["art"] != "attr"]
+        self.attr_liste = [a for a in alle_b if a["art"] == "attr"]
         # Punkt 53 (1): bestätigte Ausnahmen dürfen die Obergrenze einmalig überschreiten (nur ihr ältester Tag)
         self.ausnahmen = {c["entity_id"] for c in p.get("entitaeten", []) if c.get("ausnahme")}
         # Punkt 84: Verwaiste des Plans; vor ihrem Paket wird geprüft, ob sie inzwischen wieder existieren
@@ -636,7 +656,7 @@ class Lauf:
                      # Punkt 121 (0.4.12): Grenze lokale Mitternacht (exakt) oder „jetzt minus keep_days“
                      "exakt": bool(p.get("exakt")),
                      "pakete": [], "fehler": None}
-        self.fortschritt = {"paket": 0, "pakete": p["summe"]["aufrufe"] + len(self.b_liste), "geloescht": 0, "grenze": p["grenze"],
+        self.fortschritt = {"paket": 0, "pakete": p["summe"]["aufrufe"] + len(self.b_liste) + len(self.attr_liste), "geloescht": 0, "grenze": p["grenze"],
                             "geplant": p["summe"]["zeilen"], "aktuell": ""}
         self._schreibe()
 
@@ -812,9 +832,10 @@ class Lauf:
             raise LoeschFehler(f"Nachzug {eid}: {ergebnis} – Lauf beendet")
         return rest - geloescht
 
-    def _fuehre_b_aus(self, rest):
-        """Stufe B: je Auftrag Aufrufe von rs_db_hygiene.purge, bis nichts mehr übrig ist oder die Obergrenze greift."""
-        for a in sorted(self.b_liste, key=lambda a: (a["zeilen"], a["name"])):
+    def _fuehre_b_aus(self, rest, liste=None):
+        """Stufe B: je Auftrag Aufrufe von rs_db_hygiene.purge, bis nichts mehr übrig ist oder die Obergrenze greift.
+        liste: Aufträge (Voreinstellung b_liste; Punkt 254: attr_liste nach den States). Liefert den Rest der Obergrenze."""
+        for a in sorted(self.b_liste if liste is None else liste, key=lambda a: (a["zeilen"], a["name"])):
             if self.abbruch:
                 raise LoeschFehler("abgebrochen")
             self.fortschritt["paket"] += 1
@@ -833,11 +854,21 @@ class Lauf:
             while rest > 0:
                 self._warte_auf_backup(f"{ART_NAME[a['art']]} {a['name']}")     # Punkt 110
                 zusatz = {"vor_ts": self._grenze(a["keep_days"])} if self.exakt and not a["alle"] else {}     # Punkt 121
-                antwort = self.dienst_b(a["art"], a["name"], a["keep_days"], a["alle"], a["mit_meta"], min(rest, B_PRO_AUFRUF), self.token, **zusatz)
+                try:
+                    antwort = self.dienst_b(a["art"], a["name"], a["keep_days"], a["alle"], a["mit_meta"], min(rest, B_PRO_AUFRUF), self.token, **zusatz)
+                except urllib.error.HTTPError as x:
+                    if a["art"] != "attr" or x.code not in (400, 422):
+                        raise
+                    # Punkt 254: ältere Integration kennt states_attribute nicht – die übrigen Aufträge laufen weiter
+                    eintrag["ergebnis"] = "Integration zu alt – bitte auf ≥ 0.5.6b9 aktualisieren"
+                    _LOG.warning("Attribute %s: Integration kennt states_attribute nicht (HTTP %s) – bitte aktualisieren", a["name"], x.code)
+                    break
                 aufrufe += 1
                 if eintrag["vorher"] is None:
                     eintrag["vorher"] = antwort.get("vorher", 0)
                     self.fortschritt["gezaehlt"] = self.fortschritt.get("gezaehlt", 0) + eintrag["vorher"]
+                if a["art"] == "attr":      # Punkt 254: entfernte Attributzeilen zählen wie bei den States-Läufen
+                    eintrag["attr_geloescht"] = eintrag.get("attr_geloescht", 0) + int(antwort.get("attr_zeilen_geloescht", 0))
                 n = int(antwort.get("geloescht", 0))
                 geloescht += n
                 rest -= n
@@ -851,14 +882,23 @@ class Lauf:
                 if not n or not eintrag["nachher"] or self.abbruch:
                     break
             eintrag["geloescht"] = geloescht
-            eintrag["je_entitaet"] = {a["name"]: {"vorher": eintrag["vorher"] or 0, "nachher": eintrag["nachher"] or 0}}
+            eintrag["je_entitaet"] = {a["name"]: {"vorher": eintrag["vorher"] or 0, "nachher": eintrag["nachher"] or 0,
+                                                  **({"attr_geloescht": eintrag.get("attr_geloescht", 0)} if a["art"] == "attr" else {})}}
             eintrag["ergebnis"] = eintrag["ergebnis"] or ("fertig" if not eintrag["nachher"] else "Rest im nächsten Lauf")
             eintrag["dauer_s"] = round(time.time() - eintrag["beginn"], 1)
             eintrag["aufrufe"] = aufrufe
-            self.prot["geloescht"] += geloescht
-            self.fortschritt["geloescht"] = self.prot["geloescht"]
+            if a["art"] == "attr":
+                # Punkt 254: geloescht zählt hier abgetrennte States, nicht gelöschte Zeilen – die Summe „Zeilen gelöscht“ bleibt
+                # den echten Löschungen vorbehalten; die entfernten Attributzeilen stehen wie bei den States in attr_geloescht
+                eintrag["abgetrennt"], eintrag["geloescht"] = geloescht, 0
+                self.prot["attr_geloescht"] = self.prot.get("attr_geloescht", 0) + eintrag.get("attr_geloescht", 0)
+                self.prot["abgetrennt"] = self.prot.get("abgetrennt", 0) + geloescht
+                self.fortschritt["geloescht"] = self.prot["geloescht"]
+            else:
+                self.prot["geloescht"] += geloescht
+                self.fortschritt["geloescht"] = self.prot["geloescht"]
             self._schreibe()
-            _LOG.info("%s %s: %d Zeilen gelöscht in %d Aufrufen (%s)", ART_NAME[a["art"]], a["name"], geloescht, aufrufe, eintrag["ergebnis"])
+            _LOG.info("%s %s: %d Zeilen %s in %d Aufrufen (%s)", ART_NAME[a["art"]], a["name"], geloescht, "abgetrennt" if a["art"] == "attr" else "gelöscht", aufrufe, eintrag["ergebnis"])
         return rest
 
     def _wieder_vorhanden(self, teil):
@@ -884,7 +924,7 @@ class Lauf:
         try:
             # ab 0.4.3 (Punkt 82): Stufe B zuerst und mit eigener Obergrenze – sie ist klein und schnell und kommt so auch
             # dann an die Reihe, wenn die States die Grenze füllen oder ein States-Paket den Lauf beendet
-            self._fuehre_b_aus(self.p.get("grenze_b", self.p["grenze"]))
+            rest_b = self._fuehre_b_aus(self.p.get("grenze_b", self.p["grenze"]))
             for g in self.p["gruppen"]:
                 d = g["keep_days"]
                 for i in range(0, len(g["entitaeten"]), PAKET):
@@ -950,6 +990,8 @@ class Lauf:
                         raise LoeschFehler(f"Paket keep_days {d}: {ergebnis} – Lauf beendet")
                     for eid in nachzug:
                         rest = self._nachziehen(eid, mid[eid], d, rest)
+            if self.attr_liste:      # Punkt 254: danach Attribute abtrennen (Rest der Stufe-B-Obergrenze)
+                self._fuehre_b_aus(rest_b, self.attr_liste)
             self.prot["status"] = "fertig"
         except Exception as e:  # noqa: BLE001 – im Protokoll festhalten, Job meldet weiter
             self.prot["status"] = "abgebrochen" if "abgebrochen" in str(e) else "Fehler"

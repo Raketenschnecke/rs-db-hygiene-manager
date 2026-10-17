@@ -385,7 +385,7 @@ async def pareto(request):
         return web.json_response({"stufen": [], "fehler": "Noch keine Analyse vorhanden"})
 
     def rechne():
-        return optimierung.pareto(r, optimierung.histogramme(CACHE), warnungen.kontext(HA_CONFIG), ziel, tage)
+        return optimierung.pareto(r, optimierung.histogramme(CACHE, ATTR), warnungen.kontext(HA_CONFIG), ziel, tage)
     return web.json_response(await asyncio.to_thread(rechne))
 
 
@@ -695,7 +695,7 @@ async def regel_vorschau(request):
     if not r:
         return web.json_response({"anzahl": 0, "treffer": [], "fehler": "Noch keine Analyse vorhanden"})
     bestand = rg.lade(REGELN, VORLAGE)
-    hist = await asyncio.to_thread(optimierung.histogramme, CACHE)
+    hist = await asyncio.to_thread(optimierung.histogramme, CACHE, ATTR)
     fn = optimierung.event_wirkung if regel["typ"] == "event" else optimierung.wirkung
     return web.json_response(await asyncio.to_thread(fn, regel, r, bestand, hist, ziel))
 
@@ -708,7 +708,7 @@ async def optimierungen(request):
         return web.json_response({"vorschlaege": [], "fehler": "Noch keine Analyse vorhanden"})
 
     def rechne():
-        hist = optimierung.histogramme(CACHE)
+        hist = optimierung.histogramme(CACHE, ATTR)
         ktx = warnungen.kontext(HA_CONFIG)
         return optimierung.vorschlaege(r, rg.lade(REGELN, VORLAGE), hist, ktx, HA_CONFIG,
                                        optimierung.lies_ignoriert(DATA), ziel)

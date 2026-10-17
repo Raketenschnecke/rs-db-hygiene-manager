@@ -24,6 +24,7 @@ UEBERSTIMMT_MIN = 20         # … und mindestens so viele Entitäten
 ZUSAMMEN_TYPEN = ("schutz", "entity", "glob", "klasse", "herkunft", "event")
 DOPPELT_TYPEN = ("schutz", "glob", "klasse", "herkunft", "event")
 STUFE_RANG = {"rot": 0, "gelb": 1, "grau": 2}
+WERT_NAME = {"kurzzeit": "Kurzzeit", "attribute": "Attribute", "langzeit": "Langzeit"}   # Punkt 254
 BEISPIELE = 30
 _CACHE = {"schl": None, "daten": None}
 
@@ -71,11 +72,16 @@ def _vorfilter(r, ents):
 
 def _text(x):
     k, l = rg.anzeige(x["kurzzeit"]["wert"]), rg.anzeige(x["langzeit"]["wert"])
-    return f"{k} / {l}" + (" 🔒" if x.get("schutz") else "")
+    # Punkt 254: Attribute nur nennen, wenn sie nicht einfach der Kurzzeit folgen
+    a = x["attribute"]["wert"]
+    attr = "" if a == "wie_kurzzeit" else f" / Attribute {rg.anzeige(a)}"
+    return f"{k}{attr} / {l}" + (" 🔒" if x.get("schutz") else "")
 
 
-def _stempel(x):
-    return (x["kurzzeit"]["wert"], x["langzeit"]["wert"], bool(x.get("schutz")))
+def _stempel(x, pkd):
+    # Punkt 254: Attribute zählen mit ihren wirksamen Tagen (höchstens die Kurzzeit) – „30 Tage“ bei Kurzzeit 7 Tage ist dasselbe wie „wie Kurzzeit“
+    tage, _h = rg.wirksame_tage(x, pkd)
+    return (x["kurzzeit"]["wert"], tage["attribute"], x["langzeit"]["wert"], bool(x.get("schutz")))
 
 
 def diff(alt, neu, regeln, ctx):
@@ -90,7 +96,7 @@ def diff(alt, neu, regeln, ctx):
     geaendert = []
     for e in ents:
         x, y = a.loese_e(e), n.loese_e(e)
-        if _stempel(x) != _stempel(y):
+        if _stempel(x, ctx["pkd"]) != _stempel(y, ctx["pkd"]):
             geaendert.append({"entity_id": e["entity_id"], "rows_24h": e["rows_24h"] or 0, "vorher": _text(x), "nachher": _text(y),
                               "regel_vorher": x["kurzzeit"]["regel"] or x["langzeit"]["regel"],
                               "regel_nachher": y["kurzzeit"]["regel"] or y["langzeit"]["regel"]})
@@ -150,9 +156,9 @@ def folgen(aenderung, bestand):
             t.append(f"+{len(dazu)} Muster")
         if weg:
             t.append(f"−{len(weg)} Muster" + (f" ({', '.join(weg)})" if len(weg) <= 3 else ""))
-        for x in ("kurzzeit", "langzeit"):
+        for x in ("kurzzeit", "attribute", "langzeit"):   # Punkt 254: Attribute
             if r[x] != a[x]:
-                t.append(f"{'Kurzzeit' if x == 'kurzzeit' else 'Langzeit'} {rg.anzeige(a[x]) if a[x] else '–'} → {rg.anzeige(r[x]) if r[x] else '–'}")
+                t.append(f"{WERT_NAME[x]} {rg.anzeige(a[x]) if a[x] else '–'} → {rg.anzeige(r[x]) if r[x] else '–'}")
         if r["name"] != a["name"]:
             t.append(f"Name „{r['name']}“")
         out.append({"art": "geaendert", "id": r["id"], "name": a["name"], "text": "wird geändert: " + (", ".join(t) or "–")})
@@ -193,7 +199,7 @@ def _ohne_muster(r, muster):
 def _wertetext(r):
     if r["typ"] == "schutz":
         return "Schutz"
-    teile = [rg.anzeige(r[a]) for a in ("kurzzeit", "langzeit") if r[a]]
+    teile = [rg.anzeige(r[a]) if a != "attribute" else f"Attribute {rg.anzeige(r[a])}" for a in ("kurzzeit", "attribute", "langzeit") if r[a]]
     return " / ".join(teile) if r["typ"] != "event" else rg.anzeige(r["kurzzeit"])
 
 
@@ -224,7 +230,7 @@ def _vorrang_varianten(ru, rs, eids, arten, ctx):
         out.append(variante(f"{ru['id']} soll gelten: neue Regel {rid} (entity) mit den Werten von {ru['id']}",
                             {"setzen": [neu]}, ctx, f"entity hat Vorrang vor {rs['typ']} – nur diese {len(eids)} Entitäten ändern sich."))
     # b) und c) Werte angleichen – wirkt auf alle Treffer der geänderten Regel, die Liste zeigt es
-    namen = " und ".join({"kurzzeit": "Kurzzeit", "langzeit": "Langzeit"}[a] for a in arten)
+    namen = " und ".join(WERT_NAME[a] for a in arten)
     out.append(variante(f"{rs['id']} übernimmt {namen} von {ru['id']}", {"setzen": [{**rs, **{a: ru[a] for a in arten}}]}, ctx,
                         f"ändert {rs['id']} für alle Entitäten, die sie bestimmt."))
     out.append(variante(f"{ru['id']} übernimmt {namen} von {rs['id']}", {"setzen": [{**ru, **{a: rs[a] for a in arten}}]}, ctx,
@@ -286,11 +292,11 @@ def befunde(pl, bestand, ignoriert=()):
     konflikt = {}   # (X, Y) → [Beispiele]: X wird von Y (anderer Typ) mit anderem Wert überstimmt
     for e in ents:
         w = e.get("werte") or {}
-        sieger = {(w.get(a) or {}).get("regel") for a in ("kurzzeit", "langzeit")} - {None}
+        sieger = {(w.get(a) or {}).get("regel") for a in ("kurzzeit", "attribute", "langzeit")} - {None}   # Punkt 254: auch Attribute
         for s in sieger:
             gewinnt[s] += 1
         unterlegen = {}
-        for a in ("kurzzeit", "langzeit"):
+        for a in ("kurzzeit", "attribute", "langzeit"):
             x = w.get(a) or {}
             for u in x.get("ueberstimmt") or []:
                 if u["regel"] in sieger or not u.get("regel"):
@@ -376,7 +382,7 @@ def befunde(pl, bestand, ignoriert=()):
                             f"(der Typ bestimmt den Vorrang, nicht die Reihenfolge). Bei allen übrigen Entitäten wirkt {u} weiter.",
                             f"Soll {s} dort gelten, „bewusst so“ wählen – sonst einen Vorschlag."],
                            _vorrang_varianten(ru, rs, [eid for eid, _x in bsp], arten, ctx), wahl_pflicht=True,
-                           beispiele=[{"entity_id": eid, "wert": {"kurzzeit": "Kurzzeit", "langzeit": "Langzeit"}[a],
+                           beispiele=[{"entity_id": eid, "wert": WERT_NAME[a],
                                        "gilt": wa, "statt": wu, "rows_24h": n} for eid, (a, wa, wu, n) in bsp[:BEISPIELE]]))
 
     # 4. tote Muster: genaue IDs, die es in der Analyse nicht (mehr) gibt

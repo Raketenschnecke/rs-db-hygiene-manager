@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b9 (Beta)
+- **Attribut-Standard und Attribut-Wert je Regel (Punkt 254):** Attribute haben wieder eine eigene Frist. Im Reiter Regeln gibt es unter der Tabelle den Kasten „Attribut-Standard“ (Voreinstellung „wie Kurzzeit“, z. B. 30 Tage einstellbar); jede Regel kann einen eigenen Attribut-Wert setzen (leer = Standard, nie länger als die Kurzzeit). Nach der Frist trennt der Löschlauf die Attribute von den States (die States bleiben bis zu ihrer Kurzzeit) und entfernt die danach unbenutzten Attributzeilen. Schutz-Regeln haben die Option „Attribute mitschützen“ (Voreinstellung an, wie bisher)
+- **Neue Empfehlung „Attribute“ (Punkt 254):** Sammelregel nur mit Attribut-Wert 14 Tage für Entitäten mit großem Attribut-Zuwachs (ab 100 MB im Prognosezeitraum je Entität); die Kurzzeit bleibt. Ersetzt den bisherigen Grund „große Attribute“ bei den Kurzzeit-Vorschlägen
+- **Regelwerk-Check und Empfehlungen** rechnen die Attribute mit (Gewinn und Überstimmung, wirksame Tage, Ersparnis und Löschmenge der Attribute getrennt ausgewiesen); Spalte „Attribute“ in den Tabellen Entitäten und Regeln, Teil „A“ im Löschplan, Namenssuffix „– A 14T“ bei reinen Attribut-Regeln
+- **Integration:** neue Tabelle `states_attribute` im Dienst `rs_db_hygiene.purge` (setzt `states.attributes_id` alter States auf NULL, löscht unbenutzte `state_attributes`-Zeilen, bereinigt den Cache des Recorders). **Die Integration muss mit aktualisiert werden** (HACS, danach HA-Neustart); ohne sie meldet der Löschlauf bei Attribut-Aufträgen „Integration zu alt“ und lässt die übrigen Aufträge laufen
+
 ## 0.5.6b8 (Beta)
 - **„Ansehen“ bei mehreren Entitäten (Punkt 251):** in Empfehlungen mit mehr als einer Entität (z. B. Langzeit nirgends verwendeter Entitäten, Sammelregeln) zeigt „Ansehen“ jetzt nur die betroffenen Entitäten; Chip „Empfehlung: …“ mit ✕ über der Tabelle
 - **Langzeit-Empfehlung (Punkt 252):** der Vorschlagswert für die Langzeit nirgends verwendeter Entitäten ist 1 Jahr statt 90 Tage

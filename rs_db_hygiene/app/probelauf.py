@@ -214,15 +214,12 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             if art == "kurzzeit":
                 r["states"] += loesch["states"]
                 r["kurz"] += loesch["kurz"]
-                r["attr_zeilen"] += loesch["attr_zeilen"] or 0     # Attribute folgen der Kurzzeit
                 d = (basis["states"] - prog["states"]) + (basis["kurz"] - prog["kurz"])
                 r["ersparnis_states"] += d
-                # ab 0.3.4 kein eigener Attribut-Wert: Attribut-Löschmenge und -Ersparnis gehören zur Kurzzeit-Regel
-                r["attr_bytes"] += loesch["attr_bytes"] or 0
-                da = basis["attribute"] - prog["attribute"]
-                r["ersparnis_attr"] += da
-                d += da
             elif art == "attribute":
+                # Punkt 254 (0.5.6b9): Attribute haben wieder einen eigenen Wert – Löschmenge und Ersparnis gehören der Regel,
+                # die ihn setzt (der Attribut-Standard hat keine Regel-ID und erscheint nur in den Summen)
+                r["attr_zeilen"] += loesch["attr_zeilen"] or 0
                 r["attr_bytes"] += loesch["attr_bytes"] or 0
                 d = basis["attribute"] - prog["attribute"]
                 r["ersparnis_attr"] += d
@@ -361,7 +358,8 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     ziel = int(ziel_tage or pkd)
     monate = max(1, ceil(ziel / MONAT - 1e-9))
     tage = [0] + [min(round(m * MONAT), ziel) for m in range(1, monate + 1)]
-    ohne = {"standard": dict(rg.STANDARD), "regeln": []}
+    # Punkt 254: „ohne“ und „ha“ bilden HA nach: Attribute folgen den States (kein Attribut-Standard)
+    ohne = {"standard": {**rg.STANDARD, "attribute": "wie_kurzzeit"}, "regeln": []}
     varianten = {"ohne": (ohne, False), "ha": ({**ohne, "regeln": [{**rg.HA_STANDARD, "aktiv": True}]}, False),
                  "aktiv": (regel_daten, mit_passiven), "alle": (regel_daten, True)}
     ha_regel = next((r for r in regel_daten["regeln"] if r["typ"] == "ha_standard"), rg.HA_STANDARD)
