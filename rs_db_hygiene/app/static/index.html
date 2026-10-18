@@ -125,6 +125,16 @@ main { padding: 0 20px 24px; }
 .vl-tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
   font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .vl-tip i { display: inline-block; width: 10px; height: 3px; margin-right: 5px; vertical-align: middle; background: var(--c); }
+/* Zuwachs-Chart (Zeilen pro Tag je Entität) im Entitäten-Dialog; Rahmen und Achsen wie .vl */
+.zw { --zw-states: #2f7fd1; --zw-kurz: #d4a72c; --zw-lts: #3f9a5c; --zw-attr: #8e5bc4; margin-top: 8px; }
+@media (prefers-color-scheme: dark) { .zw { --zw-states: #5aa2ee; --zw-kurz: #d9b13a; --zw-lts: #4fb873; --zw-attr: #a985e0; } }
+#eZuwachs > summary, #eRegeln > summary { cursor: pointer; font-weight: 600; margin: 6px 0; }
+#eZuwachs { margin-bottom: 14px; }
+.zw .vl-leg { grid-template-columns: repeat(auto-fit, minmax(100px, max-content)); justify-content: center; gap: 6px; margin-bottom: 6px; }
+.zw .vl-leg > button { padding: 2px 8px; font-size: 12px; text-align: center; }
+.zw-bereich { display: flex; gap: 6px; flex-wrap: wrap; }
+.zw-bereich button { font-size: 12px; padding: 2px 8px; }
+.zw-bereich button.an { background: var(--panel); border-color: var(--muted); font-weight: 600; }
 .r-ist { --zf: var(--zf-ist); } .r-loesch { --zf: var(--zf-loesch); } .r-prog { --zf: var(--zf-prog); }
 .raster .kurz { display: none; }
 @media (max-width: 1250px) { .raster .z .lang { display: none; } .raster .z .kurz { display: inline; } .raster .kachel .z { font-size: 17px; } }
@@ -1889,6 +1899,72 @@ function verlaufHover(r) {
   svg.addEventListener("mouseleave", () => { tip.hidden = true; kreuz.setAttribute("visibility", "hidden"); });
 }
 
+// ================================================ Zuwachs-Chart: neue Zeilen pro Tag je Entität (zuwachs.db, nach jeder Analyse fortgeschrieben)
+const ZW_QUELLEN = [["states", "States"], ["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["attr", "Attribute"]];
+const ZW_BEREICHE = [[30, "30 Tage"], [90, "90 Tage"], [365, "1 Jahr"], [0, "alles"]];
+const ZW_MASS = { W: 1000, H: 220, L: 52, R: 12, O: 10, U: 28 };
+const ZW_AUS = new Set();
+let zwTage = 90;
+const zwDatum = iso => `${iso.slice(8)}.${iso.slice(5, 7)}.${iso.slice(2, 4)}`;
+
+async function zuwachsLaden(box, eid) {
+  box.innerHTML = `<p class="sub">Wird geladen …</p>`;
+  let r;
+  try { r = await api("zuwachs?entity=" + encodeURIComponent(eid)); }
+  catch (e) { box.innerHTML = `<p class="sub">${esc(/keine Zuwachs/i.test(e.message) ? "Noch keine Zuwachs-Statistik – sie entsteht mit der nächsten Analyse." : e.message)}</p>`; return; }
+  zuwachsZeichnen(box, r);
+}
+
+function zuwachsZeichnen(box, r) {
+  const alle = r.tage, tage = zwTage ? alle.slice(-zwTage) : alle, { W, H, L, R, O, U } = ZW_MASS;
+  if (!tage.length) { box.innerHTML = `<p class="sub">Noch keine abgeschlossenen Tage erfasst – ab der nächsten Analyse.</p>`; return; }
+  const da = ZW_QUELLEN.filter(([k]) => tage.some(t => t[k] != null)), sicht = da.filter(([k]) => !ZW_AUS.has(k));
+  const max = Math.max(1, ...sicht.flatMap(([k]) => tage.map(t => t[k] ?? 0)));
+  const schritt = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6].find(v => max / v <= 4) || 1e7;
+  const oben = Math.ceil(max / schritt) * schritt, n = tage.length;
+  const x = i => L + (W - L - R) * (n > 1 ? i / (n - 1) : .5), y = v => O + (H - O - U) * (1 - v / oben);
+  let svg = "";
+  for (let v = 0; v <= oben; v += schritt) {
+    svg += `<line class="${v ? "gitter" : "achse"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${zahl(v)}</text>`;
+  }
+  const jede = Math.max(1, Math.ceil(n / 7));
+  for (let i = 0; i < n; i += jede) svg += `<text x="${x(i)}" y="${H - U + 16}" text-anchor="middle">${zwDatum(tage[i].datum)}</text>`;
+  for (const [k] of sicht) {   // Lücken (null = außerhalb der Abdeckung) unterbrechen die Linie
+    let teil = [];
+    const ende = () => { if (teil.length) svg += `<polyline class="linie" style="stroke: var(--zw-${k}); stroke-width: 1.8" points="${teil.join(" ")}"/>`; teil = []; };
+    tage.forEach((t, i) => t[k] == null ? ende() : teil.push(`${x(i).toFixed(1)},${y(t[k]).toFixed(1)}`));
+    ende();
+  }
+  svg += `<line class="kreuz" id="zwKreuz" y1="${O}" y2="${H - U}" visibility="hidden"/>`;
+  const leg = ZW_QUELLEN.map(([k, name]) => {
+    const hat = da.some(([j]) => j === k);
+    return `<button type="button" data-zw="${k}" class="${ZW_AUS.has(k) || !hat ? "aus" : ""}" style="--c: var(--zw-${k})" ${hat ? "" : "disabled"}
+      title="${hat ? "Klick: Linie ein-/ausblenden" : k === "attr" ? "Wird erst ab dem übernächsten Tag nach dem ersten Lauf erfasst" : "Noch keine Daten"}">${esc(name)}</button>`;
+  }).join("");
+  box.innerHTML = `<div class="vl zw">
+    <div class="zw-bereich">${ZW_BEREICHE.map(([t, name]) => `<button type="button" data-zwb="${t}" class="${t === zwTage ? "an" : ""}">${name}</button>`).join("")}</div>
+    <div style="position:relative"><svg id="zwSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Neue Zeilen pro Tag">${svg}</svg><div class="vl-tip" id="zwTip" hidden></div></div>
+    <div class="vl-leg">${leg}</div>
+    </div>`;
+  box.querySelectorAll("[data-zwb]").forEach(b => b.onclick = () => { zwTage = +b.dataset.zwb; zuwachsZeichnen(box, r); });
+  box.querySelectorAll("[data-zw]").forEach(b => b.onclick = () => {
+    const k = b.dataset.zw; if (ZW_AUS.has(k)) ZW_AUS.delete(k); else if (sicht.length > 1) ZW_AUS.add(k);
+    zuwachsZeichnen(box, r);
+  });
+  const svgEl = $("#zwSvg"), tip = $("#zwTip"), kreuz = $("#zwKreuz");
+  svgEl.addEventListener("mousemove", ev => {
+    const bx = svgEl.getBoundingClientRect(), fx = (ev.clientX - bx.left) * W / bx.width;
+    const i = n > 1 ? Math.max(0, Math.min(n - 1, Math.round((fx - L) / (W - L - R) * (n - 1)))) : 0, t = tage[i], px = x(i);
+    kreuz.setAttribute("x1", px); kreuz.setAttribute("x2", px); kreuz.setAttribute("visibility", "visible");
+    tip.innerHTML = `<b>${zwDatum(t.datum)}</b><br>` + sicht.map(([k, name]) => `<i style="--c: var(--zw-${k})"></i>${esc(name)}: <b>${t[k] == null ? "–" : zahl(t[k])}</b>`).join("<br>");
+    tip.hidden = false;
+    const links = px * bx.width / W;
+    tip.style.top = "8px";
+    tip.style.left = (links > bx.width / 2 ? links - tip.offsetWidth - 12 : links + 12) + "px";
+  });
+  svgEl.addEventListener("mouseleave", () => { tip.hidden = true; kreuz.setAttribute("visibility", "hidden"); });
+}
+
 // Ohne Analyse liefert die API 404 – dann einen Hinweis statt einer Fehlermeldung zeigen
 const leerText = e => /keine Analyse/i.test(e.message)
   ? (S.status?.fehler ? "Noch keine Analyse – der letzte Lauf ist fehlgeschlagen." : "Noch keine Daten – die erste Analyse läuft (ca. 1 Minute).")
@@ -3634,10 +3710,12 @@ function oeffneEntitaet(e) {
   };
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
   const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "langzeit" ? [] : ["keine"], true);   // Punkt 174: Schnellknöpfe; Punkt 262: Attribute
-  const info = `<div class="mono">${esc(e.entity_id)}</div>
-    <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/Tag (Ø 7 T) · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
-      Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
-    ${e.herkunft ? `<div class="sub">Herkunft: ${esc(e.herkunft)}${e.herkunft_info ? " – " + esc(e.herkunft_info) : ""}</div>` : ""}
+  const infoKopf = `<div class="mono">${esc(e.entity_id)}</div>`;
+  const info = `<details id="eZuwachs"><summary>Zeilen pro Tag (Zuwachs)</summary>
+      <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/Tag (Ø 7 T) · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
+        Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
+      <div class="zwBox"></div></details>`;
+  const infoRegeln = `${e.herkunft ? `<div class="sub">Herkunft: ${esc(e.herkunft)}${e.herkunft_info ? " – " + esc(e.herkunft_info) : ""}</div>` : ""}
     ${[...e.hinweise, ...e.geschuetzt.map(g => "Zähler-Schutz: Regel " + g + " greift nicht")].map(h => `<div class="chip warn">${esc(h)}</div>`).join(" ")}`;
   // Verwaiste (Punkt 30): eigene Vorhaltezeiten (E:-Regel) gelten weiter – mit Vorrang vor Regeln vom Typ verwaist
   const verwaist = e.status === "verwaist" || e.status === "verwaist_geloescht";
@@ -3645,11 +3723,13 @@ function oeffneEntitaet(e) {
   const hinweisVerwaist = verwaist ? `<p class="chip warn" style="display:block">Entität verwaist – eigene Vorhaltezeiten gelten nur noch für die Altdaten.
     Was hier nicht gesetzt ist, kommt aus Regeln vom Typ „verwaist“ bzw. dem Standard.</p>` : deaktiviert ? `<p class="chip warn" style="display:block">Entität deaktiviert – eigene Vorhaltezeiten gelten für die Altdaten.
     Was hier nicht gesetzt ist, kommt aus glob-/klasse-Regeln, Regeln vom Typ „verwaist“ mit der Art deaktiviert bzw. dem Standard.</p>` : "";
-  dialog(verwaist ? "Eigene Vorhaltezeiten (verwaiste Entität)" : "Eigene Vorhaltezeiten", info + hinweisVerwaist +
-    `<p class="sub">Leer lassen = wie bisher (${verwaist ? "verwaist-Regel" : "Muster-Regel"} oder Standard; bei den Attributen der Attribut-Standard). Gespeichert als Regel <span class="mono">${esc(id)}</span>;
+  dialog(verwaist ? "Eigene Vorhaltezeiten (verwaiste Entität)" : "Eigene Vorhaltezeiten", infoKopf + hinweisVerwaist + info +
+    `<details id="eRegeln" open><summary>Regeldefinitionen</summary>${infoRegeln}
+    <p class="sub">Leer lassen = wie bisher (${verwaist ? "verwaist-Regel" : "Muster-Regel"} oder Standard; bei den Attributen der Attribut-Standard). Gespeichert als Regel <span class="mono">${esc(id)}</span>;
     sie hat immer Vorrang vor allen anderen Regeln.</p>
     <div class="raster3">${WERTE_MASKE.map(zeile).join("")}</div>
     ${verwaist ? "" : `<div class="knopfreihe" id="eRegelFuer"><span class="sub">Regel für gleichartige Entitäten …</span></div>`}
+    </details>
     <div id="dlgFehler" class="fehler"></div>`, [
     ...(verwaist ? [["Regel „verwaist“ anlegen", () => bearbeiteRegel(-1, {
       typ: "verwaist", muster: [e.entity_id], name: `Verwaist: ${e.entity_id}`, kurzzeit: "30d" })]] : []),
@@ -3669,6 +3749,8 @@ function oeffneEntitaet(e) {
       try { await speichereRegeln({ ...S.regeln, regeln }); $("#dlg").close(); } catch (x) { $("#dlgFehler").textContent = x.message; }
     }, true]]);
   if (!verwaist) regelFuer(e);
+  const zw = $("#eZuwachs");   // erst beim Aufklappen laden
+  zw.addEventListener("toggle", () => { if (zw.open && !zw.dataset.geladen) { zw.dataset.geladen = "1"; zuwachsLaden(zw.querySelector(".zwBox"), e.entity_id); } });
 }
 // Punkt 172 (0.5.4): aus einer Entität heraus eine Regel für gleichartige anlegen – gleiches Präfix, gleiche Endung, gleiche Klasse
 async function regelFuer(e) {

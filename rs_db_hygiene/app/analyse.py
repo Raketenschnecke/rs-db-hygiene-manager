@@ -16,6 +16,8 @@ import sqlite3
 import time
 import urllib.request
 
+import zuwachs
+
 _LOG = logging.getLogger("analyse")
 TAG = 86400
 # Version des Cache-Aufbaus; ältere Caches werden beim Start neu analysiert (2 = mit Herkunft, ab 0.1.4; 3 = Events je Typ, ab 0.3.0;
@@ -237,11 +239,13 @@ def _schritt_fertig(name, nr, dauer):
         FORTSCHRITT.update(nr=nr + 1, schritt=ANALYSE_SCHRITTE[nr])
 
 
-def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None):
+def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None,
+            zuwachs_pfad=None):
     """Vollanalyse von states, statistics und statistics_short_term (ohne Attribute).
 
     herkunft: Ergebnis von herkunft.ermittle() – {entity_id: {art, text, info, device_id}}.
     reg_details: Ergebnis von lies_registry_details() (ab 0.5.5b5): Status deaktiviert und Klasse ohne Zustand.
+    zuwachs_pfad: wenn gesetzt, schreibt zuwachs.fortschreiben() danach die Tageswerte in diese Datei fort (dauerhaft, nie neu aufgebaut).
     Dauer bei 22 GB / 73 Mio. States ca. 1–2 min.
     """
     herkunft = herkunft or {}
@@ -378,6 +382,11 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
     c.close()
     _ersetze_datei(neu, cache_pfad)
     _LOG.info("Analyse fertig in %.1f s: %s", dauer, werte["schritte"])
+    if zuwachs_pfad:
+        try:
+            zuwachs.fortschreiben(zuwachs_pfad, cache_pfad, db_pfad, meta, heute)
+        except Exception:  # noqa: BLE001 – Zusatzstatistik, die Analyse ist bereits fertig
+            _LOG.exception("Zuwachs-Statistik konnte nicht fortgeschrieben werden")
     return werte
 
 

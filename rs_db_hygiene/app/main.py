@@ -25,6 +25,7 @@ import regelcheck
 import regeln as rg
 import spaltenfilter
 import warnungen
+import zuwachs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 _LOG = logging.getLogger("main")
@@ -34,6 +35,7 @@ DATA = os.environ.get("DBH_DATA", "/data")
 OPTIONEN_PFAD = os.path.join(DATA, "options.json")
 CACHE = os.path.join(DATA, "cache.db")
 ATTR = os.path.join(DATA, "attribute.db")
+ZUWACHS = os.path.join(DATA, "zuwachs.db")      # Tageswerte neuer Zeilen je Entität, wird nur fortgeschrieben (zuwachs.py)
 REGELN = os.path.join(DATA, "regeln.json")
 HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
 LAEUFE = os.path.join(DATA, "laeufe")
@@ -139,7 +141,7 @@ def _analyse_sync():
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d)
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS)
 
 
 def _cache_version():
@@ -343,6 +345,20 @@ async def prognose_verlauf(request):
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
     return web.json_response({**r, "historie": await asyncio.to_thread(Z.historie)})
+
+
+async def zuwachs_tage(request):
+    """Neue Zeilen pro Tag (States, 5-Min, Langzeit, Attribute) aus zuwachs.db. ?entity=sensor.x (ohne: Summe aller Entitäten),
+    ?von=2026-09-01&bis=2026-10-01 (auch als Tageszahl); None = Tag liegt außerhalb der Abdeckung der Quelle."""
+    if not os.path.exists(ZUWACHS):
+        return web.json_response({"fehler": "Noch keine Zuwachs-Statistik vorhanden"}, status=404)
+    q = request.query
+    try:
+        von = zuwachs.datum_tag(q["von"]) if q.get("von") else None
+        bis = zuwachs.datum_tag(q["bis"]) if q.get("bis") else None
+    except ValueError:
+        return web.json_response({"fehler": "von/bis als JJJJ-MM-TT oder Tageszahl angeben"}, status=400)
+    return web.json_response(await asyncio.to_thread(zuwachs.lies, ZUWACHS, q.get("entity") or None, von, bis))
 
 
 async def klassen(_request):
@@ -1184,6 +1200,7 @@ def erstelle_app():
         web.post("/api/job/{art}", job_starten),
         web.get("/api/probelauf", probelauf_summe),
         web.get("/api/prognose_verlauf", prognose_verlauf),
+        web.get("/api/zuwachs", zuwachs_tage),
         web.get("/api/entitaeten", entitaeten),
         web.get("/api/klassen", klassen),
         web.get("/api/plattformen", plattformen),
