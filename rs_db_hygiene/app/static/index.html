@@ -214,7 +214,7 @@ th, td { padding: 6px 9px; border-bottom: 1px solid var(--line); text-align: lef
 th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--panel); user-select: none; }
 th[data-sort] { cursor: pointer; }
 th[data-sort]:hover { color: var(--text); }
-dialog.breit { width: min(1100px, 96vw); }
+dialog.breit { width: min(1265px, 96vw); }   /* Punkt 264: alle Popups 15 % breiter (vorher 1100 px) */
 .trefferzeile select { padding: 1px 4px; }
 tr.filterzeile th { padding: 4px 6px; font-weight: 400; }
 /* Punkt 136 (0.5.3): Auswahlfelder oben, Freitextfelder unten – auf einer Linie mit den beiden Feldern von „Gerät / Herkunft“ */
@@ -317,18 +317,21 @@ td.geraetklick:hover { text-decoration: underline; }
 .status-verwaist, .status-verwaist_geloescht { color: var(--bad); }
 .status-deaktiviert { color: var(--warn); }
 .blaettern { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 0 0; color: var(--muted); }
-dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); width: min(720px, 96vw); padding: 0; }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); width: min(828px, 96vw); padding: 0; }   /* Punkt 264: vorher 720 px */
 dialog::backdrop { background: rgba(0,0,0,.35); }
 .dlg-kopf { padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+#dlgTitel, #kalTitel, #frageTitel { font-size: 28px; line-height: 1.2; }   /* Punkt 264: Titeltext doppelt so groß (14 → 28 px), Leistenhöhe wächst nur mit */
 .dlg-inhalt { padding: 12px 16px; display: grid; gap: 10px; max-height: 70vh; overflow: auto; overflow-x: hidden; overflow-wrap: anywhere; }   /* Punkt 105 */
 .dlg-inhalt p { margin: 0; }
 .dlg-fuss { padding: 10px 16px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; }
-label.feld { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+label.feld { display: grid; gap: 3px; align-content: start; font-size: 12px; color: var(--muted); }   /* Punkt 265: align-content start – Eingabefelder nebeneinander stehen auf einer Höhe, auch wenn ein Nachbar (Typ: Zeile „Typ automatisch“) höher ist */
 label.feld > * { font-size: 14px; color: var(--text); }
 /* Eingabe der Vorhaltezeiten (Punkt 27): je Wert ein Block mit festem Aufbau */
 .wertblock { display: grid; gap: 6px; align-content: start; }
 .wertkopf { min-height: 3.1em; display: grid; align-content: start; gap: 1px; font-size: 12px; color: var(--muted); line-height: 1.35; }
 .wertkopf b { font-size: 14px; color: var(--text); font-weight: 600; }
+/* Punkt 263: nebeneinander stehende Wertblöcke teilen sich die Zeilen (Kopf, Auswahl, Schnellknöpfe, Hinweis) – die Dropdowns stehen auf einer Höhe */
+.raster3 > .wertblock { grid-row: span 4; grid-template-rows: subgrid; row-gap: 6px; }
 .wertwahl { display: grid; gap: 6px; }
 .wertwahl .wModus { width: 100%; }
 .wDauer { display: grid; grid-template-columns: minmax(72px, 2fr) 3fr; gap: 6px; }
@@ -958,7 +961,7 @@ actions:
   <div class="dlg-inhalt" id="dlgInhalt"></div>
   <div class="dlg-fuss" id="dlgFuss"></div>
 </dialog>
-<dialog id="kalender" style="width:min(420px,92vw)">
+<dialog id="kalender" style="width:min(483px,92vw)">
   <div class="dlg-kopf"><span id="kalTitel">Datum wählen</span><button id="kalX" aria-label="schließen">✕</button></div>
   <div class="dlg-inhalt">
     <label class="feld">Bedingung
@@ -975,7 +978,7 @@ actions:
   </div>
   <div class="dlg-fuss"><button id="kalLeeren">Leeren</button><button id="kalAbbr">Abbrechen</button><button id="kalOk" class="primaer">Übernehmen</button></div>
 </dialog>
-<dialog id="frage" style="width:min(460px,92vw)">
+<dialog id="frage" style="width:min(529px,92vw)">
   <div class="dlg-kopf" id="frageTitel"></div>
   <div class="dlg-inhalt" id="frageText"></div>
   <div class="dlg-fuss"><button id="frageNein">Abbrechen</button><button id="frageExtra" hidden></button><button id="frageJa" class="primaer">OK</button></div>
@@ -1025,7 +1028,7 @@ const speicher = { // Browser-Speicher nur für Komfort; darf fehlen
 const WERTE = ["kurzzeit", "langzeit"];
 const WERTE_MASKE = ["kurzzeit", "attribute", "langzeit"];   // Punkt 254: Regelmaske mit Attributen (HA-Standard-Dialog bleibt bei WERTE)
 // Punkt 67: einheitliche Beschriftung – was Kurzzeit und Langzeit umfassen
-const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min)", attribute: "Attribute (von den States getrennt)", langzeit: "Langzeit (Stundenstatistik, 1 h)" };
+const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min)", attribute: "Attribute", langzeit: "Langzeit (Stundenstatistik, 1 h)" };
 const EV_NAME = "Vorhaltezeit (Events)";
 // Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / deaktiviert / verwaist / verwaist_geloescht)
 const STATUS_TEXT = { aktiv: "aktiv", deaktiviert: "deaktiviert", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
@@ -3297,7 +3300,7 @@ const SCHNELL = { kurzzeit: [["7d", "7 T"], ["14d", "14 T"], ["30d", "30 T"], ["
                   langzeit: [["1j", "1 J"], ["2j", "2 J"], ["5j", "5 J"], ["unbegrenzt", "unbegrenzt"]] };
 function wertBlock(art, wert, mitNull, unter, ohne, schnell) {
   // Punkt 61: Attribute haben keinen eigenen Wert mehr – Hinweis an der Kurzzeit
-  const hinweis = art === "attribute" ? `<div class="sub" style="font-size:11px;margin-top:3px">leer = Attribut-Standard · wirksam höchstens die Kurzzeit</div>`
+  const hinweis = art === "attribute" ? `<div class="sub" style="font-size:11px;margin-top:3px">leer = ${(S.regeln?.attribut_standard || "wie_kurzzeit") === "wie_kurzzeit" ? "wie Kurzzeit" : wertAnzeige(S.regeln.attribut_standard) + " (Attribut-Standard)"}</div>`
     : art !== "kurzzeit" ? "" : `<div class="sub kzHinweis" style="font-size:11px;margin-top:3px">gilt für States und 5-Min-Statistik</div>`;
   const knoepfe = schnell && SCHNELL[art] ? `<div class="schnell">${SCHNELL[art].map(([w, t]) =>
     `<button type="button" data-w="${w}" class="${w === wert ? "an" : ""}" title="${esc(wertAnzeige(w))}">${t}</button>`).join("")}</div>` : "";
@@ -3545,11 +3548,12 @@ function oeffneEntitaet(e) {
   // Kette je Wert (Punkt 29): Gewinner, dann die unterlegenen Regeln in Rangfolge (Punkt 225: „hat Vorrang vor“)
   const kette = a => {
     const x = w[a] || {}, u = x.ueberstimmt || [];
-    return `wirksam: ${esc(x.anzeige || "–")} (${esc(x.regel || "Standard")})` +
-      (u.length ? `<br><span title="${esc(vorrangText(x.regel, u, v => v.anzeige))}">${esc(x.regel || "Standard")} hat Vorrang vor: ${esc(u.map(v => `${v.regel} – ${v.anzeige}`).join(" · "))}</span>` : "");
+    const std = a === "attribute" ? "Attribut-Standard" : "Standard";   // Punkt 262
+    return `wirksam: ${esc(x.anzeige || "–")} (${esc(x.regel || std)})` +
+      (u.length ? `<br><span title="${esc(vorrangText(x.regel, u, v => v.anzeige))}">${esc(x.regel || std)} hat Vorrang vor: ${esc(u.map(v => `${v.regel} – ${v.anzeige}`).join(" · "))}</span>` : "");
   };
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
-  const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "kurzzeit" ? ["keine"] : [], true);   // Punkt 174: Schnellknöpfe
+  const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "langzeit" ? [] : ["keine"], true);   // Punkt 174: Schnellknöpfe; Punkt 262: Attribute
   const info = `<div class="mono">${esc(e.entity_id)}</div>
     <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/Tag (Ø 7 T) · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
       Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
@@ -3562,9 +3566,9 @@ function oeffneEntitaet(e) {
     Was hier nicht gesetzt ist, kommt aus Regeln vom Typ „verwaist“ bzw. dem Standard.</p>` : deaktiviert ? `<p class="chip warn" style="display:block">Entität deaktiviert – eigene Vorhaltezeiten gelten für die Altdaten.
     Was hier nicht gesetzt ist, kommt aus glob-/klasse-Regeln, Regeln vom Typ „verwaist“ mit der Art deaktiviert bzw. dem Standard.</p>` : "";
   dialog(verwaist ? "Eigene Vorhaltezeiten (verwaiste Entität)" : "Eigene Vorhaltezeiten", info + hinweisVerwaist +
-    `<p class="sub">Leer lassen = wie bisher (${verwaist ? "verwaist-Regel" : "Muster-Regel"} oder Standard). Gespeichert als Regel <span class="mono">${esc(id)}</span>;
+    `<p class="sub">Leer lassen = wie bisher (${verwaist ? "verwaist-Regel" : "Muster-Regel"} oder Standard; bei den Attributen der Attribut-Standard). Gespeichert als Regel <span class="mono">${esc(id)}</span>;
     sie hat immer Vorrang vor allen anderen Regeln.</p>
-    <div class="raster3">${WERTE.map(zeile).join("")}</div>
+    <div class="raster3">${WERTE_MASKE.map(zeile).join("")}</div>
     ${verwaist ? "" : `<div class="knopfreihe" id="eRegelFuer"><span class="sub">Regel für gleichartige Entitäten …</span></div>`}
     <div id="dlgFehler" class="fehler"></div>`, [
     ...(verwaist ? [["Regel „verwaist“ anlegen", () => bearbeiteRegel(-1, {
@@ -3578,7 +3582,7 @@ function oeffneEntitaet(e) {
       const werte = Object.fromEntries([...$("#dlgInhalt").querySelectorAll(".wertwahl")].map(el => [el.dataset.art, wertLesen(el)]));
       const regeln = S.regeln.regeln.filter(r => r.id !== id);
       const neueRegel = { id, name: e.entity_id, typ: "entity", muster: [e.entity_id], aktiv: true, notiz: "", ...werte };
-      if (WERTE.some(a => werte[a])) {
+      if (WERTE_MASKE.some(a => werte[a])) {   // Punkt 262: auch der Attribut-Wert
         if (!await warnPruefung(neueRegel)) return;
         regeln.unshift(neueRegel);
       }
@@ -3896,7 +3900,7 @@ function bearbeiteRegel(i, vorlage) {
       const box = $("#rVorschau"); if (!box || !$("#dlg").open) return;
       const x = lies(), nr = ++vNr;
       if (!x.muster.length) { box.innerHTML = `<span class="sub">Vorschau: noch kein Muster eingetragen</span>`; return; }
-      const ohneWert = x.typ !== "schutz" && !WERTE.some(a => x[a]);
+      const ohneWert = x.typ !== "schutz" && !WERTE_MASKE.some(a => x[a]);   // Punkt 258: auch der Attribut-Wert ist ein Wert
       box.classList.add("laed");
       try {
         const v = await api("regeln/vorschau?" + par(), { method: "POST", headers: { "content-type": "application/json" },
@@ -4031,7 +4035,7 @@ function vorschauHtml(v, ohneWert, x) {
     (v.anzahl ? `<span>Zuwachs <b>${zahl(v.zuwachs_tag)}</b> ${ev ? "Events" : "Zeilen"}/Tag</span>` : "") + `</div>`;
   const loesch = (v.loesch_states || 0) + (v.loesch_kurz || 0) + (v.loesch_lts || 0) + (v.loesch_events || 0) + (v.loesch_attr || 0);   // Punkt 254: inkl. Attributzeilen
   const ersp = v.ersparnis_bytes || 0;
-  const z2 = ohneWert ? `<div class="sub">Noch kein Wert gesetzt – Wirkung erscheint, sobald Kurzzeit oder Langzeit gewählt ist.</div>`
+  const z2 = ohneWert ? `<div class="sub">Noch kein Wert gesetzt – Wirkung erscheint, sobald Kurzzeit, Attribute oder Langzeit gewählt ist.</div>`
     : x.typ === "schutz" ? `<div class="sub">Schutz-Regel: diese Daten werden nie gekürzt.</div>`
     : v.anzahl ? `<div class="kz"><span>wirkt bei <b>${zahl(v.gewinnt)}</b></span><span>sofort zusätzlich löschbar <b>${zahl(loesch)}</b> Zeilen (${mb(v.loesch_bytes)})</span>` +
       `<span>${ersp >= 0 ? "Ersparnis" : "Mehrbedarf"} im Prognosezeitraum (${jahreText(zielJahre())}) <b>${gbmb(Math.abs(ersp))}</b>${v.ersparnis_kurz_bytes === undefined ? "" : ` <span class="sub">(Kurzzeit ${gbmb(v.ersparnis_kurz_bytes)}${v.ersparnis_attr_bytes ? ` · Attribute ${gbmb(v.ersparnis_attr_bytes)}` : ""} · Langzeit ${gbmb(v.ersparnis_lang_bytes)})</span>`}</span></div>` +
@@ -4357,8 +4361,8 @@ async function ladeLoeschen() {
     if (p.stufe_b) for (const [art, name] of [["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]]) if (zb[art]) teile.push(`${name} ${zahl(zb[art])}`);
     const attrText = su.zeilen_states && su.attr_bekannt && su.attr_zeilen ? `; mit den States fallen ca. ${zahl(su.attr_zeilen)} Attributzeilen weg` : "";
     // Punkt 256: Attribute, die von den States getrennt werden (Attribut-Wert kürzer als die Kurzzeit) – kein Löschen, die States bleiben
-    if (p.stufe_b && su.attr_getrennt) teile.push(`Attribute ${zahl(su.attr_getrennt)} Zeilen von ${mz(su.attr_getrennt_entitaeten, "Entität", "Entitäten")} werden von den States getrennt (die States bleiben)`);
-    const laufText = (su.zeilen || (p.stufe_b && su.attr_getrennt)) && teile.length ? `${su.zeilen ? `ca. ${zahl(su.zeilen)} Zeilen – ` : ""}${teile.join(" · ")}${attrText}.` : "nichts zu löschen.";
+    if (p.stufe_b && su.attr_getrennt) teile.push(`Attribute ${zahl(su.attr_getrennt)} Zeilen von ${mz(su.attr_getrennt_entitaeten, "Entität", "Entitäten")} (die States bleiben, verlieren aber ihre Attribute)`);
+    const laufText = (su.zeilen || (p.stufe_b && su.attr_getrennt)) && teile.length ? `ca. ${zahl(su.zeilen + (p.stufe_b ? su.attr_getrennt || 0 : 0))} Zeilen – ${teile.join(" · ")}${attrText}.` : "nichts zu löschen.";
     // Punkt 200 (0.5.5b12): wie viele Läufe der Rückstand ungefähr braucht (je Obergrenze aufgerundet)
     const restLaeufe = su.laeufe > 1 ? ` Bei der Obergrenze von ${obergrenzeText(p)} sind das <b title="Schätzung: je Obergrenze aufgerundet; täglich kommen neue Zeilen dazu, und Entitäten, die nicht mehr ganz in einen Lauf passen, warten auf den nächsten">≈ ${mzahl(su.laeufe, "Lauf", "Läufe")}</b> (dieser und ${zahl(su.laeufe - 1)} weitere).` : "";
     const restText = su.zeilen_gesamt > su.zeilen ? ` Insgesamt fällig (alle Tabellen): ${zahl(su.zeilen_gesamt)} Zeilen – der Rest folgt in den nächsten Läufen.${restLaeufe}` : "";
@@ -4492,8 +4496,8 @@ async function starteLoeschen() {
     const l = b.filter(a => a.art === art);
     if (l.length && zb[art]) teile.push(`• ${name}: ca. ${zahl(l.reduce((s, a) => s + (a.zeilen_lauf ?? a.zeilen), 0))} Zeilen in ${mz(l.length, "Auftrag", "Aufträgen")} (${l.slice(0, 3).map(a => a.name).join(", ")}${l.length > 3 ? " …" : ""})`);
   }
-  if (p.stufe_b && p.summe.attr_getrennt) teile.push(`• Attribute: ca. ${zahl(p.summe.attr_getrennt)} Attributzeilen von ${mz(p.summe.attr_getrennt_entitaeten, "Entität", "Entitäten")} werden von den States getrennt (die States bleiben; rs_db_hygiene.purge, Tabelle states_attribute)`);   // Punkt 256
-  const text = `Umfang: ${umfang}\n${p.summe.zeilen ? `Gelöscht werden ca. ${zahl(p.summe.zeilen)} Zeilen:` : "Es wird nichts gelöscht, aber geändert:"}\n${teile.join("\n")}\n\n` +
+  if (p.stufe_b && p.summe.attr_getrennt) teile.push(`• Attribute: ca. ${zahl(p.summe.attr_getrennt)} Attributzeilen von ${mz(p.summe.attr_getrennt_entitaeten, "Entität", "Entitäten")} werden gelöscht – die States bleiben erhalten, verlieren aber ihre Attribute (rs_db_hygiene.purge, Tabelle states_attribute)`);   // Punkt 256
+  const text = `Umfang: ${umfang}\nGelöscht werden ca. ${zahl(p.summe.zeilen + (p.stufe_b ? p.summe.attr_getrennt || 0 : 0))} Zeilen:\n${teile.join("\n")}\n\n` +
     `Das lässt sich nicht rückgängig machen. Vor jedem Paket wird nachgezählt; gelöscht werden höchstens ${obergrenzeText(p)}` +
     (p.summe.ausnahmen ? ` – außer bei ${zahl(p.summe.ausnahmen)} Entitäten mit bestätigter Ausnahme (je ihr ältester Tag)` : "") + "." +
     ((p.risiken || []).length ? `\n\nRisiken:\n${p.risiken.map(x => "⚠ " + x.text).join("\n")}` : "") + "\n\nLöschlauf starten?";

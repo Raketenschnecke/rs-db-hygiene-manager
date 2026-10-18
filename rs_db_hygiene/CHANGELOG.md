@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b12 (Beta)
+- **Attribute in der Oberfläche (Punkte 258, 262):** der Dialog „Eigene Vorhaltezeiten“ für einzelne Entitäten hat jetzt einen Block „Attribute“ (Regel `E:<Entität>` mit Attribut-Wert); die Live-Vorschau der Regelmaske hält einen reinen Attribut-Wert nicht mehr für „kein Wert“; der Block heißt „Attribute“, der Hinweis darunter „leer = wie Kurzzeit“ (bzw. die Dauer des Attribut-Standards)
+- **Rückfrage und Kasten im Tab Löschen (Punkt 259):** Attributzeilen werden als gelöscht beschrieben („die States bleiben erhalten, verlieren aber ihre Attribute“) und zählen in der Zeilensumme mit
+- **Oberfläche (Punkte 263 bis 265):** Popups 15 % breiter, Titeltext doppelt so groß; die Auswahlfelder der Wertblöcke (Kurzzeit, Attribute, Langzeit) stehen nebeneinander auf einer Höhe; ID, Name und Typ in der Regelmaske stehen bündig
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b11 (Beta)
 - **Anzeige beim Abtrennen der Attribute (Punkt 257):** während eines Laufs mit Attribut-Aufträgen stand der Fortschritt auf „0 von … Zeilen gelöscht“, obwohl die Attribute abgetrennt wurden – die abgetrennten States zählen jetzt im Fortschritt mit („… Zeilen gelöscht bzw. States von ihren Attributen abgetrennt“), und das App-Log nennt „States abgetrennt“ samt entfernter Attributzeilen statt „gelöscht“
 - Die Integration ändert sich nur in der Versionsnummer
