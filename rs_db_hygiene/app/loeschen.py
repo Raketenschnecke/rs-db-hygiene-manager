@@ -524,6 +524,29 @@ def _attr_kandidaten(db_pfad, mids, grenze_ts):
         con.close()
 
 
+def _attr_wegfallend(db_pfad, mid, grenze_ts, ids):
+    """Punkt 267: Wie viele der Attributzeilen ids fallen nach dem Abtrennen wirklich weg? Eine Attributzeile bleibt, wenn irgendein State sie
+    noch benutzt: ein neuerer State derselben Entität, der neueste State der Entität (behält seine Attribute) oder ein State einer
+    anderen Entität (Attribute werden über ihren Hash geteilt). Nur lesend; EXISTS bricht je Attributzeile beim ersten Treffer ab."""
+    ids = sorted(ids)
+    if not ids:
+        return 0
+    con = _db(db_pfad)
+    try:
+        neueste = con.execute("SELECT MAX(state_id) FROM states WHERE metadata_id = ?", (mid,)).fetchone()[0]
+        benutzt = 0
+        for i in range(0, len(ids), 500):
+            teil = ids[i:i + 500]
+            benutzt += con.execute(
+                f"SELECT COUNT(*) FROM state_attributes sa WHERE sa.attributes_id IN ({','.join('?' * len(teil))}) AND EXISTS "
+                "(SELECT 1 FROM states s WHERE s.attributes_id = sa.attributes_id "
+                "AND NOT (s.metadata_id = ? AND s.last_updated_ts < ? AND s.state_id <> ?))",
+                [*teil, mid, grenze_ts, -1 if neueste is None else neueste]).fetchone()[0]
+        return len(ids) - benutzt
+    finally:
+        con.close()
+
+
 def _attr_vorhanden(db_pfad, ids):
     ids = sorted(ids)
     if not ids:
@@ -893,7 +916,9 @@ class Lauf:
                 # gelöscht (entfernte Attributzeilen) vergleichbar; die abgetrennten States stehen als „abgetrennt“ im Protokoll
                 try:
                     mid_a = _metadata_ids(self.db, [a["name"]]).get(a["name"])
-                    eintrag["gezaehlt_attr"] = len(_attr_kandidaten(self.db, [mid_a], self._grenze(a["keep_days"])).get(mid_a, ())) if mid_a is not None else 0
+                    gr_ts = self._grenze(a["keep_days"])
+                    # Punkt 267: nur die Attributzeilen, die nach dem Abtrennen kein State mehr benutzt – genau das, was „gelöscht“ danach zeigt
+                    eintrag["gezaehlt_attr"] = _attr_wegfallend(self.db, mid_a, gr_ts, _attr_kandidaten(self.db, [mid_a], gr_ts).get(mid_a, ())) if mid_a is not None else 0
                 except sqlite3.Error:
                     eintrag["gezaehlt_attr"] = 0
                 self.fortschritt["gezaehlt"] = self.fortschritt.get("gezaehlt", 0) + eintrag["gezaehlt_attr"]

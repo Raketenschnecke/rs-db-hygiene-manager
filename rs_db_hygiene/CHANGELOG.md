@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b15 (Beta)
+- **„gezählt“ bei Attribut-Läufen genau (Punkt 267):** die Spalte „gezählt“ im Löschprotokoll und der Banner zählen bei Attribut-Aufträgen nur noch die Attributzeilen, die nach dem Abtrennen wirklich wegfallen – also ohne die, die ein neuerer State derselben Entität, der neueste State oder eine andere Entität noch benutzt. „gezählt“ entspricht damit genau dem, was danach unter „gelöscht“ steht (bisher stand dort bis zu doppelt so viel)
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b14 (Beta)
 - **Löschprotokoll und Banner bei Attribut-Läufen (Punkt 266):** „gezählt“ und „gelöscht“ rechnen bei Attribut-Aufträgen jetzt beide in Attributzeilen (bisher stand bei „gezählt“ die Zahl der abgetrennten States, bei „gelöscht“ die der Attributzeilen); der Banner und der Fortschritt zählen die entfernten Attributzeilen gegen „geplant“ und „gezählt“. „gelöscht“ kann kleiner als „gezählt“ sein, wenn neuere States dieselbe Attributzeile noch benutzen (Tooltip der Spalte)
 - Die Integration ändert sich nur in der Versionsnummer

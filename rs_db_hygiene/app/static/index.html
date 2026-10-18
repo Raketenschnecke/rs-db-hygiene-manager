@@ -4242,7 +4242,7 @@ T.laeufe = new LokaleTabelle({
       hilfe: "Schätzung aus der Analyse auf Tagesbasis zum Zeitpunkt des Plans (ab Punkt 243 inkl. Attribute) – gelöscht wird nach genauer Zählung, dazu kommen seit der Analyse gealterte Zeilen" },
     // Punkt 59: genau gezählt vor jedem Paket bzw. Auftrag = eigentlicher Vergleichswert zu „gelöscht“
     { k: "gezaehlt", titel: "gezählt", typ: "zahl", n: 1, breite: 110, wert: r => gezaehltLauf(r), zelle: r => zahl(gezaehltLauf(r)), csv: r => gezaehltLauf(r), summe: anzahlSumme(r => gezaehltLauf(r)),
-      hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“. Bei Attribut-Aufträgen: die Attributzeilen, die nach der Frist zur Löschung in Frage kamen; was neuere States noch benutzen, bleibt stehen, deshalb kann „gelöscht“ kleiner sein. Attribute, die mit den States gelöscht werden, stehen nur unter „gelöscht“." },
+      hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“. Bei Attribut-Aufträgen: die Attributzeilen, die nach dem Abtrennen kein State mehr benutzt (genau gezählt vor dem Auftrag; was neuere States oder andere Entitäten noch benutzen, bleibt stehen und zählt nicht mit). Attribute, die mit den States gelöscht werden, stehen nur unter „gelöscht“." },
     // Punkt 200 (0.5.5b12): Rückstand nach dem Lauf = beim Start fällig − gelöscht, dazu die geschätzte Zahl weiterer Läufe
     { k: "rest", titel: "Rest danach (≈ Läufe)", typ: "zahl", n: 1, breite: 140, wert: r => laufRest(r)?.zeilen ?? null,
       zelle: r => { const x = laufRest(r); return x ? `${zahl(x.zeilen)}${x.laeufe ? ` <span class="sub">(≈ ${zahl(x.laeufe)})</span>` : ""}` : "–"; },
