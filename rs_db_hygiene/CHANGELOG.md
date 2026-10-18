@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b11 (Beta)
+- **Anzeige beim Abtrennen der Attribute (Punkt 257):** während eines Laufs mit Attribut-Aufträgen stand der Fortschritt auf „0 von … Zeilen gelöscht“, obwohl die Attribute abgetrennt wurden – die abgetrennten States zählen jetzt im Fortschritt mit („… Zeilen gelöscht bzw. States von ihren Attributen abgetrennt“), und das App-Log nennt „States abgetrennt“ samt entfernter Attributzeilen statt „gelöscht“
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b10 (Beta)
 - **Löschplan und Protokoll (Punkt 256):** Attribut-Aufträge (Attribute von den States trennen) zählen nicht mehr in „geplant“, Überhang und „Läufe nötig“ – sie trennen ab und löschen nicht, deshalb stand bisher dauerhaft die Zahl der Attributzeilen als Differenz zwischen „geplant“ und „gelöscht“. Der Plan führt sie getrennt (`attr_getrennt`); im Tab Löschen nennen Kasten und Rückfrage „Attribute … werden von den States getrennt (die States bleiben)“, auch wenn sonst nichts gelöscht wird
 - **Integration zu alt (Punkt 256):** kennt die Integration die neue Tabelle nicht, bricht der Lauf die Attribut-Aufträge nach dem ersten Fehler ab und schreibt einen Sammelhinweis („– N weitere Attribut-Aufträge übersprungen“) statt hunderter Einträge; die übrigen Aufträge laufen weiter

@@ -883,9 +883,13 @@ class Lauf:
                 rest -= n
                 eintrag["nachher"] = int(antwort.get("rest", 0))
                 self.fortschritt["aktuell_rest"] = eintrag["nachher"]
-                _LOG.info("Löschlauf %s · %s %s: %s gelöscht (Aufruf %d), noch %s · gesamt %s", _dauer(time.time() - self.start),   # Punkt 109
-                          ART_NAME[a["art"]], a["name"], _z(n), aufrufe, _z(eintrag["nachher"]), _z(self.prot["geloescht"] + geloescht))
-                self.fortschritt["geloescht"] = self.prot["geloescht"] + geloescht
+                # Punkt 257: Attribut-Aufträge trennen States ab – Log und Fortschritt zählen sie als „abgetrennt“, nicht als 0 gelöscht
+                attr = a["art"] == "attr"
+                vorab = self.prot["geloescht"] + (self.prot.get("abgetrennt", 0) if attr else 0)
+                _LOG.info("Löschlauf %s · %s %s: %s %s (Aufruf %d), noch %s · gesamt %s%s", _dauer(time.time() - self.start),   # Punkt 109
+                          ART_NAME[a["art"]], a["name"], _z(n), "States abgetrennt" if attr else "gelöscht", aufrufe, _z(eintrag["nachher"]),
+                          _z(vorab + geloescht), f" · {_z(eintrag.get('attr_geloescht'))} Attributzeilen entfernt" if attr else "")
+                self.fortschritt["geloescht"] = vorab + geloescht
                 if antwort.get("unbekannt"):
                     eintrag["ergebnis"] = "nicht in der DB (unbekannt)"
                 if not n or not eintrag["nachher"] or self.abbruch:
@@ -902,7 +906,7 @@ class Lauf:
                 eintrag["abgetrennt"], eintrag["geloescht"] = geloescht, 0
                 self.prot["attr_geloescht"] = self.prot.get("attr_geloescht", 0) + eintrag.get("attr_geloescht", 0)
                 self.prot["abgetrennt"] = self.prot.get("abgetrennt", 0) + geloescht
-                self.fortschritt["geloescht"] = self.prot["geloescht"]
+                self.fortschritt["geloescht"] = self.prot["geloescht"] + self.prot["abgetrennt"]   # Punkt 257: Anzeige „abgetrennt“
             else:
                 self.prot["geloescht"] += geloescht
                 self.fortschritt["geloescht"] = self.prot["geloescht"]

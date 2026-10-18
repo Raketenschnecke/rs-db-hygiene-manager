@@ -1520,7 +1520,7 @@ function zeigeLauf(s) {
     const ziel = Math.max(f.geplant || 0, f.gezaehlt || 0), gezaehlt = (f.gezaehlt || 0) >= (f.geplant || 0);
     const anteil = ziel ? Math.min(100, 100 * f.geloescht / ziel) : 0;
     box.innerHTML = `<div><span class="spinner"></span><b>Löschlauf läuft</b> seit ${dauerText(lief)}${j.nur_regel ? ` – Regel ${esc(j.nur_regel)}` : ""}:
-      Paket ${zahl(f.paket)} von ${zahl(f.pakete)} · ${zahl(f.geloescht)} von ${gezaehlt ? zahl(ziel) + " (gezählt)" : "ca. " + zahl(ziel)} Zeilen gelöscht
+      Paket ${zahl(f.paket)} von ${zahl(f.pakete)} · ${zahl(f.geloescht)} von ${gezaehlt ? zahl(ziel) + " (gezählt)" : "ca. " + zahl(ziel)} Zeilen ${/^Attribute/.test(f.aktuell || "") ? "gelöscht bzw. States von ihren Attributen abgetrennt" : "gelöscht"}
       ${f.aktuell ? ` · ${esc(f.aktuell)}${f.aktuell_rest != null ? `, noch ${zahl(f.aktuell_rest)} alte Zeilen` : ""}` : ""}${f.backup ? ` · <b>${esc(f.backup)}</b>` : ""}</div>
       <div class="balken"><i style="width:${anteil}%"></i></div>
       <div class="sub">HA löscht in der Warteschlange des Recorders; die App zählt nur lesend nach. Danach startet automatisch eine Analyse.
