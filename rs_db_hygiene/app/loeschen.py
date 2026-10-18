@@ -35,6 +35,7 @@ MAX_KEEP_DAYS = 7300
 MIN_KEEP_DAYS = 1
 PAKET = 100              # Entitäten je Dienstaufruf
 POLL_S = 10
+RECORDER_WARTE_S = 60        # Punkt 261: so lange darf ein Auftrag dauern, ohne dass „Recorder beschäftigt“ im Protokoll steht
 STILLSTAND_S = 600       # so lange darf die Zahl der alten Zeilen unverändert bleiben
 PAKET_MAX_S = 3600
 ANALYSE_MAX_ALTER_S = 26 * 3600
@@ -467,6 +468,32 @@ def sperren(p, freigegeben, job, token, aktuell_pkd=None, analyse_pruefen=True):
 
 # ---------------------------------------------------------------- Lauf
 
+def attr_cache_bereinigen(attr_pfad, cache_pfad, eintraege):
+    """Punkt 260: erledigte Attributzeilen aus der Attribut-Analyse (attribute.db) nehmen, damit Plan und Löschmenge nach einem Lauf sofort
+    stimmen. eintraege: [(entity_id, keep_days)] – gelöscht wurden Attributzeilen, die zuletzt vor heute-keep_days benutzt wurden
+    (Tag der Analyse, wie im Probelauf). Liefert die Zahl entfernter Tageszeilen; Fehler sind nicht schlimm (die nächste Attribut-Analyse
+    rechnet ohnehin neu)."""
+    if not attr_pfad or not cache_pfad or not eintraege or not os.path.exists(attr_pfad):
+        return 0
+    try:
+        cc = sqlite3.connect(f"file:{cache_pfad}?mode=ro", uri=True)
+        heute = int(dict(cc.execute("SELECT schluessel, wert FROM info"))["heute_tag"])
+        mid_von = dict(cc.execute("SELECT entity_id, metadata_id FROM entitaet"))
+        cc.close()
+        ac = sqlite3.connect(attr_pfad, timeout=30)
+        n = 0
+        for eid, tage in eintraege:
+            mid = mid_von.get(eid)
+            if mid is not None and tage is not None:
+                n += ac.execute("DELETE FROM attr_tage WHERE metadata_id = ? AND art = 'letzt' AND tag < ?", (mid, heute - int(tage))).rowcount
+        ac.commit()
+        ac.close()
+        return n
+    except (sqlite3.Error, OSError, KeyError, ValueError) as e:
+        _LOG.warning("Attribut-Cache nicht bereinigt (%s) – die nächste Attribut-Analyse erneuert ihn", e)
+        return 0
+
+
 def _db(db_pfad):
     return sqlite3.connect(f"file:{db_pfad}?mode=ro", uri=True, timeout=30)
 
@@ -621,7 +648,8 @@ class Lauf:
     """Ein Löschlauf; schreibt nach jedem Paket sein Protokoll unter laeufe/<start>.json."""
 
     def __init__(self, p, db_pfad, ordner, token, ausgeloest, dienst=rufe_dienst, schlafe=time.sleep, dienst_b=rufe_dienst_b,
-                 vorhanden=None, backup=None, uhr=time.time):
+                 vorhanden=None, backup=None, uhr=time.time, attr_pfad=None, cache_pfad=None):
+        self.attr_pfad, self.cache_pfad = attr_pfad, cache_pfad      # Punkt 260: Attribut-Cache nach dem Lauf bereinigen
         self.p, self.db, self.token, self.dienst, self.schlafe, self.dienst_b = p, db_pfad, token, dienst, schlafe, dienst_b
         self.backup = backup or (lambda: backup_laeuft(token))     # Punkt 110
         self.uhr = uhr
@@ -900,6 +928,14 @@ class Lauf:
             eintrag["ergebnis"] = eintrag["ergebnis"] or ("fertig" if not eintrag["nachher"] else "Rest im nächsten Lauf")
             eintrag["dauer_s"] = round(time.time() - eintrag["beginn"], 1)
             eintrag["aufrufe"] = aufrufe
+            fertig_ok = eintrag["ergebnis"] == "fertig"     # vor dem Recorder-Hinweis festhalten (Punkt 260)
+            # Punkt 261: sehr lange Wartezeit bei wenig Arbeit = der Recorder war beschäftigt (HA-Repack, Backup, große Aufgabe davor)
+            if eintrag["dauer_s"] >= RECORDER_WARTE_S and max(geloescht, eintrag["vorher"] or 0) / eintrag["dauer_s"] < 50:
+                eintrag["recorder_beschaeftigt"] = True
+                eintrag["ergebnis"] = f"{eintrag['ergebnis']} – Recorder war beschäftigt (vermutlich Repack oder Backup)"
+                _LOG.warning("%s %s: %s s gewartet bei wenig Arbeit – Recorder beschäftigt (vermutlich Repack oder Backup)", ART_NAME[a["art"]], a["name"], eintrag["dauer_s"])
+            if a["art"] == "attr" and fertig_ok:     # Punkt 260
+                self.prot["attr_cache"] = self.prot.get("attr_cache", 0) + attr_cache_bereinigen(self.attr_pfad, self.cache_pfad, [(a["name"], a["keep_days"])])
             if a["art"] == "attr":
                 # Punkt 254: geloescht zählt hier abgetrennte States, nicht gelöschte Zeilen – die Summe „Zeilen gelöscht“ bleibt
                 # den echten Löschungen vorbehalten; die entfernten Attributzeilen stehen wie bei den States in attr_geloescht
@@ -1006,6 +1042,8 @@ class Lauf:
                     self.fortschritt["geloescht"] = self.prot["geloescht"]
                     self._schreibe()
                     _LOG.info("Paket fertig: %d Zeilen gelöscht (%s)", geloescht, ergebnis)
+                    if ergebnis == "fertig":     # Punkt 260: mit den States sind auch ihre unbenutzten Attributzeilen weg
+                        self.prot["attr_cache"] = self.prot.get("attr_cache", 0) + attr_cache_bereinigen(self.attr_pfad, self.cache_pfad, [(e, d) for e in auswahl])
                     if ergebnis != "fertig":
                         raise LoeschFehler(f"Paket keep_days {d}: {ergebnis} – Lauf beendet")
                     for eid in nachzug:

@@ -31,6 +31,16 @@ def _histogramm(con, sql):
     return h
 
 
+def ev_teiler(ev, heute):
+    """Punkt 255: Durch wie viele Tage der Event-Zuwachs im Fenster [heute-8, heute-1) zu teilen ist. Events kennen je Typ nur Tage mit
+    Treffern; der älteste noch vorhandene Tag (über alle Typen) begrenzt das Fenster – bei einer 7-Tage-Regel ist heute-8 immer schon
+    gelöscht, es zählen dann 6 Tage statt fest 7. Mindestens 1, höchstens 7 (States: Punkt 192, fest ÷ 7, unverändert)."""
+    if not ev:
+        return 7
+    start = min((t for h in ev.values() for t, _n in h), default=heute - 8)
+    return max(1, min(7, heute - 1 - max(heute - 8, start)))
+
+
 def _aelter(h, schluessel, grenze_tag):
     return sum(n for tag, n in h.get(schluessel, ()) if tag < grenze_tag)
 
@@ -249,11 +259,12 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
     events_liste, ev_prog, ev_basis = [], None, None
     if ev is not None:
         ev_prog = ev_basis = 0
+        teiler = ev_teiler(ev, heute)      # Punkt 255
         for typ, h in ev.items():
             er = rg.event_regel(regel_daten, typ, pkd, mit_vorgemerkten)    # ab 0.3.1 über Regeln vom Typ event
             k = er["tage"]           # Punkt 102: wirksam (höchstens purge_keep_days), nicht der Prognosezeitraum
             kp = min(k, ziel)
-            pro_tag = sum(n for t_, n in h if heute - 8 <= t_ < heute - 1) / 7      # 7 volle Tage
+            pro_tag = sum(n for t_, n in h if heute - 8 <= t_ < heute - 1) / teiler      # Punkt 255: Tage mit möglichen Daten (höchstens 7)
             loesch = _aelter(ev, typ, heute - max(k, MIN_KEEP_DAYS))
             p, b = pro_tag * B_EVENT * kp, pro_tag * B_EVENT * zb
             ev_prog += p
@@ -403,10 +414,11 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
                 zufluss(k, KURZ_PRO_TAG * B_KURZ)
                 zufluss(lz, LTS_PRO_TAG * B_LTS)
         if ev is not None:
+            teiler = ev_teiler(ev, heute)      # Punkt 255
             for typ, h in ev.items():
                 k = rg.event_regel(daten, typ, pkd, passiv)["tage"]
                 bestand_add(h, B_EVENT, max(k, MIN_KEEP_DAYS))
-                zufluss(k, sum(n for t, n in h if heute - 8 <= t < heute - 1) / 7 * B_EVENT)
+                zufluss(k, sum(n for t, n in h if heute - 8 <= t < heute - 1) / teiler * B_EVENT)
         else:
             zufluss(pkd, int(info.get("events_pro_tag", 0)) * B_EVENT)
         bestand = best

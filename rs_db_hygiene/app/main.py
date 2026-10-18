@@ -920,7 +920,7 @@ async def loesch_start(request):
 
 async def _starte_lauf(p, ausgeloest):
     db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
-    lauf = loeschen.Lauf(p, db, LAEUFE, os.environ.get("SUPERVISOR_TOKEN"), ausgeloest)
+    lauf = loeschen.Lauf(p, db, LAEUFE, os.environ.get("SUPERVISOR_TOKEN"), ausgeloest, attr_pfad=ATTR, cache_pfad=CACHE)   # Punkt 260
 
     async def danach():   # danach Protokoll aufräumen und frische Zahlen für Kacheln und Löschpotenzial
         Z.lauf = None

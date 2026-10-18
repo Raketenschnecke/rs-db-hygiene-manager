@@ -4384,7 +4384,7 @@ async function ladeLoeschen() {
       <div>${p.freigegeben ? `<span class="chip" title="${esc(`Schalter „Löschen freigegeben“: ${SCHALTER_ORT}. Wirkt nach dem Speichern sofort.`)}">Hauptschalter an</span>`
           : `<span class="chip warn" title="${esc(`„Löschen freigegeben“ einschalten: ${SCHALTER_ORT}. Wirkt nach dem Speichern sofort, ohne Neustart der App.`)}">Hauptschalter aus</span>`}
         <span class="chip${automatik ? "" : " warn"}" title="${esc(`Schalter „Automatik freigegeben“: ${SCHALTER_ORT}. Erlaubt Läufe aus HA (Knopf, Dienst, Automation über die Integration RS DB Hygiene); das Löschen hier im Tab hängt nur am Hauptschalter. Wirkt nach dem Speichern sofort.`)}">Automatik ${automatik ? "an" : "aus"}</span>
-        <span class="chip">Obergrenze pro Lauf: ${obergrenzeText(p)}</span><span class="chip">purge_keep_days ${tageJahre(p.purge_keep_days)} (Analyse ${zeit(p.analyse_zeit)})</span>
+        <span class="chip">Obergrenze pro Lauf: ${obergrenzeText(p)}</span><span class="chip">purge_keep_days ${tageJahre(p.purge_keep_days)} (Analyse ${zeit(p.analyse_zeit)})</span><span class="chip" title="Punkt 260: Die Zahl der Attributzeilen im Plan stammt aus der Attribut-Analyse. Nach einem Lauf bereinigt die App sie selbst; ein Klick auf „Analyse“ rechnet sie ganz neu.">Attribut-Analyse ${zeit(S.status?.attribute?.analyse_zeit)}</span>
         ${p.exakt ? `<span class="chip" title="Punkt 121: gelöscht wird bis zur lokalen Mitternacht – Vorhaltung N Tage = heute plus N volle Kalendertage">Grenze: volle Kalendertage</span>`
           : p.stufe_b ? `<span class="chip warn" title="Die geladene Integration RS DB Hygiene kennt purge_states noch nicht (ab 0.4.5; nach dem Update ist ein HA-Neustart nötig). Bis dahin gilt „jetzt minus keep_days“.">Grenze: jetzt − keep_days</span>` : ""}</div>
       <div><b>Dieser Lauf:</b> ${laufText}${restText}${su.verschoben ? ` <span class="chip warn">${zahl(su.verschoben)} Entitäten folgen im nächsten Lauf</span>` : ""}</div>
@@ -4507,7 +4507,13 @@ async function starteLoeschen() {
   pruefe(); ladeLoeschen();
 }
 $("#lRegel").addEventListener("change", ladeLoeschen);
-$("#lNeu").onclick = ladeLoeschen;
+// Punkt 260: Rückmeldung – der Plan kommt sonst oft unverändert zurück und der Knopf wirkt tot
+$("#lNeu").onclick = async () => {
+  const b = $("#lNeu"); b.disabled = true; b.textContent = "berechne …";
+  await ladeLoeschen();
+  b.disabled = false; b.textContent = "✓ neu berechnet · " + new Date().toLocaleTimeString("de-DE");
+  setTimeout(() => { const x = $("#lNeu"); if (x) x.textContent = "Plan neu laden"; }, 4000);
+};
 
 // ================================================ Steuerung
 // Punkt 112: Inhaltsverzeichnis der Hilfe öffnet den Abschnitt und springt hin;
