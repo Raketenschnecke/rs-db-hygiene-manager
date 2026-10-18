@@ -1523,7 +1523,7 @@ function zeigeLauf(s) {
     const ziel = Math.max(f.geplant || 0, f.gezaehlt || 0), gezaehlt = (f.gezaehlt || 0) >= (f.geplant || 0);
     const anteil = ziel ? Math.min(100, 100 * f.geloescht / ziel) : 0;
     box.innerHTML = `<div><span class="spinner"></span><b>Löschlauf läuft</b> seit ${dauerText(lief)}${j.nur_regel ? ` – Regel ${esc(j.nur_regel)}` : ""}:
-      Paket ${zahl(f.paket)} von ${zahl(f.pakete)} · ${zahl(f.geloescht)} von ${gezaehlt ? zahl(ziel) + " (gezählt)" : "ca. " + zahl(ziel)} Zeilen ${/^Attribute/.test(f.aktuell || "") ? "gelöscht bzw. States von ihren Attributen abgetrennt" : "gelöscht"}
+      Paket ${zahl(f.paket)} von ${zahl(f.pakete)} · ${zahl(f.geloescht)} von ${gezaehlt ? zahl(ziel) + " (gezählt)" : "ca. " + zahl(ziel)} Zeilen ${/^Attribute/.test(f.aktuell || "") ? "gelöscht (Attributzeilen – die States bleiben)" : "gelöscht"}
       ${f.aktuell ? ` · ${esc(f.aktuell)}${f.aktuell_rest != null ? `, noch ${zahl(f.aktuell_rest)} alte Zeilen` : ""}` : ""}${f.backup ? ` · <b>${esc(f.backup)}</b>` : ""}</div>
       <div class="balken"><i style="width:${anteil}%"></i></div>
       <div class="sub">HA löscht in der Warteschlange des Recorders; die App zählt nur lesend nach. Danach startet automatisch eine Analyse.
@@ -4242,7 +4242,7 @@ T.laeufe = new LokaleTabelle({
       hilfe: "Schätzung aus der Analyse auf Tagesbasis zum Zeitpunkt des Plans (ab Punkt 243 inkl. Attribute) – gelöscht wird nach genauer Zählung, dazu kommen seit der Analyse gealterte Zeilen" },
     // Punkt 59: genau gezählt vor jedem Paket bzw. Auftrag = eigentlicher Vergleichswert zu „gelöscht“
     { k: "gezaehlt", titel: "gezählt", typ: "zahl", n: 1, breite: 110, wert: r => gezaehltLauf(r), zelle: r => zahl(gezaehltLauf(r)), csv: r => gezaehltLauf(r), summe: anzahlSumme(r => gezaehltLauf(r)),
-      hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen (ohne Attribute) – Vergleichswert zu „gelöscht“" },
+      hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“. Bei Attribut-Aufträgen: die Attributzeilen, die nach der Frist zur Löschung in Frage kamen; was neuere States noch benutzen, bleibt stehen, deshalb kann „gelöscht“ kleiner sein. Attribute, die mit den States gelöscht werden, stehen nur unter „gelöscht“." },
     // Punkt 200 (0.5.5b12): Rückstand nach dem Lauf = beim Start fällig − gelöscht, dazu die geschätzte Zahl weiterer Läufe
     { k: "rest", titel: "Rest danach (≈ Läufe)", typ: "zahl", n: 1, breite: 140, wert: r => laufRest(r)?.zeilen ?? null,
       zelle: r => { const x = laufRest(r); return x ? `${zahl(x.zeilen)}${x.laeufe ? ` <span class="sub">(≈ ${zahl(x.laeufe)})</span>` : ""}` : "–"; },
@@ -4424,7 +4424,8 @@ async function ladeLoeschen() {
   }
 }
 // ---- Reiter Löschprotokolle (Punkt 45; Name seit Punkt 158)
-const gezaehltLauf = r => (r.pakete || []).reduce((s, p) => s + (p.vorher || 0), 0);
+// Punkt 266: bei Attribut-Aufträgen zählt gezaehlt_attr (Attributzeilen, die zur Löschung in Frage kamen; ältere Läufe: das Entfernte), nicht die States
+const gezaehltLauf = r => (r.pakete || []).reduce((s, p) => s + (p.art === "attr" ? (p.gezaehlt_attr ?? p.attr_geloescht ?? 0) : (p.vorher || 0)), 0);
 const laufArt = (r, art) => (r.pakete || []).filter(p => (p.art || "states") === art).reduce((s, p) => s + (p.geloescht || 0), 0);
 const artZeilen = (r, k) => k === "states" ? (r.states ?? r.zeilen - (r.kurz || 0) - (r.lts || 0) - (r.events || 0)) : (r[k] || 0);
 const monatSumme = r => (r.zeilen || 0) + (r.attr_zeilen || 0);   // Punkt 243: Summe inkl. Attribute

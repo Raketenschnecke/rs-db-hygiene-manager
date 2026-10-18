@@ -661,6 +661,7 @@ class Lauf:
         # Punkt 254: Attribute abtrennen läuft nach den States – was die States-Löschung schon mitnimmt, muss nicht erst umgeschrieben werden
         self.b_liste = [a for a in alle_b if a["art"] != "attr"]
         self.attr_liste = [a for a in alle_b if a["art"] == "attr"]
+        self._attr_gel = 0         # Punkt 266: Attributzeilen, die frühere Attribut-Aufträge dieses Laufs entfernt haben (Fortschritt)
         self._attr_alt = None      # Punkt 256: erster „Integration zu alt“-Eintrag; weitere Attribut-Aufträge werden nur gezählt
         # Punkt 53 (1): bestätigte Ausnahmen dürfen die Obergrenze einmalig überschreiten (nur ihr ältester Tag)
         self.ausnahmen = {c["entity_id"] for c in p.get("entitaeten", []) if c.get("ausnahme")}
@@ -690,7 +691,7 @@ class Lauf:
                      "exakt": bool(p.get("exakt")),
                      "pakete": [], "fehler": None}
         self.fortschritt = {"paket": 0, "pakete": p["summe"]["aufrufe"] + len(self.b_liste) + len(self.attr_liste), "geloescht": 0, "grenze": p["grenze"],
-                            "geplant": p["summe"]["zeilen"], "aktuell": ""}
+                            "geplant": p["summe"]["zeilen"] + ((p["summe"].get("attr_getrennt") or 0) if p.get("stufe_b") else 0), "aktuell": ""}   # Punkt 266: inkl. Attributzeilen
         self._schreibe()
 
     def _schreibe(self):
@@ -887,6 +888,15 @@ class Lauf:
                 continue
             eintrag["gesendet"] = [a["name"]]
             geloescht, aufrufe = 0, 0
+            if a["art"] == "attr":
+                # Punkt 266: „gezählt“ zählt hier Attributzeilen (die zur Löschung in Frage kommen), nicht States – so sind gezählt und
+                # gelöscht (entfernte Attributzeilen) vergleichbar; die abgetrennten States stehen als „abgetrennt“ im Protokoll
+                try:
+                    mid_a = _metadata_ids(self.db, [a["name"]]).get(a["name"])
+                    eintrag["gezaehlt_attr"] = len(_attr_kandidaten(self.db, [mid_a], self._grenze(a["keep_days"])).get(mid_a, ())) if mid_a is not None else 0
+                except sqlite3.Error:
+                    eintrag["gezaehlt_attr"] = 0
+                self.fortschritt["gezaehlt"] = self.fortschritt.get("gezaehlt", 0) + eintrag["gezaehlt_attr"]
             while rest > 0:
                 self._warte_auf_backup(f"{ART_NAME[a['art']]} {a['name']}")     # Punkt 110
                 zusatz = {"vor_ts": self._grenze(a["keep_days"])} if self.exakt and not a["alle"] else {}     # Punkt 121
@@ -903,7 +913,8 @@ class Lauf:
                 aufrufe += 1
                 if eintrag["vorher"] is None:
                     eintrag["vorher"] = antwort.get("vorher", 0)
-                    self.fortschritt["gezaehlt"] = self.fortschritt.get("gezaehlt", 0) + eintrag["vorher"]
+                    if a["art"] != "attr":      # Punkt 266: bei Attributen zählt gezaehlt_attr (oben)
+                        self.fortschritt["gezaehlt"] = self.fortschritt.get("gezaehlt", 0) + eintrag["vorher"]
                 if a["art"] == "attr":      # Punkt 254: entfernte Attributzeilen zählen wie bei den States-Läufen
                     eintrag["attr_geloescht"] = eintrag.get("attr_geloescht", 0) + int(antwort.get("attr_zeilen_geloescht", 0))
                 n = int(antwort.get("geloescht", 0))
@@ -917,7 +928,7 @@ class Lauf:
                 _LOG.info("Löschlauf %s · %s %s: %s %s (Aufruf %d), noch %s · gesamt %s%s", _dauer(time.time() - self.start),   # Punkt 109
                           ART_NAME[a["art"]], a["name"], _z(n), "States abgetrennt" if attr else "gelöscht", aufrufe, _z(eintrag["nachher"]),
                           _z(vorab + geloescht), f" · {_z(eintrag.get('attr_geloescht'))} Attributzeilen entfernt" if attr else "")
-                self.fortschritt["geloescht"] = vorab + geloescht
+                self.fortschritt["geloescht"] = (self.prot["geloescht"] + self._attr_gel + eintrag.get("attr_geloescht", 0)) if attr else vorab + geloescht   # Punkt 266
                 if antwort.get("unbekannt"):
                     eintrag["ergebnis"] = "nicht in der DB (unbekannt)"
                 if not n or not eintrag["nachher"] or self.abbruch:
@@ -942,7 +953,8 @@ class Lauf:
                 eintrag["abgetrennt"], eintrag["geloescht"] = geloescht, 0
                 self.prot["attr_geloescht"] = self.prot.get("attr_geloescht", 0) + eintrag.get("attr_geloescht", 0)
                 self.prot["abgetrennt"] = self.prot.get("abgetrennt", 0) + geloescht
-                self.fortschritt["geloescht"] = self.prot["geloescht"] + self.prot["abgetrennt"]   # Punkt 257: Anzeige „abgetrennt“
+                self._attr_gel += eintrag.get("attr_geloescht", 0)
+                self.fortschritt["geloescht"] = self.prot["geloescht"] + self._attr_gel   # Punkt 266: Attributzeilen, vergleichbar mit „gezählt“
             else:
                 self.prot["geloescht"] += geloescht
                 self.fortschritt["geloescht"] = self.prot["geloescht"]

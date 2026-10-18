@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b14 (Beta)
+- **Löschprotokoll und Banner bei Attribut-Läufen (Punkt 266):** „gezählt“ und „gelöscht“ rechnen bei Attribut-Aufträgen jetzt beide in Attributzeilen (bisher stand bei „gezählt“ die Zahl der abgetrennten States, bei „gelöscht“ die der Attributzeilen); der Banner und der Fortschritt zählen die entfernten Attributzeilen gegen „geplant“ und „gezählt“. „gelöscht“ kann kleiner als „gezählt“ sein, wenn neuere States dieselbe Attributzeile noch benutzen (Tooltip der Spalte)
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b13 (Beta)
 - **Plan nach einem Attribut-Lauf (Punkt 260):** nach einem Lauf nimmt die App die erledigten Attributzeilen selbst aus der Attribut-Analyse (`attribute.db`), sodass Plan, Kasten und Löschmenge sofort stimmen – bisher zeigte der Plan bis zur nächsten Attribut-Analyse die alten Zahlen; neben „Analyse“ steht im Tab Löschen ein Chip mit dem Stand der Attribut-Analyse, und „Plan neu laden“ meldet „berechne …“ und „✓ neu berechnet“
 - **Recorder beschäftigt (Punkt 261):** dauert ein Auftrag mindestens 60 s bei wenig Arbeit, steht im Löschprotokoll „Recorder war beschäftigt (vermutlich Repack oder Backup)“ (und im App-Log) – etwa wenn eine HA-Automation nach dem Lauf ein `VACUUM` startet
