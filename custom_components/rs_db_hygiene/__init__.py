@@ -41,9 +41,10 @@ from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 
 from homeassistant.const import Platform
+from homeassistant.loader import async_get_integration
 
 from . import kern
-from .const import DOMAIN
+from .const import DOMAIN, KOPF_VERSION
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE = "purge"
@@ -201,6 +202,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .coordinator import DbhCoordinator
 
     coordinator = DbhCoordinator(hass, entry)
+    coordinator.kopf[KOPF_VERSION] = str((await async_get_integration(hass, DOMAIN)).version)     # Punkt 272
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 

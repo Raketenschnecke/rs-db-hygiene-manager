@@ -286,8 +286,11 @@ async def status(_request):
         con = sqlite3.connect(f"file:{ATTR}?mode=ro", uri=True)
         attr = dict(con.execute("SELECT schluessel, wert FROM info"))
         con.close()
+    await asyncio.to_thread(_integration_abfragen)
+    integration = {"da": _INTEGRATION["da"], "exakt": _INTEGRATION["exakt"],      # Punkt 272: Chips in der Oberfläche
+                   "version": _INTEGRATION["version"] if time.time() - _INTEGRATION["version_zeit"] < 300 else None}
     return web.json_response({"job": Z.job, "letzter_job": Z.letzter_job, "fehler": Z.letzter_fehler,
-                              "analyse": info, "attribute": attr, "optionen": optionen(),
+                              "analyse": info, "attribute": attr, "optionen": optionen(), "integration": integration,
                               "regeln_geaendert": Z.mtime(REGELN), "app": APP,
                               "pruefung": await asyncio.to_thread(pkd_pruefung)})
 
@@ -1003,7 +1006,10 @@ def _info(pfad):
         con.close()
 
 
-async def auto_status(_request):
+async def auto_status(request):
+    v = request.headers.get("X-DBH-Integration-Version")     # Punkt 272: ab 0.5.6b16 meldet die Integration ihre Version
+    if v:
+        _INTEGRATION.update(version=v[:40], version_zeit=time.time())
     uhr = _Stoppuhr("Status für HA")
     p = await _auto_plan()
     uhr("Plan (Zwischenspeicher)")
@@ -1116,7 +1122,7 @@ def _protokoll_aufraeumen():
         _LOG.exception("Löschprotokoll aufräumen fehlgeschlagen")
 
 
-_INTEGRATION = {"zeit": 0, "da": False, "exakt": False}
+_INTEGRATION = {"zeit": 0, "da": False, "exakt": False, "version": None, "version_zeit": 0}   # Punkt 272: version meldet die Integration im Kopf ihrer Anfragen
 
 
 def _integration_abfragen():

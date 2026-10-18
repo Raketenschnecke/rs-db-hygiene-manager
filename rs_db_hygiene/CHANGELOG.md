@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b16 (Beta)
+- **Status-Chips auf den Reitern mit Entitäten (Punkte 270 bis 272):** unter der Tab-Leiste (Entitäten, Empfehlungen, Regeln, Löschen, Löschprotokolle, Prognosen je Regel) stehen jetzt Chips: **Lösch-Standard** (Regel HA:standard: „Lösch-Standard: 90 Tage · Langzeit 1 Jahr“ bzw. orange „global 7.300 Tage“ bei passiver Regel), **Attribute** („wie Kurzzeit“ oder „Standard 30 Tage“), **Schutz** (Regeln, Entitäten, ob die Attribute mitgeschützt sind) und – nur bei Auffälligem – **Veraltet** (Analyse oder Attribut-Analyse älter als 26 Stunden), **Integration** (fehlt, zu alt) und **Sperre** („Löschen aus“, „Automatik aus“). Ein Klick öffnet bzw. zeigt, was dahintersteht. Der Kasten „Attribut-Standard“ im Reiter Regeln aktualisiert sich nach dem Speichern und nennt die Wirkung
+- **Integration (Punkt 272):** schickt ab dieser Version ihre Versionsnummer mit jeder Anfrage an die App; die App zeigt im Chip, wenn sie zu alt für das Löschen der Attribute ist (Betas der Integration müssen von Hand nach HA kopiert werden)
+- **Tabelle Entitäten (Punkte 273, 274):** Klick auf den Chip der Herkunft (Gerät, UI, YAML …) wählt die Herkunftsart im Spaltenkopf und filtert; Klick auf den Regel-Chip bzw. „Std.“ in Kurzzeit, Attribute und Langzeit filtert nach dieser Regel bzw. nach „nur Standard“ (Umschalt+Klick öffnet die Regel wie bisher)
+- **Warnung vor dem Löschlauf (Punkt 268):** „Die App läuft im HA-Standard“ erscheint nur noch, wenn der Lauf HA:standard anfasst (alle aktiven Regeln oder diese Regel), nicht bei einem Lauf für eine einzelne andere Regel
+- **Attribute in der Regelmaske (Punkt 269):** die leere Option heißt auch bei den Attributen „– nicht gesetzt –“
+
 ## 0.5.6b15 (Beta)
 - **„gezählt“ bei Attribut-Läufen genau (Punkt 267):** die Spalte „gezählt“ im Löschprotokoll und der Banner zählen bei Attribut-Aufträgen nur noch die Attributzeilen, die nach dem Abtrennen wirklich wegfallen – also ohne die, die ein neuerer State derselben Entität, der neueste State oder eine andere Entität noch benutzt. „gezählt“ entspricht damit genau dem, was danach unter „gelöscht“ steht (bisher stand dort bis zu doppelt so viel)
 - Die Integration ändert sich nur in der Versionsnummer

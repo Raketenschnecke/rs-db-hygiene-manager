@@ -283,6 +283,8 @@ tr.summenzeile th .ges { display: block; color: var(--muted); font-size: 11px; }
 @media (prefers-color-scheme: dark) { .art-yaml { background: #15301f; } }
 td.geraetklick { cursor: zoom-in; }
 td.geraetklick:hover { text-decoration: underline; }
+.art[data-herkunft-art] { cursor: pointer; }   /* Punkt 273 */
+.art[data-herkunft-art]:hover { background: var(--accent); color: #fff; }
 .trefferzeile { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 0 2px 6px; color: var(--muted); }
 .trefferzeile b { color: var(--text); }
 .filterchip { display: inline-flex; gap: 6px; align-items: center; padding: 1px 4px 1px 9px; border-radius: 12px; background: var(--accent-weak); color: var(--accent); }
@@ -292,6 +294,8 @@ td.geraetklick:hover { text-decoration: underline; }
 .mono { font-family: var(--mono); font-size: 12.5px; }
 .chip { display: inline-block; padding: 0 6px; border-radius: 9px; background: var(--chip); color: var(--muted); font-size: 11px; margin-left: 4px; }
 .chip.regel { background: var(--accent-weak); color: var(--accent); }
+.chipzeile { margin: -4px 0 8px; padding-left: 2px; }   /* Punkt 271 */
+.chipzeile .chip { margin-left: 0; }
 .chip.regelklick { cursor: pointer; }   /* Punkt 97 */
 .chip.regelklick:hover, .chip.regelklick:focus-visible { background: var(--accent); color: #fff; outline: none; }
 .chip.warn { background: var(--warn-bg); color: var(--warn); }
@@ -499,6 +503,8 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       <button data-tab="probe" class="rf-prog">Prognosen je Regel</button>
       <button data-tab="hilfe" class="rechts" title="Einstieg, Begriffe, Regel-Rangfolge, FAQ">Hilfe</button>
     </nav>
+    <!-- Punkte 271/272: Status-Chips (Standards, Schutz, Stand, Integration, Sperren) auf allen Reitern, die mit Entitäten zu tun haben -->
+    <div class="chipzeile" id="attrChipZeile" hidden></div>
     <div class="leiste" data-leiste="ent">
       <select id="fDomain"><option value="">alle Domains</option></select>
       <select id="fRegel"><option value="">mit und ohne Regel</option><option value="mit">mit Regel</option><option value="ohne">ohne Regel</option></select>
@@ -1441,7 +1447,7 @@ const alterText = ts => {
 };
 async function ladeStatus() {
   try {
-    const s = await api("status"); S.status = s;
+    const s = await api("status"); S.status = s; zeigeChips();   // Punkt 272
     setzeVerbindung(true);
     zeigeKennung(s.app);
     // Punkt 85: kein Infotext zu purge_keep_days mehr im Kopf – nur noch eine Warnung im Banner, wenn etwas nicht passt
@@ -2185,10 +2191,14 @@ $("#filterReset").onclick = () => {
 // Der Wert wird bei Platzmangel gekürzt, der Chip bleibt immer ganz sichtbar.
 // Punkt 160 (0.5.3): eigene Regeln (E:<entity_id>) im Chip nur „E“ – die volle ID verdrängte sonst den Wert
 const chipText = id => String(id).startsWith("E:") ? "E" : id;
-function wertZelle(w) {
+// Punkt 274: Klick auf den Chip (Regel bzw. „Std.“) wählt im Spaltenkopf der Vorhaltezeit „aus Regel …“ bzw. „nur Standard“ und filtert danach –
+// wie bei den Labels; Umschalt+Klick öffnet die Regel wie bisher. art = Spalte (kurzzeit, attribute, langzeit)
+function wertZelle(w, art) {
   if (!w) return "–";
-  const quelle = w.regel ? `<span class="chip regel rklick" data-regel="${esc(w.regel)}" title="${esc(w.regel.startsWith("E:") ? "eigene Regel " + w.regel : w.muster)}\nKlick: Regel ${esc(w.regel)} öffnen">${esc(chipText(w.regel))}</span>`
-    : `<span class="chip" title="Standard (keine Regel)">Std.</span>`;
+  const wa = art ? ` data-wart="${esc(art)}"` : "";
+  const spalte = art && SPALTE[art] ? SPALTE[art][1] : "";
+  const quelle = w.regel ? `<span class="chip regel rklick" data-regel="${esc(w.regel)}"${wa} title="${esc(w.regel.startsWith("E:") ? "eigene Regel " + w.regel : w.muster)}\nKlick: ${art ? "nur Entitäten, deren " + spalte + " aus Regel " + w.regel + " stammt · Umschalt+Klick: Regel öffnen" : "Regel " + w.regel + " öffnen"}">${esc(chipText(w.regel))}</span>`
+    : `<span class="chip${art ? " rklick" : ""}" ${art ? `data-std="1"${wa}` : ""} title="Standard (keine Regel)${art ? "\nKlick: nur Entitäten ohne Regel für diesen Wert (" + spalte + ")" : ""}">Std.</span>`;
   return `<span class="wzelle"><span class="wtext" title="${esc(w.anzeige)}">${esc(w.anzeige)}</span>${quelle}</span>`;
 }
 function oeffneRegel(id) {
@@ -2200,8 +2210,10 @@ function herkunftZelle(e) {
   // Punkt 218: „Art: Name“ und „Plattform: x“ – passend zur Tooltip-Anzeige „Thema: Inhalt“
   const tip = [HERKUNFT_LANG[e.herkunft_art] ? `${HERKUNFT_LANG[e.herkunft_art]}: ${e.herkunft || ""}` : e.herkunft,
     (e.herkunft_info || "").replace(/^Plattform (\S+)/, "Plattform: $1")].filter(Boolean).join("\n");
-  const klick = e.device_id ? ` class="geraetklick" data-geraet="${esc(e.device_id)}" data-gname="${esc(e.herkunft)}"` : "";
-  return `<td${klick} title="${esc(tip)}${e.device_id ? "\nKlick: alle Entitäten dieses Geräts" : ""}"><span class="art art-${e.herkunft_art}">${HERKUNFT_ART[e.herkunft_art] || ""}</span>${esc(e.herkunft)}</td>`;
+  // Punkt 273: Klick auf den Chip (Art der Herkunft) wählt die Art im Dropdown des Spaltenkopfs und filtert danach – wie bei den Labels,
+  // ohne Filter-Chip über der Tabelle; der Name dahinter ist nicht klickbar
+  const artName = HERKUNFT_LANG[e.herkunft_art] || e.herkunft_art;
+  return `<td title="${esc(tip)}"><span class="art art-${e.herkunft_art}" data-herkunft-art="${esc(e.herkunft_art)}" title="${esc("Klick: nur Herkunftsart „" + artName + "“ zeigen")}">${HERKUNFT_ART[e.herkunft_art] || ""}</span>${esc(e.herkunft)}</td>`;
 }
 // Punkt 115 (0.4.10): Labels als Chips; Tooltip an Entität / am Gerät, Klick filtert nach dem Label
 const LABEL_AN = { entitaet: "an der Entität", geraet: "am Gerät", beide: "an der Entität und am Gerät" };
@@ -2340,12 +2352,15 @@ async function beschneideAuswahl(r, filterKey) {
 }
 $("#tEntRumpf").addEventListener("click", ev => {
   if (ev.target.closest(".wahlzelle")) return;   // Punkt 91: Auswahl öffnet nicht die Entität
-  const g = ev.target.closest("td[data-geraet]");
-  if (g) { S.geraetName = g.dataset.gname; return setzeFilter("device_id", g.dataset.geraet, true); }
+  const ha = ev.target.closest("[data-herkunft-art]");   // Punkt 273: Chip der Herkunft wie ein Label – Art im Spaltenkopf wählen und filtern
+  if (ha) { S.geraetName = ""; setzeFilter("device_id", "", false); return setzeFilter("herkunft_art", ha.dataset.herkunftArt, true); }
   const lb = ev.target.closest("[data-label]");   // Punkt 115
   if (lb) return setzeFilter("labels", lb.dataset.label, true);
-  const rc = ev.target.closest("[data-regel]");   // Punkt 143
+  const rc = ev.target.closest("[data-regel]");   // Punkt 143; Punkt 274: in den Spalten der Vorhaltezeiten filtert der Chip, Umschalt+Klick öffnet die Regel
+  if (rc && rc.dataset.wart && !ev.shiftKey) return setzeFilter(rc.dataset.wart, "regel:" + rc.dataset.regel, true);
   if (rc) return oeffneRegel(rc.dataset.regel);
+  const sc = ev.target.closest("[data-std]");   // Punkt 274
+  if (sc) return setzeFilter(sc.dataset.wart, "std", true);
   const tr = ev.target.closest("tr[data-eid]");
   if (tr) oeffneEntitaet(S.zeilen[tr.dataset.eid]);
 });
@@ -3051,7 +3066,7 @@ $("#massenEv").addEventListener("click", ev => {
 const regelIdx = id => (S.regeln?.regeln || []).findIndex(x => x.id === id);
 const regelChip = id => regelIdx(id) >= 0
   ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)}: Klick öffnet die Regelmaske" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(chipText(id))}</span>`
-  : `<span class="chip regel" title="${esc(id)}">${esc(chipText(id))}</span>`;   // Punkt 160: E: kurz
+  : `<span class="chip regel" title="${esc(id === "A:standard" ? "A:standard = Attribut-Standard (Kasten im Reiter Regeln): gilt für alle Entitäten, deren Regel keinen eigenen Attribut-Wert setzt" : id)}">${esc(chipText(id))}</span>`;   // Punkt 160: E: kurz; Punkt 270
 // Punkt 225 (0.5.5b14): einheitlich „X hat Vorrang vor: Y – Wert“ (statt „überstimmt“ bzw. „gewinnt vor“).
 // liste: unterlegene Regeln [{regel, …}], wertVon: Wert der unterlegenen Regel als Text
 const vorrangText = (gewinner, liste, wertVon) => liste.map(u => `${gewinner || "Standard"} hat Vorrang vor: ${u.regel}${wertVon(u) ? ` – ${wertVon(u)}` : ""}`).join("\n");
@@ -3282,7 +3297,7 @@ function wertWahl(art, wert, mitNull, ohne = []) {
   const m = /^(\d+)([dwmj])$/.exec(wert || "");
   const modus = wert == null ? "" : m ? "dauer" : wert;
   const aus = modus === "dauer" ? "" : "disabled";
-  const opt = [mitNull ? `<option value="">${art === "attribute" ? `– Attribut-Standard (${esc(wertAnzeige(S.regeln?.attribut_standard) || "wie Kurzzeit")}) –` : "– nicht gesetzt –"}</option>` : "",
+  const opt = [mitNull ? `<option value="">– nicht gesetzt –</option>` : "",   // Punkt 269: auch bei Attributen „nicht gesetzt“ – den Standard nennt der Hinweis unter dem Block
     ...SONDER[art].filter(s => !ohne.includes(s)).map(s => `<option value="${s}" ${modus === s ? "selected" : ""}>${SNAME[s]}${s === "keine" && art === "kurzzeit" ? " (nur Typ verwaist)" : ""}</option>`),
     `<option value="dauer" ${modus === "dauer" ? "selected" : ""}>Dauer …</option>`].join("");
   return `<div class="wertwahl" data-art="${art}">
@@ -3397,11 +3412,73 @@ async function ladeRegeln() {
 // Punkt 254: Attribut-Standard – gilt für alle Entitäten, deren Regel keinen eigenen Attribut-Wert setzt
 function zeigeAttrStandard() {
   const w = S.regeln.attribut_standard;
+  const wirkung = w === "wie_kurzzeit" ? `<span class="sub"><b>Wirkung:</b> keine zusätzliche – Attribute fallen nur mit ihren States weg.</span>`
+    : S.probe?.summe ? `<span><b>Wirkung:</b> sofort ca. ${zahl(S.probe.summe.loeschbar_attr_zeilen || 0)} Attributzeilen löschbar (Tab Löschen, Regel „A:standard“) · Prognose der Attribute ${gb(S.probe.summe.prognose_attribute || 0)} <span class="sub">(gelöscht wird erst im nächsten Löschlauf, die States bleiben)</span></span>` : "";
   $("#attrStandardBox").innerHTML = `<b>Attribut-Standard: ${esc(wertAnzeige(w))}</b> – gilt für alle Entitäten, deren Regel keinen eigenen Attribut-Wert setzt.
-    Nach dieser Frist werden die Attribute von den States getrennt (die States bleiben bis zu ihrer Kurzzeit; wirksam höchstens die Kurzzeit).
-    Schutz-Regeln mit „Attribute mitschützen“ sind ausgenommen. <button type="button" id="btnAttrStd">Ändern …</button>`;
-  $("#btnAttrStd").onclick = () => dialog("Attribut-Standard", `<div class="sub">Frist, nach der die Attribute von den States getrennt werden – für alles, was keine Regel mit eigenem Attribut-Wert trifft.
-      Die States selbst bleiben bis zu ihrer Kurzzeit. „wie Kurzzeit“ trennt nichts ab; ein Wert wie 30 Tage spart Platz, ohne States zu löschen.</div>
+    Nach dieser Frist löscht ein Löschlauf die Attributzeilen (die States bleiben bis zu ihrer Kurzzeit und verlieren nur ihre Attribute; wirksam höchstens die Kurzzeit).
+    Schutz-Regeln mit „Attribute mitschützen“ sind ausgenommen.` + wirkung + `<button type="button" id="btnAttrStd" style="justify-self:start">Ändern …</button>`;
+  $("#btnAttrStd").onclick = attrStandardDialog;
+  zeigeChips();
+}
+// Punkte 271/272: Status-Chips unter der Tab-Leiste. Grau = Standardverhalten, Akzentfarbe = hier wird anders gelöscht als HA es täte,
+// orange = etwas stimmt nicht oder ist veraltet. Klick öffnet, was dahintersteht. Die Chips 4 bis 6 erscheinen nur, wenn etwas zu beachten ist.
+const CHIP_TABS = ["ent", "opt", "regeln", "loeschen", "protokoll", "probe"];
+const versionNr = v => { const m = /^(\d+)\.(\d+)\.(\d+)(?:b(\d+))?/.exec(v || ""); return m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1e6 : +m[4]] : null; };
+const versionKleiner = (x, y) => { for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] < y[i]; return false; };
+function zeigeChips() {
+  const zeile = $("#attrChipZeile"); if (!zeile || !S.regeln) return;
+  zeile.hidden = !CHIP_TABS.includes(document.querySelector("#tabs button.an")?.dataset.tab);
+  const chips = [], su = S.probe?.summe || {}, pkd = S.probe?.stand?.purge_keep_days, st = S.status || {}, op = st.optionen || {}, jetzt = Date.now() / 1000;
+  const chip = (id, text, klasse, tip) => chips.push(`<span class="chip regelklick ${klasse}" data-chip="${id}" role="button" tabindex="0" title="${esc(tip + "\nKlick: " + (CHIP_KLICK[id] || ""))}">${esc(text)}</span>`);
+  // 1. HA-Standard: was für alles ohne eigene Regel gilt
+  const ha = S.regeln.regeln.find(r => r.id === HA_STD);
+  if (ha) {
+    const lz = ha.langzeit || "unbegrenzt", n = su.global_entitaeten;
+    if (ha.aktiv) chip("ha", `Lösch-Standard: ${wertAnzeige(ha.kurzzeit || HA_STD_KZ)} · Langzeit ${lz === "unbegrenzt" ? "unbegrenzt" : wertAnzeige(lz)}`, "regel",
+      `Lösch-Standard (Regel HA:standard) ist aktiv: Alles ohne eigene Regel behält States, 5-Min-Statistik und Events ${wertAnzeige(ha.kurzzeit || HA_STD_KZ)}, die Langzeit ${lz === "unbegrenzt" ? "unbegrenzt" : wertAnzeige(lz)} (Zähler behalten ihre Langzeit immer).`);
+    else chip("ha", `Lösch-Standard: global ${pkd ? tageJahre(pkd) : "purge_keep_days"}`, "warn",
+      `Lösch-Standard (Regel HA:standard) ist passiv: Alles ohne eigene Regel gilt „global“ = purge_keep_days${pkd ? " (" + tageJahre(pkd) + ")" : ""}${n ? " – " + zahl(n) + " aktive Entitäten betroffen" : ""}.`);
+  }
+  // 2. Attribut-Standard
+  const w = S.regeln.attribut_standard, aktiv = w !== "wie_kurzzeit";
+  chip("attr", aktiv ? `Attribute: Standard ${wertAnzeige(w)}` : "Attribute: wie Kurzzeit", aktiv ? "regel" : "",
+    aktiv ? `Attribut-Standard ${wertAnzeige(w)}: Attributzeilen älter als diese Frist löscht ein Löschlauf, die States bleiben (${zahl(su.loeschbar_attr_zeilen || 0)} Zeilen sofort löschbar, Regel „A:standard“).`
+      : "Attribut-Standard „wie Kurzzeit“: Attribute fallen nur mit ihren States weg (außer Regeln mit eigenem Attribut-Wert).");
+  // 3. Schutz und Attribute
+  const sch = S.regeln.regeln.filter(r => r.typ === "schutz" && r.aktiv);
+  if (sch.length) {
+    const offen = sch.filter(r => r.attribute_schutz === false);
+    chip("schutz", `🔒 Schutz: ${sch.length} ${sch.length === 1 ? "Regel" : "Regeln"}${su.schutz_entitaeten ? " · " + zahl(su.schutz_entitaeten) + " Entitäten" : ""} · Attribute ${offen.length ? "bei " + offen.length + " nicht geschützt" : "geschützt"}`, offen.length ? "regel" : "",
+      offen.length ? `Schutz-Regeln ohne „Attribute mitschützen“: ${offen.map(r => r.id).join(", ")} – States und Langzeit bleiben, die Attribute löscht ein Löschlauf nach dem Attribut-Wert bzw. Attribut-Standard.` : "Schutz-Regeln: States, Langzeit und Attribute dieser Entitäten bleiben unangetastet.");
+  }
+  // 4. Stand der Analysen – nur bei Veraltetem
+  const an = Number(st.analyse?.analyse_zeit) || 0, at = Number(st.attribute?.analyse_zeit) || 0, alt = [];
+  if (an && jetzt - an > 26 * 3600) alt.push("Analyse " + zeit(an));
+  if (st.attribute === null || (st.analyse && !at)) alt.push("Attribut-Analyse fehlt"); else if (at && jetzt - at > 26 * 3600) alt.push("Attribut-Analyse " + zeit(at));
+  if (alt.length) chip("analyse", "Veraltet: " + alt.join(" · "), "warn", "Die Zahlen auf diesen Reitern (u. a. die Attributzeilen im Plan) stammen aus der letzten Analyse – sie ist älter als 26 Stunden bzw. fehlt.");
+  // 5. Integration – nur wenn sie fehlt, nicht bietet, was gebraucht wird, oder ihre Version zu alt ist
+  const ig = st.integration;
+  if (ig && !ig.da) chip("integration", "Integration fehlt", "warn", "Die Integration RS DB Hygiene ist in HA nicht aktiv: 5-Min-Statistik, Langzeit, Events und das Löschen der Attribute werden übersprungen.");
+  else if (ig && !ig.exakt) chip("integration", "Integration ohne purge_states", "warn", "Die geladene Integration ist älter als 0.4.5 – Löschen bis zur lokalen Mitternacht ist nicht möglich.");
+  else if (ig?.version && versionNr(ig.version) && versionKleiner(versionNr(ig.version), [0, 5, 6, 9]))
+    chip("integration", `Integration ${ig.version} zu alt`, "warn", "Das Abtrennen und Löschen der Attribute braucht die Integration ab 0.5.6b9 (nach dem Update HA neu starten).");
+  // 6. Sperren – nur wenn gesetzt
+  if (op.loeschen_freigegeben === false) chip("sperre", "Löschen aus", "warn", "Der Hauptschalter „Löschen freigegeben“ ist aus – kein Löschlauf wird ausgeführt.");
+  else if (op.automatik_freigegeben === false) chip("sperre", "Automatik aus", "warn", "„Automatik freigegeben“ ist aus – Läufe aus HA (Knopf, Dienst, Automation) werden abgelehnt.");
+  zeile.innerHTML = chips.join("");
+}
+const CHIP_KLICK = { ha: "Regel HA:standard öffnen", attr: "Attribut-Standard ändern", schutz: "Schutz-Regeln im Reiter Regeln zeigen", analyse: "Analyse starten", integration: "Erklärung zeigen", sperre: "zum Tab Löschen" };
+function chipKlick(id) {
+  if (id === "attr") return attrStandardDialog();
+  if (id === "ha") { const i = S.regeln.regeln.findIndex(r => r.id === HA_STD); if (i >= 0) bearbeiteRegel(i); return; }
+  if (id === "schutz") { document.querySelector('#tabs button[data-tab="regeln"]').click(); T.regeln.f.typ = "schutz"; T.regeln.baueKopf(); T.regeln.zeige(); return; }
+  if (id === "analyse") return $("#btnAnalyse").click();
+  if (id === "integration") return meldung("Integration RS DB Hygiene", INTEGRATION_FEHLT);
+  if (id === "sperre") document.querySelector('#tabs button[data-tab="loeschen"]').click();
+}
+function attrStandardDialog() {
+  dialog("Attribut-Standard", `<div class="sub">Frist, nach der ein Löschlauf die Attributzeilen löscht – für alles, was keine Regel mit eigenem Attribut-Wert trifft.
+      Die States bleiben bis zu ihrer Kurzzeit und verlieren nur ihre Attribute. „wie Kurzzeit“ löscht nichts zusätzlich; ein Wert wie 30 Tage spart Platz.</div>
     ${wertBlock("attribute", S.regeln.attribut_standard, false, "", ["keine"], true)}<div id="dlgFehler" class="fehler"></div>`, [
     ["Abbrechen", () => $("#dlg").close()],
     ["Speichern", async () => {
@@ -3409,8 +3486,11 @@ function zeigeAttrStandard() {
       try { await speichereRegeln({ ...S.regeln, attribut_standard: neu }); $("#dlg").close(); } catch (e) { $("#dlgFehler").textContent = e.message; }
     }, true]]);
 }
+document.addEventListener("click", ev => { const c = ev.target.closest("[data-chip]"); if (c) chipKlick(c.dataset.chip); });
+document.addEventListener("keydown", ev => { if (ev.key === "Enter" && ev.target.dataset?.chip) chipKlick(ev.target.dataset.chip); });
 // Punkt 79: Wie viel ohne eigene Kurzzeit bleibt – „global“ heißt purge_keep_days, bei 7300 also 20 Jahre
 function zeigeGlobal() {
+  zeigeChips();   // Punkt 272: Chips mit den frischen Zahlen
   const s = S.probe?.summe, pkd = S.probe?.stand?.purge_keep_days, el = $("#globalText");
   if (!s || !pkd || !s.global_entitaeten) { el.hidden = true; return; }
   el.hidden = false;
@@ -3424,7 +3504,7 @@ async function speichereRegeln(daten) {
   const r = await api("regeln", { method: "PUT", headers: { "content-type": "application/json" },
     body: JSON.stringify({ daten, version: S.version }) });
   S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
-  T.regeln.daten(S.regeln.regeln); ladeAlles(false); ladeRegelCheck();
+  T.regeln.daten(S.regeln.regeln); zeigeAttrStandard(); ladeAlles(false).then(zeigeAttrStandard); ladeRegelCheck();   // Punkt 270: Kasten „Attribut-Standard“ nachziehen
 }
 
 // ================================================ Punkt 232: Regelwerk-Check – Befunde zum bestehenden Regelwerk
@@ -4478,7 +4558,8 @@ $("#pNeu").onclick = ladeProtokoll;
 async function starteLoeschen() {
   const p = S.loeschPlan; if (!p) return;
   // Punkt 127: Mit aktiver Regel HA-Standard löscht die App wie HA in der Grundeinstellung – vorher deutlich darauf hinweisen
-  if (haStandardAktiv() && !await frage("⚠ Die App läuft im HA-Standard",
+  // Punkt 268: nur bei einem Lauf, der HA:standard überhaupt anfasst (alle aktiven Regeln oder die Regel selbst) – nicht bei einem Lauf für eine einzelne andere Regel
+  if (haStandardAktiv() && (!p.nur_regel || p.nur_regel === HA_STD) && !await frage("⚠ Die App läuft im HA-Standard",
     `Die Regel ${HA_STD} (HA-Standard) ist aktiv. Für alles ohne eigene Regel löscht dieser Lauf${haStdKurzzeit() === HA_STD_KZ ? " wie Home Assistant in der Grundeinstellung" : ""}:\n\n` +
     `• ${WNAME.kurzzeit}: alles älter als ${wertAnzeige(haStdKurzzeit())}\n• ${EV_NAME}: alle Event-Typen älter als ${wertAnzeige(haStdKurzzeit())}\n• ${WNAME.langzeit}: ${haStdLangzeit() === "unbegrenzt" ? "bleibt unbegrenzt" : "alles älter als " + wertAnzeige(haStdLangzeit()) + " (Zähler ausgenommen)"}\n\n` +
     `Längere Vorhaltezeiten (z. B. purge_keep_days 7300) wirken dann nur dort, wo eine eigene Regel gilt. ` +
@@ -4537,6 +4618,7 @@ $("#tabs").addEventListener("click", ev => {
   document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("an", x === b));
   ["ent", "events", "opt", "regeln", "probe", "lts", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
   document.querySelectorAll("[data-leiste]").forEach(l => l.hidden = l.dataset.leiste !== b.dataset.tab);
+  zeigeChips();   // Punkte 271/272
   zeigeAuswahl(); zeigeAuswahlEnt(); zeigeAuswahlEv(); zeigeAuswahlOpt();
   if (b.dataset.tab === "lts") ladeLts();
   if (b.dataset.tab === "opt") ladeOpt();   // Punkt 176
