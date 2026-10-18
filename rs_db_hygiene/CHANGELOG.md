@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b10 (Beta)
+- **Löschplan und Protokoll (Punkt 256):** Attribut-Aufträge (Attribute von den States trennen) zählen nicht mehr in „geplant“, Überhang und „Läufe nötig“ – sie trennen ab und löschen nicht, deshalb stand bisher dauerhaft die Zahl der Attributzeilen als Differenz zwischen „geplant“ und „gelöscht“. Der Plan führt sie getrennt (`attr_getrennt`); im Tab Löschen nennen Kasten und Rückfrage „Attribute … werden von den States getrennt (die States bleiben)“, auch wenn sonst nichts gelöscht wird
+- **Integration zu alt (Punkt 256):** kennt die Integration die neue Tabelle nicht, bricht der Lauf die Attribut-Aufträge nach dem ersten Fehler ab und schreibt einen Sammelhinweis („– N weitere Attribut-Aufträge übersprungen“) statt hunderter Einträge; die übrigen Aufträge laufen weiter
+- Die Integration ändert sich nur in der Versionsnummer (der Dienst für die Attribute kam mit 0.5.6b9)
+
 ## 0.5.6b9 (Beta)
 - **Attribut-Standard und Attribut-Wert je Regel (Punkt 254):** Attribute haben wieder eine eigene Frist. Im Reiter Regeln gibt es unter der Tabelle den Kasten „Attribut-Standard“ (Voreinstellung „wie Kurzzeit“, z. B. 30 Tage einstellbar); jede Regel kann einen eigenen Attribut-Wert setzen (leer = Standard, nie länger als die Kurzzeit). Nach der Frist trennt der Löschlauf die Attribute von den States (die States bleiben bis zu ihrer Kurzzeit) und entfernt die danach unbenutzten Attributzeilen. Schutz-Regeln haben die Option „Attribute mitschützen“ (Voreinstellung an, wie bisher)
 - **Neue Empfehlung „Attribute“ (Punkt 254):** Sammelregel nur mit Attribut-Wert 14 Tage für Entitäten mit großem Attribut-Zuwachs (ab 100 MB im Prognosezeitraum je Entität); die Kurzzeit bleibt. Ersetzt den bisherigen Grund „große Attribute“ bei den Kurzzeit-Vorschlägen

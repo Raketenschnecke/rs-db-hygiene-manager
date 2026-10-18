@@ -283,7 +283,9 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
     kennung = hashlib.sha1(json.dumps([bool(ausnahme), bool(exakt), [[g["keep_days"], sorted(g["entitaeten"])] for g in gruppen],
                                        sorted([a["art"], a["name"], a["keep_days"], a["alle"]] for a in im_lauf_b)],
                                       default=str).encode()).hexdigest()[:12]
-    zeilen_b = sum(a["zeilen"] for a in auftraege_b)
+    # Punkt 256: Attribut-Aufträge zählen Attributzeilen, die abgetrennt (nicht gelöscht) werden – nicht in geplant/fällig/Läufe
+    zeilen_b = sum(a["zeilen"] for a in auftraege_b if a["art"] != "attr")
+    attr_lauf = [a for a in im_lauf_b if a["art"] == "attr"]
     # Punkt 199 (0.5.5b10): je Eintrag die überstimmten Regeln in Rangfolge (Kurzzeit, Langzeit bzw. Events) – für den
     # Tooltip „R12 gewinnt vor R30 …“ in der Löschtabelle; nur Anzeige, der Lauf nutzt es nicht
     namen = {c["entity_id"] for c in eintraege} | {a["name"] for a in auftraege_b}
@@ -307,7 +309,9 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
         "regeln": sorted(regeln.values(), key=lambda r: r["regel"]),
         "stufe_b": stufe_b,
         "exakt": bool(exakt),     # Punkt 121: Grenze lokale Mitternacht (Integration mit purge_states)
-        "summe": {"zeilen": sum(c["zeilen"] for c in eintraege) + sum(a["zeilen_lauf"] for a in auftraege_b),
+        "summe": {"zeilen": sum(c["zeilen"] for c in eintraege) + sum(a["zeilen_lauf"] for a in auftraege_b if a["art"] != "attr"),
+                  # Punkt 256: Attribut-Aufträge dieses Laufs (Attributzeilen und Entitäten) – getrennt, nicht in „zeilen“
+                  "attr_getrennt": sum(a["zeilen_lauf"] for a in attr_lauf), "attr_getrennt_entitaeten": len(attr_lauf),
                   # Punkt 75: je Tabelle nur, was in diesem Lauf gelöscht wird; zeilen_b = alles Fällige (auch „nächster Lauf“)
                   "zeilen_b_lauf": {art: sum(a["zeilen_lauf"] for a in auftraege_b if a["art"] == art) for art in ART_B},
                   "zeilen_states": sum(c["zeilen"] for c in eintraege),
@@ -629,6 +633,7 @@ class Lauf:
         # Punkt 254: Attribute abtrennen läuft nach den States – was die States-Löschung schon mitnimmt, muss nicht erst umgeschrieben werden
         self.b_liste = [a for a in alle_b if a["art"] != "attr"]
         self.attr_liste = [a for a in alle_b if a["art"] == "attr"]
+        self._attr_alt = None      # Punkt 256: erster „Integration zu alt“-Eintrag; weitere Attribut-Aufträge werden nur gezählt
         # Punkt 53 (1): bestätigte Ausnahmen dürfen die Obergrenze einmalig überschreiten (nur ihr ältester Tag)
         self.ausnahmen = {c["entity_id"] for c in p.get("entitaeten", []) if c.get("ausnahme")}
         # Punkt 84: Verwaiste des Plans; vor ihrem Paket wird geprüft, ob sie inzwischen wieder existieren
@@ -645,12 +650,12 @@ class Lauf:
                      "analyse_zeit": p.get("analyse_zeit"), "analyse_vorher": bool(p.get("analyse_vorher")),
                      "kennung": p["kennung"], "geplant_zeilen": p["summe"]["zeilen"], "geloescht": 0,
                      # Punkt 243: ab hier zählt die Summe eines Laufs die Attributzeilen mit (ältere Läufe ohne dieses Feld bleiben unverändert)
-                     "geplant_attr": p["summe"].get("attr_zeilen") or 0,
+                     "geplant_attr": (p["summe"].get("attr_zeilen") or 0) + (p["summe"].get("attr_getrennt") or 0),   # Punkt 256: auch die getrennten
                      # Punkt 242: Wert der Regel je Entität bzw. Event-Typ und Datenart (Einheit nach Wahl des Users) für „K 7T/L 1J“
                      "vorhaltung": self._vorhaltung(p),
                      # Punkt 200 (0.5.5b12): alles Fällige beim Start – Rest danach = fällig − gelöscht (je Obergrenze)
                      "faellig_states": p["summe"].get("zeilen_states_gesamt"),
-                     "faellig_b": sum((p["summe"].get("zeilen_b") or {}).values()) if p.get("stufe_b") else 0,
+                     "faellig_b": sum(v for k, v in (p["summe"].get("zeilen_b") or {}).items() if k != "attr") if p.get("stufe_b") else 0,   # Punkt 256: ohne Attribute
                      # Punkt 116 (0.4.10): Wartezeit auf HA-Backups (Sekunden, Anzahl Pausen), je Lauf und je Paket
                      "backup_warte_s": 0, "backup_pausen": 0,
                      # Punkt 121 (0.4.12): Grenze lokale Mitternacht (exakt) oder „jetzt minus keep_days“
@@ -838,6 +843,9 @@ class Lauf:
         for a in sorted(self.b_liste if liste is None else liste, key=lambda a: (a["zeilen"], a["name"])):
             if self.abbruch:
                 raise LoeschFehler("abgebrochen")
+            if a["art"] == "attr" and self._attr_alt is not None:     # Punkt 256: Integration zu alt – nicht 700-mal dasselbe versuchen
+                self._attr_alt["weitere"] += 1
+                continue
             self.fortschritt["paket"] += 1
             self.fortschritt["aktuell"] = f"{ART_NAME[a['art']]} {a['name']}" + (" (alle)" if a["alle"] else f", keep_days {a['keep_days']}")
             self.fortschritt["aktuell_rest"] = None
@@ -861,6 +869,7 @@ class Lauf:
                         raise
                     # Punkt 254: ältere Integration kennt states_attribute nicht – die übrigen Aufträge laufen weiter
                     eintrag["ergebnis"] = "Integration zu alt – bitte auf ≥ 0.5.6b9 aktualisieren"
+                    self._attr_alt = {"eintrag": eintrag, "weitere": 0}
                     _LOG.warning("Attribute %s: Integration kennt states_attribute nicht (HTTP %s) – bitte aktualisieren", a["name"], x.code)
                     break
                 aufrufe += 1
@@ -899,6 +908,13 @@ class Lauf:
                 self.fortschritt["geloescht"] = self.prot["geloescht"]
             self._schreibe()
             _LOG.info("%s %s: %d Zeilen %s in %d Aufrufen (%s)", ART_NAME[a["art"]], a["name"], geloescht, "abgetrennt" if a["art"] == "attr" else "gelöscht", aufrufe, eintrag["ergebnis"])
+        if self._attr_alt and self._attr_alt["weitere"]:     # Punkt 256: ein Sammelhinweis statt hunderter Einträge
+            e = self._attr_alt["eintrag"]
+            e["uebersprungen_weitere"] = self._attr_alt["weitere"]
+            e["ergebnis"] = f"{e['ergebnis']} – {self._attr_alt['weitere']} weitere Attribut-Aufträge übersprungen"
+            _LOG.warning("Attribute: %d weitere Aufträge übersprungen (Integration zu alt)", self._attr_alt["weitere"])
+            self._attr_alt["weitere"] = 0
+            self._schreibe()
         return rest
 
     def _wieder_vorhanden(self, teil):

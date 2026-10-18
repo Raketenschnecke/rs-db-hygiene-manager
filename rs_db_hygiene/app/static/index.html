@@ -4356,7 +4356,9 @@ async function ladeLoeschen() {
     if (su.zeilen_states) teile.push(`States ${zahl(su.zeilen_states)} von ${mz(su.entitaeten, "Entität", "Entitäten")} in ${mz(su.aufrufe, "Aufruf", "Aufrufen")} von ${p.exakt ? "rs_db_hygiene.purge_states" : "recorder.purge_entities"}${gruppen ? ` (${gruppen})` : ""}`);
     if (p.stufe_b) for (const [art, name] of [["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]]) if (zb[art]) teile.push(`${name} ${zahl(zb[art])}`);
     const attrText = su.zeilen_states && su.attr_bekannt && su.attr_zeilen ? `; mit den States fallen ca. ${zahl(su.attr_zeilen)} Attributzeilen weg` : "";
-    const laufText = su.zeilen && teile.length ? `ca. ${zahl(su.zeilen)} Zeilen – ${teile.join(" · ")}${attrText}.` : "nichts zu löschen.";
+    // Punkt 256: Attribute, die von den States getrennt werden (Attribut-Wert kürzer als die Kurzzeit) – kein Löschen, die States bleiben
+    if (p.stufe_b && su.attr_getrennt) teile.push(`Attribute ${zahl(su.attr_getrennt)} Zeilen von ${mz(su.attr_getrennt_entitaeten, "Entität", "Entitäten")} werden von den States getrennt (die States bleiben)`);
+    const laufText = (su.zeilen || (p.stufe_b && su.attr_getrennt)) && teile.length ? `${su.zeilen ? `ca. ${zahl(su.zeilen)} Zeilen – ` : ""}${teile.join(" · ")}${attrText}.` : "nichts zu löschen.";
     // Punkt 200 (0.5.5b12): wie viele Läufe der Rückstand ungefähr braucht (je Obergrenze aufgerundet)
     const restLaeufe = su.laeufe > 1 ? ` Bei der Obergrenze von ${obergrenzeText(p)} sind das <b title="Schätzung: je Obergrenze aufgerundet; täglich kommen neue Zeilen dazu, und Entitäten, die nicht mehr ganz in einen Lauf passen, warten auf den nächsten">≈ ${mzahl(su.laeufe, "Lauf", "Läufe")}</b> (dieser und ${zahl(su.laeufe - 1)} weitere).` : "";
     const restText = su.zeilen_gesamt > su.zeilen ? ` Insgesamt fällig (alle Tabellen): ${zahl(su.zeilen_gesamt)} Zeilen – der Rest folgt in den nächsten Läufen.${restLaeufe}` : "";
@@ -4490,7 +4492,8 @@ async function starteLoeschen() {
     const l = b.filter(a => a.art === art);
     if (l.length && zb[art]) teile.push(`• ${name}: ca. ${zahl(l.reduce((s, a) => s + (a.zeilen_lauf ?? a.zeilen), 0))} Zeilen in ${mz(l.length, "Auftrag", "Aufträgen")} (${l.slice(0, 3).map(a => a.name).join(", ")}${l.length > 3 ? " …" : ""})`);
   }
-  const text = `Umfang: ${umfang}\nGelöscht werden ca. ${zahl(p.summe.zeilen)} Zeilen:\n${teile.join("\n")}\n\n` +
+  if (p.stufe_b && p.summe.attr_getrennt) teile.push(`• Attribute: ca. ${zahl(p.summe.attr_getrennt)} Attributzeilen von ${mz(p.summe.attr_getrennt_entitaeten, "Entität", "Entitäten")} werden von den States getrennt (die States bleiben; rs_db_hygiene.purge, Tabelle states_attribute)`);   // Punkt 256
+  const text = `Umfang: ${umfang}\n${p.summe.zeilen ? `Gelöscht werden ca. ${zahl(p.summe.zeilen)} Zeilen:` : "Es wird nichts gelöscht, aber geändert:"}\n${teile.join("\n")}\n\n` +
     `Das lässt sich nicht rückgängig machen. Vor jedem Paket wird nachgezählt; gelöscht werden höchstens ${obergrenzeText(p)}` +
     (p.summe.ausnahmen ? ` – außer bei ${zahl(p.summe.ausnahmen)} Entitäten mit bestätigter Ausnahme (je ihr ältester Tag)` : "") + "." +
     ((p.risiken || []).length ? `\n\nRisiken:\n${p.risiken.map(x => "⚠ " + x.text).join("\n")}` : "") + "\n\nLöschlauf starten?";
