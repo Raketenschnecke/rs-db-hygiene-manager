@@ -173,9 +173,12 @@ button.ansicht.an { background: var(--accent); color: #fff; }
 .banner a.hverweis { color: inherit; font-weight: 600; margin-left: 4px; white-space: nowrap; }
 button:disabled { opacity: .5; cursor: default; }
 input[type=number] { width: 72px; }
-.klebend { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-top: 4px; }
+/* Punkt 276: Reiter + Chips kleben oben (.kleb-oben), jede sichtbare Knopfleiste klebt darunter; was dazwischen steht (Banner im Reiter Regeln) scrollt weg */
+.klebend { display: contents; }   /* Kinder kleben relativ zur Seite, nicht zu diesem Wrapper */
+.kleb-oben { position: sticky; top: 0; z-index: 6; background: var(--bg); padding-top: 4px; display: flow-root; }   /* flow-root: der untere Rand der Chips bleibt in der Leiste, sonst klebt die Knopfleiste ohne Abstand darunter */
+.klebend > .leiste { position: sticky; top: var(--kleb-oben-h, 0px); z-index: 5; background: var(--bg); }
 /* 0.5.3 (Punkte 152/153): 8 px deckender Abstand unter den Knöpfen – beim Scrollen wie im Stand */
-.klebend { padding-bottom: 8px; } .klebend > .leiste { margin-bottom: 0; }
+.klebend > .leiste { margin-bottom: 0; padding-bottom: 8px; }
 /* Reiter (Punkt 41): eigene Fläche und Rahmen je Tab; der aktive ist mit dem Inhalt verbunden */
 /* Punkt 80 (0.4.4): kein senkrechter Scrollbalken – overflow-y: hidden. Die Grundlinie ist ein innerer Schatten statt eines Rahmens,
    damit nichts über die Leiste hinausragt; der aktive Reiter deckt sie mit seinem unteren Rand in Flächenfarbe ab. */
@@ -235,6 +238,8 @@ tr.filterzeile input.ungueltig, tr.filterzeile select.ungueltig { border-color: 
 tr.filterzeile .gesetzt { border-color: var(--accent); }
 td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 /* Zebramuster (Punkt 13): abwechselnd etwas heller / dunkler als die Fläche; Hover bleibt deutlich stärker */
+.tabelle.fuellend { min-height: calc(100vh - var(--kleb-h) - var(--unten, 56px)); }   /* Punkt 276 */
+#tab-loeschen .tabelle.fuellend { min-height: 240px; }
 .tabelle tbody tr:nth-child(odd) td { background: var(--zeile-hell); }
 .tabelle tbody tr:nth-child(even) td { background: var(--zeile-dunkel); }
 .tabelle tbody tr.klick:hover td { background: var(--accent-weak); cursor: pointer; }
@@ -304,7 +309,7 @@ td.geraetklick:hover { text-decoration: underline; }
 .mono { font-family: var(--mono); font-size: 12.5px; }
 .chip { display: inline-block; padding: 0 6px; border-radius: 9px; background: var(--chip); color: var(--muted); font-size: 11px; margin-left: 4px; }
 .chip.regel { background: var(--accent-weak); color: var(--accent); }
-.chipzeile { margin: -4px 0 8px; padding-left: 2px; }   /* Punkt 271 */
+.chipzeile { margin: -1px 0 10px; padding-left: 2px; }   /* Punkt 271; Punkt 276: Abstand der Chips zu den Reitern und zu den Knöpfen gleich groß (je ca. 12 px) */
 .chipzeile .chip { margin-left: 0; }
 .chip.regelklick { cursor: pointer; }   /* Punkt 97 */
 .chip.regelklick:hover, .chip.regelklick:focus-visible { background: var(--accent); color: #fff; outline: none; }
@@ -501,6 +506,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       class="hilfeknopf" data-hilfe="passiv" aria-label="Erläuterung: passive Regeln">ⓘ</button></span>
   </div>
   <div class="klebend" id="klebend">
+   <div class="kleb-oben" id="klebOben">
     <nav class="tabs" id="tabs">
       <!-- Punkt 158 (0.5.3): Reihenfolge Istzustand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
       <button data-tab="ent" class="an rf-ist">Entitäten</button>
@@ -515,6 +521,11 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
     </nav>
     <!-- Punkte 271/272: Status-Chips (Standards, Schutz, Stand, Integration, Sperren) auf allen Reitern, die mit Entitäten zu tun haben -->
     <div class="chipzeile" id="attrChipZeile" hidden></div>
+   </div>
+    <!-- Punkt 276: Textblock (global) und Banner (Attribut-Standard) des Reiters Regeln stehen oben zwischen den Chips und den Knöpfen -->
+    <div data-leiste="regeln" hidden style="margin-bottom:16px">
+      <div class="hinweisbox" id="attrStandardBox"></div>   <!-- Punkt 254: Attribut-Standard -->
+    </div>
     <div class="leiste" data-leiste="ent">
       <select id="fDomain"><option value="">alle Domains</option></select>
       <select id="fRegel"><option value="">mit und ohne Regel</option><option value="mit">mit Regel</option><option value="ohne">ohne Regel</option></select>
@@ -924,9 +935,6 @@ actions:
     <div class="hinweisbox" id="regelCheck" hidden></div>   <!-- Punkt 232: Regelwerk-Check -->
     <div class="trefferzeile" id="trefferRegeln"></div>
     <div class="tabelle"><table id="tRegeln" class="baustein"></table></div>
-    <p class="sub" id="globalText" hidden></p>
-    <div class="hinweisbox" id="attrStandardBox"></div>   <!-- Punkt 254: Attribut-Standard -->
-    <p class="sub" id="standardText">Rang: entity › glob › klasse › integration › vielschreiber, innerhalb eines Typs die Reihenfolge hier. Jeder der drei Werte wird für sich aufgelöst.</p>
   </section>
   <section id="tab-probe" hidden>
     <div class="trefferzeile" id="trefferProbe"></div>
@@ -948,6 +956,7 @@ actions:
   <section id="tab-protokoll" hidden>
     <div class="loeschkasten" id="pKopf">lade …</div>
     <h2 class="laeufe-titel">Läufe</h2>
+    <div class="leiste" style="justify-content:flex-end"><span id="laeufeZeilen"></span></div>   <!-- Punkt 276: Auswahl „Zeilen“ direkt über der Tabelle -->
     <div class="trefferzeile" id="trefferLaeufe"></div>
     <div class="tabelle" style="min-height:120px"><table id="tLaeufe" class="baustein"></table></div>
     <h2 class="laeufe-titel">Gelöscht je Entität und Monat <span class="sub">– bleibt erhalten, auch wenn alte Läufe aufgeräumt werden</span></h2>
@@ -1126,7 +1135,19 @@ function par() {
 }
 
 // Höhe der klebenden Leiste für den Scrollbereich der Tabellen
-new ResizeObserver(() => document.documentElement.style.setProperty("--kleb-h", $("#klebend").offsetHeight + "px")).observe($("#klebend"));
+{
+  // --kleb-h = Reiter + Chips + die sichtbare Knopfleiste (ohne das Banner dazwischen)
+  const kleb = () => {
+    const oben = $("#klebOben").offsetHeight, leiste = [...document.querySelectorAll("#klebend > .leiste:not([hidden])")].reduce((s, l) => s + l.offsetHeight, 0);
+    const wurzel = document.documentElement.style;
+    if (wurzel.getPropertyValue("--kleb-h") === oben + leiste + "px") return;
+    wurzel.setProperty("--kleb-oben-h", oben + "px"); wurzel.setProperty("--kleb-h", oben + leiste + "px");
+    document.querySelectorAll(".tabelle").forEach(b => b.dispatchEvent(new Event("dbh-hoehe")));
+  };
+  const ro = new ResizeObserver(kleb);
+  ro.observe($("#klebOben")); document.querySelectorAll("#klebend > .leiste").forEach(l => ro.observe(l));
+  new MutationObserver(kleb).observe($("#klebend"), { attributes: true, attributeFilter: ["hidden"], subtree: true });
+}
 // Punkt 240: Platz unter einer Tabelle (Text darunter + Polster von main) von ihrer Höhe abziehen – sonst lässt sich die Seite
 // weiter scrollen, als die Tabelle hoch ist, und ihr Kopf (Gruppenzeile) verschwindet unter der klebenden Leiste
 function tabelleUnten() {
@@ -1137,14 +1158,16 @@ function tabelleUnten() {
     let weitere = false;
     for (let s = t.nextElementSibling; s; s = s.nextElementSibling) if (s.matches(".tabelle") || s.querySelector(".tabelle")) weitere = true;
     if (weitere) { if (t.style.getPropertyValue("--unten")) t.style.removeProperty("--unten"); return; }
+    t.classList.toggle("fuellend", !!t.dataset.nurPager);   // letzte seitenweise Tabelle: Box reicht bis zum Fensterrand
     let h = pad + 2;
     for (let s = t.nextElementSibling; s; s = s.nextElementSibling) {
       if (s.hidden || s.offsetParent === null) continue;
+      if (t.dataset.nurPager && !s.matches(".blaettern")) continue;   // Punkt 276: Texte unter der Tabelle zählen nicht, die Box reicht bis zum Fensterrand
       const cs = getComputedStyle(s);
       h += s.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
     }
     const css = Math.ceil(h) + "px";
-    if (t.style.getPropertyValue("--unten") !== css) t.style.setProperty("--unten", css);
+    if (t.style.getPropertyValue("--unten") !== css) { t.style.setProperty("--unten", css); t.dispatchEvent(new Event("dbh-hoehe")); }   // „automatisch“ neu einteilen
   });
 }
 new ResizeObserver(tabelleUnten).observe($("main"));
@@ -1269,8 +1292,11 @@ class LokaleTabelle {
     this.sortStdListe = o.sortStd ? [{ k: o.sortStd.k, desc: !!o.sortStd.desc }] : [];
     this.sortierung = ladeSort(o.schluessel + "_sort", this.sortStdListe).filter(s => o.spalten.some(sp => sp.k === s.k));
     if (o.seiten) {
-      this.seite = +speicher.lies(o.schluessel + "_zeilen", String(o.seiteStd));
-      if (!o.seiten.includes(this.seite)) this.seite = o.seiteStd;
+      const roh = speicher.lies(o.schluessel + "_zeilen", String(o.seiteStd));
+      // „automatisch“: so viele Zeilen, wie in die Tabellenbox passen (Kopf bleibt stehen, keine senkrechte Leiste)
+      this.auto = roh === "auto";
+      this.seite = this.auto ? 10 : +roh;
+      if (!this.auto && !o.seiten.includes(this.seite)) this.seite = o.seiteStd;
     }
     this.el = $(o.id); this.treffer = $(o.treffer);
     this.z = ziehbar(this.el, o.schluessel, () => Object.fromEntries(o.spalten.map(s => [s.k, s.breite])));
@@ -1288,7 +1314,7 @@ class LokaleTabelle {
     this.sichtbar = ladeSichtbar(o.schluessel + "_spalten", o.spalten.map(s => s.k));
     this.el.addEventListener("input", ev => {
       const e = ev.target.closest("[data-tf]"); if (!e) return;
-      this.f[e.dataset.tf] = e.value; clearTimeout(this.t);
+      this.f[e.dataset.tf] = e.value; this.pg = 0; clearTimeout(this.t);
       this.t = setTimeout(() => this.zeige(), e.tagName === "SELECT" ? 0 : 300);
     });
     this.el.addEventListener("click", ev => {
@@ -1296,14 +1322,49 @@ class LokaleTabelle {
       const th = ev.target.closest("thead th[data-sort]"); if (!th) return;
       const k = th.dataset.sort, sp = this.spalte(k);
       this.sortierung = sortKlick(this.sortierung, k, ev.shiftKey, sp.typ === "zahl" || sp.typ === "gb");
-      this.merkeSort(); this.zeige();
+      this.merkeSort(); this.pg = 0; this.zeige();
     });
     // Umschalt+Klick soll keinen Text markieren
     this.el.addEventListener("mousedown", ev => { if (ev.shiftKey && ev.target.closest("thead th[data-sort]")) ev.preventDefault(); });
-    if (this.treffer && o.seiten) this.treffer.addEventListener("change", ev => {
-      const s = ev.target.closest("[data-seite]"); if (!s) return;
-      this.seite = +s.value; speicher.schreib(this.schluessel + "_zeilen", String(this.seite)); this.zeige();
-    });
+    if (o.seiten) {
+      // Punkt 276: Auswahl „Zeilen“ in der Leiste vor dem CSV-Link und Seitenwechsler ‹ › unter der Tabelle – wie im Tab Entitäten
+      const anker = o.csvAnker && document.querySelector(`a[data-csv="${o.csvAnker}"]`);
+      const box = this.el.closest(".tabelle");
+      const ort = o.wahlOrt && document.querySelector(o.wahlOrt);   // fester Platz statt vor dem CSV-Link
+      if (anker || ort) {
+        this.wahl = document.createElement("label");
+        this.wahl.innerHTML = `Zeilen <select aria-label="angezeigte Zeilen">${o.seiten.map(n => `<option value="${n}" ${!this.auto && n === this.seite ? "selected" : ""}>${n}</option>`).join("")}<option value="auto" ${this.auto ? "selected" : ""} title="so viele Zeilen, wie ins Fenster passen">automatisch</option></select>`;
+        if (ort) ort.append(this.wahl); else anker.before(this.wahl);
+        this.wahl.querySelector("select").addEventListener("change", ev => {
+          const v = ev.target.value; this.auto = v === "auto"; this.seite = this.auto ? (this.seite || 10) : +v;
+          this.pg = 0; speicher.schreib(this.schluessel + "_zeilen", v); this.zeige();
+        });
+      }
+      if (box) {
+        this.pager = document.createElement("div"); this.pager.className = "blaettern";
+        this.pager.innerHTML = '<button data-pg="-1" aria-label="vorherige Seite">‹</button><span></span><button data-pg="1" aria-label="nächste Seite">›</button>';
+        box.after(this.pager); box.dataset.nurPager = "1";
+        // bei „automatisch“ neu einteilen, wenn sich die Höhe der Box ändert (Fenstergröße, Reiterwechsel)
+        let rf = 0;
+        const neu = () => { if (!this.auto) return; cancelAnimationFrame(rf); rf = requestAnimationFrame(() => this.zeige()); };
+        new ResizeObserver(neu).observe(box);
+        box.addEventListener("dbh-hoehe", neu);   // die maximale Höhe (--unten, --kleb-h) ändert sich, ohne dass die Box ihre Größe ändert
+        this.pager.addEventListener("click", ev => {
+          const b = ev.target.closest("[data-pg]"); if (!b || b.disabled) return;
+          this.pg = (this.pg || 0) + (+b.dataset.pg); this.zeige();
+        });
+      }
+    }
+  }
+  // Anzahl Zeilen, die in die Tabellenbox passen (null, solange die Box nicht sichtbar ist oder keine Zeilen hat)
+  autoZeilen() {
+    const box = this.el.closest(".tabelle"); if (!box || !box.offsetParent) return null;
+    const hoch = parseFloat(getComputedStyle(box).maxHeight), kopf = this.el.querySelector("thead"),
+      zeilen = [...this.el.querySelectorAll("tbody tr:not(:has(td.leer))")].slice(0, 15);
+    if (!hoch || !kopf || !zeilen.length) return null;
+    const h = zeilen.reduce((s, r) => s + r.offsetHeight, 0) / zeilen.length;
+    // Rand und waagerechte Leiste der Box (offsetHeight − clientHeight) gehen von der Höhe ab
+    return h > 0 ? Math.max(3, Math.floor((hoch - kopf.offsetHeight - (box.offsetHeight - box.clientHeight) - 1) / h)) : null;
   }
   merkeSort() { speicher.schreib(this.schluessel + "_sort", JSON.stringify(this.sortierung)); }
   spalte(k) { return this.spalten.find(s => s.k === k); }
@@ -1418,7 +1479,9 @@ class LokaleTabelle {
       th.innerHTML = oben === "" ? "" : `<b>${oe(oben)}</b>${gef && unten !== "–" && unten !== "" ? `<span class="ges">(${oe(unten)})</span>` : ""}`;
       th.title = oben === "" ? "" : (tip || `${s.titel}: Summe bzw. Anzahl – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)`);
     });
-    const sp = this.zeigbar(), sicht = this.seite ? l.slice(0, this.seite) : l, gk = this.klassen(sp);
+    const sp = this.zeigbar(), seitenZahl = this.seite ? Math.max(1, Math.ceil(l.length / this.seite)) : 1;
+    this.pg = Math.min(Math.max(this.pg || 0, 0), seitenZahl - 1);
+    const von = this.seite ? this.pg * this.seite : 0, sicht = this.seite ? l.slice(von, von + this.seite) : l, gk = this.klassen(sp);
     this.el.querySelector("tbody").innerHTML = l.length
       ? sicht.map(r => `<tr ${this.zeileAttr ? this.zeileAttr(r) : ""}>${sp.map((s, i) =>
           `<td class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${s.tdKlasse ? " " + s.tdKlasse : ""}${gk[i]}" title="${esc(s.tip ? s.tip(r) : (s.typ === "text" ? s.wert(r) : ""))}">${s.zelle(r)}</td>`).join("")}</tr>`).join("")
@@ -1426,14 +1489,33 @@ class LokaleTabelle {
     const aus = this.spalten.filter(s => !s.fest && !this.sichtbar.has(s.k) && (this.f[s.k] || "").trim());
     // Punkt 153 (0.5.3): Anzahl entfällt (steht in der Summenzeile); bei Tabellen mit Seiten bleibt die Auswahl „Zeilen“ samt Bereich
     if (this.treffer) this.treffer.innerHTML = "" +
-      (this.seiten ? `<span>angezeigt ${zahl(l.length ? 1 : 0)}–${zahl(sicht.length)} von ${zahl(l.length)}</span>
-        <label>Zeilen <select data-seite aria-label="angezeigte Zeilen">${this.seiten.map(n => `<option value="${n}" ${n === this.seite ? "selected" : ""}>${n}</option>`).join("")}</select></label>` : "") +
       (aus.length ? `<span class="chip warn" title="${esc(aus.map(s => s.titel).join(", "))}">${aus.length} Filter in ausgeblendeten Spalten wirken nicht</span>` : "") +
       (this.zusatz ? this.zusatz(this) : "");
     if (this.treffer) this.treffer.hidden = !this.treffer.innerHTML.trim();
+    if (this.auto && (this.messen || 0) < 4) {
+      let n = this.autoZeilen();
+      // Zeilen sind unterschiedlich hoch (Chips, Umbrüche): läuft die Box trotzdem über, eine Zeile weniger
+      const box = this.el.closest(".tabelle");
+      // Wachsen darf die Seitengröße nur auf der ersten Seite: auf Folgeseiten (und der kürzeren letzten Seite) wäre die Messung
+      // eine andere Stichprobe, die Einteilung spränge zurück und das Blättern käme nicht voran
+      if (n && n > this.seite && (this.pg > 0 || sicht.length < this.seite)) n = this.seite;
+      if (n && box.scrollHeight > box.clientHeight + 1 && sicht.length > 3) n = Math.min(n, sicht.length - 1);
+      if (n && n !== this.seite) {
+        this.pg = Math.floor(von / n); this.seite = n; this.messen = (this.messen || 0) + 1;
+        try { this.zeige(); } finally { this.messen--; }
+        return;
+      }
+    }
+    if (this.pager) {
+      this.pager.hidden = !this.seite;
+      const bis = von + sicht.length;
+      this.pager.querySelector("span").textContent = `${zahl(l.length ? von + 1 : 0)}–${zahl(bis)} von ${zahl(l.length)}`;
+      const [zu, weiter] = this.pager.querySelectorAll("button");
+      zu.disabled = this.pg <= 0; weiter.disabled = bis >= l.length;
+    }
     if (this.nachher) this.nachher(this);
   }
-  resetFilter() { this.f = {}; this.sortierung = [...this.sortStdListe]; this.merkeSort(); this.baueKopf(); this.zeige(); }
+  resetFilter() { this.f = {}; this.pg = 0; this.sortierung = [...this.sortStdListe]; this.merkeSort(); this.baueKopf(); this.zeige(); }
   csv(name) {
     // Punkt 226 (0.5.5b14): csvTeile = [[Titel, Wert-Funktion], …] – eine zusammengefasste Spalte als mehrere CSV-Felder
     const sp = this.spalten.filter(s => s.csv || s.csvTeile);
@@ -2492,6 +2574,7 @@ const wertSpalte = art => ({
 const T = {};
 T.regeln = new LokaleTabelle({
   id: "#tRegeln", treffer: "#trefferRegeln", schluessel: "dbh_breiten_regeln", einheit: "Regeln", sortStd: { k: "rang" },
+  csvAnker: "regeln", seiten: [25, 50, 100, 250], seiteStd: 25,   // Punkt 276
   // Punkt 145 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]], ["Istzustand", "ist", ["treffer"]],
     ["Regelwerk-Check", "loesch", ["empfehlung"]]],   // Punkt 232: Farbe wie der Reiter Empfehlungen
@@ -2557,7 +2640,7 @@ T.regeln = new LokaleTabelle({
   nachher: () => zeigeAuswahl(),
 });
 T.probe = new LokaleTabelle({
-  id: "#tProbe", treffer: "#trefferProbe", schluessel: "dbh_breiten_probe", einheit: "Regeln", sortStd: { k: "regel" },
+  id: "#tProbe", treffer: "#trefferProbe", schluessel: "dbh_breiten_probe", einheit: "Regeln", sortStd: { k: "regel" }, csvAnker: "probe", seiten: [25, 50, 100, 250], seiteStd: 25,   // Punkt 276
   // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
   // Punkt 224 (0.5.5b14): Block „Löschmenge sofort“ entfällt – die steht in Kacheln, Tab Entitäten und Tab Löschen
   gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
@@ -3476,10 +3559,6 @@ async function ladeRegeln() {
   const ids = new Set(S.regeln.regeln.map(x => x.id));
   [...S.auswahl].forEach(id => ids.has(id) || S.auswahl.delete(id));   // entfernte Regeln aus der Auswahl
   const st = S.regeln.standard;
-  $("#standardText").textContent = `Rang: Schutz › eigene Vorhaltezeiten (E:) › entity › glob › klasse › integration › vielschreiber › verwaist › HA-Standard, innerhalb eines Typs die Reihenfolge hier. ${WNAME.kurzzeit} und ${WNAME.langzeit} werden je für sich aufgelöst. ` +
-    `Für verwaiste Entitäten gelten E:- und entity-Regeln sowie Regeln vom Typ verwaist. ` +
-    `Regeln vom Typ event setzen die ${EV_NAME} (Logbuch) je Event-Typ – genauer Name vor Platzhalter. ` +
-    `Standard ohne Regel: ${WNAME.kurzzeit} ${wertAnzeige(st.kurzzeit)}, ${WNAME.langzeit} ${wertAnzeige(st.langzeit)}.`;
   T.regeln.daten(S.regeln.regeln);
   zeigeAttrStandard();
   zeigeGlobal();
@@ -3564,17 +3643,9 @@ function attrStandardDialog() {
 }
 document.addEventListener("click", ev => { const c = ev.target.closest("[data-chip]"); if (c) chipKlick(c.dataset.chip); });
 document.addEventListener("keydown", ev => { if (ev.key === "Enter" && ev.target.dataset?.chip) chipKlick(ev.target.dataset.chip); });
-// Punkt 79: Wie viel ohne eigene Kurzzeit bleibt – „global“ heißt purge_keep_days, bei 7300 also 20 Jahre
+// Punkt 79: Der Textblock „Ohne eigene Kurzzeit (global …)“ ist am 18.10.2026 entfallen (Punkt 276); die Funktion zieht nur noch die Chips nach
 function zeigeGlobal() {
   zeigeChips();   // Punkt 272: Chips mit den frischen Zahlen
-  const s = S.probe?.summe, pkd = S.probe?.stand?.purge_keep_days, el = $("#globalText");
-  if (!s || !pkd || !s.global_entitaeten) { el.hidden = true; return; }
-  el.hidden = false;
-  el.innerHTML = `<b>Ohne eigene Kurzzeit (global = purge_keep_days = ${tageJahre(pkd)}):</b> ${zahl(s.global_entitaeten)} aktive Entitäten,
-    heute ${zahl(s.global_states)} States, Zufluss ca. ${zahl(s.global_zuwachs_tag)} States am Tag.
-    HA bewahrt sie ${tageJahre(pkd)} auf; auf diese Zeit hochgerechnet ca. <b>${gb(s.global_bytes_tag * pkd)}</b> (States, 5-Min, Attribute; aus dem Zufluss je Tag, Mittel der letzten 7 vollen Tage).
-    Kürzer geht es nur über Regeln mit eigener Kurzzeit.`;
-  el.title = "Kurzzeit global: Zählt aktive Entitäten, deren Kurzzeit „global“ ist (keine Regel oder eine Regel mit dem Wert global). Verwaiste schreiben nichts mehr und fehlen hier.";
 }
 async function speichereRegeln(daten) {
   const r = await api("regeln", { method: "PUT", headers: { "content-type": "application/json" },
@@ -4329,7 +4400,7 @@ const vorhaltungTip = r => {
 const blockSpalte = (k, titel, hilfe, breite = 115) => ({ k, titel, hilfe, typ: "zahl", n: 1, breite, wert: r => r[k],
   zelle: r => r[k] == null ? "–" : zahl(r[k]), csv: r => r[k] ?? "", summe: anzahlSumme(r => r[k]) });
 T.loesch = new LokaleTabelle({
-  id: "#tLoesch", treffer: "#trefferLoesch", schluessel: "dbh_breiten_loesch2", einheit: "Entitäten bzw. Event-Typen im Plan", sortStd: { k: "summe", desc: true },
+  id: "#tLoesch", treffer: "#trefferLoesch", schluessel: "dbh_breiten_loesch2", einheit: "Entitäten bzw. Event-Typen im Plan", sortStd: { k: "summe", desc: true }, csvAnker: "loesch", seiten: [25, 50, 100, 250], seiteStd: 25,   // Punkt 276
   // Punkt 148 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Stammdaten", "stamm", ["entity_id", "regel", "status"]], ["Vorhaltezeiten", "vorh", ["lauf"]],
     ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "attr_zeilen", "events", "lts"]],
@@ -4379,7 +4450,7 @@ const mitAttr = r => r.geplant_attr !== undefined;
 const laufSumme = r => (r.geloescht || 0) + (mitAttr(r) ? r.attr_geloescht || 0 : 0);
 const geplantLauf = r => (r.geplant_zeilen || 0) + (mitAttr(r) ? r.geplant_attr || 0 : 0);
 T.laeufe = new LokaleTabelle({
-  id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true },
+  id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true }, wahlOrt: "#laeufeZeilen",
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt", "rest"]],
@@ -4593,7 +4664,7 @@ const artZeilen = (r, k) => k === "states" ? (r.states ?? r.zeilen - (r.kurz || 
 const monatSumme = r => (r.zeilen || 0) + (r.attr_zeilen || 0);   // Punkt 243: Summe inkl. Attribute
 const monatSpalte = (k, t) => ({ k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 120, wert: r => artZeilen(r, k), zelle: r => zahl(artZeilen(r, k)), csv: r => artZeilen(r, k), summe: anzahlSumme(r => artZeilen(r, k)) });
 T.summe = new LokaleTabelle({
-  id: "#tSumme", treffer: "#trefferSumme", schluessel: "dbh_breiten_summe", einheit: "Einträgen (Entität × Monat)", sortStd: { k: "zeilen", desc: true },
+  id: "#tSumme", treffer: "#trefferSumme", schluessel: "dbh_breiten_summe", einheit: "Einträgen (Entität × Monat)", sortStd: { k: "zeilen", desc: true }, csvAnker: "summe",
   seiten: [50, 250, 1000, 2500], seiteStd: 250,   // Punkt 70
   // Punkt 151 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Stammdaten", "stamm", ["entity_id", "monat"]], ["Gelöscht", "loesch", ["zeilen", "states", "kurz", "attr_zeilen", "events", "lts"]]],

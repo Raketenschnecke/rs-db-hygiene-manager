@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b18 (Beta)
+- **Tabellen mit Zeilenauswahl und Seitenwechsel (Punkt 276):** Regeln, Löschen, Prognosen je Regel, Läufe und Gelöscht je Entität und Monat haben vor „CSV“ bzw. über der Tabelle die Auswahl „Zeilen“ (Regeln, Löschen, Prognosen: 25, 50, 100, 250; Läufe und Monatssumme wie bisher) und unter der Tabelle den Seitenwechsler ‹ › wie im Tab Entitäten
+- **Neue Stufe „automatisch“:** zeigt so viele Zeilen, wie in die Tabellenbox passen – ohne senkrechte Leiste, der Kopf bleibt stehen; rechnet bei Fenstergröße und Reiterwechsel neu. Regeln und Prognosen reichen bis zum unteren Fensterrand
+- **Reiter Regeln:** der Textblock „Ohne eigene Kurzzeit …“ und der Rang-Hinweis unter der Tabelle entfallen; das Banner „Attribut-Standard“ steht zwischen Chips und Knöpfen und scrollt weg, die Knopfleiste bleibt oben stehen
+- **Abstände:** Reiter → Chips → Knopfleiste auf allen Reitern gleich groß (ca. 12 px); die Kopfleiste ist dafür in Reiter plus Chips und die Knopfleisten geteilt
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b17 (Beta)
 - **Zuwachs-Statistik (neue Datei `zuwachs.db`):** Nach jeder Analyse schreibt die App je Entität und abgeschlossenem Kalendertag vier Zahlen fort: neue Zeilen in States, 5-Min-Statistik, Langzeit und Attributen. Anders als der Cache wird die Datei nie neu aufgebaut, die Tageswerte bleiben also auch nach Purge und Löschläufen erhalten (ein erfasster Tag wird nie kleiner). Abruf: `GET /api/zuwachs?entity=sensor.x&von=2026-09-01&bis=2026-10-01` (ohne `entity` die Summe aller Entitäten; `null` = Tag außerhalb der Abdeckung der Quelle, `0` = keine neuen Zeilen)
 - Beim ersten Lauf wird übernommen, was die Recorder-Datenbank noch hat (ohne den angeschnittenen ältesten Tag); was die App vorher schon gelöscht hat, ist zu niedrig erfasst. Attribute lassen sich nicht rückwirkend ermitteln und werden erst ab dem übernächsten Tag nach dem ersten Lauf erfasst. Chart „Zeilen pro Tag (Zuwachs)“ im Dialog einer Entität (aufklappbar; 30 Tage, 90 Tage, 1 Jahr, alles; Linien per Klick auf die Legende ein-/ausblenden). Aufbewahrung unbegrenzt (ca. 30–50 MB pro Jahr bei 3.000 Entitäten)
