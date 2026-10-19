@@ -465,13 +465,15 @@ def befunde(pl, bestand, ignoriert=(), live=None):
                            [f"gewinnt bei {g}, überstimmt bei {u}", f"Vorrang haben: {text_von(r['id'])}"]))
 
     out.sort(key=lambda b: (STUFE_RANG[b["stufe"]], min(pos.get(i, 999) for i in b["regeln"])))
-    return {"befunde": out, "zusammenfassung": zusammenfassung(out, bestand)}
+    # Anzahl toter Muster über alle Regeln (auch passive) – so viele zeigt der Knopf „Tote Muster“ und die Sammelliste
+    tote_gesamt = sum(len(t) for t in tote.finde(bestand, bz).values())
+    return {"befunde": out, "zusammenfassung": {**zusammenfassung(out, bestand), "tote_gesamt": tote_gesamt}}
 
 
 def zusammenfassung(liste, bestand):
     """Zähler je Stufe und Regeln/Muster, wenn alle nicht ausgeblendeten Vorschläge (erste Variante) übernommen würden –
     nacheinander, Vorschläge zu schon geänderten Regeln entfallen."""
-    n = Counter(b["stufe"] for b in liste if not b["ignoriert"])
+    n = Counter("tot" if b["art"] == "tot" else b["stufe"] for b in liste if not b["ignoriert"])   # tote Muster zählen für sich (magenta), nicht als Hinweis
     daten, beruehrt = bestand, set()
     for b in liste:
         # ohne Befunde, bei denen der Nutzer erst wählen muss (Vorrang) – dort gibt es keine Standard-Variante
@@ -483,7 +485,7 @@ def zusammenfassung(liste, bestand):
             continue
         beruehrt |= ids
         daten = _anwenden(daten, a)
-    return {"rot": n["rot"], "gelb": n["gelb"], "grau": n["grau"], "ausgeblendet": sum(1 for b in liste if b["ignoriert"]),
+    return {"rot": n["rot"], "tot": n["tot"], "gelb": n["gelb"], "grau": n["grau"], "ausgeblendet": sum(1 for b in liste if b["ignoriert"]),
             "vorher": _kennzahl(bestand["regeln"]), "nachher": _kennzahl(daten["regeln"])}
 
 

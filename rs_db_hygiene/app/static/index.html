@@ -162,6 +162,12 @@ main { padding: 0 20px 24px; }
 button, select, input, textarea { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
 button { cursor: pointer; }
 button.primaer { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* Aktivität nach Klick auf den blauen Knopf eines Dialogs: Ring vor dem Text, Doppelklick wird ignoriert */
+button.primaer.laeuft { cursor: progress; opacity: .85; }
+button.primaer.laeuft::before { content: ""; display: inline-block; width: .9em; height: .9em; margin-right: .5em; vertical-align: -.12em;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: dlg-dreh .8s linear infinite; }
+@keyframes dlg-dreh { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { button.primaer.laeuft::before { animation-duration: 2.4s; } }
 /* Punkt 135 (0.5.3): Ansichtsknöpfe im Spaltendialog präsenter; die Ansicht, die genau den Häkchen entspricht, ist gefüllt */
 button.ansicht { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 button.ansicht:hover { background: color-mix(in srgb, var(--accent) 22%, var(--panel)); }
@@ -318,6 +324,7 @@ td.geraetklick:hover { text-decoration: underline; }
 .chip.ok { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); color: var(--ok); }
 .chip.bad { background: color-mix(in srgb, var(--bad) 16%, var(--panel)); color: var(--bad); }
 /* Punkt 232: Regelwerk-Check – Chips in der Spalte Empfehlung und im Kasten über der Tabelle */
+.chip.bad.check, .chip.tot { font-weight: 700; }   /* rot und magenta fett */
 .chip.tot { background: color-mix(in srgb, var(--tot) 16%, var(--panel)); color: var(--tot); }   /* Punkt 281: tote Muster in Magenta, Stufe bleibt grau */
 .chip.check { cursor: pointer; margin: 1px 4px 1px 0; }
 .chip.check:hover { outline: 1px solid currentColor; }
@@ -2666,8 +2673,8 @@ T.regeln = new LokaleTabelle({
     { k: "empfehlung", titel: "Empfehlung", typ: "auswahl", fest: 1, breite: 230, wert: r => checkWert(r),
       hilfe: "Regelwerk-Check: Befunde zum bestehenden Regelwerk – rot Fehler oder Konflikt, gelb Verdichtung, grau Hinweis. Klick auf einen Chip: Begründung, Wirkung und Übernehmen",
       zelle: r => checkChips(r), tip: () => "", csv: r => checkVon(r).map(b => b.kurz).join(", "),
-      optionen: () => [["__mit", "mit Befund"], ["rot", "Fehler/Konflikt"], ["gelb", "Verdichtung"], ["grau", "Hinweis"], ["__ohne", "ohne Befund"]],
-      passt: (r, w) => { const l = checkVon(r); return w === "__mit" ? l.length > 0 : w === "__ohne" ? !l.length : l.some(b => b.stufe === w); },
+      optionen: () => [["__mit", "mit Befund"], ["rot", "Fehler/Konflikt"], ["tot", "Tote Muster"], ["gelb", "Verdichtung"], ["grau", "Hinweis"], ["__ohne", "ohne Befund"]],
+      passt: (r, w) => { const l = checkVon(r); return w === "__mit" ? l.length > 0 : w === "__ohne" ? !l.length : l.some(b => w === "tot" ? b.art === "tot" : b.stufe === w && b.art !== "tot"); },
       summe: (g, a) => [zahl(g.filter(r => checkVon(r).length).length), zahl(a.filter(r => checkVon(r).length).length), "Regeln mit Befund – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "notiz", titel: "Notiz", typ: "text", breite: 200, wert: r => r.notiz, zelle: r => esc(r.notiz), csv: r => r.notiz, tip: r => notizLang(r.notiz) },
   ],
@@ -3554,7 +3561,13 @@ function dialog(titel, inhalt, knoepfe) {
   $("#dlgInhalt").onchange = $("#dlgInhalt").oninput = null;   // Punkt 232: Handler eines vorigen Dialogs entfernen
   knoepfe.forEach(([t, fn, primaer]) => {
     const b = document.createElement("button"); b.textContent = t; if (primaer) b.className = "primaer";
-    b.onclick = fn; $("#dlgFuss").append(b);
+    // Der blaue Knopf zeigt nach dem Klick Aktivität, bis seine Aktion fertig ist (Speichern kann dauern); ein zweiter Klick wird ignoriert
+    b.onclick = !primaer ? fn : async ev => {
+      if (b.classList.contains("laeuft")) return;
+      b.classList.add("laeuft"); b.setAttribute("aria-busy", "true");
+      try { return await fn(ev); } finally { b.classList.remove("laeuft"); b.removeAttribute("aria-busy"); }
+    };
+    $("#dlgFuss").append(b);
   });
   if (!$("#dlg").open) $("#dlg").showModal();
 }
@@ -3695,8 +3708,10 @@ async function speichereRegeln(daten) {
 // eines Vorschlags ist auf allen Entitäten durchgerechnet – „wirkungsneutral“ oder mit der Liste der Unterschiede.
 const CHECK_STUFE = { rot: ["bad", "Fehler oder Konflikt"], gelb: ["warn", "Verdichtung"], grau: ["", "Hinweis"] };
 S.check = null; S.checkAlle = false;
-const checkVon = r => (S.check?.je[r.id] || []).filter(b => S.checkAlle || !b.ignoriert);
-const checkWert = r => { const l = checkVon(r); return l.length ? String(Math.min(...l.map(b => ({ rot: 1, gelb: 2, grau: 3 })[b.stufe]))) : "9"; };
+// Reihenfolge der Chips: rot, magenta (tote Muster), gelb, grau
+const checkRang = b => b.art === "tot" ? 1 : ({ rot: 0, gelb: 2, grau: 3 })[b.stufe];
+const checkVon = r => (S.check?.je[r.id] || []).filter(b => S.checkAlle || !b.ignoriert).sort((a, b) => checkRang(a) - checkRang(b));
+const checkWert = r => { const l = checkVon(r); return l.length ? String(1 + Math.min(...l.map(checkRang))) : "9"; };
 function checkChips(r) {
   return checkVon(r).map(b => {
     const andere = b.regeln.filter(i => i !== r.id);
@@ -3719,14 +3734,18 @@ async function ladeRegelCheck() {
 function zeigeRegelCheckKasten() {
   const el = $("#regelCheck"), d = S.check;
   if (!d || d.fehler) { el.hidden = true; return; }
-  const z = d.zusammenfassung, filter = st => `<span class="chip check ${CHECK_STUFE[st][0]}" data-rc-filter="${st}" title="Filter: nur Regeln mit diesem Befund\nKlick: Tabelle filtern">${zahl(z[st])} ${CHECK_STUFE[st][1]}</span>`;
-  el.hidden = false;
-  el.innerHTML = `<b>Regelwerk-Check</b>` +
-    (z.rot + z.gelb + z.grau ? ["rot", "gelb", "grau"].filter(st => z[st]).map(filter).join("") : `<span class="chip ok">keine Befunde</span>`) +
-    `<span class="sub" title="Wenn alle angezeigten Vorschläge (jeweils die erste Variante) übernommen würden; Vorschläge zu schon geänderten Regeln zählen nicht doppelt">alle Vorschläge übernommen: Regeln ${zahl(z.vorher.regeln)} → ${zahl(z.nachher.regeln)} · Muster ${zahl(z.vorher.muster)} → ${zahl(z.nachher.muster)}</span>` +
-    // Punkt 281: tote Muster sammelweise bereinigen (Zahl = tote Muster in aktiven Regeln laut Befunden)
-    `<button id="rcTote" class="chip tot" style="cursor:pointer;margin:0" title="Liste aller Muster, die Entitäten nennen, die es in HA nicht mehr gibt – mit Auswahl und Entfernen">Tote Muster${(d.befunde || []).some(b => b.art === "tot") ? ` (${zahl((d.befunde || []).filter(b => b.art === "tot" && !b.ignoriert).reduce((n, b) => n + (b.tote || 0), 0))})` : ""} …</button>` +
-    (z.ausgeblendet ? `<label class="sub"><input type="checkbox" id="rcAlle"${S.checkAlle ? "checked" : ""}> ${zahl(z.ausgeblendet)} ausgeblendete zeigen</label>` : "") +
+  const z = d.zusammenfassung, filter = st => `<span class="chip check ${CHECK_STUFE[st][0]}" data-rc-filter="${st}" title="Filter: nur Regeln mit diesem Befund
+Klick: Tabelle filtern">${zahl(z[st])} ${CHECK_STUFE[st][1]}</span>`;
+  // Chips und Haken nur, wenn es Werte gibt; ohne jeden Eintrag verschwindet das ganze Banner. Reihenfolge: rot, magenta (tote Muster, Punkt 281), gelb, grau
+  const teile = [
+    z.rot ? filter("rot") : "",
+    z.tote_gesamt ? `<button id="rcTote" class="chip tot" style="cursor:pointer;margin:0" title="Liste aller Muster, die Entitäten nennen, die es in HA nicht mehr gibt – mit Auswahl und Entfernen">Tote Muster (${zahl(z.tote_gesamt)}) …</button>` : "",
+    ...["gelb", "grau"].map(st => z[st] ? filter(st) : ""),
+    z.ausgeblendet ? `<label class="sub" title="Befunde, die mit „Bewusst so“ ausgeblendet wurden"><input type="checkbox" id="rcAlle" ${S.checkAlle ? "checked" : ""}> ${zahl(z.ausgeblendet)} ausgeblendete zeigen</label>` : "",
+  ].filter(Boolean);
+  el.hidden = !teile.length;
+  if (!teile.length) { el.innerHTML = ""; return; }
+  el.innerHTML = `<b>Regelwerk-Check</b>` + teile.join("") +
     `<span class="sub" style="margin-left:auto">${d.dauer_s >= 0.1 ? `gerechnet in ${String(d.dauer_s).replace(".", ",")} s` : ""}</span>`;
 }
 // Punkt 281: tote Muster – Liste über alle Regeln, Auswahl, Entfernen mit Sicherung

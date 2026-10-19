@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b23 (Beta)
+- **Banner Regelwerk-Check aufgeräumt:** Chips und Haken erscheinen nur noch, wenn sie Werte haben; ohne jeden Eintrag verschwindet das ganze Banner. Der Text „alle Vorschläge übernommen: Regeln … → …“ und der Chip „keine Befunde“ entfallen. Reihenfolge: rot, magenta (Tote Muster), gelb, grau; rot und magenta fett, auch in der Spalte „Empfehlung“. Tote Muster zählen nicht mehr als Hinweis (grau), sondern für sich; neuer Filterwert „Tote Muster“. Der Knopf „Tote Muster (n) …“ zählt alle Regeln, auch passive
+- **Aktivität im Dialog:** Der blaue Knopf jedes Dialogs zeigt nach dem Klick einen drehenden Ring, bis die Aktion fertig ist; ein zweiter Klick wird ignoriert
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b22 (Beta)
 - **Tote Muster in Regeln (Punkt 281):** Der Regelwerk-Check prüft Muster mit genauer Entity-ID (entity, E:, glob und schutz ohne Platzhalter) jetzt live gegen Registry und HA-Zustände; bisher galt nur „fehlt in der Analyse“, umbenannte oder gelöschte Entitäten mit Altdaten wurden nicht erkannt. Fallback bei nicht erreichbarem HA: letzte Analyse (verwaiste zählen als tot). Deaktivierte Entitäten gelten als lebendig
 - **Knopf „Tote Muster …“ im Regelwerk-Check:** Liste über alle Regeln (auch passive) mit Befund (in der Registry gelöscht / nirgends bekannt) und den Daten, die noch in der DB liegen; Auswahl per Haken, Entfernen mit Rückfrage und Sicherung der Regeln. Regeln ohne Muster entfallen. Neue Schnittstellen `GET /api/regeln/tote`, `POST /api/regeln/tote/entfernen`
