@@ -4453,8 +4453,10 @@ T.laeufe = new LokaleTabelle({
   id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true }, wahlOrt: "#laeufeZeilen",
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt", "rest"]],
-    ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_attr", "lauf_events", "lauf_lts"]]],
+  gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
+    ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_attr", "lauf_events", "lauf_lts"]],
+    // Punkt 277: wie in der Löschtabelle als eigene Gruppe im Rot des Istzustands
+    ["Überhang", "ist", ["ueberhang"]]],
   fix: ["start"],
   leer: "noch kein Löschlauf",
   spalten: [
@@ -4476,11 +4478,6 @@ T.laeufe = new LokaleTabelle({
     // Punkt 59: genau gezählt vor jedem Paket bzw. Auftrag = eigentlicher Vergleichswert zu „gelöscht“
     { k: "gezaehlt", titel: "gezählt", typ: "zahl", n: 1, breite: 110, wert: r => gezaehltLauf(r), zelle: r => zahl(gezaehltLauf(r)), csv: r => gezaehltLauf(r), summe: anzahlSumme(r => gezaehltLauf(r)),
       hilfe: "Summe der vor jedem Paket bzw. Auftrag genau gezählten alten Zeilen – Vergleichswert zu „gelöscht“. Bei Attribut-Aufträgen: die Attributzeilen, die nach dem Abtrennen kein State mehr benutzt (genau gezählt vor dem Auftrag; was neuere States oder andere Entitäten noch benutzen, bleibt stehen und zählt nicht mit). Attribute, die mit den States gelöscht werden, stehen nur unter „gelöscht“." },
-    // Punkt 200 (0.5.5b12): Rückstand nach dem Lauf = beim Start fällig − gelöscht, dazu die geschätzte Zahl weiterer Läufe
-    { k: "rest", titel: "Rest danach (≈ Läufe)", typ: "zahl", n: 1, breite: 140, wert: r => laufRest(r)?.zeilen ?? null,
-      zelle: r => { const x = laufRest(r); return x ? `${zahl(x.zeilen)}${x.laeufe ? ` <span class="sub">(≈ ${zahl(x.laeufe)})</span>` : ""}` : "–"; },
-      csv: r => laufRest(r)?.zeilen ?? "", tip: r => { const x = laufRest(r); return x ? `nach diesem Lauf noch fällig: ${zahl(x.zeilen)} Zeilen – bei gleicher Obergrenze ≈ ${mzahl(x.laeufe, "weiterer Lauf", "weitere Läufe")} (Schätzung; neue Zeilen kommen täglich dazu)` : ""; },
-      hilfe: "Was beim Start des Laufs insgesamt fällig war, abzüglich des Gelöschten, und wie viele Läufe das bei gleicher Obergrenze ungefähr noch braucht. Erst ab 0.5.5b12 erfasst; ältere Läufe „–“." },
     // Punkt 243: Summe | States | 5-Min | Attribute | Events | Langzeit; die Summe zählt ab dieser Version die Attribute mit (ältere Läufe unverändert)
     { k: "geloescht", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 130, wert: r => laufSumme(r), zelle: r => zahl(laufSumme(r)), csv: r => laufSumme(r), summe: anzahlSumme(r => laufSumme(r)),
       hilfe: "Gelöscht insgesamt: States + 5-Min-Statistik + Attribute + Events + Langzeit. Läufe aus früheren Versionen zeigen die Summe ohne Attribute." },
@@ -4488,6 +4485,11 @@ T.laeufe = new LokaleTabelle({
     { k: "lauf_attr", titel: "Attribute", typ: "zahl", n: 1, breite: 115, hilfe: "im Lauf gemessen: Attributzeilen, die HA mit den States gelöscht hat (ab 0.4.0) – in der Summe enthalten (Läufe aus früheren Versionen: nicht)",
       wert: r => r.attr_geloescht ?? null, zelle: r => r.attr_geloescht == null ? "–" : zahl(r.attr_geloescht), csv: r => r.attr_geloescht ?? "", summe: anzahlSumme(r => r.attr_geloescht || 0) },
     ...[["events", "Events"], ["lts", "Langzeit"]].map(([k, t]) => laufSpalte(k, t)),
+    // Punkt 277 (0.5.6b19): ersetzt „Rest danach (≈ Läufe)“ und die erste Fassung des Überhangs – rot: Aufträge komplett nicht abgearbeitet, gelb: Teilmengen
+    { k: "ueberhang", titel: "Überhang", typ: "zahl", n: 1, breite: 130, wert: r => ueberhang(r)?.summe ?? null,
+      zelle: r => { const u = ueberhang(r); return !u ? "–" : !u.summe ? "0" : (u.rot ? `<span class="chip bad">${zahl(u.rot)}</span>` : "") + (u.gelb ? `<span class="chip warn">${zahl(u.gelb)}</span>` : ""); },
+      csv: r => ueberhang(r)?.summe ?? "", tip: r => ueberhangTip(r), summe: anzahlSumme(r => ueberhang(r)?.summe || 0),
+      hilfe: "Geplant minus gelöscht (Zeilen und Attributzeilen, jeweils höchstens bis 0). Rot: Aufträge, die dieser Lauf gar nicht begonnen hat (Obergrenze erreicht) · gelb: nur teilweise abgearbeitete Aufträge. Der Tooltip nennt den Grund und, wie viel nach dem Lauf insgesamt noch fällig ist (≈ Läufe). Der Rest folgt im nächsten Lauf." },
     { k: "pakete", titel: "Aufrufe", typ: "zahl", n: 1, breite: 80, wert: r => r.pakete.filter(p => p.gesendet.length).length,
       zelle: r => zahl(r.pakete.filter(p => p.gesendet.length).length), csv: r => r.pakete.filter(p => p.gesendet.length).length },
     { k: "fehler", titel: "Meldung", typ: "text", breite: 280, wert: r => r.fehler || "", zelle: r => esc(r.fehler || ""), csv: r => r.fehler || "" },
@@ -4511,8 +4513,48 @@ function laufRest(r) {
   const st = Math.max(0, r.faellig_states - laufArt(r, "states")), b = Math.max(0, (r.faellig_b || 0) - laufArt(r, "kurz") - laufArt(r, "lts") - laufArt(r, "events"));
   return { zeilen: st + b, laeufe: laeufeNoetig(st, b, r.grenze, r.grenze_b) };
 }
+// Punkt 277 (0.5.6b19): Überhang = geplant − erledigt (Zeilen und Attribute getrennt, je höchstens bis 0) und der Grund dazu, aus den Paketen des
+// Protokolls abgeleitet – auch bei älteren Läufen; die Plan-Zahl je Auftrag („geplant“) trägt erst 0.5.6b19
+const ergebnisKern = e => String(e || "").split(" – ")[0];
+const ART_B = { kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
+function ueberhang(r) {
+  if (r.status === "läuft") return null;
+  const p = r.pakete || [], zeilen = Math.max(0, (r.geplant_zeilen || 0) - (r.geloescht || 0));
+  const attr = mitAttr(r) ? Math.max(0, (r.geplant_attr || 0) - (r.attr_geloescht || 0)) : 0;
+  const gruende = [];
+  const nach = {};
+  for (const x of p) { const e = ergebnisKern(x.ergebnis); if (e && e !== "fertig") (nach[e + "|" + (x.art || "states")] ||= []).push(x); }
+  const bGeloescht = ["kurz", "lts", "events"].reduce((s, a) => s + laufArt(r, a), 0), abgetr = r.abgetrennt || 0;
+  for (const [k, l] of Object.entries(nach)) {
+    const [e, art] = k.split("|"), attrArt = art === "attr", plan = l.reduce((s, x) => s + (x.geplant || 0), 0), hat = l.some(x => x.geplant != null);
+    const was = attrArt ? mzahl(l.length, "Attribut-Auftrag", "Attribut-Aufträge") : art === "states" ? mzahl(l.length, "States-Paket", "States-Pakete") : mzahl(l.length, `${ART_B[art] || art}-Auftrag`, `${ART_B[art] || art}-Aufträge`);
+    const menge = hat ? ` (${zahl(plan)} ${attrArt ? "Attributzeilen" : "Zeilen"} geplant)` : "";
+    if (e === "Obergrenze erreicht" || e === "nichts zu löschen oder Obergrenze erreicht")
+      gruende.push({ art, n: l.length, text: `${was} nicht begonnen${menge} – Obergrenze erreicht${r.grenze_b != null && art !== "states" ? `: Statistik/Events ${zahl(r.grenze_b)} Zeilen = ${zahl(bGeloescht)} gelöscht + ${zahl(abgetr)} States abgetrennt` : ""}` });
+    else if (e === "Rest im nächsten Lauf") gruende.push({ art, n: l.length, text: `${was} nur teilweise${menge}: Rest folgt im nächsten Lauf (Obergrenze erreicht)` });
+    else gruende.push({ art, n: l.length, text: `${was}: ${e}` });
+  }
+  const fertigAttr = p.filter(x => x.art === "attr" && x.ergebnis && ergebnisKern(x.ergebnis) === "fertig" && x.geplant != null);
+  if (fertigAttr.length) {
+    const d = fertigAttr.reduce((s, x) => s + (x.geplant || 0) - (x.attr_geloescht || 0), 0);
+    if (d > 0) gruende.push({ art: "attr", n: fertigAttr.length, text: `${zahl(d)} Attributzeilen geplant, aber nicht gelöscht, obwohl die Aufträge „fertig“ sind – andere States benutzen sie noch oder sie waren seit der Analyse schon weg` });
+  } else if (attr && !p.some(x => x.geplant != null))
+    gruende.push({ art: "attr", n: 0, text: "Aufteilung der Attributzeilen auf die Aufträge fehlt – erst ab 0.5.6b19 im Protokoll" });
+  if (["abgebrochen", "Fehler", "unterbrochen"].includes(r.status)) gruende.unshift({ art: "", n: 0, text: `Lauf ${r.status}${r.fehler ? `: ${r.fehler}` : ""}` });
+  if (zeilen > 0 && !gruende.length) gruende.push({ art: "", n: 0, text: "mehr Zeilen geplant als gelöscht (Schätzung auf Tagesbasis; seit der Analyse bereits gelöscht oder keine Zeilen vorhanden)" });
+  // rot = komplett nicht abgearbeitete Aufträge (Obergrenze), gelb = Teilmengen; ohne Plan je Auftrag (ältere Läufe) zählt der ganze Überhang als rot, sobald ein Auftrag nicht begonnen wurde
+  const summe = zeilen + attr, nb = p.filter(x => ["Obergrenze erreicht", "nichts zu löschen oder Obergrenze erreicht"].includes(ergebnisKern(x.ergebnis)));
+  const rot = !nb.length ? 0 : nb.every(x => x.geplant != null) ? Math.min(summe, nb.reduce((s, x) => s + x.geplant, 0)) : summe;
+  return { zeilen, attr, summe, rot, gelb: summe - rot, gruende };
+}
+const ueberhangTip = r => {
+  const u = ueberhang(r), x = laufRest(r);
+  if (!u || !u.summe) return "";
+  return [`Überhang: ${zahl(u.zeilen)} Zeilen, ${zahl(u.attr)} Attributzeilen`, ...u.gruende.map(g => "• " + g.text),
+    ...(x ? [`Nach diesem Lauf noch fällig (alles, nicht nur der Plan): ${zahl(x.zeilen)} Zeilen – bei gleicher Obergrenze ≈ ${mzahl(x.laeufe, "weiterer Lauf", "weitere Läufe")} (Schätzung; neue Zeilen kommen täglich dazu)`] : [])].join("\n");
+};
 // ab 0.4.3 (Punkt 82): getrennte Obergrenzen für States und Stufe B (5-Min-Statistik, Langzeit, Events)
-const obergrenzeText = x => x.grenze_b != null ? `States ${zahl(x.grenze)} Zeilen, Statistik und Events ${zahl(x.grenze_b)} Zeilen` : `${zahl(x.grenze)} Zeilen`;
+const obergrenzeText =x => x.grenze_b != null ? `States ${zahl(x.grenze)} Zeilen, Statistik und Events ${zahl(x.grenze_b)} Zeilen` : `${zahl(x.grenze)} Zeilen`;
 // Punkt 84: Verwaiste, die beim Lauf wieder als Zustand vorhanden waren, wurden übersprungen
 function uebersprungenText(r) {
   const u = (r.pakete || []).flatMap(p => (p.uebersprungen || []).map(e => [e, p.uebersprungen_grund]));
@@ -4532,10 +4574,27 @@ $("#tLaeufe").addEventListener("click", ev => {
     z.teile[p.art || "states"] = { wert: ((r.vorhaltung || {})[eid] || {})[p.art || "states"], tage: p.keep_days, alle: p.alle };
     if (p.ergebnis) z.ergebnis.add(p.ergebnis);
   }
+  // Punkt 277: Pakete ohne Entitäts-Ergebnis (Obergrenze erreicht, nichts zu löschen) fehlten bisher in der Liste – jetzt mit ihrem Ergebnis; Plan je Auftrag ab 0.5.6b19
+  for (const p of r.pakete) {
+    const offen = !Object.keys(p.je_entitaet || {}).length && p.ergebnis && ergebnisKern(p.ergebnis) !== "fertig";
+    for (const eid of p.entitaeten || []) {
+      if (!offen && p.geplant == null) continue;
+      const z = je[eid] ||= { states: 0, kurz: 0, lts: 0, events: 0, attr: null, rest: 0, teile: {}, ergebnis: new Set() };
+      if (offen) { z.teile[p.art || "states"] = { wert: ((r.vorhaltung || {})[eid] || {})[p.art || "states"], tage: p.keep_days, alle: p.alle }; z.ergebnis.add(p.ergebnis); }
+      if (p.geplant != null && (p.art || "states") !== "states") {
+        z.geplant = (z.geplant || 0) + p.geplant;
+        z.erledigt = (z.erledigt || 0) + (p.art === "attr" ? (p.attr_geloescht || 0) : (p.geloescht || 0));
+      }
+    }
+  }
   const zeilen = Object.entries(je).map(([eid, z]) => ({ entity_id: eid, keep: vorhaltedauer(z.teile), summe: z.states + z.kurz + z.lts + z.events + (mitAttr(r) ? z.attr || 0 : 0),
-    states: z.states, kurz: z.kurz, lts: z.lts, events: z.events, attr_zeilen: z.attr, rest: z.rest, ergebnis: [...z.ergebnis].join(", ") }));
+    states: z.states, kurz: z.kurz, lts: z.lts, events: z.events, attr_zeilen: z.attr, rest: z.rest, ergebnis: [...z.ergebnis].join(", "),
+    geplant: z.geplant ?? null, ueberhang: z.geplant == null ? null : Math.max(0, z.geplant - z.erledigt) }));
+  const uh = ueberhang(r);
+  const uhText = uh && uh.summe ? `<div class="sperre" style="margin:6px 0"><b>Überhang ${zahl(uh.summe)}</b> (${zahl(uh.zeilen)} Zeilen, ${zahl(uh.attr)} Attributzeilen) – geplant, aber in diesem Lauf nicht gelöscht:<ul style="margin:4px 0 0 18px;padding:0">${uh.gruende.map(g => `<li>${esc(g.text)}</li>`).join("")}</ul></div>` : "";
   dialog(`Löschlauf ${zeit(r.start)} – ${r.status}`,
-    `<p>Umfang: ${esc(r.nur_regel || "alle aktiven Regeln")} · Obergrenze ${obergrenzeText(r)} · purge_keep_days ${zahl(r.purge_keep_days)}${r.exakt ? " · Grenze lokale Mitternacht" : ""}${r.analyse_zeit ? ` · Analyse ${zeit(r.analyse_zeit)}${r.analyse_vorher ? " (vorher neu gestartet)" : ""}` : ""} · gelöscht ${zahl(laufSumme(r))} von geplant ca. ${zahl(geplantLauf(r))}${r.ende ? ` · Dauer ${dauerText(r.ende - r.start)}` : ""}${r.backup_warte_s ? `, davon <b>${backupText(r)}</b> auf Backup gewartet` : ""}</p>
+    `<p>Umfang: ${esc(r.nur_regel || "alle aktiven Regeln")} · Obergrenze ${obergrenzeText(r)}${r.analyse_zeit ? ` · Analyse ${zeit(r.analyse_zeit)}${r.analyse_vorher ? " (vorher neu gestartet)" : ""}` : ""} · gelöscht ${zahl(laufSumme(r))} von geplant ca. ${zahl(geplantLauf(r))}${r.ende ? ` · Dauer ${dauerText(r.ende - r.start)}` : ""}${r.backup_warte_s ? `, davon <b>${backupText(r)}</b> auf Backup gewartet` : ""}</p>
+     ${uhText}
      ${uebersprungenText(r)}
      ${r.fehler ? `<p class="fehler">${esc(r.fehler)}</p>` : ""}
      <div class="trefferzeile" id="trefferDetail"></div>
@@ -4546,7 +4605,7 @@ $("#tLaeufe").addEventListener("click", ev => {
   T.detail = new LokaleTabelle({
     id: "#tDetail", treffer: "#trefferDetail", schluessel: "dbh_breiten_detail", einheit: "Entitäten bzw. Event-Typen", sortStd: { k: "summe", desc: true },
     // Punkt 150 (0.5.3): Look & Feel wie Tab Entitäten
-    gruppen: [["Stammdaten", "stamm", ["entity_id", "keep"]], ["Gelöscht", "loesch", ["summe", "states", "kurz", "attr_zeilen", "events", "lts"]]],
+    gruppen: [["Stammdaten", "stamm", ["entity_id", "keep"]], ["Plan", "vorh", ["geplant", "ueberhang"]], ["Gelöscht", "loesch", ["summe", "states", "kurz", "attr_zeilen", "events", "lts"]]],
     fix: ["entity_id"],
     leer: "keine Entität gesendet",
     spalten: [
@@ -4554,7 +4613,9 @@ $("#tLaeufe").addEventListener("click", ev => {
         summe: (g, a) => [zahl(g.length), zahl(a.length)] },
       { k: "keep", titel: "Vorhaltedauer", typ: "text", breite: 150, wert: x => x.keep, zelle: x => esc(x.keep), csv: x => x.keep,
         hilfe: "K = Kurzzeit (gilt für States, 5-Min-Statistik und Events), A = Attribute, L = Langzeit; Einheit wie in der Regel gewählt (T Tage, W Wochen, M Monate, J Jahre), „alle“ = alles gelöscht. Läufe aus früheren Versionen zeigen Tage." },
-      blockSpalte("summe", "Summe (Zeilen)", mitAttr(r) ? "Summe aus States, 5-Min-Statistik, Attributen, Events und Langzeit" : "Summe aus States, 5-Min-Statistik, Events und Langzeit (dieser Lauf stammt aus einer früheren Version – ohne Attribute)", 130),
+      blockSpalte("geplant", "geplant", "Plan dieses Auftrags (Zeilen bzw. Attributzeilen) – nur für Aufträge von 5-Min-Statistik, Langzeit, Events und Attributen, erst ab 0.5.6b19 im Protokoll", 100),
+      blockSpalte("ueberhang", "Überhang", "geplant minus erledigt (gelöschte Zeilen bzw. entfernte Attributzeilen) – was im nächsten Lauf folgt; bei Aufträgen ohne Plan „–“", 100),
+      blockSpalte("summe", "Summe (Zeilen)", mitAttr(r) ?"Summe aus States, 5-Min-Statistik, Attributen, Events und Langzeit" : "Summe aus States, 5-Min-Statistik, Events und Langzeit (dieser Lauf stammt aus einer früheren Version – ohne Attribute)", 130),
       blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term", 145),
       blockSpalte("attr_zeilen", "Attribute", "im Lauf gemessen – Attributzeilen, die HA mit den States gelöscht hat", 150),
       blockSpalte("events", "Events", "Events dieses Typs"), blockSpalte("lts", "Langzeit", "Stundenstatistik"),

@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b19 (Beta)
+- **Löschprotokoll: neue Spalte „Überhang“ (Punkt 277):** zeigt, was ein Lauf geplant, aber nicht gelöscht hat (Zeilen und Attributzeilen). Roter Chip: Aufträge, die wegen der Obergrenze gar nicht begonnen wurden; gelber Chip: nur teilweise abgearbeitete Aufträge. Der Tooltip nennt den Grund (z. B. „Obergrenze Statistik/Events 2.000.000 = 222.187 gelöscht + 1.777.813 States abgetrennt“) und wie viel nach dem Lauf insgesamt noch fällig ist. Die Spalte steht als rote Gruppe zwischen Langzeit und Aufrufe und ersetzt „Rest danach“
+- **Einzellauf:** Kasten „Überhang“ mit den Gründen, nicht begonnene Aufträge stehen jetzt in der Liste, Spalten „geplant“ und „Überhang“ je Auftrag (die Plan-Zahl je Auftrag trägt das Protokoll erst ab dieser Version, die Gründe werden auch für ältere Läufe angezeigt)
+- Kopfzeile des Einzellaufs ohne „purge_keep_days“ und „Grenze lokale Mitternacht“
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b18 (Beta)
 - **Tabellen mit Zeilenauswahl und Seitenwechsel (Punkt 276):** Regeln, Löschen, Prognosen je Regel, Läufe und Gelöscht je Entität und Monat haben vor „CSV“ bzw. über der Tabelle die Auswahl „Zeilen“ (Regeln, Löschen, Prognosen: 25, 50, 100, 250; Läufe und Monatssumme wie bisher) und unter der Tabelle den Seitenwechsler ‹ › wie im Tab Entitäten
 - **Neue Stufe „automatisch“:** zeigt so viele Zeilen, wie in die Tabellenbox passen – ohne senkrechte Leiste, der Kopf bleibt stehen; rechnet bei Fenstergröße und Reiterwechsel neu. Regeln und Prognosen reichen bis zum unteren Fensterrand

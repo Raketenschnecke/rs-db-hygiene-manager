@@ -903,7 +903,9 @@ class Lauf:
             self.fortschritt["aktuell_rest"] = None
             eintrag = {"art": a["art"], "keep_days": a["keep_days"], "alle": a["alle"], "entitaeten": [a["name"]], "gesendet": [],
                        "vorher": None, "nachher": None, "geloescht": 0, "beginn": time.time(), "dauer_s": None, "ergebnis": None,
-                       "je_entitaet": {}}
+                       "je_entitaet": {},
+                       # Punkt 277: Plan je Auftrag (Zeilen bzw. Attributzeilen dieses Laufs) – Grundlage der Spalte „Überhang“ im Löschprotokoll
+                       "geplant": a.get("zeilen_lauf", a["zeilen"])}
             self.prot["pakete"].append(eintrag)
             if rest <= 0:
                 eintrag["ergebnis"] = "Obergrenze erreicht"
