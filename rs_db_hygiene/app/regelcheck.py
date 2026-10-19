@@ -15,6 +15,7 @@ from collections import Counter
 
 import optimierung
 import regeln as rg
+import tote
 
 PRAEFIX = "check:"           # Kennung im gemeinsamen Ignorier-Speicher der Empfehlungen
 MIN_PLATZHALTER = 3          # Listen ab so vielen genauen IDs auf Platzhalter prüfen
@@ -276,11 +277,12 @@ def zusammenlegen_variante(gruppe, ctx, name=None):
 
 # ---------------------------------------------------------------- Befunde
 
-def befunde(pl, bestand, ignoriert=()):
+def befunde(pl, bestand, ignoriert=(), live=None):
     ents = pl.get("entitaeten", [])
     ctx = {"bestand": bestand, "ents": ents, "events": pl.get("events", []), "ignoriert": set(ignoriert),
            "pkd": int((pl.get("stand") or {}).get("purge_keep_days") or 3650),
            "ids": {e["entity_id"] for e in ents}}
+    bz = tote.bezug(ents, live)      # Punkt 281: tot = nicht in Registry und ohne Zustand (live), ersatzweise laut Analyse
     aktiv = _aktiv(bestand)
     nach_id = {r["id"]: r for r in aktiv}
     stufe = {r["id"]: rg.rang(r) for r in aktiv}
@@ -385,16 +387,17 @@ def befunde(pl, bestand, ignoriert=()):
                            beispiele=[{"entity_id": eid, "wert": WERT_NAME[a],
                                        "gilt": wa, "statt": wu, "rows_24h": n} for eid, (a, wa, wu, n) in bsp[:BEISPIELE]]))
 
-    # 4. tote Muster: genaue IDs, die es in der Analyse nicht (mehr) gibt
+    # 4. tote Muster (Punkt 281): genaue IDs (entity, glob, schutz), die es in HA nicht mehr gibt
     for r in aktiv:
-        if r["typ"] not in ("entity", "schutz"):
-            continue
-        tot = [m for m in r["muster"] if not _platzhalter(m) and m not in ctx["ids"]]
+        tot = tote.tote_muster(r, bz)
         if tot:
+            namen = [t["muster"] for t in tot]
+            nach_grund = Counter(tote.GRUND_TEXT[t["grund"]] for t in tot)
             out.append(_befund(ctx, "tot", "grau", [r["id"]], "tote Muster", f"Regel {r['id']}: {len(tot)} Muster ohne Entität",
-                               [f"{len(tot)} von {len(r['muster'])} Entity-IDs gibt es in der letzten Analyse nicht: {', '.join(tot[:6])}{' …' if len(tot) > 6 else ''}"],
+                               [f"{len(tot)} von {len(r['muster'])} Entity-IDs gibt es in HA nicht mehr: {', '.join(namen[:6])}{' …' if len(namen) > 6 else ''}",
+                                "Befund: " + ", ".join(f"{n}× {g}" for g, n in nach_grund.items()) + ". Sammelweise entfernen: Knopf „Tote Muster …“ im Regelwerk-Check."],
                                [variante(f"{len(tot)} Muster aus {r['id']} entfernen" if len(tot) < len(r["muster"]) else f"{r['id']} entfernen",
-                                         _ohne_muster(r, tot), ctx)]))
+                                         _ohne_muster(r, namen), ctx)], tote=len(tot)))
 
     # 5. zusammenlegen: gleicher Typ, gleiche Werte
     gruppen = {}
@@ -484,10 +487,10 @@ def zusammenfassung(liste, bestand):
             "vorher": _kennzahl(bestand["regeln"]), "nachher": _kennzahl(daten["regeln"])}
 
 
-def berechne(pl, bestand, ignoriert, schluessel):
-    """befunde() mit Zwischenspeicher je Stand (Analyse, Regeln, Ignorier-Liste)."""
+def berechne(pl, bestand, ignoriert, schluessel, live=None):
+    """befunde() mit Zwischenspeicher je Stand (Analyse, Regeln, Ignorier-Liste, Live-Stand der Entitäten)."""
     if _CACHE["schl"] != schluessel:
-        _CACHE.update(schl=schluessel, daten=befunde(pl, bestand, ignoriert))
+        _CACHE.update(schl=schluessel, daten=befunde(pl, bestand, ignoriert, live))
     return _CACHE["daten"]
 
 

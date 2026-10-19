@@ -24,6 +24,7 @@ import probelauf
 import regelcheck
 import regeln as rg
 import spaltenfilter
+import tote
 import warnungen
 import zuwachs
 
@@ -43,6 +44,7 @@ LAEUFE_SUMME = os.path.join(DATA, "laeufe_summe.json")
 VORLAGE = os.path.join(APP_DIR, "regeln_vorlage.json")
 SICHERUNGEN = os.path.join(DATA, "regeln_sicherungen")   # Punkt 123
 HA_CONFIG = "/homeassistant"
+ENTITY_REGISTRY = f"{HA_CONFIG}/.storage/core.entity_registry"
 INGRESS_IP = "172.30.32.2"
 
 
@@ -759,8 +761,58 @@ async def _regelcheck_daten():
         return None, None, None
     bestand = rg.lade(REGELN, VORLAGE)
     ign = optimierung.lies_ignoriert(DATA)
-    schl = (id(r), (r.get("stand") or {}).get("analyse_zeit"), Z.mtime(REGELN), tuple(sorted(ign)))
-    return r, bestand, await asyncio.to_thread(regelcheck.berechne, r, bestand, ign, schl)
+    live = await asyncio.to_thread(tote.live_oder_none, ENTITY_REGISTRY)     # Punkt 281: tote Muster live prüfen (30 s Zwischenspeicher)
+    schl = (id(r), (r.get("stand") or {}).get("analyse_zeit"), Z.mtime(REGELN), tuple(sorted(ign)), id(live[0]) if live else None)
+    return r, bestand, await asyncio.to_thread(regelcheck.berechne, r, bestand, ign, schl, live)
+
+
+async def _tote_befund():
+    """Punkt 281: (Regeldaten, Bezug der Prüfung, Probelauf-Zeilen je Entität) – live, ersatzweise nach der Analyse."""
+    bestand = rg.lade(REGELN, VORLAGE)
+    pl = await asyncio.to_thread(Z.probelauf, None, False)
+    live = await asyncio.to_thread(tote.live_oder_none, ENTITY_REGISTRY, True)
+    ents = (pl or {}).get("entitaeten", [])
+    return bestand, tote.bezug(ents, live), {e["entity_id"]: e for e in ents}, pl is not None
+
+
+async def regeln_tote(_request):
+    """Punkt 281: Regeln mit toten Entitäten samt Befund und den Daten, die noch in der DB liegen."""
+    bestand, bz, zeilen, analyse_da = await _tote_befund()
+    if bz["live"] is None and not analyse_da:
+        return web.json_response({"verfuegbar": False, "grund": "Weder HA noch eine Analyse liefert den Stand der Entitäten – bitte zuerst eine Analyse starten."})
+    gefunden = tote.finde(bestand, bz)
+    regeln, anzahl = [], 0
+    for r in bestand["regeln"]:
+        if r["id"] not in gefunden:
+            continue
+        eintraege = []
+        for t in gefunden[r["id"]]:
+            e = zeilen.get(t["muster"]) or {}
+            eintraege.append({**t, "text": tote.GRUND_TEXT[t["grund"]], "rows": e.get("rows") or 0, "lts_rows": e.get("lts_rows") or 0, "analyse": bool(e)})
+        anzahl += len(eintraege)
+        regeln.append({"regel": r["id"], "name": r["name"], "typ": r["typ"], "aktiv": r["aktiv"], "muster_gesamt": len(r["muster"]),
+                       "ganz": len(eintraege) == len(r["muster"]), "eintraege": eintraege})
+    return web.json_response({"verfuegbar": True, "live": bz["live"] is not None, "anzahl": anzahl, "regeln": regeln})
+
+
+async def regeln_tote_entfernen(request):
+    """Punkt 281: gewählte tote Einträge aus den Regeln nehmen. Der Befund wird hier frisch berechnet, die Anzeige gibt nur die Auswahl vor.
+    Sicherung der Regeln wie bei Import und Wiederherstellen; an HA und der Datenbank wird nichts verändert."""
+    body = await request.json()
+    gesperrt = _ersetzen_gesperrt(body)
+    if gesperrt is not None:
+        return gesperrt
+    bestand, bz, _zeilen, _da = await _tote_befund()
+    neu, bericht = tote.entferne(bestand, tote.finde(bestand, bz), body.get("auswahl"))
+    if not bericht["muster"]:
+        return web.json_response({"fehler": "Nichts zu entfernen – die Einträge sind inzwischen nicht mehr tot oder schon weg"}, status=409)
+    try:
+        antwort = _ersetze_regeln(neu, "tote_entitaeten")
+    except rg.RegelFehler as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    _LOG.info("Tote Entitäten aus Regeln entfernt: %d Einträge, Regeln geändert %s, ganz entfernt %s",
+              bericht["muster"], bericht["regeln_geaendert"], bericht["regeln_entfernt"])
+    return web.json_response({**json.loads(antwort.text), "bericht": bericht})
 
 
 async def regelcheck_lesen(_request):
@@ -1217,6 +1269,8 @@ def erstelle_app():
         web.get("/api/regelcheck", regelcheck_lesen),
         web.post("/api/regelcheck/vorschau", regelcheck_vorschau),
         web.post("/api/regelcheck/uebernehmen", regelcheck_uebernehmen),
+        web.get("/api/regeln/tote", regeln_tote),
+        web.post("/api/regeln/tote/entfernen", regeln_tote_entfernen),
         web.post("/api/muster/verdichten", muster_verdichten),
         web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),

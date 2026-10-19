@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b22 (Beta)
+- **Tote Muster in Regeln (Punkt 281):** Der Regelwerk-Check prüft Muster mit genauer Entity-ID (entity, E:, glob und schutz ohne Platzhalter) jetzt live gegen Registry und HA-Zustände; bisher galt nur „fehlt in der Analyse“, umbenannte oder gelöschte Entitäten mit Altdaten wurden nicht erkannt. Fallback bei nicht erreichbarem HA: letzte Analyse (verwaiste zählen als tot). Deaktivierte Entitäten gelten als lebendig
+- **Knopf „Tote Muster …“ im Regelwerk-Check:** Liste über alle Regeln (auch passive) mit Befund (in der Registry gelöscht / nirgends bekannt) und den Daten, die noch in der DB liegen; Auswahl per Haken, Entfernen mit Rückfrage und Sicherung der Regeln. Regeln ohne Muster entfallen. Neue Schnittstellen `GET /api/regeln/tote`, `POST /api/regeln/tote/entfernen`
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b21 (Beta)
 - **Zuwachs-Chart ohne Statistik (Punkt 280):** Entitäten ohne `state_class` (und ohne Statistikzeilen) haben in Home Assistant keine 5-Min- und keine Langzeit-Statistik. Das Chart „Zeilen pro Tag (Zuwachs)“ zeigte dafür bisher 0 und wirkte wie ein Fehler. Jetzt entfallen diese beiden Linien, die Legendenknöpfe sind ausgegraut („Keine Statistik: Die Entität hat keine state_class“), und über dem Chart steht ein Hinweis
 - Die Integration ändert sich nur in der Versionsnummer

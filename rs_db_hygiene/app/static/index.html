@@ -8,7 +8,7 @@
 :root {
   --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6676; --line: #e1e4ea;
   --accent: #1f6feb; --accent-weak: #e7f0ff; --warn: #9a6700; --warn-bg: #fff6dd;
-  --ok: #1a7f37; --bad: #c62828; --chip: #eef1f5; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --ok: #1a7f37; --bad: #c62828; --tot: #b4137f; --chip: #eef1f5; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   --kleb-h: 120px; --zeile-hell: #ffffff; --zeile-dunkel: #f2f4f7;
   --reiter: #e3e7ee; --reiter-hover: #d5dbe5; --reiter-rand: #c9d0db;
   --zf-ist: #d98880; --zf-loesch: #d4a72c; --zf-prog: #4fa36a;
@@ -23,7 +23,7 @@
 @media (prefers-color-scheme: dark) {
   :root { --bg: #111418; --panel: #1a1f26; --text: #e6e9ee; --muted: #9aa3b1; --line: #2b323c;
           --accent: #5b9bff; --accent-weak: #1d2a40; --warn: #e3b341; --warn-bg: #33290f;
-          --ok: #3fb950; --bad: #ff6b6b; --chip: #242b35; --zeile-hell: #1f252d; --zeile-dunkel: #161b21;
+          --ok: #3fb950; --bad: #ff6b6b; --tot: #f06bc4; --chip: #242b35; --zeile-hell: #1f252d; --zeile-dunkel: #161b21;
           --reiter: #232a34; --reiter-hover: #2d3643; --reiter-rand: #3a4452;
           --zf-ist: #b5615c; --zf-loesch: #b8912a; --zf-prog: #3d8a55;
           --zf-stamm: #3f80b0; --zf-vorh: #5561b0; }
@@ -318,6 +318,7 @@ td.geraetklick:hover { text-decoration: underline; }
 .chip.ok { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); color: var(--ok); }
 .chip.bad { background: color-mix(in srgb, var(--bad) 16%, var(--panel)); color: var(--bad); }
 /* Punkt 232: Regelwerk-Check – Chips in der Spalte Empfehlung und im Kasten über der Tabelle */
+.chip.tot { background: color-mix(in srgb, var(--tot) 16%, var(--panel)); color: var(--tot); }   /* Punkt 281: tote Muster in Magenta, Stufe bleibt grau */
 .chip.check { cursor: pointer; margin: 1px 4px 1px 0; }
 .chip.check:hover { outline: 1px solid currentColor; }
 #regelCheck { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 8px; }
@@ -753,6 +754,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
           <li><b>gelb:</b> Verdichtung, z. B. ein Muster doppelt, Regeln mit gleichen Werten zusammenlegen, Platzhalter statt langer Listen;</li>
           <li><b>grau:</b> Hinweis, z. B. ein totes Muster oder eine meist überstimmte Regel.</li>
         </ul>
+        <p><b>Tote Muster:</b> Wird eine Entität gelöscht oder umbenannt, bleibt ihre ID in den Regeln stehen. Der Check prüft alle Muster, die eine einzelne Entität nennen (Typ entity, E:-Regeln, glob und schutz ohne Platzhalter), live gegen die Registry und die Zustände in HA; nur deaktivierte Entitäten gelten als lebendig. Der Knopf <b>Tote Muster …</b> im Kasten listet alle toten Einträge über alle Regeln – mit Befund (in der Registry gelöscht oder nirgends bekannt) und den Daten, die noch in der DB liegen. Ausgewählte Einträge lassen sich entfernen; bleibt einer Regel kein Muster, entfällt sie. Die Regeln werden vorher gesichert, an HA und den Daten ändert sich nichts.</p>
         <p>Ein Klick auf den Chip zeigt Begründung und Wirkung, wo möglich mit „Übernehmen“. Jede Variante ist auf allen Entitäten durchgerechnet: Sie ist entweder „wirkungsneutral“ oder nennt die Entitäten, bei denen sich etwas ändert. Vor dem Übernehmen sichert die App die Regeln. „Bewusst so“ blendet einen Befund aus; die Zähler im Kasten filtern die Tabelle nach Befunden.</p>
       </details>
 
@@ -3702,7 +3704,7 @@ function checkChips(r) {
     // Vorrang: an der unwirksamen Regel „teilweise unwirksam · R15“, an der wirksamen „hat Vorrang vor R29“
     const text = b.art === "vorrang" && r.id === b.regeln[1] ? `hat Vorrang vor ${b.regeln[0]}`
       : b.kurz + (andere.length && b.art !== "zusammen" ? " · " + andere.join(", ") : "");
-    return `<span class="chip check ${CHECK_STUFE[b.stufe][0]}" data-befund="${esc(b.id)}" title="${esc(tip)}"${b.ignoriert ? ' style="opacity:.55"' : ""}>${esc(text)}</span>`;
+    return `<span class="chip check ${CHECK_STUFE[b.stufe][0]}${b.art === "tot" ? " tot" : ""}" data-befund="${esc(b.id)}" title="${esc(tip)}"${b.ignoriert ? ' style="opacity:.55"' : ""}>${esc(text)}</span>`;
   }).join("") || `<span class="sub">–</span>`;
 }
 async function ladeRegelCheck() {
@@ -3722,10 +3724,61 @@ function zeigeRegelCheckKasten() {
   el.innerHTML = `<b>Regelwerk-Check</b>` +
     (z.rot + z.gelb + z.grau ? ["rot", "gelb", "grau"].filter(st => z[st]).map(filter).join("") : `<span class="chip ok">keine Befunde</span>`) +
     `<span class="sub" title="Wenn alle angezeigten Vorschläge (jeweils die erste Variante) übernommen würden; Vorschläge zu schon geänderten Regeln zählen nicht doppelt">alle Vorschläge übernommen: Regeln ${zahl(z.vorher.regeln)} → ${zahl(z.nachher.regeln)} · Muster ${zahl(z.vorher.muster)} → ${zahl(z.nachher.muster)}</span>` +
-    (z.ausgeblendet ? `<label class="sub"><input type="checkbox" id="rcAlle" ${S.checkAlle ? "checked" : ""}> ${zahl(z.ausgeblendet)} ausgeblendete zeigen</label>` : "") +
+    // Punkt 281: tote Muster sammelweise bereinigen (Zahl = tote Muster in aktiven Regeln laut Befunden)
+    `<button id="rcTote" class="chip tot" style="cursor:pointer;margin:0" title="Liste aller Muster, die Entitäten nennen, die es in HA nicht mehr gibt – mit Auswahl und Entfernen">Tote Muster${(d.befunde || []).some(b => b.art === "tot") ? ` (${zahl((d.befunde || []).filter(b => b.art === "tot" && !b.ignoriert).reduce((n, b) => n + (b.tote || 0), 0))})` : ""} …</button>` +
+    (z.ausgeblendet ? `<label class="sub"><input type="checkbox" id="rcAlle"${S.checkAlle ? "checked" : ""}> ${zahl(z.ausgeblendet)} ausgeblendete zeigen</label>` : "") +
     `<span class="sub" style="margin-left:auto">${d.dauer_s >= 0.1 ? `gerechnet in ${String(d.dauer_s).replace(".", ",")} s` : ""}</span>`;
 }
+// Punkt 281: tote Muster – Liste über alle Regeln, Auswahl, Entfernen mit Sicherung
+async function toteDialog() {
+  let t;
+  try { t = await api("regeln/tote"); } catch (e) { return meldung("Prüfung nicht möglich", e.message); }
+  if (!t.verfuegbar) return meldung("Prüfung nicht möglich", t.grund || "Der Befund liegt nicht vor.");
+  if (!t.regeln.length) return meldung("Keine toten Muster", "Kein Muster nennt eine Entität, die es in HA nicht mehr gibt.");
+  const flach = [];
+  const daten = e => !e.analyse ? "–" : e.rows || e.lts_rows ? `${zahl(e.rows)} States · ${zahl(e.lts_rows)} Langzeit` : "keine Daten in der DB";
+  const zeilen = t.regeln.map(r => `<tr><td colspan="4"><b class="mono">${esc(r.regel)}</b> ${esc(r.name)}${r.aktiv ? "" : ` <span class="chip">passiv</span>`}
+      ${r.ganz ? `<span class="chip warn" title="Alle Muster dieser Regel sind tot – sie entfällt, wenn du alle ihre Einträge wählst">Regel bleibt ohne Muster</span>` : ""}</td></tr>` +
+    r.eintraege.map(e => {
+      flach.push({ regel: r.regel, muster: e.muster });
+      return `<tr><td><input type="checkbox" class="toteWahl" data-i="${flach.length - 1}" checked aria-label="${esc(e.muster)} entfernen"></td>
+        <td class="mono" style="overflow-wrap:anywhere">${esc(e.muster)}</td><td class="sub">${esc(e.text)}</td><td class="sub">${esc(daten(e))}</td></tr>`;
+    }).join("")).join("");
+  const wahl = () => [...$("#dlgInhalt").querySelectorAll(".toteWahl")].filter(c => c.checked).map(c => flach[+c.dataset.i]);
+  const zaehler = () => { $("#toteAnzahl").textContent = `${zahl(wahl().length)} von ${zahl(flach.length)} gewählt`; };
+  dialog("Tote Muster in Regeln", `
+    <p class="sub">Diese Muster nennen Entitäten, die weder in der Registry stehen noch einen Zustand in HA haben${t.live ? "" : " (HA nicht erreichbar – Stand der letzten Analyse)"}.
+      Entfernt wird nur der Eintrag in der Regel; an HA und an den Daten in der DB ändert sich nichts. Die Altdaten einer entfernten Entität
+      fallen danach unter Regeln vom Typ „verwaist“ bzw. den Standard. Vorher sichert die App die Regeln (Regeln verwalten … › Sicherungen).</p>
+    <p><label><input type="checkbox" id="toteAlle" checked> alle wählen</label> <span class="sub" id="toteAnzahl"></span></p>
+    <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th></th><th align="left">Entität im Muster</th><th align="left">Befund</th><th align="left">Daten in der DB</th></tr></thead>
+      <tbody>${zeilen}</tbody></table></div><div id="dlgFehler" class="fehler"></div>`, [
+    ["Abbrechen", () => $("#dlg").close()],
+    ["Ausgewählte entfernen", async () => {
+      const auswahl = wahl();
+      if (!auswahl.length) { $("#dlgFehler").textContent = "Nichts gewählt."; return; }
+      const proRegel = {}; auswahl.forEach(a => proRegel[a.regel] = (proRegel[a.regel] || 0) + 1);
+      const nRegeln = Object.keys(proRegel).length, ganz = t.regeln.filter(r => proRegel[r.regel] === r.muster_gesamt).map(r => r.regel);
+      if (!await frage("Tote Muster entfernen", `${mzahl(auswahl.length, "Eintrag", "Einträge")} aus ${mzahl(nRegeln, "Regel", "Regeln")} entfernen.` +
+        (ganz.length ? `\n\nDabei bleibt ohne Muster und entfällt ganz: ${ganz.join(", ")}.` : "") +
+        "\n\nEs ändert sich nur die Regeldatei der App (mit Sicherung). An HA und den Daten wird nichts gelöscht.", "Entfernen")) return;
+      try {
+        const r = await api("regeln/tote/entfernen", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: S.version, auswahl: auswahl.map(a => [a.regel, a.muster]) }) });
+        S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
+        [...S.auswahl].forEach(id => S.regeln.regeln.some(x => x.id === id) || S.auswahl.delete(id));
+        $("#dlg").close(); T.regeln.daten(S.regeln.regeln); ladeAlles(false); ladeRegelCheck();
+        meldung("Bereinigt", `${mzahl(r.bericht.muster, "Eintrag", "Einträge")} entfernt.` +
+          (r.bericht.regeln_entfernt.length ? ` Ganz entfernte Regeln: ${r.bericht.regeln_entfernt.join(", ")}.` : ""));
+      } catch (e) { $("#dlgFehler").textContent = e.message; }
+    }, true]]);
+  $("#dlg").classList.add("breit");
+  $("#toteAlle").onchange = ev => { $("#dlgInhalt").querySelectorAll(".toteWahl").forEach(c => c.checked = ev.target.checked); zaehler(); };
+  $("#dlgInhalt").onchange = ev => { if (ev.target.classList.contains("toteWahl")) zaehler(); };
+  zaehler();
+}
 $("#regelCheck").addEventListener("click", ev => {
+  if (ev.target.closest("#rcTote")) return toteDialog();
   const f = ev.target.closest("[data-rc-filter]"); if (!f) return;
   T.regeln.f.empfehlung = T.regeln.f.empfehlung === f.dataset.rcFilter ? "" : f.dataset.rcFilter;
   T.regeln.baueKopf(); T.regeln.zeige();
