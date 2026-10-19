@@ -20,6 +20,9 @@ configuration:
   protokoll_tage:
     name: Aufbewahrung Löschprotokoll (Tage)
     description: Ältere Läufe werden gelöscht; 0 = unbegrenzt. Die Monatssumme je Entität bleibt immer erhalten.
+  zuwachs_monate:
+    name: Speicherung Zuwachsdaten (Monate)
+    description: So viele Monate bleiben die Tageswerte der Zuwachs-Charts (neue Zeilen pro Tag) gespeichert; ältere werden nach jeder Analyse entfernt. Erlaubt sind 1 bis 240, Vorgabe 24. Die Werte für gelöschte Tage lassen sich nicht wiederherstellen.
   automatik_freigegeben:
     name: Automatik freigegeben
     description: Erlaubt Löschläufe aus Home Assistant heraus (Knopf, Dienst rs_db_hygiene.loeschlauf_starten, Automation) über die Integration RS DB Hygiene. Zusätzlich muss „Löschen freigegeben“ an sein.

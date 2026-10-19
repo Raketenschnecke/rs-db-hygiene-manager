@@ -119,6 +119,15 @@ Z = Zustand()
 
 # ---------------------------------------------------------------- Jobs
 
+def _zuwachs_monate():
+    """Punkt 287: Speicherdauer der Zuwachsdaten in Monaten (App-Option zuwachs_monate, 1 bis 240, Vorgabe 24)."""
+    try:
+        monate = int(optionen().get("zuwachs_monate"))
+    except (TypeError, ValueError):
+        return zuwachs.ZUWACHS_MONATE
+    return monate if monate >= 1 else zuwachs.ZUWACHS_MONATE      # ungültige Werte (0, negativ) gelten als Vorgabe
+
+
 def _analyse_sync():
     # Punkt 133 (0.5.3): Schritt 0 – Recorder-Einrichtung frisch prüfen (Ergebnis zeigt die GUI als Banner)
     try:
@@ -143,7 +152,7 @@ def _analyse_sync():
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS)
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate())
 
 
 def _cache_version():
@@ -347,6 +356,19 @@ async def prognose_verlauf(request):
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
     return web.json_response({**r, "historie": await asyncio.to_thread(Z.historie)})
+
+
+async def zuwachs_events(request):
+    """Punkt 286: Event-Zuwachs pro Tag – Summe und je Event-Typ (Chart der Kachel Events). ?von=…&bis=… wie bei /api/zuwachs."""
+    if not os.path.exists(ZUWACHS):
+        return web.json_response({"fehler": "Noch keine Zuwachs-Statistik vorhanden"}, status=404)
+    q = request.query
+    try:
+        von = zuwachs.datum_tag(q["von"]) if q.get("von") else None
+        bis = zuwachs.datum_tag(q["bis"]) if q.get("bis") else None
+    except ValueError:
+        return web.json_response({"fehler": "von/bis als JJJJ-MM-TT oder Tageszahl angeben"}, status=400)
+    return web.json_response(await asyncio.to_thread(zuwachs.lies_events, ZUWACHS, von, bis))
 
 
 async def zuwachs_tage(request):
@@ -1253,6 +1275,7 @@ def erstelle_app():
         web.get("/api/probelauf", probelauf_summe),
         web.get("/api/prognose_verlauf", prognose_verlauf),
         web.get("/api/zuwachs", zuwachs_tage),
+        web.get("/api/zuwachs/events", zuwachs_events),
         web.get("/api/entitaeten", entitaeten),
         web.get("/api/klassen", klassen),
         web.get("/api/plattformen", plattformen),

@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b25 (Beta)
+- **Zuwachs-Chart der Kachel „Datenzeilen gesamt“ (Punkt 283):** Ein Klick auf die Kachel Istzustand / Datenzeilen gesamt öffnet „Neue Zeilen pro Tag“ über alle Entitäten (States, 5-Min-Statistik, Langzeit, Attribute, Events) im Stil des Entitäten-Charts. Die Y-Achse hat jetzt Schritte bis in die Milliarden und kürzt ab einer Million als „2 Mio.“ (vorher blieb bei Summen nur eine abgeschnittene Marke)
+- **Events in der Zuwachs-Statistik (Punkt 284):** `zuwachs.db` führt die Event-Zeilen pro Tag als fünfte Quelle „events“ je Event-Typ (Kennung `ev:<Typ>`); sie zählen nur in der Summe über alle Entitäten. Eine ältere Datei bekommt die Spalte bei der nächsten Analyse nachgerüstet, die Daten bleiben. Events reichen nur so weit zurück, wie die Events-Tabelle der Datenbank Zeilen hält
+- **Einheitliche Spaltenfolge (Punkt 285):** Summe | States | 5-Min | Attribute | Langzeit | Events – im Tab Löschen, im Löschprotokoll (Läufe, Monatssumme, Einzellauf), in den Prognosen je Regel (Ersparnis) und im Kachelraster oben (Attribute vor Langzeit und Events). Gilt ab jetzt statt der Folge aus 0.5.6b6 (Punkt 243)
+- **Event-Chart je Typ (Punkt 286):** Die Kachel Istzustand / Events öffnet „Events – Zuwachs pro Tag“: die Summe aller Event-Typen und auf Knopfdruck die Einzelverläufe der Top 5, Top 10 oder aller Event-Typen (Rangfolge nach den Zeilen im gewählten Zeitraum), mit Legende zum Ein- und Ausblenden und Tooltip. Neue Schnittstelle `GET /api/zuwachs/events`. Jede der drei Kacheln öffnet genau ein Popup
+- **Speicherdauer der Zuwachsdaten (Punkt 287):** Neue App-Option `zuwachs_monate` („Speicherung Zuwachsdaten (Monate)“, 1 bis 240, Vorgabe 24). Ältere Tageswerte entfernt die nächste Analyse und kürzt die Abdeckung der Charts; entfernte Tage werden nicht wieder aus dem Analyse-Cache geholt. Beide Zuwachs-Dialoge nennen die Einstellung, dazu ein FAQ-Eintrag in der Hilfe
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b24 (Beta)
 - **Dauer und Backup-Pause in einer Spalte (Punkt 282):** Im Löschprotokoll entfällt die Spalte „Backup-Pause (davon)“. Hat ein Lauf auf ein HA-Backup gewartet, steht seine Dauer als gelber Chip; der Tooltip nennt die Pause (Länge, Zahl der Pausen) und erklärt sie. Läufe ohne Pause zeigen die Dauer wie bisher. Sortierung nach der Gesamtdauer; der CSV-Export behält beide Werte als „Dauer (s)“ und „davon Backup-Pause (s)“. Hilfetexte angepasst
 - Die Integration ändert sich nur in der Versionsnummer

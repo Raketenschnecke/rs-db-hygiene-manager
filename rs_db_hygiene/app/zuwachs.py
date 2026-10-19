@@ -5,6 +5,8 @@ Je voll abgeschlossenem lokalen Kalendertag und Entität werden vier Zahlen fest
   kurz    neue Zeilen in statistics_short_term (5-Min-Statistik)
   lts     neue Zeilen in statistics (Langzeit)
   attr    neue Zeilen in state_attributes, die an diesem Tag erstmals von States der Entität benutzt wurden
+  events  neue Zeilen in events (alle Event-Typen) – gehören keiner Entität, stehen unter der Kennung ev:<Event-Typ> und
+          zählen nur in der Summe über alle Entitäten (Punkt 284)
 
 Anders als der Analyse-Cache wird die Datei nie neu aufgebaut, sondern nur fortgeschrieben: Der Recorder und die
 Löschläufe der App entfernen alte Zeilen, die Tageswerte bleiben. Ein einmal erfasster Tag wird nie kleiner (MAX).
@@ -19,8 +21,12 @@ höhere attributes_id als alle früheren. Gemerkt wird die höchste bis zum letz
 neu an einem Tag sind die Ids darüber, die States dieses Tages benutzen. Erfasst wird daher erst ab dem übernächsten Tag
 nach dem ersten Lauf (attr_von).
 
+Speicherdauer (Punkt 287): Die Tageswerte bleiben ZUWACHS_MONATE Monate (App-Option zuwachs_monate, 1 bis 240). Nach jedem Lauf werden ältere
+Tage entfernt und die Abdeckung der Quellen entsprechend gekürzt; neu erfasst wird nichts, was vor der Grenze liegt.
+
 Nur Standardbibliothek; schreibt ausschließlich in die eigene Datei, die HA-Datenbank wird nur lesend geöffnet.
 """
+import calendar
 import datetime
 import logging
 import sqlite3
@@ -28,17 +34,18 @@ import time
 
 _LOG = logging.getLogger("zuwachs")
 TAG = 86400
-QUELLEN = ("states", "kurz", "lts", "attr")
+QUELLEN = ("states", "kurz", "lts", "attr", "events")
 MAX_NACHHOLEN = 31            # so viele Tage holt die Attribut-Erfassung nach; bei mehr beginnt sie neu
 UEBERLAPP = 1                 # letzte erfasste Tage werden beim Fortschreiben nochmals eingelesen (Nachbuchungen)
 MAX_BEREICH = 3700            # Tage je Abfrage der GUI
+ZUWACHS_MONATE = 24           # Vorgabe der Speicherdauer in Monaten (App-Option zuwachs_monate, 1 bis 240)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS info (schluessel TEXT PRIMARY KEY, wert TEXT);
 CREATE TABLE IF NOT EXISTS tage (
   entity_id TEXT NOT NULL, tag INTEGER NOT NULL,
   states INTEGER NOT NULL DEFAULT 0, kurz INTEGER NOT NULL DEFAULT 0,
-  lts INTEGER NOT NULL DEFAULT 0, attr INTEGER NOT NULL DEFAULT 0,
+  lts INTEGER NOT NULL DEFAULT 0, attr INTEGER NOT NULL DEFAULT 0, events INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (entity_id, tag)) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS ix_tage_tag ON tage (tag);
 """
@@ -51,7 +58,27 @@ _CACHE_QUELLEN = {
              "WHERE t.tag >= ? AND t.tag <= ?", "SELECT MIN(tag) FROM kurz_tage"),
     "lts": ("SELECT e.entity_id, t.tag, t.n FROM lts_tage t JOIN entitaet e ON e.lts_id = t.lts_id "
             "WHERE t.tag >= ? AND t.tag <= ?", "SELECT MIN(tag) FROM lts_tage"),
+    # Punkt 284: Events je Event-Typ; die Kennung ev: hält sie von den Entity-IDs getrennt
+    "events": ("SELECT 'ev:' || event_type, tag, n FROM ev_tage WHERE tag >= ? AND tag <= ?", "SELECT MIN(tag) FROM ev_tage"),
 }
+
+
+def _migriere(con):
+    """Ältere zuwachs.db: Spalte events nachrüsten (die Daten bleiben)."""
+    if "events" not in {z[1] for z in con.execute("PRAGMA table_info(tage)")}:
+        con.execute("ALTER TABLE tage ADD COLUMN events INTEGER NOT NULL DEFAULT 0")
+
+
+def grenze_tag(heute, monate):
+    """Ältester Tag (Tageszahl), der bei `monate` Monaten Speicherdauer noch bleibt; None bei 0 oder weniger (= keine Grenze).
+
+    Kalendermonate: heute = 19.10.2026, 24 Monate → 19.10.2024. Gibt es den Tag im Zielmonat nicht (31.), gilt dessen letzter Tag."""
+    if not monate or monate <= 0:
+        return None
+    d = datetime.date(1970, 1, 1) + datetime.timedelta(days=heute)
+    jahr, monat = divmod(d.year * 12 + d.month - 1 - int(monate), 12)
+    tag = min(d.day, calendar.monthrange(jahr, monat + 1)[1])
+    return (datetime.date(jahr, monat + 1, tag) - datetime.date(1970, 1, 1)).days
 
 
 def tag_beginn(tag):
@@ -86,15 +113,20 @@ def _schreibe(con, quelle, zeilen):
         f"ON CONFLICT(entity_id, tag) DO UPDATE SET {quelle} = MAX({quelle}, excluded.{quelle})", zeilen)
 
 
-def _aus_cache(con, cache_pfad, heute, info):
+def _aus_cache(con, cache_pfad, heute, info, grenze=None):
     """states, kurz und lts aus den Tagestabellen des Analyse-Caches übernehmen (nur volle Tage, nicht der älteste)."""
     cache = sqlite3.connect(f"file:{cache_pfad}?mode=ro", uri=True)
     try:
         for quelle, (abfrage, min_abfrage) in _CACHE_QUELLEN.items():
-            kleinster = cache.execute(min_abfrage).fetchone()[0]
+            try:
+                kleinster = cache.execute(min_abfrage).fetchone()[0]
+            except sqlite3.OperationalError:     # Cache ohne ev_tage (alter Aufbau)
+                continue
             if kleinster is None:
                 continue
             neu_von, bis = kleinster + 1, heute - 1
+            if grenze is not None:           # Aufbewahrung: nichts übernehmen, was ohnehin gleich wieder entfällt
+                neu_von = max(neu_von, grenze)
             if neu_von > bis:
                 continue
             alt_von, alt_bis = info.get(f"{quelle}_von"), info.get(f"{quelle}_bis")
@@ -108,6 +140,18 @@ def _aus_cache(con, cache_pfad, heute, info):
             _LOG.info("Zuwachs %s: %d Tageswerte bis %s", quelle, len(zeilen), tag_datum(bis))
     finally:
         cache.close()
+
+
+def _beschneide(con, grenze):
+    """Tageswerte vor der Grenze löschen und die Abdeckung der Quellen kürzen (Aufbewahrung). Liefert die Zahl gelöschter Zeilen."""
+    if grenze is None:
+        return 0
+    weg = con.execute("DELETE FROM tage WHERE tag < ?", (grenze,)).rowcount
+    info = _info_lesen(con)
+    for q in QUELLEN:
+        if f"{q}_von" in info and int(info[f"{q}_von"]) < grenze:
+            _info_setzen(con, **{f"{q}_von": grenze})
+    return weg
 
 
 def _attribute(con, ha_pfad, meta, heute, info):
@@ -137,21 +181,59 @@ def _attribute(con, ha_pfad, meta, heute, info):
         ha.close()
 
 
-def fortschreiben(zuwachs_pfad, cache_pfad, ha_pfad, meta, heute):
-    """Nach einer Analyse aufrufen. meta = {metadata_id: entity_id} der Analyse, heute = lokaler Kalendertag."""
+def fortschreiben(zuwachs_pfad, cache_pfad, ha_pfad, meta, heute, monate=ZUWACHS_MONATE):
+    """Nach einer Analyse aufrufen. meta = {metadata_id: entity_id} der Analyse, heute = lokaler Kalendertag,
+    monate = Speicherdauer der Tageswerte; 0 oder None hebt die Grenze auf (nur intern, die App-Option beginnt bei 1)."""
     start = time.time()
     con = sqlite3.connect(zuwachs_pfad, timeout=60)
     try:
         con.executescript(SCHEMA)
+        _migriere(con)
         info = _info_lesen(con)
-        _aus_cache(con, cache_pfad, heute, info)
+        grenze = grenze_tag(heute, monate)
+        _aus_cache(con, cache_pfad, heute, info, grenze)
         con.commit()
         _attribute(con, ha_pfad, meta, heute, _info_lesen(con))
+        weg = _beschneide(con, grenze)
+        if weg:
+            _LOG.info("Zuwachs: %d Tageswerte vor %s entfernt (Aufbewahrung %d Monate)", weg, tag_datum(grenze), monate)
         _info_setzen(con, stand=time.time())
         con.commit()
     finally:
         con.close()
     _LOG.info("Zuwachs fortgeschrieben in %.1f s", time.time() - start)
+
+
+def lies_events(zuwachs_pfad, von=None, bis=None):
+    """Neue Event-Zeilen pro Tag: Summe über alle Event-Typen und der Verlauf je Typ (Punkt 286).
+
+    Liefert {"abdeckung", "tage": [{"tag", "datum", "events"}], "typen": [{"event_type", "summe", "werte": [je Tag]}]};
+    die Typen sind nach ihrer Summe im Bereich absteigend sortiert, "werte" läuft parallel zu "tage" (0 = keine Events an dem Tag)."""
+    con = sqlite3.connect(f"file:{zuwachs_pfad}?mode=ro", uri=True, timeout=60)
+    try:
+        info = _info_lesen(con)
+        if "events_von" not in info or "events_bis" not in info or int(info["events_von"]) > int(info["events_bis"]):
+            return {"abdeckung": {}, "tage": [], "typen": []}
+        a_von, a_bis = int(info["events_von"]), int(info["events_bis"])
+        von = a_von if von is None else max(von, a_von)
+        bis = a_bis if bis is None else min(bis, a_bis)
+        if bis - von + 1 > MAX_BEREICH:
+            von = bis - MAX_BEREICH + 1
+        # Bereichsabfrage auf dem Primärschlüssel (entity_id, tag): 'ev:' <= Kennung < 'ev;'
+        zeilen = con.execute("SELECT entity_id, tag, events FROM tage WHERE entity_id >= 'ev:' AND entity_id < 'ev;' AND tag BETWEEN ? AND ?",
+                             (von, bis)).fetchall()
+        je_typ = {}
+        for eid, tag, n in zeilen:
+            je_typ.setdefault(eid[3:], {})[tag] = n
+        tage = list(range(von, bis + 1))
+        typen = sorted(({"event_type": t, "summe": sum(d.values()), "werte": [d.get(tag, 0) for tag in tage]} for t, d in je_typ.items()),
+                       key=lambda x: (-x["summe"], x["event_type"]))
+        summen = [sum(t["werte"][i] for t in typen) for i in range(len(tage))]
+        return {"abdeckung": {"events": {"von": a_von, "bis": a_bis, "von_datum": tag_datum(a_von), "bis_datum": tag_datum(a_bis)}},
+                "tage": [{"tag": tag, "datum": tag_datum(tag), "events": s} for tag, s in zip(tage, summen)], "typen": typen,
+                "stand": float(info.get("stand") or 0)}
+    finally:
+        con.close()
 
 
 def lies(zuwachs_pfad, entity_id=None, von=None, bis=None):
@@ -173,20 +255,23 @@ def lies(zuwachs_pfad, entity_id=None, von=None, bis=None):
         bis = letzter if bis is None else min(bis, letzter)
         if bis - von + 1 > MAX_BEREICH:
             von = bis - MAX_BEREICH + 1
-        spalten = ", ".join(QUELLEN)
+        vorhanden = [q for q in QUELLEN if q in {z[1] for z in con.execute("PRAGMA table_info(tage)")}]
+        spalten = ", ".join(vorhanden)
         if entity_id:
             zeilen = con.execute(f"SELECT tag, {spalten} FROM tage WHERE entity_id = ? AND tag BETWEEN ? AND ?",
                                  (entity_id, von, bis)).fetchall()
         else:
-            summen = ", ".join(f"SUM({q})" for q in QUELLEN)
+            summen = ", ".join(f"SUM({q})" for q in vorhanden)
             zeilen = con.execute(f"SELECT tag, {summen} FROM tage WHERE tag BETWEEN ? AND ? GROUP BY tag", (von, bis)).fetchall()
-        je_tag = {z[0]: z[1:] for z in zeilen}
+        je_tag = {z[0]: dict(zip(vorhanden, z[1:])) for z in zeilen}
         tage = []
         for tag in range(von, bis + 1):
-            werte = je_tag.get(tag, (0,) * len(QUELLEN))
+            werte = je_tag.get(tag, {})
             eintrag = {"tag": tag, "datum": tag_datum(tag)}
-            for q, w in zip(QUELLEN, werte):
-                eintrag[q] = w if q in abd and abd[q]["von"] <= tag <= abd[q]["bis"] else None
+            for q in QUELLEN:
+                # Events gehören keiner Entität: je Entität None, nur die Summe führt sie
+                gueltig = q in vorhanden and q in abd and abd[q]["von"] <= tag <= abd[q]["bis"] and not (entity_id and q == "events")
+                eintrag[q] = (werte.get(q) or 0) if gueltig else None
             tage.append(eintrag)
         return {"abdeckung": abd, "tage": tage, "entity_id": entity_id, "stand": float(info.get("stand") or 0)}
     finally:

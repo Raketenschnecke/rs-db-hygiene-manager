@@ -240,12 +240,13 @@ def _schritt_fertig(name, nr, dauer):
 
 
 def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None,
-            zuwachs_pfad=None):
+            zuwachs_pfad=None, zuwachs_monate=None):
     """Vollanalyse von states, statistics und statistics_short_term (ohne Attribute).
 
     herkunft: Ergebnis von herkunft.ermittle() – {entity_id: {art, text, info, device_id}}.
     reg_details: Ergebnis von lies_registry_details() (ab 0.5.5b5): Status deaktiviert und Klasse ohne Zustand.
-    zuwachs_pfad: wenn gesetzt, schreibt zuwachs.fortschreiben() danach die Tageswerte in diese Datei fort (dauerhaft, nie neu aufgebaut).
+    zuwachs_pfad: wenn gesetzt, schreibt zuwachs.fortschreiben() danach die Tageswerte in diese Datei fort (nie neu aufgebaut).
+    zuwachs_monate: Speicherdauer dieser Tageswerte in Monaten (None = Vorgabe von zuwachs.py).
     Dauer bei 22 GB / 73 Mio. States ca. 1–2 min.
     """
     herkunft = herkunft or {}
@@ -384,7 +385,8 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
     _LOG.info("Analyse fertig in %.1f s: %s", dauer, werte["schritte"])
     if zuwachs_pfad:
         try:
-            zuwachs.fortschreiben(zuwachs_pfad, cache_pfad, db_pfad, meta, heute)
+            zuwachs.fortschreiben(zuwachs_pfad, cache_pfad, db_pfad, meta, heute,
+                                  zuwachs.ZUWACHS_MONATE if zuwachs_monate is None else zuwachs_monate)
         except Exception:  # noqa: BLE001 – Zusatzstatistik, die Analyse ist bereits fertig
             _LOG.exception("Zuwachs-Statistik konnte nicht fortgeschrieben werden")
     return werte

@@ -1,5 +1,5 @@
 name: RS DB Hygiene Manager (Beta)
-version: "0.5.6b24"
+version: "0.5.6b25"
 slug: rs_db_hygiene
 stage: experimental
 description: >-
@@ -31,6 +31,7 @@ options:
   loeschen_max_zeilen: 5000000
   loeschen_max_zeilen_b: 2000000
   protokoll_tage: 365
+  zuwachs_monate: 24
   automatik_freigegeben: false
 schema:
   db_pfad: str
@@ -47,5 +48,7 @@ schema:
   loeschen_max_zeilen_b: int(10000,50000000)?
   # Aufbewahrung des Löschprotokolls in Tagen, 0 = unbegrenzt (die Monatssumme je Entität bleibt immer)
   protokoll_tage: int(0,3650)
+  # Punkt 287: Speicherung der Zuwachsdaten (Charts „Zeilen pro Tag“) in Monaten, 1 bis 240; optional (?) wie jede neue Option
+  zuwachs_monate: int(1,240)?
   # Läufe aus HA heraus (Knopf, Dienst, Automation) zulassen – zusätzlich zum Hauptschalter
   automatik_freigegeben: bool
