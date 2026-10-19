@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b24 (Beta)
+- **Dauer und Backup-Pause in einer Spalte (Punkt 282):** Im Löschprotokoll entfällt die Spalte „Backup-Pause (davon)“. Hat ein Lauf auf ein HA-Backup gewartet, steht seine Dauer als gelber Chip; der Tooltip nennt die Pause (Länge, Zahl der Pausen) und erklärt sie. Läufe ohne Pause zeigen die Dauer wie bisher. Sortierung nach der Gesamtdauer; der CSV-Export behält beide Werte als „Dauer (s)“ und „davon Backup-Pause (s)“. Hilfetexte angepasst
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b23 (Beta)
 - **Banner Regelwerk-Check aufgeräumt:** Chips und Haken erscheinen nur noch, wenn sie Werte haben; ohne jeden Eintrag verschwindet das ganze Banner. Der Text „alle Vorschläge übernommen: Regeln … → …“ und der Chip „keine Befunde“ entfallen. Reihenfolge: rot, magenta (Tote Muster), gelb, grau; rot und magenta fett, auch in der Spalte „Empfehlung“. Tote Muster zählen nicht mehr als Hinweis (grau), sondern für sich; neuer Filterwert „Tote Muster“. Der Knopf „Tote Muster (n) …“ zählt alle Regeln, auch passive
 - **Aktivität im Dialog:** Der blaue Knopf jedes Dialogs zeigt nach dem Klick einen drehenden Ring, bis die Aktion fertig ist; ein zweiter Klick wird ignoriert

@@ -907,7 +907,7 @@ actions:
           <li>Die App erkennt das nach spätestens etwa einer Minute. Sie schreibt „Backup läuft … es wird gewartet“ ins App-Log, die GUI zeigt „wartet auf Backup seit …“. Die Wartezeit zählt nicht als Stillstand.</li>
           <li>Nach dem Backup geht der Lauf von selbst weiter; im Log steht „Backup beendet nach …, es wird weiter gelöscht“. Gewartet wird höchstens 2 Stunden.</li>
           <li>Das Backup bleibt in Ordnung. Ein neuer Lauf startet erst, wenn das Backup fertig ist.</li>
-          <li>Im Reiter Löschprotokolle steht in der Spalte „Backup-Pause“, wie lange der Lauf gewartet hat.</li>
+          <li>Im Reiter Löschprotokolle ist die Dauer des Laufs gelb markiert; der Tooltip nennt, wie lange der Lauf gewartet hat.</li>
         </ul>
         <h3 id="h-faq-global">Was bedeutet „global“ genau?</h3>
         <p><a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days</code></a> aus der <a class="hverweis" href="#h-faq-ha-vorbereiten"><code>configuration.yaml</code></a> (derzeit <span data-live="pkd">–</span>). Ändert sich der Wert dort, übernimmt HA ihn erst nach einem Neustart. Siehe auch <a class="hverweis" href="#h-werte">Werte einer Vorhaltezeit</a>.</p>
@@ -4548,6 +4548,8 @@ T.loesch = new LokaleTabelle({
   ],
 });
 // Punkt 116 (0.4.10): „1:20 min (1 Pause)“
+// Tooltip der Dauer eines Laufs; mit Backup-Pause nennt er deren Länge
+const dauerTip = r => `Dauer ${dauerText(r.ende - r.start)}` + (r.backup_warte_s ? `, davon ${backupText(r)} Pause wegen eines HA-Backups – das Backup sperrt die Datenbank, der Lauf hat gewartet und danach von selbst weitergemacht` : "");
 const backupText = r => `${dauerText(r.backup_warte_s)} (${zahl(r.backup_pausen || 1)} ${(r.backup_pausen || 1) === 1 ? "Pause" : "Pausen"})`;
 const LSTATUS = { fertig: "fertig", "läuft": "läuft", Fehler: "Fehler", abgebrochen: "abgebrochen", unterbrochen: "unterbrochen", "nicht gestartet": "nicht gestartet" };
 const laufSpalte = (k, t) => ({ k: "lauf_" + k, titel: t, typ: "zahl", n: 1, breite: k === "kurz" ? 145 : 115, wert: r => laufArt(r, k), zelle: r => zahl(laufArt(r, k)), csv: r => laufArt(r, k), summe: anzahlSumme(r => laufArt(r, k)) });
@@ -4559,7 +4561,7 @@ T.laeufe = new LokaleTabelle({
   id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true }, wahlOrt: "#laeufeZeilen", neueSpalten: ["ueberhang"],   // Punkt 279
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
+  gruppen: [["Lauf", "stamm", ["start", "dauer", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
     ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_attr", "lauf_events", "lauf_lts"]],
     // Punkt 277: wie in der Löschtabelle als eigene Gruppe im Rot des Istzustands
     ["Überhang", "ist", ["ueberhang"]]],
@@ -4567,13 +4569,12 @@ T.laeufe = new LokaleTabelle({
   leer: "noch kein Löschlauf",
   spalten: [
     { k: "start", titel: "Start", typ: "keine", sortierbar: 1, fest: 1, n: 1, breite: 140, wert: r => r.start, zelle: r => zeit(r.start), csv: r => zeit(r.start) },
-    { k: "dauer", titel: "Dauer", typ: "keine", sortierbar: 1, n: 1, breite: 80, wert: r => r.ende ? r.ende - r.start : null, zelle: r => r.ende ? dauerText(r.ende - r.start) : "–", csv: r => r.ende ? Math.round(r.ende - r.start) : "",
-      tip: r => r.ende ? `Dauer ${dauerText(r.ende - r.start)}${r.backup_warte_s ? `, davon ${backupText(r)}` : ""}` : "" },
-    // Punkt 116 (0.4.10): Pause wegen eines HA-Backups (erst ab 0.4.10 gemessen)
-    { k: "backup", titel: "Backup-Pause (davon)", typ: "keine", sortierbar: 1, n: 1, breite: 125, wert: r => r.backup_warte_s ?? null,
-      hilfe: "Zeit, die der Lauf auf ein HA-Backup gewartet hat (das Backup sperrt die Datenbank) – in der Dauer enthalten. Erst ab 0.4.10 gemessen; ältere Läufe „–“.",
-      zelle: r => r.backup_warte_s ? dauerText(r.backup_warte_s) : r.backup_warte_s === 0 ? "0" : "–", tip: r => r.backup_warte_s ? `auf Backup gewartet: ${backupText(r)}` : "",
-      csv: r => r.backup_warte_s == null ? "" : Math.round(r.backup_warte_s) },
+    // Backup-Pause (Punkt 116) steckt ab 0.5.6b24 in der Dauer: gelber Chip mit Tooltip, wenn der Lauf auf ein HA-Backup gewartet hat
+    { k: "dauer", titel: "Dauer", typ: "keine", sortierbar: 1, n: 1, breite: 100, wert: r => r.ende ? r.ende - r.start : null,
+      hilfe: "Gesamtdauer des Laufs. Gelb markiert: Der Lauf hat auf ein HA-Backup gewartet (das Backup sperrt die Datenbank) – die Pause ist in der Dauer enthalten, der Tooltip nennt sie. Erst ab 0.4.10 gemessen.",
+      zelle: r => !r.ende ? "–" : r.backup_warte_s ? `<span class="chip warn" style="margin:0" title="${esc(dauerTip(r))}">${esc(dauerText(r.ende - r.start))}</span>` : dauerText(r.ende - r.start),
+      csvTeile: [["Dauer (s)", r => r.ende ? Math.round(r.ende - r.start) : ""], ["davon Backup-Pause (s)", r => r.backup_warte_s == null ? "" : Math.round(r.backup_warte_s)]],
+      tip: r => r.ende ? dauerTip(r) : "" },
     { k: "umfang", titel: "Umfang", typ: "text", breite: 120, wert: r => r.nur_regel || "alle aktiven Regeln", zelle: r => esc(r.nur_regel || "alle aktiven Regeln"), csv: r => r.nur_regel || "alle" },
     { k: "ausgeloest", titel: "Auslöser", typ: "auswahl", breite: 100, wert: r => r.ausgeloest || "manuell", zelle: r => esc(r.ausgeloest || "manuell"), csv: r => r.ausgeloest || "manuell",
       hilfe: "manuell = Tab „Löschen“; automatik = aus HA (Knopf, Dienst oder Automation über die Integration RS DB Hygiene)", optionen: () => [["manuell", "manuell"], ["automatik", "automatik"]] },
