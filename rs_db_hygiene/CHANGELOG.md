@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b20 (Beta)
+- **Wartesignal beim Laden (Punkt 278):** Bis die ersten Tabellen geladen sind, zeigt die Seite in der Mitte das Piktogramm mit einem dezent pulsierenden Glimmen in seiner Form und „please wait…“ – die Seite wirkt nicht mehr defekt. Blendet von selbst aus, ist nicht im Weg und läuft bei „Bewegung reduzieren“ ohne Animation
+- **Neue Spalten trotz gemerkter Spaltenauswahl (Punkt 279):** Wer in einer Tabelle schon Spalten abgewählt hatte, sah neue Spalten nie (so fehlte „Überhang“ in den Läufen). Eine neue Spalte erscheint jetzt einmal von selbst; danach gilt wieder die eigene Auswahl
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b19 (Beta)
 - **Löschprotokoll: neue Spalte „Überhang“ (Punkt 277):** zeigt, was ein Lauf geplant, aber nicht gelöscht hat (Zeilen und Attributzeilen). Roter Chip: Aufträge, die wegen der Obergrenze gar nicht begonnen wurden; gelber Chip: nur teilweise abgearbeitete Aufträge. Der Tooltip nennt den Grund (z. B. „Obergrenze Statistik/Events 2.000.000 = 222.187 gelöscht + 1.777.813 States abgetrennt“) und wie viel nach dem Lauf insgesamt noch fällig ist. Die Spalte steht als rote Gruppe zwischen Langzeit und Aufrufe und ersetzt „Rest danach“
 - **Einzellauf:** Kasten „Überhang“ mit den Gründen, nicht begonnene Aufträge stehen jetzt in der Liste, Spalten „geplant“ und „Überhang“ je Auftrag (die Plan-Zahl je Auftrag trägt das Protokoll erst ab dieser Version, die Gründe werden auch für ältere Läufe angezeigt)

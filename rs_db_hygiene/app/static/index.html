@@ -417,7 +417,21 @@ textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: 1
 @keyframes pendeln { from { margin-left: 0; } to { margin-left: 70%; } }
 .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; animation: drehen .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
 @keyframes drehen { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spinner, .balken.offen > i { animation: none; } }
+/* Punkt 278 (0.5.6b20): Wartesignal beim ersten Laden – das Piktogramm pulsiert mit weichem Glimmen hinter dem Haus, bis die Tabellen da sind */
+#warten { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent); pointer-events: none; transition: opacity .4s ease; }
+#warten.weg { opacity: 0; }
+#warten .w-bild { position: relative; width: 120px; height: 120px; }
+/* Glimmen in der Form des Piktogramms: abgerundetes Quadrat (rx 36 von 180 = 24 px bei 120 px), weich verwischt */
+#warten .w-bild::before, #warten .w-bild::after { content: ""; position: absolute; inset: 0; border-radius: 24px; background: rgb(255,70,60); filter: blur(20px); animation: glimmen 2.8s ease-in-out infinite; }
+#warten .w-bild::after { animation-delay: -1.4s; }
+#warten svg { position: relative; z-index: 1; border-radius: 24px; width: 120px; height: 120px; }   /* Piktogramm bleibt scharf; nur das Glimmen dahinter pulsiert */
+#warten .w-text { position: relative; font-size: 15px; color: var(--muted); letter-spacing: .06em; }
+#warten .w-text i { font-style: normal; display: inline-block; animation: punkt 1.4s ease-in-out infinite; }
+#warten .w-text i:nth-child(2) { animation-delay: .2s; } #warten .w-text i:nth-child(3) { animation-delay: .4s; }
+@keyframes glimmen { 0%, 100% { transform: scale(1); opacity: .08; } 50% { transform: scale(1.18); opacity: .32; } }
+@keyframes punkt { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .spinner, .balken.offen > i, #warten .w-bild::before, #warten .w-bild::after, #warten .w-text i { animation: none; } #warten .w-bild::before { opacity: .25; } }
 /* 0.1.5: gemeinsamer Tabellen-Baustein für alle Tabellen */
 table.baustein { table-layout: fixed; width: auto; }
 /* 0.5.3: Titelzeile auch per Klasse titelzeile – im Tab Entitäten ist die erste Kopfzeile seit Punkt 130 die Gruppenzeile */
@@ -478,6 +492,16 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
 </style>
 </head>
 <body>
+<!-- Punkt 278: Wartesignal, sichtbar bis die ersten Tabellen geladen sind (ohne JavaScript-Abhängigkeit sichtbar; JS blendet aus) -->
+<div id="warten" role="status" aria-live="polite"><div class="w-bild"><svg viewBox="10 10 180 180" aria-hidden="true">
+    <rect x="10" y="10" width="180" height="180" rx="36" fill="#5c0000"/>
+    <path d="M40 92 L95 42 L150 92 V160 H40 Z" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M56 102 v38 a20 6 0 0 0 40 0 v-38 z" fill="#fff"/>
+    <path d="M56 121 a20 6 0 0 0 40 0" fill="none" stroke="#5c0000" stroke-width="2.5"/>
+    <ellipse cx="76" cy="102" rx="20" ry="6" fill="#ffd1d1"/>
+    <path d="M112 108 L122 118 L132 108 M112 124 L122 134 L132 124 M112 140 L122 150 L132 140" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="163" y="54" text-anchor="middle" font-weight="600" font-size="24" fill="#fff" font-family="system-ui, sans-serif">RS</text>
+  </svg></div><div class="w-text">please wait<i>.</i><i>.</i><i>.</i></div></div>
 <header>
   <div class="kopf-titel"><h1><svg class="kopf-logo" viewBox="8 8 484 184" role="img" aria-label="RS DB Hygiene Manager"><title>RS DB Hygiene Manager</title>
     <rect x="10" y="10" width="180" height="180" rx="36" fill="#5c0000"/>
@@ -1312,6 +1336,14 @@ class LokaleTabelle {
     }
     // Spaltenauswahl (Punkt 23): je Tabelle im Browser gemerkt; Spalten mit fest:1 sind immer sichtbar
     this.sichtbar = ladeSichtbar(o.schluessel + "_spalten", o.spalten.map(s => s.k));
+    // Punkt 279: Spalten, die eine neue Version bringt (Option neueSpalten), erscheinen einmal auch bei gemerkter Spaltenauswahl – sonst bliebe
+    // jede neue Spalte unsichtbar, sobald jemand je Spalten abgewählt hat; danach gilt wieder die Wahl des Benutzers
+    for (const k of o.neueSpalten || []) {
+      const merker = o.schluessel + "_neu_" + k;
+      if (speicher.lies(merker, "")) continue;
+      this.sichtbar.add(k); speicher.schreib(merker, "1");
+      if (speicher.lies(o.schluessel + "_spalten", "")) speicher.schreib(o.schluessel + "_spalten", JSON.stringify([...this.sichtbar]));
+    }
     this.el.addEventListener("input", ev => {
       const e = ev.target.closest("[data-tf]"); if (!e) return;
       this.f[e.dataset.tf] = e.value; this.pg = 0; clearTimeout(this.t);
@@ -4450,7 +4482,7 @@ const mitAttr = r => r.geplant_attr !== undefined;
 const laufSumme = r => (r.geloescht || 0) + (mitAttr(r) ? r.attr_geloescht || 0 : 0);
 const geplantLauf = r => (r.geplant_zeilen || 0) + (mitAttr(r) ? r.geplant_attr || 0 : 0);
 T.laeufe = new LokaleTabelle({
-  id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true }, wahlOrt: "#laeufeZeilen",
+  id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true }, wahlOrt: "#laeufeZeilen", neueSpalten: ["ueberhang"],   // Punkt 279
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Lauf", "stamm", ["start", "dauer", "backup", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
@@ -4863,7 +4895,10 @@ async function ladeAlles(regelnAuch = true) {
   if (!$("#tab-opt").hidden) ladeOpt();   // Punkt 176: nach Regeländerung, Prognosezeitraum, Analyse
 }
 T.opt.daten([]); T.probe.daten([]); T.lts.daten([]); T.events.daten([]); T.loesch.daten([]); T.laeufe.daten([]); T.summe.daten([]);
-ladeStatus().then(s => { jobWar = !!(s && (s.job || !s.analyse?.analyse_zeit)); ladeAlles(); pruefe(); });
+// Punkt 278: Wartesignal ausblenden, sobald die ersten Tabellen da sind (auch bei einem Fehler, damit nichts hängen bleibt)
+const wartenAus = () => { const w = $("#warten"); if (!w) return; w.classList.add("weg"); setTimeout(() => w.remove(), 500); };
+setTimeout(wartenAus, 120000);   // Notausgang
+ladeStatus().then(s => { jobWar = !!(s && (s.job || !s.analyse?.analyse_zeit)); ladeAlles().finally(wartenAus); pruefe(); });
 
 // ================================================ Punkt 216 (0.5.5b12): eigene Tooltip-Anzeige „Thema: Inhalt“
 // Liest beim Überfahren den Text aus title, nimmt title solange weg (kein Browser-Tooltip) und setzt ihn danach zurück –
