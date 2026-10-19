@@ -2021,11 +2021,12 @@ const ZW_AUS = new Set();
 let zwTage = 90;
 const zwDatum = iso => `${iso.slice(8)}.${iso.slice(5, 7)}.${iso.slice(2, 4)}`;
 
-async function zuwachsLaden(box, eid) {
+async function zuwachsLaden(box, eid, ohneStat) {
   box.innerHTML = `<p class="sub">Wird geladen …</p>`;
   let r;
   try { r = await api("zuwachs?entity=" + encodeURIComponent(eid)); }
   catch (e) { box.innerHTML = `<p class="sub">${esc(/keine Zuwachs/i.test(e.message) ? "Noch keine Zuwachs-Statistik – sie entsteht mit der nächsten Analyse." : e.message)}</p>`; return; }
+  if (ohneStat) r = { ...r, ohneStat, tage: r.tage.map(t => ({ ...t, kurz: null, lts: null })) };   // ohne Statistik sind 0-Werte keine Messung
   zuwachsZeichnen(box, r);
 }
 
@@ -2053,9 +2054,10 @@ function zuwachsZeichnen(box, r) {
   const leg = ZW_QUELLEN.map(([k, name]) => {
     const hat = da.some(([j]) => j === k);
     return `<button type="button" data-zw="${k}" class="${ZW_AUS.has(k) || !hat ? "aus" : ""}" style="--c: var(--zw-${k})" ${hat ? "" : "disabled"}
-      title="${hat ? "Klick: Linie ein-/ausblenden" : k === "attr" ? "Wird erst ab dem übernächsten Tag nach dem ersten Lauf erfasst" : "Noch keine Daten"}">${esc(name)}</button>`;
+      title="${hat ? "Klick: Linie ein-/ausblenden" : r.ohneStat && (k === "kurz" || k === "lts") ? "Keine Statistik: Die Entität hat keine state_class" : k === "attr" ? "Wird erst ab dem übernächsten Tag nach dem ersten Lauf erfasst" : "Noch keine Daten"}">${esc(name)}</button>`;
   }).join("");
-  box.innerHTML = `<div class="vl zw">
+  const hinweis = r.ohneStat ? `<p class="sub">5-Min- und Langzeit-Statistik: keine – die Entität hat keine <code>state_class</code> (HA schreibt dafür keine Statistik).</p>` : "";
+  box.innerHTML = `<div class="vl zw">${hinweis}
     <div class="zw-bereich">${ZW_BEREICHE.map(([t, name]) => `<button type="button" data-zwb="${t}" class="${t === zwTage ? "an" : ""}">${name}</button>`).join("")}</div>
     <div style="position:relative"><svg id="zwSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Neue Zeilen pro Tag">${svg}</svg><div class="vl-tip" id="zwTip" hidden></div></div>
     <div class="vl-leg">${leg}</div>
@@ -3853,7 +3855,7 @@ function oeffneEntitaet(e) {
     }, true]]);
   if (!verwaist) regelFuer(e);
   const zw = $("#eZuwachs");   // erst beim Aufklappen laden
-  zw.addEventListener("toggle", () => { if (zw.open && !zw.dataset.geladen) { zw.dataset.geladen = "1"; zuwachsLaden(zw.querySelector(".zwBox"), e.entity_id); } });
+  zw.addEventListener("toggle", () => { if (zw.open && !zw.dataset.geladen) { zw.dataset.geladen = "1"; zuwachsLaden(zw.querySelector(".zwBox"), e.entity_id, e.lts_id == null && !e.lts_rows && !e.kurz_rows && !e.state_class); } });
 }
 // Punkt 172 (0.5.4): aus einer Entität heraus eine Regel für gleichartige anlegen – gleiches Präfix, gleiche Endung, gleiche Klasse
 async function regelFuer(e) {

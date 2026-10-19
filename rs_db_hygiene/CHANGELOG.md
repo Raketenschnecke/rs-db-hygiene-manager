@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b21 (Beta)
+- **Zuwachs-Chart ohne Statistik (Punkt 280):** Entitäten ohne `state_class` (und ohne Statistikzeilen) haben in Home Assistant keine 5-Min- und keine Langzeit-Statistik. Das Chart „Zeilen pro Tag (Zuwachs)“ zeigte dafür bisher 0 und wirkte wie ein Fehler. Jetzt entfallen diese beiden Linien, die Legendenknöpfe sind ausgegraut („Keine Statistik: Die Entität hat keine state_class“), und über dem Chart steht ein Hinweis
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b20 (Beta)
 - **Wartesignal beim Laden (Punkt 278):** Bis die ersten Tabellen geladen sind, zeigt die Seite in der Mitte das Piktogramm mit einem dezent pulsierenden Glimmen in seiner Form und „please wait…“ – die Seite wirkt nicht mehr defekt. Blendet von selbst aus, ist nicht im Weg und läuft bei „Bewegung reduzieren“ ohne Animation
 - **Neue Spalten trotz gemerkter Spaltenauswahl (Punkt 279):** Wer in einer Tabelle schon Spalten abgewählt hatte, sah neue Spalten nie (so fehlte „Überhang“ in den Läufen). Eine neue Spalte erscheint jetzt einmal von selbst; danach gilt wieder die eigene Auswahl
