@@ -28,6 +28,49 @@
           --zf-ist: #b5615c; --zf-loesch: #b8912a; --zf-prog: #3d8a55;
           --zf-stamm: #3f80b0; --zf-vorh: #5561b0; }
 }
+/* Punkt 288: Reiter Dashboard – Aufbau der Recorder-Datenbank. Zweige in den Farben der Zuwachs-Charts:
+   Zustandsverlauf blau (States), Event-Bus orange (Events), Statistik grün (Langzeit), Verwaltung grau */
+.dash { --d-st: #2f7fd1; --d-ev: #d9622b; --d-lt: #3f9a5c; --d-adm: #7a8290; display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
+@media (prefers-color-scheme: dark) { .dash { --d-st: #5aa2ee; --d-ev: #f08a5d; --d-lt: #4fb873; --d-adm: #a0a7b3; } }
+.dash h2 { font-size: 17px; margin: 0 0 4px; }
+.dash .d-sub { color: var(--muted); max-width: 95ch; margin: 0 0 12px; }
+.dash .d-kopf { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--muted); }
+.dash .d-kopf b { color: var(--text); font-variant-numeric: tabular-nums; }
+.dash figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.dash .d-scroll { overflow-x: auto; }
+.dash .d-scroll svg { min-width: 760px; width: 100%; max-width: 1100px; height: auto; display: block; }
+.dash svg text { font-family: var(--mono); fill: var(--text); }
+.dash svg .t-name { font-size: 13px; font-weight: 700; }
+.dash svg .t-term { font-size: 11px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; fill: var(--c); }
+.dash svg .t-col { font-size: 11px; }
+.dash svg .t-note, .dash svg .t-lbl { font-size: 10.5px; fill: var(--muted); }
+.dash svg .t-lbl { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.dash svg .t-fuss { font-size: 10.5px; fill: var(--muted); font-weight: 700; }
+.dash svg .t-warn { fill: var(--bad); }
+.dash svg .bx { fill: var(--panel); stroke: var(--c); stroke-width: 1.6; }
+.dash svg .hd { fill: color-mix(in srgb, var(--c) 18%, var(--panel)); }
+.dash svg .fl { stroke: var(--line); stroke-width: 1; }
+.dash svg .link { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.dash svg .soft { stroke: var(--bad); stroke-width: 1.4; stroke-dasharray: 5 4; fill: none; }
+.dash .d-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); padding: 10px 4px 0; }
+.dash .d-punkt { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.dash figcaption { color: var(--muted); padding: 8px 4px 0; max-width: 95ch; }
+.dash .d-balken { display: flex; flex-direction: column; gap: 12px; max-width: 1100px; }
+.dash .d-bar { display: grid; grid-template-columns: minmax(130px, 200px) 1fr; gap: 4px 12px; align-items: center; }
+.dash .d-bar .nm { font-family: var(--mono); font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+.dash .d-spur { display: flex; height: 22px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+.dash .d-spur i { display: block; height: 100%; background: var(--c); }
+.dash .d-spur i.x { opacity: .45; }
+.dash .d-bar .val { grid-column: 2; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dash .d-plus { color: var(--warn); } .dash .d-minus { color: var(--ok); }
+.dash .d-karten { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; max-width: 1400px; }
+.dash .d-karte { background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--c); border-radius: 6px; padding: 12px 14px;
+  min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.dash .d-karte h3 { margin: 0; font-family: var(--mono); font-size: 14px; overflow-wrap: anywhere; }
+.dash .d-karte .term { font-weight: 600; color: var(--c); font-size: 13px; }
+.dash .d-karte p { margin: 0; }
+.dash .d-karte .meta { margin-top: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dash code { font-family: var(--mono); font-size: .92em; }
 * { box-sizing: border-box; }
 /* hidden muss immer gewinnen – sonst heben display-Regeln (z. B. .lauf) es auf (Fehler 0.1.2) */
 [hidden] { display: none !important; }
@@ -227,6 +270,7 @@ input[type=number] { width: 72px; }
    Istzustand rot, Vorhaltezeiten blau, Prognose grün, Löschmenge gelb; aktiv volle Farbe und farbige Schrift; Hilfe bleibt neutral */
 .tabs button.rf-ist { --rf: var(--zf-ist); } .tabs button.rf-vorh { --rf: var(--zf-vorh); }
 .tabs button.rf-prog { --rf: var(--zf-prog); } .tabs button.rf-loesch { --rf: var(--zf-loesch); }
+.tabs button.rf-dash { --rf: var(--muted); }   /* Punkt 288: Dashboard grau, ganz links */
 .tabs button[class*="rf-"] { border-top-color: color-mix(in srgb, var(--rf) 75%, var(--reiter)); }
 .tabs button.an[class*="rf-"] { color: color-mix(in srgb, var(--rf) 70%, var(--text)); border-top-color: var(--rf); }
 /* Eigener Scrollbereich bis zur Fensterhöhe: darin bleibt der Tabellenkopf stehen */
@@ -545,7 +589,9 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
    <div class="kleb-oben" id="klebOben">
     <nav class="tabs" id="tabs">
       <!-- Punkt 158 (0.5.3): Reihenfolge Istzustand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
-      <button data-tab="ent" class="an rf-ist">Entitäten</button>
+      <!-- Punkt 288: Dashboard ganz links und Startreiter beim Laden der Seite (bis dahin Entitäten) -->
+      <button data-tab="dash" class="an rf-dash" title="Aufbau der Recorder-Datenbank: Tabellen, Beziehungen, Platz – Stand der letzten Analyse">Dashboard</button>
+      <button data-tab="ent" class="rf-ist">Entitäten</button>
       <button data-tab="events" class="rf-ist">Events</button>
       <button data-tab="lts" class="rf-ist">Statistik ohne Entität</button>
       <button data-tab="opt" class="rf-loesch" title="Regelvorschläge aus der letzten Analyse">Empfehlungen</button>
@@ -562,7 +608,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
     <div data-leiste="regeln" hidden style="margin-bottom:16px">
       <div class="hinweisbox" id="attrStandardBox"></div>   <!-- Punkt 254: Attribut-Standard -->
     </div>
-    <div class="leiste" data-leiste="ent">
+    <div class="leiste" data-leiste="ent" hidden>
       <select id="fDomain"><option value="">alle Domains</option></select>
       <select id="fRegel"><option value="">mit und ohne Regel</option><option value="mit">mit Regel</option><option value="ohne">ohne Regel</option></select>
       <label><input type="checkbox" id="fHinweis"> nur mit Hinweis/Schutz</label>
@@ -636,7 +682,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       <a href="#" data-csv="lts">CSV</a>
     </div>
   </div>
-  <section id="tab-ent">
+  <section id="tab-ent" hidden>
     <div class="trefferzeile" id="trefferzeile"></div>
     <div class="tabelle"><table id="tEnt" class="baustein gruppiert"><colgroup id="tEntSpalten"></colgroup><thead id="tEntKopf"></thead><tbody id="tEntRumpf"></tbody></table></div>
     <div class="blaettern"><button id="zurueck">‹</button><span id="seite"></span><button id="weiter">›</button><span id="aufbau" class="sub"></span></div>
@@ -1016,6 +1062,10 @@ actions:
     </div>
     <div class="trefferzeile" id="trefferLts"></div>
     <div class="tabelle"><table id="tLts" class="baustein"></table></div>
+  </section>
+  <!-- Punkt 288: Aufbau der Recorder-Datenbank, Tagesstand aus der Analyse (struktur.db) -->
+  <section id="tab-dash">
+    <div class="dash" id="dashInhalt"><p class="d-sub">Lädt …</p></div>
   </section>
 </main>
 
@@ -5015,6 +5065,180 @@ $("#lNeu").onclick = async () => {
   setTimeout(() => { const x = $("#lNeu"); if (x) x.textContent = "Plan neu laden"; }, 4000);
 };
 
+// ================================================ Punkt 288: Reiter Dashboard – Aufbau der Recorder-Datenbank
+// Stand aus struktur.db (GET /api/struktur), erfasst als Schritt 7 jeder Analyse; drei Teile: Beziehungen, Platz, Tabelleninhalte
+const D_ZWEIG = { st: "var(--d-st)", ev: "var(--d-ev)", lt: "var(--d-lt)", adm: "var(--d-adm)" };
+const D_TAB_ZWEIG = { states_meta: "st", states: "st", state_attributes: "st", event_types: "ev", events: "ev", event_data: "ev",
+  statistics_meta: "lt", statistics: "lt", statistics_short_term: "lt" };
+const dMio = n => n == null ? "–" : n >= 1e6 ? (n / 1e6).toLocaleString("de-DE", { maximumFractionDigits: n >= 1e8 ? 0 : n >= 1e7 ? 1 : 2 }) + " Mio" : zahl(n);
+const dDatum = ts => ts ? new Date(ts * 1000).toLocaleDateString("de-DE") : "–";
+const dProz = (a, b) => b ? (100 * a / b).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " %" : "–";
+const dDelta = (neu, alt, fmt) => {
+  if (alt == null || neu == null || neu === alt) return "";
+  return ` · <span class="${neu > alt ? "d-plus" : "d-minus"}">${neu > alt ? "+" : "−"}${fmt(Math.abs(neu - alt))}</span> seit dem Stand davor`;
+};
+
+// Beziehungen als SVG: drei Zeilen (Zweige) zu je Register | Faktentabelle | Pool; Kastenhöhe nach Spaltenzahl, Zeilen so hoch wie ihr größter Kasten
+function dashDiagramm(s) {
+  const z = s.zeilen || {}, W = 230, X = [40, 365, 690], LZ = 15.5;
+  const K = [
+    [["states_meta", "Entität", [["PK", "metadata_id"], ["", "entity_id", "UNIQUE"]]],
+     ["states", "Zustand (State)", [["PK", "state_id"], ["FK", "metadata_id"], ["FK", "attributes_id"], ["FK", "old_state_id", "→ states"], ["", "state"],
+       ["", "last_updated_ts"], ["", "last_changed_ts"], ["", "last_reported_ts"], ["", "context_id_bin"]]],
+     ["state_attributes", "Attribute", [["PK", "attributes_id"], ["", "hash"], ["", "shared_attrs", "JSON"]]]],
+    [["event_types", "Ereignistyp", [["PK", "event_type_id"], ["", "event_type", "UNIQUE"]]],
+     ["events", "Ereignis (Event)", [["PK", "event_id"], ["FK", "event_type_id"], ["FK", "data_id"], ["", "time_fired_ts"], ["", "origin_idx"],
+       ["", "context_id_bin"], ["", "context_user_id_bin"], ["", "context_parent_id_bin"]]],
+     ["event_data", "Ereignisdaten", [["PK", "data_id"], ["", "hash"], ["", "shared_data", "JSON"]]]],
+    [["statistics_meta", "Statistik-Register", [["PK", "id"], ["", "statistic_id", "UNIQUE"], ["", "source"], ["", "unit_of_measurement"], ["", "mean_type"], ["", "has_sum"], ["", "name, unit_class"]]],
+     ["statistics", "Langzeit, 1 Stunde", null], ["statistics_short_term", "Kurzzeit, 5 Minuten", null]]];
+  const stat = [["PK", "id"], ["FK", "metadata_id"], ["", "start_ts"], ["", "mean / min / max"], ["", "state"], ["", "sum"], ["", "last_reset_ts"]];
+  const hoehe = k => 44 + (k[2] || stat).length * LZ + 26;
+  const RH = K.map(r => Math.max(...r.map(hoehe))), ABST = 56;
+  const R = [20]; RH.forEach((h, i) => R.push(R[i] + h + ABST));
+  const H = R[2] + RH[2] + 34;     // Platz für die Umleitung von statistics_short_term unter den Kästen
+  let o = "";
+  K.forEach((reihe, ri) => reihe.forEach(([name, term, sp], ci) => {
+    const x = X[ci], y = R[ri], h = RH[ri], c = D_ZWEIG[D_TAB_ZWEIG[name]], spalten = sp || stat;
+    o += `<g style="--c:${c}"><rect x="${x}" y="${y}" width="${W}" height="${h}" rx="6" class="bx"/>`
+      + `<path d="M${x} ${y + 34}V${y + 6}a6 6 0 0 1 6-6H${x + W - 6}a6 6 0 0 1 6 6V${y + 34}Z" class="hd"/>`
+      + `<text x="${x + 10}" y="${y + 16}" class="t-name">${esc(name)}</text><text x="${x + 10}" y="${y + 29}" class="t-term">${esc(term)}</text>`;
+    spalten.forEach((s_, i) => {
+      o += `<text x="${x + 10}" y="${y + 52 + i * LZ}" class="t-col"><tspan font-weight="700">${s_[0] ? esc(s_[0]) + " " : "   "}</tspan>${esc(s_[1])}`
+        + (s_[2] ? `<tspan class="t-note">  ${esc(s_[2])}</tspan>` : "") + `</text>`;
+    });
+    o += `<line x1="${x + 1}" x2="${x + W - 1}" y1="${y + h - 22}" y2="${y + h - 22}" class="fl"/>`
+      + `<text x="${x + 10}" y="${y + h - 7}" class="t-fuss">${esc(dMio(z[name]))} Zeilen</text></g>`;
+  }));
+  const pfeil = (pkte, lbl, lx, ly) => `<polyline points="${pkte}" class="link" marker-end="url(#dPfeil)"/>`
+    + (lbl ? `<text x="${lx}" y="${ly}" class="t-lbl" text-anchor="middle">${esc(lbl)}</text>` : "");
+  const mitte = (X[0] + W + X[1]) / 2, mitte2 = (X[1] + W + X[2]) / 2;
+  o += pfeil(`${X[1]},${R[0] + 68} ${X[0] + W},${R[0] + 68}`, "metadata_id", mitte, R[0] + 62)
+    + pfeil(`${X[1] + W},${R[0] + 83} ${X[2]},${R[0] + 83}`, "attributes_id", mitte2, R[0] + 77)
+    + pfeil(`${X[1]},${R[1] + 68} ${X[0] + W},${R[1] + 68}`, "event_type_id", mitte, R[1] + 62)
+    + pfeil(`${X[1] + W},${R[1] + 83} ${X[2]},${R[1] + 83}`, "data_id", mitte2, R[1] + 77)
+    + pfeil(`${X[1]},${R[2] + 68} ${X[0] + W},${R[2] + 68}`, "metadata_id", mitte, R[2] + 62);
+  const unten = R[2] + RH[2], umweg = unten + 22;
+  o += pfeil(`${X[2] + W / 2},${unten} ${X[2] + W / 2},${umweg} ${X[0] + W / 2},${umweg} ${X[0] + W / 2},${unten}`, "metadata_id (n : 1)", X[1] + W / 2, umweg - 6);
+  // logische Verbindungen ohne Fremdschlüssel
+  const ym = (R[0] + 60 + R[2] + 60) / 2;
+  o += `<polyline points="${X[0]},${R[0] + 60} 24,${R[0] + 60} 24,${R[2] + 60} ${X[0]},${R[2] + 60}" class="soft"/>`
+    + `<text x="12" y="${ym}" class="t-lbl t-warn" text-anchor="middle" transform="rotate(-90 12 ${ym})">statistic_id = entity_id, kein FK</text>`
+    + `<polyline points="${X[1] + W / 2},${R[0] + RH[0]} ${X[1] + W / 2},${R[1]}" class="soft"/>`
+    + `<text x="${X[1] + W / 2 + 10}" y="${R[0] + RH[0] + ABST / 2 + 4}" class="t-lbl t-warn">gleiche context_id, kein FK</text>`;
+  return `<svg viewBox="0 0 960 ${H}" role="img" aria-label="Beziehungen der Recorder-Tabellen: states verweist auf states_meta, state_attributes und sich selbst; events auf event_types und event_data; statistics und statistics_short_term auf statistics_meta">`
+    + `<defs><marker id="dPfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>${o}</svg>`;
+}
+
+// Platz je Tabelle: Daten und Indizes als gestapelter Balken, Maßstab = größte Tabelle; kleine Tabellen unter 1 MB zusammengefasst
+function dashPlatz(s, v) {
+  const b = s.bytes || {}, vb = v?.bytes || {}, summe = t => t ? t.daten + t.indizes : 0;
+  const gesamt = Object.values(b).reduce((a, t) => a + summe(t), 0);
+  const gross = Object.keys(b).filter(n => summe(b[n]) >= 1e6).sort((a, c) => summe(b[c]) - summe(b[a]));
+  const klein = Object.keys(b).filter(n => !gross.includes(n));
+  const max = Math.max(1, ...gross.map(n => summe(b[n])));
+  const zeile = (name, t, alt, c, tip) => {
+    const g = summe(t);
+    return `<div class="d-bar" style="--c:${c}" title="${esc(tip)}"><span class="nm">${esc(name)}</span>`
+      + `<div class="d-spur"><i style="width:${100 * t.daten / max}%"></i><i class="x" style="width:${100 * t.indizes / max}%"></i></div>`
+      + `<span class="val">${mb(g)} gesamt (${dProz(g, gesamt)}): Daten ${mb(t.daten)}, Indizes ${mb(t.indizes)}${dDelta(g, alt, mb)}</span></div>`;
+  };
+  let o = gross.map(n => {
+    const idx = Object.entries(b[n].index || {}).sort((a, c) => c[1] - a[1]).map(([i, x]) => `${i}: ${mb(x)}`);
+    return zeile(n, b[n], vb[n] ? summe(vb[n]) : null, D_ZWEIG[D_TAB_ZWEIG[n]] || D_ZWEIG.adm,
+      `${n}: Daten ${mb(b[n].daten)}` + (idx.length ? `\nIndizes:\n${idx.join("\n")}` : "\nkeine Indizes"));
+  }).join("");
+  if (klein.length) {
+    const t = klein.reduce((a, n) => ({ daten: a.daten + b[n].daten, indizes: a.indizes + b[n].indizes }), { daten: 0, indizes: 0 });
+    o += zeile(`übrige (${klein.length})`, t, null, D_ZWEIG.adm, `Kleine Tabellen und interne Objekte:\n${klein.map(n => `${n}: ${mb(summe(b[n]))}`).join("\n")}`);
+  }
+  return o;
+}
+
+// Inhalte je Tabelle: Begriff, Text aus den aktuellen Zahlen, Fuß mit Zeilen und Platz
+function dashKarten(s) {
+  const z = s.zeilen || {}, d = s.details || {}, b = s.bytes || {}, zr = s.zeitraum || {}, pl = s.planer || {};
+  const platz = n => b[n] ? " · " + mb(b[n].daten + b[n].indizes) : "";
+  const dom = d.domains || [];
+  const domText = dom.slice(0, 5).map(([n, c]) => `${zahl(c)} <code>${esc(n)}</code>`).join(", ") + (dom.length > 5 ? `, dazu ${dom.length - 5} weitere Domains` : "");
+  const evt = (d.event_typen || []).filter(e => e[1] > 0), evSumme = evt.reduce((a, e) => a + e[1], 0);
+  const evText = evt.slice(0, 3).map(([n, c]) => `<code>${esc(n)}</code> ${dProz(c, evSumme)}`).join(", ");
+  const planerAlt = pl.states && z.states && Math.abs(pl.states - z.states) / z.states > 0.25
+    ? ` Die Statistik des Abfrageplaners (<code>sqlite_stat1</code>) nennt ${dMio(pl.states)} Zeilen und ist damit veraltet.` : "";
+  const al = d.attr_laenge || [];
+  const schema = (d.schema || []).map(([v, t]) => `${v} (${esc(String(t).slice(5, 7))}/${esc(String(t).slice(0, 4))})`).join(", ");
+  const K = [
+    ["states_meta", "Entitäten-Register", "st", `Eine Zeile je Entität, die je aufgezeichnet wurde: ${domText}.`, `${zahl(z.states_meta)} Zeilen`],
+    ["states", "Zustandshistorie", "st", `Jede Zustandsmeldung einer Entität mit Wert, drei Zeitstempeln, Vorgänger und Context. Größte Tabelle, Spanne ${dDatum(zr.states?.[0])} bis ${dDatum(zr.states?.[1])}.`
+      + (d.max_state_id ? ` Die höchste <code>state_id</code> ist ${dMio(d.max_state_id)}; die Differenz zur Zeilenzahl sind bereits gelöschte Zeilen.` : "") + planerAlt,
+      `${dMio(z.states)} Zeilen${platz("states")}`],
+    ["state_attributes", "Attribut-Pool", "st", `Einzigartige Attribut-JSONs, per Hash dedupliziert. Im Schnitt teilen sich ${z.state_attributes ? zahl(Math.round(z.states / z.state_attributes)) : "–"} Zustandszeilen einen Satz.`
+      + (al[0] ? ` Die Länge liegt im Mittel bei ${zahl(Math.round(al[0]))} Zeichen, maximal bei ${zahl(al[1])}.` : ""), `${zahl(z.state_attributes)} Zeilen${platz("state_attributes")}`],
+    ["events / event_types", "Event-Bus", "ev", `Service-Aufrufe, Automationsauslöser, Registry-Änderungen, Start und Stopp von HA, eigene Events. Spanne ${dDatum(zr.events?.[0])} bis ${dDatum(zr.events?.[1])}.`
+      + (evText ? ` Häufigste Typen: ${evText}.` : ""), `${dMio(z.events)} Zeilen · ${zahl(z.event_types)} Typen${platz("events")}`],
+    ["event_data", "Event-Nutzlast", "ev", "JSON-Inhalt der Events, dedupliziert. Bei Service-Aufrufen mit Domain, Service und Daten.", `${zahl(z.event_data)} Zeilen${platz("event_data")}`],
+    ["statistics_meta", "Statistik-Register", "lt", `Welche Entitäten Langzeitstatistik haben, mit Einheit und Art: ${zahl(d.mit_sum)} mit Summe (Zähler), die übrigen mit Mittelwert.`
+      + ` Quelle: ${(d.quellen || []).map(([q, n]) => `<code>${esc(q)}</code> ${zahl(n)}`).join(", ")}.`
+      + ` Häufigste Einheiten: ${(d.einheiten || []).map(([e, n]) => `${esc(e || "ohne")} (${zahl(n)})`).join(", ")}.`, `${zahl(z.statistics_meta)} Zeilen`],
+    ["statistics", "Langzeitstatistik", "lt", `Stündliche Kennwerte${d.lts_ids ? ` für ${zahl(d.lts_ids)} Statistik-IDs` : ""}, unabhängig von der Vorhaltezeit der States. Reicht bis ${dDatum(zr.statistics?.[0])} zurück. Grundlage des Energie-Dashboards.`,
+      `${dMio(z.statistics)} Zeilen${platz("statistics")}`],
+    ["statistics_short_term", "Kurzzeitstatistik", "lt", `Fünf-Minuten-Kennwerte${d.kurz_ids ? ` für ${zahl(d.kurz_ids)} Statistik-IDs` : ""}, ab ${dDatum(zr.statistics_short_term?.[0])}. HA verdichtet sie zu Stundenwerten.`,
+      `${dMio(z.statistics_short_term)} Zeilen${platz("statistics_short_term")}`],
+    ["recorder_runs, statistics_runs", "Laufprotokolle", "adm", `Start und Ende jeder Aufzeichnung (${zahl(z.recorder_runs)} Läufe, ${zahl(d.recorder_unsauber)} davon unsauber beendet) und jeder 5-Minuten-Statistikberechnung.`,
+      `${zahl(z.recorder_runs)} und ${zahl(z.statistics_runs)} Zeilen`],
+    ["schema_changes, migration_changes", "Versionsstand", "adm", `Schema-Migrationen: ${schema ? "Version " + schema : "keine"}. <code>migration_changes</code> ${z.migration_changes ? `führt ${zahl(z.migration_changes)} Einträge` : "ist leer"}.`,
+      `${zahl(z.schema_changes)} und ${zahl(z.migration_changes)} Zeilen`],
+  ];
+  return K.map(([n, term, zw, text, fuss]) => `<div class="d-karte" style="--c:${D_ZWEIG[zw]}"><h3>${esc(n)}</h3><span class="term">${esc(term)}</span><p>${text}</p><span class="meta">${fuss}</span></div>`).join("");
+}
+
+async function ladeDash() {
+  const ziel = $("#dashInhalt");
+  let r;
+  try { r = await api("struktur"); }
+  catch (e) { ziel.innerHTML = `<p class="d-sub">${esc(e.message)}</p>`; return; }
+  const s = r.stand;
+  if (!s) { ziel.innerHTML = `<div class="hinweisbox">Noch kein Stand erfasst. Die nächste Analyse (nachts oder über „Analyse starten“) liest den Aufbau der Datenbank ein.</div>`; return; }
+  const v = r.vorher, dt = s.datei || {}, z = s.zeilen || {};
+  const datei = dt.seite * dt.seiten, frei = dt.seite * dt.frei;
+  const belegt = Object.values(s.bytes || {}).reduce((a, t) => a + t.daten + t.indizes, 0);
+  const st = s.bytes?.states, stAnteil = st ? dProz(st.daten + st.indizes, belegt) : "–";
+  ziel.innerHTML = `
+    <div class="d-kopf">
+      <span>Stand <b>${new Date(s.zeit * 1000).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</b></span>
+      <span>Datei <b>${gb(datei)}</b>, davon frei <b>${gb(frei)}</b></span>
+      <span>Zustände <b>${dMio(z.states)}</b></span>
+      <span>Entitäten <b>${zahl(z.states_meta)}</b></span>
+      <span><code>states</code> samt Indizes <b>${stAnteil}</b> des belegten Platzes</span>
+      <span title="Erfassung: ${esc(String(s.dauer_s))} s, davon Platzmessung (dbstat) ${esc(String(s.dbstat_s))} s">${zahl(r.tage)} ${r.tage === 1 ? "Tagesstand" : "Tagesstände"} gespeichert</span>
+    </div>
+    <section>
+      <h2>Beziehungen der Tabellen</h2>
+      <p class="d-sub">Drei Zweige teilen sich die Datenbank: der Zustandsverlauf, der Event-Bus und die Statistik. Jeder Zweig hat eine kleine Register-Tabelle links, eine große Faktentabelle in der Mitte und einen Text-Pool rechts, der doppelte Inhalte spart.</p>
+      <figure>
+        <div class="d-scroll">${dashDiagramm(s)}</div>
+        <div class="d-legende">
+          <span style="--c:var(--d-st)"><i class="d-punkt"></i>Zustandsverlauf</span>
+          <span style="--c:var(--d-ev)"><i class="d-punkt"></i>Event-Bus</span>
+          <span style="--c:var(--d-lt)"><i class="d-punkt"></i>Statistik</span>
+          <span>Graue Linie: echter Fremdschlüssel (n : 1)</span>
+          <span style="color:var(--bad)">Rot gestrichelt: logische Verbindung ohne Fremdschlüssel</span>
+        </div>
+        <figcaption>Jede Zeile in <code>states</code> zeigt auf genau eine Entität und einen Attributsatz. Das Attribut-JSON liegt nur einmal in <code>state_attributes</code>, egal wie oft es sich wiederholt. Die Statistik kennt die Entität nur über denselben Namen, nicht über einen Schlüssel.</figcaption>
+      </figure>
+    </section>
+    <section>
+      <h2>Wo der Platz liegt</h2>
+      <p class="d-sub">Größe je Tabelle, getrennt nach Nutzdaten (kräftig) und zugehörigen Indizes (blass), gemessen mit <code>dbstat</code>. Belegt sind ${gb(belegt)}; der Rest der Datei sind freie Seiten (${gb(frei)}).${v ? ` Veränderung gegenüber dem Stand vom ${dDatum(v.zeit)}.` : ""} Überfahren zeigt die einzelnen Indizes.</p>
+      <div class="d-balken">${dashPlatz(s, v)}</div>
+    </section>
+    <section>
+      <h2>Was in welcher Tabelle steht</h2>
+      <p class="d-sub">Zeilenzahlen und Zeiträume aus der Analyse vom ${dDatum(s.zeit)}.</p>
+      <div class="d-karten">${dashKarten(s)}</div>
+    </section>`;
+}
+
 // ================================================ Steuerung
 // Punkt 112: Inhaltsverzeichnis der Hilfe öffnet den Abschnitt und springt hin;
 // ab 0.4.11 auch Verweise im Text (Ziel kann eine Frage oder ein Unterabschnitt sein) – kurz hervorgehoben
@@ -5034,11 +5258,12 @@ document.querySelector(".hilfe")?.addEventListener("click", ev => {
 $("#tabs").addEventListener("click", ev => {
   const b = ev.target.closest("button[data-tab]"); if (!b) return;
   document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("an", x === b));
-  ["ent", "events", "opt", "regeln", "probe", "lts", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
+  ["ent", "events", "opt", "regeln", "probe", "lts", "dash", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
   document.querySelectorAll("[data-leiste]").forEach(l => l.hidden = l.dataset.leiste !== b.dataset.tab);
   zeigeChips();   // Punkte 271/272
   zeigeAuswahl(); zeigeAuswahlEnt(); zeigeAuswahlEv(); zeigeAuswahlOpt();
   if (b.dataset.tab === "lts") ladeLts();
+  if (b.dataset.tab === "dash") ladeDash();   // Punkt 288
   if (b.dataset.tab === "opt") ladeOpt();   // Punkt 176
   if (b.dataset.tab === "loeschen") ladeLoeschen();
   if (b.dataset.tab === "protokoll") ladeProtokoll();
@@ -5065,6 +5290,7 @@ async function ladeAlles(regelnAuch = true) {
   if (!$("#tab-loeschen").hidden) ladeLoeschen();
   if (!$("#tab-protokoll").hidden) ladeProtokoll();
   if (!$("#tab-opt").hidden) ladeOpt();   // Punkt 176: nach Regeländerung, Prognosezeitraum, Analyse
+  if (!$("#tab-dash").hidden) ladeDash();   // Punkt 288: nach einer Analyse frischer Stand
 }
 T.opt.daten([]); T.probe.daten([]); T.lts.daten([]); T.events.daten([]); T.loesch.daten([]); T.laeufe.daten([]); T.summe.daten([]);
 // Punkt 278: Wartesignal ausblenden, sobald die ersten Tabellen da sind (auch bei einem Fehler, damit nichts hängen bleibt)

@@ -24,6 +24,7 @@ import probelauf
 import regelcheck
 import regeln as rg
 import spaltenfilter
+import struktur
 import tote
 import warnungen
 import zuwachs
@@ -37,6 +38,7 @@ OPTIONEN_PFAD = os.path.join(DATA, "options.json")
 CACHE = os.path.join(DATA, "cache.db")
 ATTR = os.path.join(DATA, "attribute.db")
 ZUWACHS = os.path.join(DATA, "zuwachs.db")      # Tageswerte neuer Zeilen je Entität, wird nur fortgeschrieben (zuwachs.py)
+STRUKTUR = os.path.join(DATA, "struktur.db")    # Punkt 288: Tagesstand der Tabellen für den Reiter Dashboard (struktur.py)
 REGELN = os.path.join(DATA, "regeln.json")
 HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
 LAEUFE = os.path.join(DATA, "laeufe")
@@ -152,7 +154,7 @@ def _analyse_sync():
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate())
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate(), STRUKTUR)
 
 
 def _cache_version():
@@ -239,6 +241,9 @@ async def nachtlauf():
     """Täglich zur eingestellten Uhrzeit die (leichte) Analyse; beim ersten Start oder altem Cache-Aufbau sofort."""
     if _cache_version() < analyse.CACHE_VERSION:
         _LOG.info("Cache fehlt oder hat alten Aufbau – starte Analyse")
+        await starte_job("analyse")
+    elif not os.path.exists(STRUKTUR):          # Punkt 288: erster Start mit Reiter Dashboard – Stand sofort erfassen
+        _LOG.info("Struktur der Datenbank noch nicht erfasst – starte Analyse")
         await starte_job("analyse")
     zuletzt = None
     while True:
@@ -369,6 +374,11 @@ async def zuwachs_events(request):
     except ValueError:
         return web.json_response({"fehler": "von/bis als JJJJ-MM-TT oder Tageszahl angeben"}, status=400)
     return web.json_response(await asyncio.to_thread(zuwachs.lies_events, ZUWACHS, von, bis))
+
+
+async def struktur_lesen(_request):
+    """Punkt 288: letzter Tagesstand der Datenbank-Struktur (Reiter Dashboard) und der Stand davor; stand null ohne Erfassung."""
+    return web.json_response(await asyncio.to_thread(struktur.lies, STRUKTUR))
 
 
 async def zuwachs_tage(request):
@@ -1276,6 +1286,7 @@ def erstelle_app():
         web.get("/api/prognose_verlauf", prognose_verlauf),
         web.get("/api/zuwachs", zuwachs_tage),
         web.get("/api/zuwachs/events", zuwachs_events),
+        web.get("/api/struktur", struktur_lesen),
         web.get("/api/entitaeten", entitaeten),
         web.get("/api/klassen", klassen),
         web.get("/api/plattformen", plattformen),

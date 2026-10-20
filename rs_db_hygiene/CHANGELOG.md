@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b26 (Beta)
+- **Reiter „Dashboard“ (Punkt 288):** ganz links, graue Oberkante, öffnet sich beim Laden der Seite (bisher Entitäten); zeigt den Aufbau der Recorder-Datenbank mit den Zahlen der letzten Analyse: die Beziehungen der Tabellen als Diagramm (Zustandsverlauf, Event-Bus, Statistik, mit Zeilen je Tabelle und den Verbindungen ohne Fremdschlüssel), „Wo der Platz liegt“ (Daten und Indizes je Tabelle, Tooltip mit den einzelnen Indizes, Veränderung gegenüber dem Stand davor) und „Was in welcher Tabelle steht“ (je Tabelle Begriff, Inhalt, Zeitraum, Zeilen und Platz)
+- Die Analyse erfasst dafür als Schritt 7 einen Tagesstand in `struktur.db` (Platz per `dbstat`, ca. 10–20 s; Zeilen der großen Tabellen aus den Tageszahlen der Analyse, die kleinen per Zählung). Die Datei wird fortgeschrieben, Stände älter als die Speicherdauer der Zuwachsdaten (`zuwachs_monate`) entfallen. Fehlt die Datei beim Start, läuft einmal sofort eine Analyse. Neue Schnittstelle `GET /api/struktur`
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.6b25 (Beta)
 - **Zuwachs-Chart der Kachel „Datenzeilen gesamt“ (Punkt 283):** Ein Klick auf die Kachel Istzustand / Datenzeilen gesamt öffnet „Neue Zeilen pro Tag“ über alle Entitäten (States, 5-Min-Statistik, Langzeit, Attribute, Events) im Stil des Entitäten-Charts. Die Y-Achse hat jetzt Schritte bis in die Milliarden und kürzt ab einer Million als „2 Mio.“ (vorher blieb bei Summen nur eine abgeschnittene Marke)
 - **Events in der Zuwachs-Statistik (Punkt 284):** `zuwachs.db` führt die Event-Zeilen pro Tag als fünfte Quelle „events“ je Event-Typ (Kennung `ev:<Typ>`); sie zählen nur in der Summe über alle Entitäten. Eine ältere Datei bekommt die Spalte bei der nächsten Analyse nachgerüstet, die Daten bleiben. Events reichen nur so weit zurück, wie die Events-Tabelle der Datenbank Zeilen hält
