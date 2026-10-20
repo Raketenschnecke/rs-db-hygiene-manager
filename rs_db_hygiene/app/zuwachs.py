@@ -28,6 +28,7 @@ Nur Standardbibliothek; schreibt ausschließlich in die eigene Datei, die HA-Dat
 """
 import calendar
 import datetime
+import fnmatch
 import logging
 import sqlite3
 import time
@@ -204,8 +205,11 @@ def fortschreiben(zuwachs_pfad, cache_pfad, ha_pfad, meta, heute, monate=ZUWACHS
     _LOG.info("Zuwachs fortgeschrieben in %.1f s", time.time() - start)
 
 
-def lies_events(zuwachs_pfad, von=None, bis=None):
+def lies_events(zuwachs_pfad, von=None, bis=None, muster=None):
     """Neue Event-Zeilen pro Tag: Summe über alle Event-Typen und der Verlauf je Typ (Punkt 286).
+
+    muster (Punkt 292): Liste von Event-Typen bzw. Mustern mit * und ? wie in Event-Regeln – dann nur die passenden Typen,
+    die Summe läuft über sie (Zuwachs-Chart in der Event-Regelkarte). Leere Liste = keine Typen.
 
     Liefert {"abdeckung", "tage": [{"tag", "datum", "events"}], "typen": [{"event_type", "summe", "werte": [je Tag]}]};
     die Typen sind nach ihrer Summe im Bereich absteigend sortiert, "werte" läuft parallel zu "tage" (0 = keine Events an dem Tag)."""
@@ -225,6 +229,8 @@ def lies_events(zuwachs_pfad, von=None, bis=None):
         je_typ = {}
         for eid, tag, n in zeilen:
             je_typ.setdefault(eid[3:], {})[tag] = n
+        if muster is not None:      # Punkt 292: gleiche Prüfung wie regeln.event_regel (genauer Name oder fnmatch, groß/klein genau)
+            je_typ = {t: d for t, d in je_typ.items() if any(m == t or fnmatch.fnmatchcase(t, m) for m in muster)}
         tage = list(range(von, bis + 1))
         typen = sorted(({"event_type": t, "summe": sum(d.values()), "werte": [d.get(tag, 0) for tag in tage]} for t, d in je_typ.items()),
                        key=lambda x: (-x["summe"], x["event_type"]))

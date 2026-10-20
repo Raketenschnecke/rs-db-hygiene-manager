@@ -28,10 +28,12 @@
           --zf-ist: #b5615c; --zf-loesch: #b8912a; --zf-prog: #3d8a55;
           --zf-stamm: #3f80b0; --zf-vorh: #5561b0; }
 }
-/* Punkt 288: Reiter Dashboard – Aufbau der Recorder-Datenbank. Zweige in den Farben der Zuwachs-Charts:
-   Zustandsverlauf blau (States), Event-Bus orange (Events), Statistik grün (Langzeit), Verwaltung grau */
-.dash { --d-st: #2f7fd1; --d-ev: #d9622b; --d-lt: #3f9a5c; --d-adm: #7a8290; display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
-@media (prefers-color-scheme: dark) { .dash { --d-st: #5aa2ee; --d-ev: #f08a5d; --d-lt: #4fb873; --d-adm: #a0a7b3; } }
+/* Punkt 289: eigenes Farbschema, das sich von den Signalfarben der App abhebt (Istzustand rot, Löschmenge gelb,
+   Prognose grün, Vorhaltezeiten blau, Tote Muster magenta): Zustandsverlauf Nachtblau, Event-Bus Purpur, Statistik Bronze,
+   Verwaltung grau. Hell dunkler als die Signalfarben, dunkel heller – geprüft mit OKLab-Abstand (normal ≥ 13,6 zu allen
+   Signalfarben, untereinander ≥ 13,6; Petrol verworfen, zu nah am Grün). Logische Verbindungen und Veränderungen in Textfarbe statt Rot/Gelb/Grün. */
+.dash { --d-st: #2e3f63; --d-ev: #7a3a9e; --d-lt: #8a5a2b; --d-adm: #7a8290; display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
+@media (prefers-color-scheme: dark) { .dash { --d-st: #b3c2f7; --d-ev: #a974d8; --d-lt: #e0b48a; --d-adm: #6f7784; } }   /* Grau dunkler, damit es sich vom hellen Nachtblau abhebt */
 .dash h2 { font-size: 17px; margin: 0 0 4px; }
 .dash .d-sub { color: var(--muted); max-width: 95ch; margin: 0 0 12px; }
 .dash .d-kopf { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--muted); }
@@ -46,12 +48,17 @@
 .dash svg .t-note, .dash svg .t-lbl { font-size: 10.5px; fill: var(--muted); }
 .dash svg .t-lbl { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .dash svg .t-fuss { font-size: 10.5px; fill: var(--muted); font-weight: 700; }
-.dash svg .t-warn { fill: var(--bad); }
+.dash svg .t-logik { fill: var(--text); }
 .dash svg .bx { fill: var(--panel); stroke: var(--c); stroke-width: 1.6; }
 .dash svg .hd { fill: color-mix(in srgb, var(--c) 18%, var(--panel)); }
 .dash svg .fl { stroke: var(--line); stroke-width: 1; }
+/* Punkt 290: Ring mit dem Anteil am Speicherplatz oben rechts im Kasten – dezenter Grundkreis, Bogen in der Zweigfarbe */
+.dash svg .d-ring { cursor: help; }
+.dash svg .d-ring-grund { fill: var(--panel); stroke: var(--line); stroke-width: 2; }
+.dash svg .d-ring-bogen { fill: none; stroke: var(--c); stroke-width: 2; stroke-linecap: round; }
+.dash svg .d-ring-wert { font-size: 8.5px; font-weight: 700; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--text); }
 .dash svg .link { stroke: var(--muted); stroke-width: 1.5; fill: none; }
-.dash svg .soft { stroke: var(--bad); stroke-width: 1.4; stroke-dasharray: 5 4; fill: none; }
+.dash svg .soft { stroke: var(--text); stroke-width: 1.4; stroke-dasharray: 5 4; fill: none; }
 .dash .d-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); padding: 10px 4px 0; }
 .dash .d-punkt { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
 .dash figcaption { color: var(--muted); padding: 8px 4px 0; max-width: 95ch; }
@@ -62,7 +69,7 @@
 .dash .d-spur i { display: block; height: 100%; background: var(--c); }
 .dash .d-spur i.x { opacity: .45; }
 .dash .d-bar .val { grid-column: 2; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.dash .d-plus { color: var(--warn); } .dash .d-minus { color: var(--ok); }
+.dash .d-plus, .dash .d-minus { color: var(--text); font-weight: 600; }
 .dash .d-karten { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; max-width: 1400px; }
 .dash .d-karte { background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--c); border-radius: 6px; padding: 12px 14px;
   min-width: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -173,8 +180,9 @@ main { padding: 0 20px 24px; }
   --ev-0: #2f7fd1; --ev-1: #3f9a5c; --ev-2: #8e5bc4; --ev-3: #c9a227; --ev-4: #c2188a; --ev-5: #17a2b8; --ev-6: #7a8290; --ev-7: #e0529c; --ev-8: #6c8e23; --ev-9: #b5651d; --ev-10: #3949ab; --ev-11: #c62828; margin-top: 8px; }
 @media (prefers-color-scheme: dark) { .zw { --zw-states: #5aa2ee; --zw-kurz: #d9b13a; --zw-lts: #4fb873; --zw-attr: #a985e0; --zw-events: #f08a5d;
   --ev-0: #5aa2ee; --ev-1: #4fb873; --ev-2: #a985e0; --ev-3: #e0bd45; --ev-4: #f06bc4; --ev-5: #3fc8dd; --ev-6: #a0a7b3; --ev-7: #ff7ab8; --ev-8: #9ec44b; --ev-9: #e0954a; --ev-10: #7c8ae0; --ev-11: #ff6b6b; } }
-#eZuwachs > summary, #eRegeln > summary { cursor: pointer; font-weight: 600; margin: 6px 0; }
+#eZuwachs > summary, #eRegeln > summary, #rEvZuwachs > summary { cursor: pointer; font-weight: 600; margin: 6px 0; }
 #eZuwachs { margin-bottom: 14px; }
+#rEvZuwachs { margin-bottom: 14px; }   /* Punkt 292: Zuwachs-Chart in der Event-Regelkarte, Abstand wie #eZuwachs */
 .zw .vl-leg { grid-template-columns: repeat(auto-fit, minmax(100px, max-content)); justify-content: center; gap: 6px; margin-bottom: 6px; }
 .zw .vl-leg > button { padding: 2px 8px; font-size: 12px; text-align: center; }
 .zw .vl-leg.ev { display: flex; flex-wrap: wrap; justify-content: center; }   /* Punkt 286: viele Event-Typen als kompakte Schilder */
@@ -1784,7 +1792,7 @@ const HILFE = {
     "Prognosezeitraum variieren, um die Wirkung zu sehen."],
   c_db: ["DB-Größe",
     "Istzustand: Größe der Datei home-assistant_v2.db. Löschmenge sofort: Platz der Zeilen, die ein Lauf jetzt löschen würde. Prognose: erwartete Größe im Dauerbetrieb, darunter ohne Regeln.",
-    "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile sind Messwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
+    "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile misst jede Analyse (Reiter Dashboard, „Wo der Platz liegt“); ohne Messung gelten Festwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
     "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren)."],
   c_zeilen: ["Datenzeilen gesamt",
     "Summe der Spalten States, 5-Min, Attribute (Zeilen), Langzeit und Events in dieser Zeile.",
@@ -2193,7 +2201,7 @@ function evZeichnen(box, r) {
   const typen = r.typen.map(t => ({ name: t.event_type, w: t.werte.slice(von) })).map(t => ({ ...t, s: t.w.reduce((a, x) => a + (x || 0), 0) }))
     .filter(t => t.s > 0).sort((a, b) => b.s - a.s || a.name.localeCompare(b.name));
   const zeige = evModus === "alle" ? typen : evModus ? typen.slice(0, +evModus) : [];
-  const reihen = [{ k: EV_SUMME, name: "Summe aller Events", farbe: "var(--zw-events)", w: tage.map(t => t.events ?? 0), dick: 2.6, strich: "" },
+  const reihen = [{ k: EV_SUMME, name: r.summeName || "Summe aller Events", farbe: "var(--zw-events)", w: tage.map(t => t.events ?? 0), dick: 2.6, strich: "" },
     ...zeige.map(t => { const i = typen.indexOf(t); return { k: t.name, name: t.name, farbe: `var(--ev-${i % 12})`, w: t.w, dick: 1.5, strich: i >= 12 ? "5 3" : "" }; })];
   const sicht = reihen.filter(x => !EV_AUS.has(x.k));
   const max = Math.max(1, ...sicht.flatMap(x => x.w.map(v => v ?? 0)));
@@ -2211,8 +2219,8 @@ function evZeichnen(box, r) {
   const leg = reihen.map(q => `<button type="button" data-evk="${esc(q.k)}" class="${EV_AUS.has(q.k) ? "aus" : ""}" style="--c: ${q.farbe}" title="Klick: Linie ein-/ausblenden">${esc(q.name)}</button>`).join("");
   box.innerHTML = `<div class="vl zw">
     <div class="zw-bereich">${ZW_BEREICHE.map(([t, name]) => `<button type="button" data-zwb="${t}" class="${t === zwTage ? "an" : ""}">${name}</button>`).join("")}</div>
-    <div class="zw-bereich"><span class="sub">Einzelne Event-Typen dazu:</span>${EV_MODI.map(([k, name]) =>
-      `<button type="button" data-evm="${k}" class="${k === evModus ? "an" : ""}" title="${k === evModus ? "Klick: wieder ausblenden" : `Verläufe ${k === "alle" ? "aller" : "der " + name.replace("Top ", "") + " größten"} Event-Typen zur Summe dazuschalten`}">${name}${k === "alle" ? ` (${zahl(typen.length)})` : ""}</button>`).join("")}</div>
+    ${typen.length > 1 ? `<div class="zw-bereich"><span class="sub">Einzelne Event-Typen dazu:</span>${EV_MODI.map(([k, name]) =>
+      `<button type="button" data-evm="${k}" class="${k === evModus ? "an" : ""}" title="${k === evModus ? "Klick: wieder ausblenden" : `Verläufe ${k === "alle" ? "aller" : "der " + name.replace("Top ", "") + " größten"} Event-Typen zur Summe dazuschalten`}">${name}${k === "alle" ? ` (${zahl(typen.length)})` : ""}</button>`).join("")}</div>` : ""}
     <div style="position:relative"><svg id="evSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Neue Event-Zeilen pro Tag">${svg}</svg><div class="vl-tip" id="evTip" hidden></div></div>
     <div class="vl-leg ev" style="max-height:110px;overflow:auto">${leg}</div></div>`;
   box.querySelectorAll("[data-zwb]").forEach(b => b.onclick = () => { zwTage = +b.dataset.zwb; evZeichnen(box, r); });
@@ -4249,6 +4257,9 @@ function bearbeiteRegel(i, vorlage) {
   // Punkt 175: Typ-Automatik nur bei neuen Regeln, deren Typ nicht vorgegeben oder von Hand gewählt ist
   let typManuell = !neu || !!r.typManuell || ["verwaist", "event", "schutz", "herkunft", "vielschreiber"].includes(r.typ);
   dialog(neu ? "Neue Regel" : "Regel " + r.id, `<div id="rMaske" style="display:contents">
+    <!-- Punkt 292: wie in der Entitäten-Karte direkt unter der Überschrift -->
+    <details id="rEvZuwachs" ${r.typ === "event" ? "" : "hidden"}><summary>Zeilen pro Tag (Zuwachs)</summary>
+      <div class="sub" id="rEvZwInfo"></div><div id="rEvZwBox"></div></details>
     <div class="raster3">
       <label class="feld">ID${neu ? " (Vorschlag, änderbar)" : ""}<input id="rId" value="${esc(r.id)}" placeholder="z. B. R24"></label>
       <label class="feld">Name<input id="rName" value="${esc(r.name)}"></label>
@@ -4329,6 +4340,7 @@ function bearbeiteRegel(i, vorlage) {
   // Punkt 51: Bei Typ event nur die Vorhaltezeit zeigen
   const eventModus = t => {
     $("#rEventHinweis").hidden = t !== "event";
+    $("#rEvZuwachs").hidden = t !== "event";   // Punkt 292
     $("#rSchutzHinweis").hidden = t !== "schutz";   // Punkt 111: bei Schutz sind die Werte fest – Blöcke ausblenden
     $("#rSchutzAttrZeile").hidden = t !== "schutz";   // Punkt 254
     ["attribute", "langzeit"].forEach(a => { const b = $(`#dlgInhalt .wertwahl[data-art="${a}"]`)?.closest(".wertblock"); if (b) b.hidden = t === "event" || t === "schutz"; });
@@ -4378,6 +4390,33 @@ function bearbeiteRegel(i, vorlage) {
     $("#rTypAuto").textContent = `Typ automatisch: ${t} (${grund}) – von Hand wählbar`;
     if ($("#rTyp").value !== t) { $("#rTyp").value = t; typGewechselt(t); }
   }
+  // ---- Punkt 292: Zuwachs-Chart der Event-Regel – Summe aller Event-Typen, auf die die Muster passen (wie die Regel sie prüft),
+  // dazu wie in der Kachel Events die Einzelverläufe. Lädt erst beim Aufklappen und nach Musteränderungen (0,6 s verzögert).
+  let zNr = 0, zTimer = null;
+  function evZuwachsRegel() {
+    clearTimeout(zTimer);
+    const det = $("#rEvZuwachs"); if (!det || det.hidden || !det.open) return;
+    zTimer = setTimeout(async () => {
+      const box = $("#rEvZwBox"), info = $("#rEvZwInfo"), nr = ++zNr;
+      const m = $("#rMuster").value.split("\n").map(x => x.trim()).filter(Boolean);
+      if (!m.length) { info.textContent = ""; box.innerHTML = `<p class="sub">Noch kein Muster eingetragen.</p>`; return; }
+      box.classList.add("laed");
+      try {
+        const r = await api("zuwachs/events?muster=" + encodeURIComponent(m.join(",")));
+        if (nr !== zNr || !$("#rEvZwBox")) return;
+        const n = r.typen.length, genau = n === 1 && m.length === 1 && !/[*?[]/.test(m[0]);
+        const letzte = r.tage.slice(-7), proTag = letzte.length ? Math.round(letzte.reduce((a, t) => a + (t.events || 0), 0) / letzte.length) : 0;
+        info.innerHTML = n ? `${zahl(n)} ${n === 1 ? "Event-Typ passt" : "Event-Typen passen"}${n > 1 ? `: <span title="${esc(r.typen.map(t => t.event_type).join("\n"))}">${esc(r.typen.slice(0, 4).map(t => t.event_type).join(", "))}${n > 4 ? " …" : ""}</span>` : ""} ·
+          Ø ${zahl(proTag)} Events/Tag (letzte ${letzte.length} Tage)${n > 1 ? " · die Linie zeigt die Summe; ob bei einzelnen Typen eine andere Regel Vorrang hat, steht in der Vorschau unten" : ""}` : "";
+        if (!n) { box.innerHTML = `<p class="sub">Kein erfasster Event-Typ passt auf diese Muster (Zuwachs-Statistik vom ${r.stand ? new Date(r.stand * 1000).toLocaleDateString("de-DE") : "–"}).</p>`; return; }
+        evZeichnen(box, { ...r, summeName: genau ? r.typen[0].event_type : "Summe der passenden Event-Typen" });
+      } catch (e) {
+        if (nr === zNr) box.innerHTML = `<p class="sub">${esc(/keine Zuwachs/i.test(e.message) ? "Noch keine Zuwachs-Statistik – sie entsteht mit der nächsten Analyse." : e.message)}</p>`;
+      } finally { box.classList.remove("laed"); }
+    }, 600);
+  }
+  $("#rEvZuwachs").addEventListener("toggle", evZuwachsRegel);
+  $("#rMuster").addEventListener("input", evZuwachsRegel);
   // ---- Punkt 170: Live-Vorschau – bei jeder Änderung, 0,4 s verzögert; ältere Antworten werden verworfen
   let vNr = 0, vTimer = null;
   function vorschau() {
@@ -4510,6 +4549,24 @@ function bearbeiteRegel(i, vorlage) {
   $("#rMaske").addEventListener("change", vorschau);
   typAuto(); pruefeVerdichten(); vorschau();
 }
+// Punkt 291: Ersparnis in der Regelkarte. `ersp` (Wirkung) vergleicht mit dem heutigen Regelwerk, in dem eine gespeicherte Regel
+// schon steckt – unverändert also 0, obwohl „Prognosen je Regel“ z. B. 21,5 GB zeigt. Deshalb bei gespeicherten Regeln:
+// Ersparnis wie in der Tabelle (gespeicherte Fassung gegenüber „ohne Regeln“) plus die Änderung; neue Regeln: „zusätzlich“.
+function ersparnisHtml(v, ersp) {
+  const zr = `im Prognosezeitraum (${jahreText(zielJahre())})`;
+  const teile = v.ersparnis_kurz_bytes === undefined ? "" : `Kurzzeit ${gbmb(v.ersparnis_kurz_bytes)}${v.ersparnis_attr_bytes ? ` · Attribute ${gbmb(v.ersparnis_attr_bytes)}` : ""} · Langzeit ${gbmb(v.ersparnis_lang_bytes)}`;
+  const aenderung = Math.abs(ersp) >= 1e5;      // unter 0,1 MB gilt als unverändert
+  if (!v.gespeichert) {
+    return `<span title="${esc("Zusätzliche Ersparnis: was die neue Regel gegenüber den heutigen Regeln einspart. Wo heute schon eine andere Regel greift, zählt nur der Unterschied.")}">`
+      + `${ersp >= 0 ? "zusätzliche Ersparnis" : "Mehrbedarf"} ${zr} <b>${gbmb(Math.abs(ersp))}</b>${teile ? ` <span class="sub">(${teile})</span>` : ""}</span>`;
+  }
+  const gesp = v.ersparnis_gespeichert || 0, ges = gesp + ersp;
+  const tip = `Ersparnis: wie in „Prognosen je Regel“ – wie viel kleiner die DB im Prognosezeitraum durch diese Regel bleibt, verglichen mit „ohne Regeln“\n`
+    + `Gespeicherte Fassung: ${gbmb(gesp)}${v.ersparnis_gespeichert == null ? " (die Regel wirkt im Probelauf nicht – passiv oder überall überstimmt)" : ""}\n`
+    + `Änderung in der Maske: ${aenderung ? (ersp >= 0 ? "+" : "−") + gbmb(Math.abs(ersp)) : "keine"}${aenderung && teile ? ` (${teile})` : ""}`;
+  return `<span title="${esc(tip)}">${ges >= 0 ? "Ersparnis" : "Mehrbedarf"} ${zr} <b>${gbmb(Math.abs(ges))}</b>`
+    + (aenderung ? ` <span class="sub">(davon durch die Änderung ${ersp >= 0 ? "+" : "−"}${gbmb(Math.abs(ersp))}${teile ? `: ${teile}` : ""})</span>` : "") + `</span>`;
+}
 // Punkt 170: Text der Live-Vorschau
 function vorschauHtml(v, ohneWert, x) {
   const ev = v.einheit === "Event-Typen", einheit = v.einheit || "Entitäten";
@@ -4524,7 +4581,7 @@ function vorschauHtml(v, ohneWert, x) {
   const z2 = ohneWert ? `<div class="sub">Noch kein Wert gesetzt – Wirkung erscheint, sobald Kurzzeit, Attribute oder Langzeit gewählt ist.</div>`
     : x.typ === "schutz" ? `<div class="sub">Schutz-Regel: diese Daten werden nie gekürzt.</div>`
     : v.anzahl ? `<div class="kz"><span>wirkt bei <b>${zahl(v.gewinnt)}</b></span><span>sofort zusätzlich löschbar <b>${zahl(loesch)}</b> Zeilen (${mb(v.loesch_bytes)})</span>` +
-      `<span>${ersp >= 0 ? "Ersparnis" : "Mehrbedarf"} im Prognosezeitraum (${jahreText(zielJahre())}) <b>${gbmb(Math.abs(ersp))}</b>${v.ersparnis_kurz_bytes === undefined ? "" : ` <span class="sub">(Kurzzeit ${gbmb(v.ersparnis_kurz_bytes)}${v.ersparnis_attr_bytes ? ` · Attribute ${gbmb(v.ersparnis_attr_bytes)}` : ""} · Langzeit ${gbmb(v.ersparnis_lang_bytes)})</span>`}</span></div>` +
+      ersparnisHtml(v, ersp) + `</div>` +
       (v.verlaengert ? `<div class="risiko">Bei ${mzahl(v.verlaengert, "Entität", "Entitäten")} bewahrt die Regel länger auf als heute.</div>` : "") +
       (!x.aktiv ? `<div class="sub">Regel ist passiv – die Werte zeigen, was sie aktiv bewirken würde.</div>` : "")
     : "";
@@ -5075,8 +5132,27 @@ const dDatum = ts => ts ? new Date(ts * 1000).toLocaleDateString("de-DE") : "–
 const dProz = (a, b) => b ? (100 * a / b).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " %" : "–";
 const dDelta = (neu, alt, fmt) => {
   if (alt == null || neu == null || neu === alt) return "";
-  return ` · <span class="${neu > alt ? "d-plus" : "d-minus"}">${neu > alt ? "+" : "−"}${fmt(Math.abs(neu - alt))}</span> seit dem Stand davor`;
+  return ` · <span class="${neu > alt ? "d-plus" : "d-minus"}">${neu > alt ? "▲ +" : "▼ −"}${fmt(Math.abs(neu - alt))}</span> seit dem Stand davor`;
 };
+
+// Punkt 290: Anteil der Tabelle am belegten Speicherplatz (Daten + Indizes) als Ring oben rechts im Kasten; der Bogen ist
+// proportional zum Anteil. Tooltip mit Platz und – zum Vergleich – dem Anteil an allen Datenzeilen.
+function dashRing(s, name, cx, cy) {
+  const b = s.bytes || {}, z = s.zeilen || {}, t = b[name];
+  if (!t) return "";
+  const platz = t.daten + t.indizes, belegt = Object.values(b).reduce((a, e) => a + e.daten + e.indizes, 0);
+  const zeilenGes = Object.values(z).reduce((a, n) => a + (n || 0), 0);
+  const ant = belegt ? platz / belegt : 0, r = 12, u = 2 * Math.PI * r;
+  const text = ant >= 0.1 ? `${Math.round(ant * 100)}%` : ant >= 0.01 ? `${(ant * 100).toLocaleString("de-DE", { maximumFractionDigits: 1 })}%` : "<1%";
+  const tip = `Anteil am Speicherplatz: ${dProz(platz, belegt)} der belegten ${gb(belegt)}\n`
+    + `Platz: ${mb(platz)} (Daten ${mb(t.daten)}, Indizes ${mb(t.indizes)})\n`
+    + `Zum Vergleich: ${dMio(z[name])} Zeilen = ${dProz(z[name] || 0, zeilenGes)} aller Datenzeilen\n`
+    + `Der Ring zeigt den Speicherplatz, nicht die Zahl der Zeilen – Zeilen sind je nach Tabelle sehr unterschiedlich groß.`;
+  return `<g class="d-ring" title="${esc(tip)}">`
+    + `<circle cx="${cx}" cy="${cy}" r="${r}" class="d-ring-grund"/>`
+    + (ant > 0 ? `<circle cx="${cx}" cy="${cy}" r="${r}" class="d-ring-bogen" stroke-dasharray="${Math.max(1, ant * u).toFixed(1)} ${u.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>` : "")
+    + `<text x="${cx}" y="${cy + 3.2}" class="d-ring-wert" text-anchor="middle">${esc(text)}</text></g>`;
+}
 
 // Beziehungen als SVG: drei Zeilen (Zweige) zu je Register | Faktentabelle | Pool; Kastenhöhe nach Spaltenzahl, Zeilen so hoch wie ihr größter Kasten
 function dashDiagramm(s) {
@@ -5102,7 +5178,8 @@ function dashDiagramm(s) {
     const x = X[ci], y = R[ri], h = RH[ri], c = D_ZWEIG[D_TAB_ZWEIG[name]], spalten = sp || stat;
     o += `<g style="--c:${c}"><rect x="${x}" y="${y}" width="${W}" height="${h}" rx="6" class="bx"/>`
       + `<path d="M${x} ${y + 34}V${y + 6}a6 6 0 0 1 6-6H${x + W - 6}a6 6 0 0 1 6 6V${y + 34}Z" class="hd"/>`
-      + `<text x="${x + 10}" y="${y + 16}" class="t-name">${esc(name)}</text><text x="${x + 10}" y="${y + 29}" class="t-term">${esc(term)}</text>`;
+      + `<text x="${x + 10}" y="${y + 16}" class="t-name">${esc(name)}</text><text x="${x + 10}" y="${y + 29}" class="t-term">${esc(term)}</text>`
+      + dashRing(s, name, x + W - 19, y + 17);
     spalten.forEach((s_, i) => {
       o += `<text x="${x + 10}" y="${y + 52 + i * LZ}" class="t-col"><tspan font-weight="700">${s_[0] ? esc(s_[0]) + " " : "   "}</tspan>${esc(s_[1])}`
         + (s_[2] ? `<tspan class="t-note">  ${esc(s_[2])}</tspan>` : "") + `</text>`;
@@ -5123,9 +5200,9 @@ function dashDiagramm(s) {
   // logische Verbindungen ohne Fremdschlüssel
   const ym = (R[0] + 60 + R[2] + 60) / 2;
   o += `<polyline points="${X[0]},${R[0] + 60} 24,${R[0] + 60} 24,${R[2] + 60} ${X[0]},${R[2] + 60}" class="soft"/>`
-    + `<text x="12" y="${ym}" class="t-lbl t-warn" text-anchor="middle" transform="rotate(-90 12 ${ym})">statistic_id = entity_id, kein FK</text>`
+    + `<text x="12" y="${ym}" class="t-lbl t-logik" text-anchor="middle" transform="rotate(-90 12 ${ym})">statistic_id = entity_id, kein FK</text>`
     + `<polyline points="${X[1] + W / 2},${R[0] + RH[0]} ${X[1] + W / 2},${R[1]}" class="soft"/>`
-    + `<text x="${X[1] + W / 2 + 10}" y="${R[0] + RH[0] + ABST / 2 + 4}" class="t-lbl t-warn">gleiche context_id, kein FK</text>`;
+    + `<text x="${X[1] + W / 2 + 10}" y="${R[0] + RH[0] + ABST / 2 + 4}" class="t-lbl t-logik">gleiche context_id, kein FK</text>`;
   return `<svg viewBox="0 0 960 ${H}" role="img" aria-label="Beziehungen der Recorder-Tabellen: states verweist auf states_meta, state_attributes und sich selbst; events auf event_types und event_data; statistics und statistics_short_term auf statistics_meta">`
     + `<defs><marker id="dPfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>${o}</svg>`;
 }
@@ -5153,6 +5230,19 @@ function dashPlatz(s, v) {
     o += zeile(`übrige (${klein.length})`, t, null, D_ZWEIG.adm, `Kleine Tabellen und interne Objekte:\n${klein.map(n => `${n}: ${mb(summe(b[n]))}`).join("\n")}`);
   }
   return o;
+}
+
+// Punkt 293: womit Prognose, Löschmenge und Empfehlungen rechnen – gemessene Größen je Zeile oder Festwerte vom 10.10.2026
+function dashGroessen(g) {
+  if (!g?.werte) return "";
+  const w = g.werte, fest = new Set(g.fest || []);
+  const teil = (k, name, fmt) => `${name} <b>${fmt(w[k])}</b>${fest.has(k) ? " (fest)" : ""}`;
+  const b = v => `${zahl(Math.round(v))} B`;
+  const liste = [teil("B_STATE", "States", b), teil("B_KURZ", "5-Min", b), teil("B_LTS", "Langzeit", b), teil("B_EVENT", "Events", b),
+    teil("B_ATTR_FAKTOR", "Attribute", v => "×" + Number(v).toLocaleString("de-DE", { maximumFractionDigits: 2 }))].join(" · ");
+  const quelle = g.quelle === "gemessen" ? `gemessen am ${dDatum(g.zeit)}${fest.size ? "; mit „fest“ markierte Werte sind die Festwerte vom 10.10.2026, weil die Messung fehlt oder unplausibel ist" : ""}`
+    : "Festwerte vom 10.10.2026 – noch keine Messung";
+  return `<p class="d-sub" title="${esc("Größe je Zeile: Platz der Tabelle samt Indizes ÷ Zeilen. Events: events und event_data je Event-Zeile. Attribute: Faktor Platz samt Index ÷ Nutzdaten (JSON-Länge), angewandt auf die Bytes der Attribut-Analyse.")}">Prognose, Löschmenge und Empfehlungen rechnen mit diesen Größen je Zeile (samt Indizes): ${liste} – ${quelle}.</p>`;
 }
 
 // Inhalte je Tabelle: Begriff, Text aus den aktuellen Zahlen, Fuß mit Zeilen und Platz
@@ -5222,7 +5312,7 @@ async function ladeDash() {
           <span style="--c:var(--d-ev)"><i class="d-punkt"></i>Event-Bus</span>
           <span style="--c:var(--d-lt)"><i class="d-punkt"></i>Statistik</span>
           <span>Graue Linie: echter Fremdschlüssel (n : 1)</span>
-          <span style="color:var(--bad)">Rot gestrichelt: logische Verbindung ohne Fremdschlüssel</span>
+          <span>Gestrichelt: logische Verbindung ohne Fremdschlüssel</span>
         </div>
         <figcaption>Jede Zeile in <code>states</code> zeigt auf genau eine Entität und einen Attributsatz. Das Attribut-JSON liegt nur einmal in <code>state_attributes</code>, egal wie oft es sich wiederholt. Die Statistik kennt die Entität nur über denselben Namen, nicht über einen Schlüssel.</figcaption>
       </figure>
@@ -5231,6 +5321,7 @@ async function ladeDash() {
       <h2>Wo der Platz liegt</h2>
       <p class="d-sub">Größe je Tabelle, getrennt nach Nutzdaten (kräftig) und zugehörigen Indizes (blass), gemessen mit <code>dbstat</code>. Belegt sind ${gb(belegt)}; der Rest der Datei sind freie Seiten (${gb(frei)}).${v ? ` Veränderung gegenüber dem Stand vom ${dDatum(v.zeit)}.` : ""} Überfahren zeigt die einzelnen Indizes.</p>
       <div class="d-balken">${dashPlatz(s, v)}</div>
+      ${dashGroessen(r.zeilengroessen)}
     </section>
     <section>
       <h2>Was in welcher Tabelle steht</h2>

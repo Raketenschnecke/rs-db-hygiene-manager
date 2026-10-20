@@ -11,6 +11,7 @@ import os
 import sqlite3
 
 import regeln as rg
+import struktur
 
 # Messwerte vom 10.10.2026 (dbstat bzw. Tabellengröße / Zeilen), siehe README
 B_STATE = 181          # states-Zeile inkl. Indizes
@@ -22,6 +23,54 @@ B_EVENT = 145          # events + event_data inkl. Indizes
 KURZ_PRO_TAG = 288     # 5-Min-Statistik
 LTS_PRO_TAG = 24       # Stundenstatistik
 MIN_KEEP_DAYS = 0      # Punkt 100/121: Kurzzeit „keine“ = alles vor heute 0:00 (ab 0.4.12; bis 0.4.11 Untergrenze 1 Tag wie loeschen.MIN_KEEP_DAYS)
+
+# Punkt 293: Die Festwerte oben sind nur noch der Rückfall. Liegt ein Stand in struktur.db vor (Analyse, Schritt 7), rechnen
+# Prognose, Löschmenge und Empfehlungen mit den dort gemessenen Größen je Zeile (Tabelle samt Indizes ÷ Zeilen).
+# messwerte_setzen() setzt die Modulwerte; optimierung.py und main.py lesen sie als probelauf.B_… und folgen damit.
+VORGABE = {"B_STATE": B_STATE, "B_KURZ": B_KURZ, "B_LTS": B_LTS, "B_EVENT": B_EVENT, "B_ATTR_FAKTOR": B_ATTR_FAKTOR}
+GRENZEN = {"B_STATE": (40, 2000), "B_KURZ": (20, 1000), "B_LTS": (20, 1000), "B_EVENT": (30, 5000), "B_ATTR_FAKTOR": (1.0, 3.0)}
+MIN_ZEILEN = 10000     # darunter ist eine Messung zu unsicher – dann gilt der Festwert
+MESSUNG = {"quelle": "fest", "zeit": None, "werte": dict(VORGABE), "fest": []}
+_MESS_MTIME = [None]
+
+
+def zeilengroessen(stand):
+    """Größen je Zeile aus einem Stand von struktur.db: {name: wert}, nur plausible Messwerte (siehe GRENZEN, MIN_ZEILEN)."""
+    b, z, d = stand.get("bytes") or {}, stand.get("zeilen") or {}, stand.get("details") or {}
+    platz = lambda t: (b[t]["daten"] + b[t]["indizes"]) if t in b else None
+    def je_zeile(bytes_, zeilen):
+        return bytes_ / zeilen if bytes_ and zeilen and zeilen >= MIN_ZEILEN else None
+    roh = {"B_STATE": je_zeile(platz("states"), z.get("states")),
+           "B_KURZ": je_zeile(platz("statistics_short_term"), z.get("statistics_short_term")),
+           "B_LTS": je_zeile(platz("statistics"), z.get("statistics")),
+           # wie der Festwert: events und event_data samt Indizes je Event-Zeile
+           "B_EVENT": je_zeile((platz("events") or 0) + (platz("event_data") or 0) or None, z.get("events"))}
+    # Attribute: Platz samt Index ÷ Nutzdaten (mittlere JSON-Länge × Zeilen) – Faktor auf die Bytes der Attribut-Analyse
+    al = (d.get("attr_laenge") or [None])[0]
+    nutz = al * z["state_attributes"] if al and z.get("state_attributes", 0) >= MIN_ZEILEN else None
+    roh["B_ATTR_FAKTOR"] = platz("state_attributes") / nutz if nutz and platz("state_attributes") else None
+    return {k: (round(v) if k != "B_ATTR_FAKTOR" else round(v, 3)) for k, v in roh.items()
+            if v is not None and GRENZEN[k][0] <= v <= GRENZEN[k][1]}
+
+
+def messwerte_setzen(struktur_pfad):
+    """Punkt 293: Modulwerte B_… aus dem letzten Stand in struktur.db setzen (nur bei geänderter Datei neu gelesen).
+    Fehlende oder unplausible Werte bleiben beim Festwert; MESSUNG beschreibt, was gilt. Liefert True bei einer Änderung."""
+    mtime = os.path.getmtime(struktur_pfad) if os.path.exists(struktur_pfad) else 0
+    if mtime == _MESS_MTIME[0]:
+        return False
+    _MESS_MTIME[0] = mtime
+    gemessen, zeit = {}, None
+    if mtime:
+        try:
+            stand = struktur.lies(struktur_pfad)["stand"] or {}
+            gemessen, zeit = zeilengroessen(stand), stand.get("zeit")
+        except Exception:  # noqa: BLE001 – ohne Messung gelten die Festwerte
+            gemessen = {}
+    werte = {**VORGABE, **gemessen}
+    globals().update(werte)
+    MESSUNG.update(quelle="gemessen" if gemessen else "fest", zeit=zeit, werte=werte, fest=[k for k in VORGABE if k not in gemessen])
+    return True
 
 
 def _histogramm(con, sql):
@@ -312,7 +361,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
     return {
         "stand": {"analyse_zeit": float(info["analyse_zeit"]), "attribut_analyse": float(attr_stand) if attr_stand else None,
                   "db_bytes": int(info["db_bytes"]), "purge_keep_days": pkd, "ziel_tage": ziel,
-                  "mit_vorgemerkten": mit_vorgemerkten},
+                  "mit_vorgemerkten": mit_vorgemerkten, "zeilengroessen": dict(MESSUNG)},   # Punkt 293
         "summe": {**summe, "events_bytes": ev_p, "events_basis_bytes": ev_b, "prognose_bytes": prognose, "basis_bytes": basis_summe},
         "regeln": regeln_liste,
         "events": events_liste,
@@ -430,5 +479,6 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     rest = int(info["db_bytes"]) - bestand
     return {"stand": {"analyse_zeit": float(info["analyse_zeit"]), "db_bytes": int(info["db_bytes"]), "purge_keep_days": pkd,
                       "ziel_tage": ziel, "mit_passiven": mit_passiven,
-                      "ha_kurzzeit": ha_regel["kurzzeit"], "ha_langzeit": ha_regel.get("langzeit") or "unbegrenzt", "ha_aktiv": bool(ha_regel.get("aktiv")), "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand},
+                      "ha_kurzzeit": ha_regel["kurzzeit"], "ha_langzeit": ha_regel.get("langzeit") or "unbegrenzt", "ha_aktiv": bool(ha_regel.get("aktiv")), "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand,
+                      "zeilengroessen": dict(MESSUNG)},   # Punkt 293
             "tage": tage, "werte": {k: [round(rest + v) for v in r] for k, r in werte.items()}}

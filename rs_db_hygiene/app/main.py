@@ -75,7 +75,8 @@ class Zustand:
     def probelauf(self, ziel, vorgemerkt):
         if not os.path.exists(CACHE):
             return None
-        schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
+        probelauf.messwerte_setzen(STRUKTUR)        # Punkt 293: gemessene Zeilengrößen (Datei-Zeit steckt im Schlüssel)
+        schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR))
         if schluessel in self._pl_cache:           # Treffer ohne Warten, auch während eine andere Rechnung läuft
             return self._pl_cache[schluessel]
         # Punkt 189: Rechnungen nacheinander – gleichzeitige Anfragen (Kacheln, Entitäten, Plan der Integration) rechnen
@@ -94,7 +95,8 @@ class Zustand:
     def verlauf(self, ziel, passiv):
         if not os.path.exists(CACHE):
             return None
-        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
+        probelauf.messwerte_setzen(STRUKTUR)        # Punkt 293
+        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR))
         if schluessel in self._vl_cache:
             return self._vl_cache[schluessel]
         with self._rechnen:                         # Punkt 189: wie probelauf
@@ -364,7 +366,8 @@ async def prognose_verlauf(request):
 
 
 async def zuwachs_events(request):
-    """Punkt 286: Event-Zuwachs pro Tag – Summe und je Event-Typ (Chart der Kachel Events). ?von=…&bis=… wie bei /api/zuwachs."""
+    """Punkt 286: Event-Zuwachs pro Tag – Summe und je Event-Typ (Chart der Kachel Events). ?von=…&bis=… wie bei /api/zuwachs.
+    Punkt 292: ?muster=… (kommagetrennt, * und ? wie in Event-Regeln) beschränkt auf die passenden Event-Typen."""
     if not os.path.exists(ZUWACHS):
         return web.json_response({"fehler": "Noch keine Zuwachs-Statistik vorhanden"}, status=404)
     q = request.query
@@ -373,12 +376,17 @@ async def zuwachs_events(request):
         bis = zuwachs.datum_tag(q["bis"]) if q.get("bis") else None
     except ValueError:
         return web.json_response({"fehler": "von/bis als JJJJ-MM-TT oder Tageszahl angeben"}, status=400)
-    return web.json_response(await asyncio.to_thread(zuwachs.lies_events, ZUWACHS, von, bis))
+    # Punkt 292: ?muster=script_*,call_service – nur passende Event-Typen (Zuwachs-Chart der Event-Regelkarte)
+    muster = [x.strip() for x in q["muster"].split(",") if x.strip()] if "muster" in q else None
+    return web.json_response(await asyncio.to_thread(zuwachs.lies_events, ZUWACHS, von, bis, muster))
 
 
 async def struktur_lesen(_request):
     """Punkt 288: letzter Tagesstand der Datenbank-Struktur (Reiter Dashboard) und der Stand davor; stand null ohne Erfassung."""
-    return web.json_response(await asyncio.to_thread(struktur.lies, STRUKTUR))
+    erg = await asyncio.to_thread(struktur.lies, STRUKTUR)
+    await asyncio.to_thread(probelauf.messwerte_setzen, STRUKTUR)
+    erg["zeilengroessen"] = probelauf.MESSUNG          # Punkt 293: womit die Prognose rechnet
+    return web.json_response(erg)
 
 
 async def zuwachs_tage(request):
@@ -750,7 +758,14 @@ async def regel_vorschau(request):
     bestand = rg.lade(REGELN, VORLAGE)
     hist = await asyncio.to_thread(optimierung.histogramme, CACHE, ATTR)
     fn = optimierung.event_wirkung if regel["typ"] == "event" else optimierung.wirkung
-    return web.json_response(await asyncio.to_thread(fn, regel, r, bestand, hist, ziel))
+    erg = await asyncio.to_thread(fn, regel, r, bestand, hist, ziel)
+    # Punkt 291: Die Wirkung oben vergleicht mit dem heutigen Regelwerk – bei einer gespeicherten Regel ist sie selbst darin
+    # enthalten, unverändert also 0. Dazu die Ersparnis der gespeicherten Fassung wie in „Prognosen je Regel“ (gegenüber
+    # „ohne Regeln“); die Karte zeigt gespeichert + Änderung. None = Regel noch nicht gespeichert bzw. im Probelauf ohne Wirkung.
+    gesp = next((x for x in r.get("regeln", []) if x.get("regel") == regel["id"]), None)
+    erg["ersparnis_gespeichert"] = gesp["ersparnis_bytes"] if gesp else None
+    erg["gespeichert"] = any(x["id"] == regel["id"] for x in bestand["regeln"])
+    return web.json_response(erg)
 
 
 async def optimierungen(request):
@@ -1263,6 +1278,7 @@ def _app_info():
 
 async def beim_start(app):
     await asyncio.to_thread(_protokoll_aufraeumen)
+    await asyncio.to_thread(probelauf.messwerte_setzen, STRUKTUR)   # Punkt 293: gemessene Zeilengrößen ab dem Start
     try:   # Punkt 85: Prüfung bei jedem Start (die GUI zeigt sie als Banner)
         for w in (await asyncio.to_thread(pkd_pruefung))["warnungen"]:
             _LOG.warning("%s %s", w.get("titel", ""), w["text"])
