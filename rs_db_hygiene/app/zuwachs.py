@@ -21,6 +21,10 @@ höhere attributes_id als alle früheren. Gemerkt wird die höchste bis zum letz
 neu an einem Tag sind die Ids darüber, die States dieses Tages benutzen. Erfasst wird daher erst ab dem übernächsten Tag
 nach dem ersten Lauf (attr_von).
 
+Nachtrag (Punkt 294, nachtrag.py): Ältere Tage lassen sich aus einer Kopie der Recorder-Datenbank nachtragen. Liegt zwischen
+Nachtrag und bisheriger Abdeckung eine Lücke, steht sie in info als <quelle>_luecken (JSON-Liste [von, bis]); dort liefern
+lies() und lies_events() None statt 0.
+
 Speicherdauer (Punkt 287): Die Tageswerte bleiben ZUWACHS_MONATE Monate (App-Option zuwachs_monate, 1 bis 240). Nach jedem Lauf werden ältere
 Tage entfernt und die Abdeckung der Quellen entsprechend gekürzt; neu erfasst wird nichts, was vor der Grenze liegt.
 
@@ -29,6 +33,7 @@ Nur Standardbibliothek; schreibt ausschließlich in die eigene Datei, die HA-Dat
 import calendar
 import datetime
 import fnmatch
+import json
 import logging
 import sqlite3
 import time
@@ -104,6 +109,14 @@ def _info_lesen(con):
     return dict(con.execute("SELECT schluessel, wert FROM info"))
 
 
+def _luecken(info, quelle):
+    """Punkt 294: Tage ohne Messung innerhalb der Abdeckung (nach einem Nachtrag aus einer alten Datenbank) als Menge."""
+    try:
+        return {t for von, bis in json.loads(info.get(f"{quelle}_luecken") or "[]") for t in range(int(von), int(bis) + 1)}
+    except (ValueError, TypeError):
+        return set()
+
+
 def _info_setzen(con, **werte):
     con.executemany("INSERT OR REPLACE INTO info VALUES (?,?)", ((k, str(v)) for k, v in werte.items()))
 
@@ -152,6 +165,12 @@ def _beschneide(con, grenze):
     for q in QUELLEN:
         if f"{q}_von" in info and int(info[f"{q}_von"]) < grenze:
             _info_setzen(con, **{f"{q}_von": grenze})
+        if info.get(f"{q}_luecken"):         # Punkt 294: Lücken vor der Grenze sind mit ihren Tagen weg
+            try:
+                rest = [l for l in json.loads(info[f"{q}_luecken"]) if int(l[1]) >= grenze]
+            except (ValueError, TypeError):
+                rest = []
+            _info_setzen(con, **{f"{q}_luecken": json.dumps(rest)})
     return weg
 
 
@@ -232,9 +251,10 @@ def lies_events(zuwachs_pfad, von=None, bis=None, muster=None):
         if muster is not None:      # Punkt 292: gleiche Prüfung wie regeln.event_regel (genauer Name oder fnmatch, groß/klein genau)
             je_typ = {t: d for t, d in je_typ.items() if any(m == t or fnmatch.fnmatchcase(t, m) for m in muster)}
         tage = list(range(von, bis + 1))
-        typen = sorted(({"event_type": t, "summe": sum(d.values()), "werte": [d.get(tag, 0) for tag in tage]} for t, d in je_typ.items()),
-                       key=lambda x: (-x["summe"], x["event_type"]))
-        summen = [sum(t["werte"][i] for t in typen) for i in range(len(tage))]
+        luecken = _luecken(info, "events")       # Punkt 294: dort None statt 0
+        typen = sorted(({"event_type": t, "summe": sum(d.values()), "werte": [None if tag in luecken else d.get(tag, 0) for tag in tage]}
+                        for t, d in je_typ.items()), key=lambda x: (-x["summe"], x["event_type"]))
+        summen = [None if tag in luecken else sum(t["werte"][i] for t in typen) for i, tag in enumerate(tage)]
         return {"abdeckung": {"events": {"von": a_von, "bis": a_bis, "von_datum": tag_datum(a_von), "bis_datum": tag_datum(a_bis)}},
                 "tage": [{"tag": tag, "datum": tag_datum(tag), "events": s} for tag, s in zip(tage, summen)], "typen": typen,
                 "stand": float(info.get("stand") or 0)}
@@ -270,13 +290,15 @@ def lies(zuwachs_pfad, entity_id=None, von=None, bis=None):
             summen = ", ".join(f"SUM({q})" for q in vorhanden)
             zeilen = con.execute(f"SELECT tag, {summen} FROM tage WHERE tag BETWEEN ? AND ? GROUP BY tag", (von, bis)).fetchall()
         je_tag = {z[0]: dict(zip(vorhanden, z[1:])) for z in zeilen}
+        luecken = {q: _luecken(info, q) for q in QUELLEN}
         tage = []
         for tag in range(von, bis + 1):
             werte = je_tag.get(tag, {})
             eintrag = {"tag": tag, "datum": tag_datum(tag)}
             for q in QUELLEN:
                 # Events gehören keiner Entität: je Entität None, nur die Summe führt sie
-                gueltig = q in vorhanden and q in abd and abd[q]["von"] <= tag <= abd[q]["bis"] and not (entity_id and q == "events")
+                gueltig = (q in vorhanden and q in abd and abd[q]["von"] <= tag <= abd[q]["bis"] and tag not in luecken[q]
+                           and not (entity_id and q == "events"))
                 eintrag[q] = (werte.get(q) or 0) if gueltig else None
             tage.append(eintrag)
         return {"abdeckung": abd, "tage": tage, "entity_id": entity_id, "stand": float(info.get("stand") or 0)}
