@@ -2,7 +2,7 @@
 from homeassistant.config_entries import ConfigFlow
 from homeassistant.helpers.service_info.hassio import HassioServiceInfo
 
-from .const import DOMAIN
+from .const import DOMAIN, NAME
 
 
 class RsDbHygieneFlow(ConfigFlow, domain=DOMAIN):
@@ -15,7 +15,7 @@ class RsDbHygieneFlow(ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
         if user_input is not None:
-            return self.async_create_entry(title="RS DB Hygiene", data={})
+            return self.async_create_entry(title=NAME, data={})
         return self.async_show_form(step_id="user")
 
     async def async_step_hassio(self, discovery_info: HassioServiceInfo):
@@ -32,5 +32,5 @@ class RsDbHygieneFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_hassio_confirm(self, user_input=None):
         if user_input is not None:
-            return self.async_create_entry(title="RS DB Hygiene", data=self._discovery)
+            return self.async_create_entry(title=NAME, data=self._discovery)
         return self.async_show_form(step_id="hassio_confirm")

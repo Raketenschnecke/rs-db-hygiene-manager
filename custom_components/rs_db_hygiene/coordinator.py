@@ -42,6 +42,7 @@ class DbhCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.session = async_get_clientsession(hass)
         self.fehler_in_folge = 0
         self.veraltet_seit: float | None = None
+        self.version: str | None = None    # Punkt 296/297: Version dieser Integration, gesetzt in async_setup_entry
 
     async def _anfrage(self, methode: str, pfad: str, daten: dict | None = None) -> tuple[int, dict]:
         async with self.session.request(methode, f"{self.basis}/{pfad}", json=daten, headers=self.kopf,

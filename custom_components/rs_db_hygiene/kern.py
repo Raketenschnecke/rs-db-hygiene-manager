@@ -9,11 +9,12 @@ Läuft in HA in der Warteschlange des Recorders (siehe __init__.py) und ist auß
 Tabellen:
     statistics, statistics_short_term   je statistic_id (Langzeit bzw. 5-Min-Statistik)
     events                              je event_type, danach nicht mehr benutzte event_data
+    states_attribute                    (Punkt 254) States bleiben, ihr Verweis auf die Attribute wird getrennt
 Gelöscht wird paketweise (BATCH Zeilen je DELETE, Commit je Paket) bis höchstens max_zeilen.
 """
 BATCH = 5000
 IN_CHUNK = 900          # Größe der IN-Listen beim Prüfen der event_data
-TABELLEN = ("statistics", "statistics_short_term", "events")
+TABELLEN = ("statistics", "statistics_short_term", "events", "states_attribute")
 
 
 class KernFehler(Exception):
@@ -37,6 +38,10 @@ def loesche(db, tabelle, namen, grenze_ts=None, max_zeilen=100_000, nur_zaehlen=
     """
     if tabelle not in TABELLEN:
         raise KernFehler(f"unbekannte Tabelle {tabelle}")
+    if tabelle == "states_attribute":
+        if alle or grenze_ts is None:
+            raise KernFehler("states_attribute braucht grenze_ts und kein „alle“")
+        return kuerze_attribute(db, namen, grenze_ts, max_zeilen, nur_zaehlen)
     if not namen:
         raise KernFehler("keine statistic_ids bzw. event_types – ein Aufruf ohne Liste ist nicht erlaubt")
     if alle and tabelle == "events":
@@ -92,5 +97,87 @@ def loesche(db, tabelle, namen, grenze_ts=None, max_zeilen=100_000, nur_zaehlen=
             erg["event_data_geloescht"] += db.execute(f"DELETE FROM event_data WHERE data_id IN ({_ids_text(teil)})")
         db.commit()
         erg["freie_data_ids"] = frei
+    erg["rest"] = erg["vorher"] - erg["geloescht"]
+    return erg
+
+
+def _wegfallende_attr(db, bed, par):
+    """Punkt 295: attributes_id der States unter `bed`, die kein anderer State benutzt – nur diese werden nach dem
+    Abtrennen frei. Gleiche Attribute zweier Entitäten bleiben so lange, bis HAs Purge die alten States entfernt."""
+    kand = sorted(a for (a,) in db.query(f"SELECT DISTINCT attributes_id FROM states WHERE {bed}", par))
+    frei = []
+    for teil in _bloecke(kand, IN_CHUNK):
+        # EXISTS hört beim ersten fremden State auf; COALESCE: ein State ohne Zeitstempel zählt als „benutzt“
+        benutzt = {a for (a,) in db.query(
+            f"SELECT sa.attributes_id FROM state_attributes sa WHERE sa.attributes_id IN ({_ids_text(teil)}) AND EXISTS "
+            f"(SELECT 1 FROM states WHERE states.attributes_id = sa.attributes_id AND NOT COALESCE(({bed}), 0))", par)}
+        frei += [a for a in teil if a not in benutzt]
+    return frei
+
+
+def kuerze_attribute(db, namen, grenze_ts, max_zeilen=100_000, nur_zaehlen=False):
+    """Punkt 254: Attribute alter States abtrennen. Bei den genannten Entitäten (entity_id) wird für States mit
+    last_updated_ts < grenze_ts der Verweis states.attributes_id auf NULL gesetzt; die States (Werte, Zeiten) bleiben.
+    Der jeweils neueste State jeder Entität behält seine Attribute. Danach werden die state_attributes-Zeilen gelöscht,
+    die kein State mehr benutzt (wie HAs Purge).
+    Punkt 295 (0.5.6b29): abgetrennt werden nur States, deren Attributzeile danach frei wird; die übrigen alten States
+    behalten ihre (noch gebrauchten) Attribute.
+
+    Rückgabe: {vorher, geloescht, rest, behalten, unbekannt, event_data_geloescht, freie_data_ids, attr_zeilen_geloescht, freie_attr_ids}
+    vorher/geloescht/rest zählen States (die Arbeit), behalten die alten States, die verbunden bleiben,
+    attr_zeilen_geloescht die entfernten Attributzeilen.
+    """
+    if not namen:
+        raise KernFehler("keine entity_ids – ein Aufruf ohne Liste ist nicht erlaubt")
+    if max_zeilen < 1:
+        raise KernFehler("max_zeilen muss mindestens 1 sein")
+    bekannt = {e: m for e, m in db.query("SELECT entity_id, metadata_id FROM states_meta")}
+    unbekannt = sorted(n for n in set(namen) if n not in bekannt)
+    mids = sorted({bekannt[n] for n in namen if n in bekannt})
+    erg = {"vorher": 0, "geloescht": 0, "rest": 0, "unbekannt": unbekannt, "event_data_geloescht": 0, "freie_data_ids": [],
+           "attr_zeilen_geloescht": 0, "freie_attr_ids": []}
+    if not mids:
+        return erg
+    neueste = [s for (s,) in db.query(f"SELECT MAX(state_id) FROM states WHERE metadata_id IN ({_ids_text(mids)}) GROUP BY metadata_id")]
+    bed = f"metadata_id IN ({_ids_text(mids)}) AND last_updated_ts < :grenze AND attributes_id IS NOT NULL"
+    if neueste:
+        bed += f" AND state_id NOT IN ({_ids_text(neueste)})"
+    par = {"grenze": float(grenze_ts)}
+    alle_alten = db.query(f"SELECT COUNT(*) FROM states WHERE {bed}", par)[0][0]
+    # Punkt 295: nur States abtrennen, deren Attributzeile danach frei wird. Eine Zeile, die neuere States (oder andere
+    # Entitäten) weiter benutzen, bliebe ohnehin – sie abzutrennen kostet nur Schreibarbeit (z. B. 213.000 States für 1 Zeile).
+    frei_kand = _wegfallende_attr(db, bed, par) if alle_alten else []
+    teile = [f"{bed} AND attributes_id IN ({_ids_text(t)})" for t in _bloecke(frei_kand, IN_CHUNK)]
+    erg["vorher"] = sum(db.query(f"SELECT COUNT(*) FROM states WHERE {b}", par)[0][0] for b in teile)
+    erg["behalten"] = alle_alten - erg["vorher"]      # alte States, deren Attributzeile noch gebraucht wird – bleiben verbunden
+    if nur_zaehlen or not erg["vorher"]:
+        erg["rest"] = erg["vorher"]
+        return erg
+
+    attr_ids = set()
+    for b in teile:
+        while erg["geloescht"] < max_zeilen:
+            n = min(BATCH, max_zeilen - erg["geloescht"])
+            zeilen = db.query(f"SELECT state_id, attributes_id FROM states WHERE {b} LIMIT {int(n)}", par)
+            if not zeilen:
+                break
+            attr_ids |= {a for _s, a in zeilen}
+            k = db.execute(f"UPDATE states SET attributes_id = NULL WHERE state_id IN ({_ids_text(s for s, _a in zeilen)})")
+            if not k:
+                break
+            erg["geloescht"] += k
+            db.commit()
+
+    if attr_ids:
+        # Attribute werden von vielen States geteilt: nur löschen, was kein State mehr benutzt
+        benutzt = set()
+        kandidaten = sorted(attr_ids)
+        for teil in _bloecke(kandidaten, IN_CHUNK):
+            benutzt |= {a for (a,) in db.query(f"SELECT DISTINCT attributes_id FROM states WHERE attributes_id IN ({_ids_text(teil)})")}
+        frei = sorted(attr_ids - benutzt)
+        for teil in _bloecke(frei, IN_CHUNK):
+            erg["attr_zeilen_geloescht"] += db.execute(f"DELETE FROM state_attributes WHERE attributes_id IN ({_ids_text(teil)})")
+        db.commit()
+        erg["freie_attr_ids"] = frei
     erg["rest"] = erg["vorher"] - erg["geloescht"]
     return erg
