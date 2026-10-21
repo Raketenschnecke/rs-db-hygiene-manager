@@ -1,7 +1,7 @@
-"""RS DB Hygiene – Mini-Integration für die App „RS DB Hygiene Manager“.
+"""RS DB Hygiene Manager (bis 0.5.6b29 „RS DB Hygiene“) – Mini-Integration für die App „RS DB Hygiene Manager“.
 
 Ab 0.4.0 (Punkt 62) zusätzlich Brücke zur App: Die App meldet sich per Supervisor-Discovery an (Host, Port, Schlüssel);
-die Integration fragt ihren Status ab und stellt Entitäten (Gerät „RS DB Hygiene“), die Dienste
+die Integration fragt ihren Status ab und stellt Entitäten (Gerät „RS DB Hygiene Manager“), die Dienste
 loeschlauf_starten / analyse_starten / attribut_analyse_starten (ab 0.4.1) und das Event rs_db_hygiene_lauf_beendet für Automationen bereit.
 
 Stellt den Dienst rs_db_hygiene.purge bereit. Er löscht in 5-Min-Statistik, Langzeitstatistik und Events (ab 0.5.6b9 mit
@@ -44,7 +44,7 @@ from homeassistant.const import Platform
 from homeassistant.loader import async_get_integration
 
 from . import kern
-from .const import DOMAIN, KOPF_VERSION
+from .const import ALTER_TITEL, DOMAIN, KOPF_VERSION, NAME
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE = "purge"
@@ -182,6 +182,10 @@ async def _purge_states(hass: HomeAssistant, call: ServiceCall) -> ServiceRespon
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if entry.title == ALTER_TITEL:
+        # Punkt 298 (0.5.6): gespeicherten Titel einmal angleichen; einen vom Nutzer gewählten Titel nicht anfassen
+        hass.config_entries.async_update_entry(entry, title=NAME)
+
     async def handler(call: ServiceCall) -> ServiceResponse:
         return await _purge(hass, call)
 
@@ -202,7 +206,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .coordinator import DbhCoordinator
 
     coordinator = DbhCoordinator(hass, entry)
-    coordinator.kopf[KOPF_VERSION] = str((await async_get_integration(hass, DOMAIN)).version)     # Punkt 272
+    coordinator.version = str((await async_get_integration(hass, DOMAIN)).version)
+    coordinator.kopf[KOPF_VERSION] = coordinator.version     # Punkt 272
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 

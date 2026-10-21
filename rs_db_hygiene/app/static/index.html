@@ -76,6 +76,8 @@
 .dash .d-karte h3 { margin: 0; font-family: var(--mono); font-size: 14px; overflow-wrap: anywhere; }
 .dash .d-karte .term { font-weight: 600; color: var(--c); font-size: 13px; }
 .dash .d-karte p { margin: 0; }
+/* Punkt 301 (0.5.6b30): Aufzählungen je Zeile „Kategorie: Wert“, eingerückt mit Punkt */
+.dash .d-karte ul.d-liste { margin: 0 0 2px; padding-left: 22px; }
 .dash .d-karte .meta { margin-top: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .dash code { font-family: var(--mono); font-size: .92em; }
 * { box-sizing: border-box; }
@@ -118,6 +120,8 @@ h1 { margin: 0; line-height: 0; flex: none; }
 #tip div + div { margin-top: 2px; }
 #tip .tip-luecke { height: 4px; }
 #tip b { font-weight: 700; }
+/* Punkt 300 (0.5.6b30): Thema mit „! “ davor = Grund einer Warnung (z. B. das ! am Knopf Analyse) – fett in der Warnfarbe */
+#tip b.tip-warn { color: var(--warn); }
 @media (max-width: 900px) { header { --kopf-h: calc(26px * 1.2); --logo-h: 52px; } }
 h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .sub { color: var(--muted); }
@@ -1702,8 +1706,9 @@ function standDaten(s, jetzt = Date.now() / 1000) {
   const da = +a.analyse_dauer_s || 0, dt = tt ? +at.analyse_dauer_s || 0 : 0;
   const anaAlt = jetzt - ta > 26 * 3600, attrAlt = !tt || jetzt - tt > 7 * 86400;
   return { letzte: Math.max(ta, tt), dauer: da + dt, alt: anaAlt || attrAlt, tip: [
-    `Analyse: ${zeit(ta)} (${alterText(ta)}) · Dauer ${dauerText(da)}`,
-    tt ? `Attribut-Analyse: ${zeit(tt)} (${alterText(tt)}) · Dauer ${dauerText(dt)}` : "Attribut-Analyse: noch nicht gelaufen – Attribute geschätzt",
+    // Punkt 300 (0.5.6b30): die Zeile, die das ! am Knopf auslöst, beginnt mit „! “ (Tooltip: fett in der Warnfarbe)
+    `${anaAlt ? "! " : ""}Analyse: ${zeit(ta)} (${alterText(ta)}) · Dauer ${dauerText(da)}`,
+    tt ? `${attrAlt ? "! " : ""}Attribut-Analyse: ${zeit(tt)} (${alterText(tt)}) · Dauer ${dauerText(dt)}` : "! Attribut-Analyse: noch nicht gelaufen – Attribute geschätzt",
     anaAlt ? "Die Analyse ist älter als 26 h – ist die nächtliche Analyse ausgefallen?" : "",
     attrAlt ? "Die Attribut-Analyse ist älter als 7 Tage – Attribut-Zahlen sind möglicherweise veraltet. „Analyse starten“ führt beide Analysen aus." : "",
   ].filter(Boolean).join("\n") };
@@ -1711,7 +1716,7 @@ function standDaten(s, jetzt = Date.now() / 1000) {
 let standTip = "";
 function zeigeStand(s) {
   const d = standDaten(s);
-  standTip = d ? d.tip : "Analyse: noch keine";
+  standTip = d ? d.tip : "! Analyse: noch keine";
   $("#btnAnalyse").classList.toggle("alt", !d || d.alt);
 }
 function zeigeLauf(s) {
@@ -4649,8 +4654,9 @@ function planZeilen(p) {
     const summe = basis + (z.attr_zeilen || 0);   // Punkt 243: Summe inkl. Attribute
     // Punkt 219: Überhang = was dieser Lauf löschen müsste, wegen der Obergrenzen aber in weitere Läufe fällt
     // Punkt 230: 5M hat dasselbe keep_days wie die States (gekoppelt) – in der Zelle nur K (ohne States-Teil: K aus dem 5-Min-Teil)
+    // Punkt 299 (0.5.6b30): Tage wie sonst in der App ohne Leerzeichen und deutsch („K 7T“ statt „K 7 d“)
     return { ...z, regel: [...z.regeln].join(", "), lauf, summe, ueberhang: Math.max(0, z.faellig - basis), hinweis: [...new Set(z.hinweise)].join(" · "),
-      vorhaltung: teileAnzeige(z.teile).map(t => `${KURZ[t.art]} ${t.alle ? "alle" : t.keep_days != null ? t.keep_days + " d" : "–"}${t.art === "states" && t.keep_days != null && t.kurzzeit != null && t.keep_days !== t.kurzzeit ? ` (Ziel ${t.kurzzeit} d)` : ""}`).join(" · ") };
+      vorhaltung: teileAnzeige(z.teile).map(t => `${KURZ[t.art]} ${t.alle ? "alle" : t.keep_days != null ? t.keep_days + "T" : "–"}${t.art === "states" && t.keep_days != null && t.kurzzeit != null && t.keep_days !== t.kurzzeit ? ` (Ziel ${t.kurzzeit}T)` : ""}`).join(" · ") };
   });
 }
 // Punkt 230: States und 5-Min-Statistik als ein Teil „Kurzzeit“ – eigene 5-Min-Zeile nur bei abweichendem Status (z. B. übersprungen)
@@ -4962,7 +4968,7 @@ async function ladeLoeschen() {
       $("#lRegel").innerHTML = `<option value="">alle aktiven Regeln</option>` + p.regeln.map(r =>
         `<option value="${esc(r.regel)}">${esc(r.regel)} ${esc(p.regel_namen[r.regel] || (r.regel === "Events" ? "je Typ" : ""))} – ${zahl(r.zeilen_gesamt)} Zeilen${r.entitaeten ? `, ${zahl(r.entitaeten)} Ent.` : ""}</option>`).join("");
     }
-    const su = p.summe, gruppen = p.gruppen.map(g => `${zahl(g.entitaeten.length)} × ${g.keep_days} d`).join(", ");
+    const su = p.summe, gruppen = p.gruppen.map(g => `${zahl(g.entitaeten.length)} × ${g.keep_days}T`).join(", ");
     const mz = (n, eins, viele) => `${zahl(n)} ${n === 1 ? eins : viele}`;
     // Punkt 44: was dieser Lauf nicht anfasst
     const na = p.nicht_ausgefuehrt || {};
@@ -5262,36 +5268,40 @@ function dashKarten(s) {
   const z = s.zeilen || {}, d = s.details || {}, b = s.bytes || {}, zr = s.zeitraum || {}, pl = s.planer || {};
   const platz = n => b[n] ? " · " + mb(b[n].daten + b[n].indizes) : "";
   const dom = d.domains || [];
-  const domText = dom.slice(0, 5).map(([n, c]) => `${zahl(c)} <code>${esc(n)}</code>`).join(", ") + (dom.length > 5 ? `, dazu ${dom.length - 5} weitere Domains` : "");
+  // Punkt 301 (0.5.6b30): Aufzählungen als Liste „Kategorie: Wert“ statt Fließtext
+  const liste = paare => `<ul class="d-liste">${paare.map(([k, v]) => `<li>${k}: ${v}</li>`).join("")}</ul>`;
+  const domListe = liste([...dom.slice(0, 5).map(([n, c]) => [`<code>${esc(n)}</code>`, zahl(c)]), ...(dom.length > 5 ? [["weitere", `${zahl(dom.length - 5)} Domains`]] : [])]);
   const evt = (d.event_typen || []).filter(e => e[1] > 0), evSumme = evt.reduce((a, e) => a + e[1], 0);
-  const evText = evt.slice(0, 3).map(([n, c]) => `<code>${esc(n)}</code> ${dProz(c, evSumme)}`).join(", ");
+  const evListe = evt.length ? liste(evt.slice(0, 3).map(([n, c]) => [`<code>${esc(n)}</code>`, dProz(c, evSumme)])) : "";
   const planerAlt = pl.states && z.states && Math.abs(pl.states - z.states) / z.states > 0.25
     ? ` Die Statistik des Abfrageplaners (<code>sqlite_stat1</code>) nennt ${dMio(pl.states)} Zeilen und ist damit veraltet.` : "";
   const al = d.attr_laenge || [];
-  const schema = (d.schema || []).map(([v, t]) => `${v} (${esc(String(t).slice(5, 7))}/${esc(String(t).slice(0, 4))})`).join(", ");
+  const schema = (d.schema || []).map(([v, t]) => [`Version ${esc(String(v))}`, `${esc(String(t).slice(5, 7))}/${esc(String(t).slice(0, 4))}`]);
   const K = [
-    ["states_meta", "Entitäten-Register", "st", `Eine Zeile je Entität, die je aufgezeichnet wurde: ${domText}.`, `${zahl(z.states_meta)} Zeilen`],
+    ["states_meta", "Entitäten-Register", "st", ["Eine Zeile je Entität, die je aufgezeichnet wurde:", domListe], `${zahl(z.states_meta)} Zeilen`],
     ["states", "Zustandshistorie", "st", `Jede Zustandsmeldung einer Entität mit Wert, drei Zeitstempeln, Vorgänger und Context. Größte Tabelle, Spanne ${dDatum(zr.states?.[0])} bis ${dDatum(zr.states?.[1])}.`
       + (d.max_state_id ? ` Die höchste <code>state_id</code> ist ${dMio(d.max_state_id)}; die Differenz zur Zeilenzahl sind bereits gelöschte Zeilen.` : "") + planerAlt,
       `${dMio(z.states)} Zeilen${platz("states")}`],
     ["state_attributes", "Attribut-Pool", "st", `Einzigartige Attribut-JSONs, per Hash dedupliziert. Im Schnitt teilen sich ${z.state_attributes ? zahl(Math.round(z.states / z.state_attributes)) : "–"} Zustandszeilen einen Satz.`
       + (al[0] ? ` Die Länge liegt im Mittel bei ${zahl(Math.round(al[0]))} Zeichen, maximal bei ${zahl(al[1])}.` : ""), `${zahl(z.state_attributes)} Zeilen${platz("state_attributes")}`],
-    ["events / event_types", "Event-Bus", "ev", `Service-Aufrufe, Automationsauslöser, Registry-Änderungen, Start und Stopp von HA, eigene Events. Spanne ${dDatum(zr.events?.[0])} bis ${dDatum(zr.events?.[1])}.`
-      + (evText ? ` Häufigste Typen: ${evText}.` : ""), `${dMio(z.events)} Zeilen · ${zahl(z.event_types)} Typen${platz("events")}`],
+    ["events / event_types", "Event-Bus", "ev", [`Service-Aufrufe, Automationsauslöser, Registry-Änderungen, Start und Stopp von HA, eigene Events. Spanne ${dDatum(zr.events?.[0])} bis ${dDatum(zr.events?.[1])}.`,
+      ...(evListe ? ["Häufigste Typen:", evListe] : [])], `${dMio(z.events)} Zeilen · ${zahl(z.event_types)} Typen${platz("events")}`],
     ["event_data", "Event-Nutzlast", "ev", "JSON-Inhalt der Events, dedupliziert. Bei Service-Aufrufen mit Domain, Service und Daten.", `${zahl(z.event_data)} Zeilen${platz("event_data")}`],
-    ["statistics_meta", "Statistik-Register", "lt", `Welche Entitäten Langzeitstatistik haben, mit Einheit und Art: ${zahl(d.mit_sum)} mit Summe (Zähler), die übrigen mit Mittelwert.`
-      + ` Quelle: ${(d.quellen || []).map(([q, n]) => `<code>${esc(q)}</code> ${zahl(n)}`).join(", ")}.`
-      + ` Häufigste Einheiten: ${(d.einheiten || []).map(([e, n]) => `${esc(e || "ohne")} (${zahl(n)})`).join(", ")}.`, `${zahl(z.statistics_meta)} Zeilen`],
+    ["statistics_meta", "Statistik-Register", "lt", ["Welche Entitäten Langzeitstatistik haben, mit Einheit und Art:",
+      liste([["mit Summe (Zähler)", zahl(d.mit_sum)], ["mit Mittelwert", z.statistics_meta != null && d.mit_sum != null ? zahl(z.statistics_meta - d.mit_sum) : "die übrigen"]]),
+      "Quelle:", liste((d.quellen || []).map(([q, n]) => [`<code>${esc(q)}</code>`, zahl(n)])),
+      "Häufigste Einheiten:", liste((d.einheiten || []).map(([e, n]) => [esc(e || "ohne"), zahl(n)]))], `${zahl(z.statistics_meta)} Zeilen`],
     ["statistics", "Langzeitstatistik", "lt", `Stündliche Kennwerte${d.lts_ids ? ` für ${zahl(d.lts_ids)} Statistik-IDs` : ""}, unabhängig von der Vorhaltezeit der States. Reicht bis ${dDatum(zr.statistics?.[0])} zurück. Grundlage des Energie-Dashboards.`,
       `${dMio(z.statistics)} Zeilen${platz("statistics")}`],
     ["statistics_short_term", "Kurzzeitstatistik", "lt", `Fünf-Minuten-Kennwerte${d.kurz_ids ? ` für ${zahl(d.kurz_ids)} Statistik-IDs` : ""}, ab ${dDatum(zr.statistics_short_term?.[0])}. HA verdichtet sie zu Stundenwerten.`,
       `${dMio(z.statistics_short_term)} Zeilen${platz("statistics_short_term")}`],
     ["recorder_runs, statistics_runs", "Laufprotokolle", "adm", `Start und Ende jeder Aufzeichnung (${zahl(z.recorder_runs)} Läufe, ${zahl(d.recorder_unsauber)} davon unsauber beendet) und jeder 5-Minuten-Statistikberechnung.`,
       `${zahl(z.recorder_runs)} und ${zahl(z.statistics_runs)} Zeilen`],
-    ["schema_changes, migration_changes", "Versionsstand", "adm", `Schema-Migrationen: ${schema ? "Version " + schema : "keine"}. <code>migration_changes</code> ${z.migration_changes ? `führt ${zahl(z.migration_changes)} Einträge` : "ist leer"}.`,
+    ["schema_changes, migration_changes", "Versionsstand", "adm", [schema.length ? "Schema-Migrationen:" : "Schema-Migrationen: keine.", ...(schema.length ? [liste(schema)] : []),
+      `<code>migration_changes</code> ${z.migration_changes ? `führt ${zahl(z.migration_changes)} Einträge` : "ist leer"}.`],
       `${zahl(z.schema_changes)} und ${zahl(z.migration_changes)} Zeilen`],
   ];
-  return K.map(([n, term, zw, text, fuss]) => `<div class="d-karte" style="--c:${D_ZWEIG[zw]}"><h3>${esc(n)}</h3><span class="term">${esc(term)}</span><p>${text}</p><span class="meta">${fuss}</span></div>`).join("");
+  return K.map(([n, term, zw, text, fuss]) => `<div class="d-karte" style="--c:${D_ZWEIG[zw]}"><h3>${esc(n)}</h3><span class="term">${esc(term)}</span>${[].concat(text).map(t => t.startsWith("<ul") ? t : `<p>${t}</p>`).join("")}<span class="meta">${fuss}</span></div>`).join("");
 }
 
 async function ladeDash() {
@@ -5409,7 +5419,8 @@ const TIP = { el: $("#tip"), ziel: null, text: "", timer: 0, x: 0, y: 0, weg: []
 // Thema: bis 40 Zeichen vor „: “ (Doppelpunkt ohne folgendes Leerzeichen erlaubt, z. B. EV:alle), Klammern ausgeglichen –
 // sonst wäre „Zeilen in der Tabelle events (Logbuch“ ein Thema
 const tipThemaAus = z => { const m = /^((?:[^:\n]|:(?!\s)){1,40}?):\s(.*)$/.exec(z); return m && m[1].split("(").length === m[1].split(")").length ? m : null; };
-const tipZeile = z => { const m = tipThemaAus(z); return m ? (m[2].trim() ? `<b>${esc(m[1])}:</b> ${esc(m[2])}` : `<b>${esc(m[1])}</b>`) : esc(z); };
+const tipZeile = z => { const m = tipThemaAus(z), b = m && /^! /.test(m[1]) ? `<b class="tip-warn">` : "<b>";   // Punkt 300: „! Thema:“ als Warnung
+  return m ? (m[2].trim() ? `${b}${esc(m[1])}:</b> ${esc(m[2])}` : `${b}${esc(m[1])}</b>`) : esc(z); };
 // Punkt 218 (0.5.5b12): alle Tooltips nach dem Schema „Thema: Inhalt“, ohne jeden Text einzeln umzuschreiben.
 // 1. schon strukturiert → bleibt; 2. kurze Überschrift + Inhalt in Zeile 2 („Gerät ⏎ Name …“) → „Gerät: Name …“;
 // 3. sonst Thema aus dem Kontext: Spaltentitel (Zellen, Summen), „Filter <Spalte>“ (Filterfelder), Beschriftung (Knöpfe, Chips, Reiter).

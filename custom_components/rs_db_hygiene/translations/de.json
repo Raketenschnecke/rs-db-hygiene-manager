@@ -2,11 +2,11 @@
   "config": {
     "step": {
       "user": {
-        "title": "RS DB Hygiene",
+        "title": "RS DB Hygiene Manager",
         "description": "Stellt den Dienst rs_db_hygiene.purge für die App „RS DB Hygiene Manager“ bereit (Löschen von 5-Min-Statistik, Langzeitstatistik und Events). Keine Einstellungen nötig."
       },
       "hassio_confirm": {
-        "title": "RS DB Hygiene",
+        "title": "RS DB Hygiene Manager",
         "description": "Die App „RS DB Hygiene Manager“ hat sich gemeldet. Einrichten, damit Status-Entitäten, Knöpfe und der Dienst rs_db_hygiene.loeschlauf_starten für Automationen verfügbar werden?"
       }
     },
@@ -17,7 +17,7 @@
   },
   "services": {
     "purge": {
-      "name": "Recorder-Daten löschen (RS DB Hygiene)",
+      "name": "Recorder-Daten löschen (RS DB Hygiene Manager)",
       "description": "Löscht Zeilen der 5-Min-Statistik, der Langzeitstatistik oder Events älter als keep_days bzw. vor vor_ts – nur für die genannten statistic_ids bzw. Event-Typen. Wird von der App aufgerufen.",
       "fields": {
         "tabelle": {
@@ -55,7 +55,7 @@
       }
     },
     "purge_states": {
-      "name": "States löschen bis Zeitpunkt (RS DB Hygiene)",
+      "name": "States löschen bis Zeitpunkt (RS DB Hygiene Manager)",
       "description": "Löscht die States der genannten Entitäten vor einem exakten Zeitpunkt – wie recorder.purge_entities, aber ohne Rundung auf ganze Tage ab jetzt. Wird von der App aufgerufen.",
       "fields": {
         "entity_id": {
@@ -69,7 +69,7 @@
       }
     },
     "loeschlauf_starten": {
-      "name": "Löschlauf starten (RS DB Hygiene)",
+      "name": "Löschlauf starten (RS DB Hygiene Manager)",
       "description": "Startet in der App einen Löschlauf mit allen aktiven Regeln oder einer Regel. Braucht in der App „Löschen freigegeben“ und „Automatik freigegeben“; Obergrenze und Sperren gelten wie im Tab „Löschen“.",
       "fields": {
         "regel": {
@@ -79,11 +79,11 @@
       }
     },
     "analyse_starten": {
-      "name": "Analyse starten (RS DB Hygiene)",
+      "name": "Analyse starten (RS DB Hygiene Manager)",
       "description": "Startet in der App die (lesende) Analyse."
     },
     "attribut_analyse_starten": {
-      "name": "Attribut-Analyse starten (RS DB Hygiene)",
+      "name": "Attribut-Analyse starten (RS DB Hygiene Manager)",
       "description": "Startet in der App die (lesende) Attribut-Analyse (≈ 5–10 min). Sie liefert die Attributzeilen für Plan, Prognose und Entitäten."
     }
   },
@@ -125,6 +125,9 @@
       },
       "letzte_attribut_analyse": {
         "name": "Letzte Attribut-Analyse"
+      },
+      "version_integration": {
+        "name": "Version Integration"
       }
     },
     "binary_sensor": {

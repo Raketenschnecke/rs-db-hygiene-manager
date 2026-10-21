@@ -2,11 +2,11 @@
   "config": {
     "step": {
       "user": {
-        "title": "RS DB Hygiene",
+        "title": "RS DB Hygiene Manager",
         "description": "Provides the service rs_db_hygiene.purge for the add-on RS DB Hygiene Manager. No settings required."
       },
       "hassio_confirm": {
-        "title": "RS DB Hygiene",
+        "title": "RS DB Hygiene Manager",
         "description": "The add-on RS DB Hygiene Manager was discovered. Set up status entities, buttons and the service rs_db_hygiene.loeschlauf_starten?"
       }
     },
@@ -17,7 +17,7 @@
   },
   "services": {
     "purge": {
-      "name": "Recorder-Daten löschen (RS DB Hygiene)",
+      "name": "Recorder-Daten löschen (RS DB Hygiene Manager)",
       "description": "Löscht Zeilen der 5-Min-Statistik, der Langzeitstatistik oder Events älter als keep_days bzw. vor vor_ts – nur für die genannten statistic_ids bzw. Event-Typen. Wird von der App aufgerufen.",
       "fields": {
         "tabelle": {
@@ -55,7 +55,7 @@
       }
     },
     "purge_states": {
-      "name": "States löschen bis Zeitpunkt (RS DB Hygiene)",
+      "name": "States löschen bis Zeitpunkt (RS DB Hygiene Manager)",
       "description": "Löscht die States der genannten Entitäten vor einem exakten Zeitpunkt – wie recorder.purge_entities, aber ohne Rundung auf ganze Tage ab jetzt. Wird von der App aufgerufen.",
       "fields": {
         "entity_id": {
@@ -69,7 +69,7 @@
       }
     },
     "loeschlauf_starten": {
-      "name": "Start deletion run (RS DB Hygiene)",
+      "name": "Start deletion run (RS DB Hygiene Manager)",
       "description": "Starts a deletion run in the add-on (all active rules or one rule).",
       "fields": {
         "regel": {
@@ -79,11 +79,11 @@
       }
     },
     "analyse_starten": {
-      "name": "Start analysis (RS DB Hygiene)",
+      "name": "Start analysis (RS DB Hygiene Manager)",
       "description": "Starts the read-only analysis in the add-on."
     },
     "attribut_analyse_starten": {
-      "name": "Start attribute analysis (RS DB Hygiene)",
+      "name": "Start attribute analysis (RS DB Hygiene Manager)",
       "description": "Starts the read-only attribute analysis in the add-on (≈ 5–10 min)."
     }
   },
@@ -125,6 +125,9 @@
       },
       "letzte_attribut_analyse": {
         "name": "Last attribute analysis"
+      },
+      "version_integration": {
+        "name": "Integration version"
       }
     },
     "binary_sensor": {
