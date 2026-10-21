@@ -951,7 +951,8 @@ async def lts_ohne(_request):
 def _loesch_optionen():
     opt = optionen()
     return (bool(opt.get("loeschen_freigegeben")), int(opt.get("loeschen_max_zeilen") or 5_000_000),
-            int(opt.get("loeschen_max_zeilen_b") or 2_000_000))     # Punkt 82: eigene Grenze für Stufe B
+            int(opt.get("loeschen_max_zeilen_b") or 2_000_000),     # Punkt 82: eigene Grenze für Stufe B
+            int(opt.get("loeschen_max_zeilen_attr") or 2_000_000))  # Punkt 295: eigene Grenze fürs Abtrennen der Attribute
 
 
 def _pkd_wirksam():
@@ -975,11 +976,11 @@ async def _loesch_plan(request_or_regel, ausnahme=None):
     uhr("Probelauf")
     if not pl:
         return None
-    frei, grenze, grenze_b = _loesch_optionen()
+    frei, grenze, grenze_b, grenze_attr = _loesch_optionen()
     stufe_b = await asyncio.to_thread(_integration_da)
     uhr("Integration prüfen (HA-API)")
     exakt = stufe_b and await asyncio.to_thread(_integration_exakt)       # Punkt 121
-    p = await asyncio.to_thread(loeschen.plan, pl, CACHE, grenze, regel, stufe_b, bool(ausnahme), grenze_b, exakt)
+    p = await asyncio.to_thread(loeschen.plan, pl, CACHE, grenze, regel, stufe_b, bool(ausnahme), grenze_b, exakt, grenze_attr)
     uhr("Löschplan")
     p["freigegeben"] = frei
     pkd = await asyncio.to_thread(_aktuelle_pkd)

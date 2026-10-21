@@ -153,15 +153,17 @@ def _alt_zaehler(h, heute):
     return (lambda d: kum[bisect.bisect_left(tage, heute - d)]), (tage[0] if tage else heute)
 
 
-def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, grenze_b=None, exakt=False):
+def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, grenze_b=None, exakt=False, grenze_attr=None):
     """Was ein Lauf jetzt löschen würde – aus Probelauf (ohne passive Regeln) und Tageshistogrammen des Caches.
 
     Die Zeilenzahlen sind Schätzungen auf Tagesbasis; der Lauf zählt vor jedem Paket genau nach.
     grenze gilt für die States, grenze_b (ab 0.4.3, Punkt 82) getrennt für Stufe B; ohne grenze_b gilt dieselbe Zahl.
+    grenze_attr (Punkt 295) begrenzt die abgetrennten States der Attribut-Aufträge; ohne Wert gilt grenze_b.
     exakt (ab 0.4.12, Punkt 121): Integration mit purge_states – gelöscht wird bis zur lokalen Mitternacht, Kurzzeit
     „keine“ bis heute 0:00 (keep_days 0). Sonst wie bisher „jetzt minus keep_days“ mit Untergrenze 1 Tag.
     """
     grenze_b = grenze if grenze_b is None else grenze_b
+    grenze_attr = grenze_b if grenze_attr is None else grenze_attr
     min_tage = 0 if exakt else MIN_KEEP_DAYS
     pkd = int(pl["stand"]["purge_keep_days"])
     heute, mid_von, hist, lid_von, hist_kurz = _histogramme(cache_pfad)
@@ -266,6 +268,10 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
             a["art_lauf"] = "übersprungen"
         elif a.get("wartet"):    # Punkt 230: States derselben Entität folgen erst im nächsten Lauf
             a["art_lauf"] = "nächster Lauf"
+        elif a["art"] == "attr":
+            # Punkt 295: Attribut-Aufträge zehren nicht mehr von grenze_b; ihre eigene Grenze zählt abgetrennte States, die erst
+            # die Integration kennt (zeilen sind hier Attributzeilen) – ob sie greift, zeigt der Lauf
+            a["art_lauf"] = "vollständig"
         elif a["zeilen"] <= rest:
             a["art_lauf"] = "vollständig"
         elif rest > 0:
@@ -274,7 +280,7 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
             a["art_lauf"] = "nächster Lauf"
         # Punkt 75 (0.4.4): was davon in diesem Lauf gelöscht wird (bei „teilweise“ der Rest der Obergrenze)
         a["zeilen_lauf"] = (a["zeilen"] if a["art_lauf"] == "vollständig" else min(rest, a["zeilen"]) if a["art_lauf"] == "teilweise" else 0)
-        if stufe_b:
+        if stufe_b and a["art"] != "attr":
             rest -= a["zeilen_lauf"]
         r = regeln.setdefault(a["regel"], {"regel": a["regel"], "entitaeten": 0, "zeilen": 0, "zeilen_gesamt": 0})
         r["zeilen"] += a["zeilen_lauf"]
@@ -303,7 +309,7 @@ def plan(pl, cache_pfad, grenze, nur_regel=None, stufe_b=True, ausnahme=False, g
                                                    for u in ev.get("ueberstimmt") or []]}
     return {
         "ketten": ketten,
-        "analyse_zeit": pl["stand"]["analyse_zeit"], "purge_keep_days": pkd, "grenze": grenze, "grenze_b": grenze_b,
+        "analyse_zeit": pl["stand"]["analyse_zeit"], "purge_keep_days": pkd, "grenze": grenze, "grenze_b": grenze_b, "grenze_attr": grenze_attr,
         "nur_regel": nur_regel, "ausnahme": bool(ausnahme),
         "kennung": kennung, "gruppen": gruppen, "entitaeten": eintraege, "auftraege_b": auftraege_b,
         "wartet_untergrenze": sorted(wartend.values(), key=lambda w: w["regel"]),   # Punkt 100
@@ -697,6 +703,7 @@ class Lauf:
         self.pfad = os.path.join(ordner, f"{int(self.start)}.json")
         self.prot = {"start": self.start, "ende": None, "status": "läuft", "ausgeloest": ausgeloest,
                      "nur_regel": p["nur_regel"], "grenze": p["grenze"], "grenze_b": p.get("grenze_b", p["grenze"]),
+                     "grenze_attr": self._grenze_attr(p),      # Punkt 295
                      "purge_keep_days": p["purge_keep_days"],
                      # Punkt 83: auf welchem Analyse-Stand der Plan beruht
                      "analyse_zeit": p.get("analyse_zeit"), "analyse_vorher": bool(p.get("analyse_vorher")),
@@ -716,6 +723,11 @@ class Lauf:
         self.fortschritt = {"paket": 0, "pakete": p["summe"]["aufrufe"] + len(self.b_liste) + len(self.attr_liste), "geloescht": 0, "grenze": p["grenze"],
                             "geplant": p["summe"]["zeilen"] + ((p["summe"].get("attr_getrennt") or 0) if p.get("stufe_b") else 0), "aktuell": ""}   # Punkt 266: inkl. Attributzeilen
         self._schreibe()
+
+    @staticmethod
+    def _grenze_attr(p):
+        """Punkt 295: Obergrenze fürs Abtrennen; Pläne ohne den Wert (vor 0.5.6b29) nehmen wie bisher die Stufe-B-Grenze."""
+        return p.get("grenze_attr", p.get("grenze_b", p["grenze"]))
 
     def _schreibe(self):
         tmp = self.pfad + ".tmp"
@@ -940,6 +952,9 @@ class Lauf:
                 aufrufe += 1
                 if eintrag["vorher"] is None:
                     eintrag["vorher"] = antwort.get("vorher", 0)
+                    if a["art"] == "attr" and antwort.get("behalten") is not None:
+                        # Punkt 295: alte States, deren Attributzeile noch gebraucht wird – die Integration lässt sie verbunden
+                        eintrag["behalten"] = int(antwort["behalten"])
                     if a["art"] != "attr":      # Punkt 266: bei Attributen zählt gezaehlt_attr (oben)
                         self.fortschritt["gezaehlt"] = self.fortschritt.get("gezaehlt", 0) + eintrag["vorher"]
                 if a["art"] == "attr":      # Punkt 254: entfernte Attributzeilen zählen wie bei den States-Läufen
@@ -980,6 +995,8 @@ class Lauf:
                 eintrag["abgetrennt"], eintrag["geloescht"] = geloescht, 0
                 self.prot["attr_geloescht"] = self.prot.get("attr_geloescht", 0) + eintrag.get("attr_geloescht", 0)
                 self.prot["abgetrennt"] = self.prot.get("abgetrennt", 0) + geloescht
+                if eintrag.get("behalten") is not None:     # Punkt 295
+                    self.prot["behalten"] = self.prot.get("behalten", 0) + eintrag["behalten"]
                 self._attr_gel += eintrag.get("attr_geloescht", 0)
                 self.fortschritt["geloescht"] = self.prot["geloescht"] + self._attr_gel   # Punkt 266: Attributzeilen, vergleichbar mit „gezählt“
             else:
@@ -1011,15 +1028,15 @@ class Lauf:
     def fuehre_aus(self):
         rest = self.p["grenze"]
         su = self.p.get("summe") or {}
-        _LOG.info("Löschlauf gestartet (%s%s): States ca. %s Zeilen von %d Entitäten in %d Aufrufen, Statistik/Events %d Aufträge; "   # Punkt 109
-                  "Obergrenzen States %s, Statistik/Events %s; Grenze %s", self.prot.get("ausgeloest"), f", Regel {self.p['nur_regel']}" if self.p.get("nur_regel") else "",
-                  _z(su.get("zeilen_states")), su.get("entitaeten", 0), su.get("aufrufe", 0), len(self.b_liste),
-                  _z(self.p["grenze"]), _z(self.p.get("grenze_b", self.p["grenze"])),
+        _LOG.info("Löschlauf gestartet (%s%s): States ca. %s Zeilen von %d Entitäten in %d Aufrufen, Statistik/Events %d Aufträge, Attribute %d Aufträge; "   # Punkt 109
+                  "Obergrenzen States %s, Statistik/Events %s, Abtrennen %s; Grenze %s", self.prot.get("ausgeloest"), f", Regel {self.p['nur_regel']}" if self.p.get("nur_regel") else "",
+                  _z(su.get("zeilen_states")), su.get("entitaeten", 0), su.get("aufrufe", 0), len(self.b_liste), len(self.attr_liste),
+                  _z(self.p["grenze"]), _z(self.p.get("grenze_b", self.p["grenze"])), _z(self._grenze_attr(self.p)),
                   "lokale Mitternacht (volle Kalendertage)" if self.exakt else "jetzt minus keep_days (Integration ohne purge_states)")
         try:
             # ab 0.4.3 (Punkt 82): Stufe B zuerst und mit eigener Obergrenze – sie ist klein und schnell und kommt so auch
             # dann an die Reihe, wenn die States die Grenze füllen oder ein States-Paket den Lauf beendet
-            rest_b = self._fuehre_b_aus(self.p.get("grenze_b", self.p["grenze"]))
+            self._fuehre_b_aus(self.p.get("grenze_b", self.p["grenze"]))
             for g in self.p["gruppen"]:
                 d = g["keep_days"]
                 for i in range(0, len(g["entitaeten"]), PAKET):
@@ -1087,8 +1104,8 @@ class Lauf:
                         raise LoeschFehler(f"Paket keep_days {d}: {ergebnis} – Lauf beendet")
                     for eid in nachzug:
                         rest = self._nachziehen(eid, mid[eid], d, rest)
-            if self.attr_liste:      # Punkt 254: danach Attribute abtrennen (Rest der Stufe-B-Obergrenze)
-                self._fuehre_b_aus(rest_b, self.attr_liste)
+            if self.attr_liste:      # Punkt 254: danach Attribute abtrennen – Punkt 295: mit eigener Obergrenze statt Rest der Stufe B
+                self._fuehre_b_aus(self._grenze_attr(self.p), self.attr_liste)
             self.prot["status"] = "fertig"
         except Exception as e:  # noqa: BLE001 – im Protokoll festhalten, Job meldet weiter
             self.prot["status"] = "abgebrochen" if "abgebrochen" in str(e) else "Fehler"

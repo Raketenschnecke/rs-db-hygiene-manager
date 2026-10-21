@@ -846,7 +846,8 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
           <li><b>Voraussetzung:</b> Hauptschalter „Löschen freigegeben“ (App-Konfiguration). Für Läufe aus HA (Knopf, Dienst, Automation) zusätzlich „Automatik freigegeben“.</li>
           <li><b>States und Attribute:</b> über HAs Purge für Entitäten (<code>rs_db_hygiene.purge_states</code>, dieselbe Arbeit wie <code>recorder.purge_entities</code>, aber für ganze Kalendertage, siehe <a class="hverweis" href="#h-kalendertage">Kalendertage</a>); HA entfernt dabei nicht mehr benutzte Attribute mit.</li>
           <li><b>5-Min-Statistik, Langzeit, Events:</b> über die Integration <i>RS DB Hygiene</i>; läuft zuerst und hat eine eigene Obergrenze.</li>
-          <li><b>Obergrenzen je Lauf:</b> States 5 Mio. Zeilen, Statistik und Events 2 Mio. (App-Konfiguration). Was nicht mehr passt (Spalte Überhang), folgt im nächsten Lauf (manuell oder durch eine HA-Automation gestartet).</li>
+          <li><b>Attribute kürzer als die States:</b> über die Integration; abgetrennt werden nur States, deren Attributzeile danach frei wird. Bleibt eine Zeile ohnehin (neuere States benutzen dieselben Attribute), behalten auch die alten States ihre Attribute – das spart viel Schreibarbeit ohne Platzverlust. Läuft nach den States.</li>
+          <li><b>Obergrenzen je Lauf:</b> States 5 Mio. Zeilen, Statistik und Events 2 Mio., Abtrennen der Attribute 2 Mio. States (App-Konfiguration). Was nicht mehr passt (Spalte Überhang), folgt im nächsten Lauf (manuell oder durch eine HA-Automation gestartet).</li>
           <li>Vor jedem Paket zählt die App genau nach. Die App selbst schreibt nie in die Datenbank. Im App-Protokoll steht jede Minute der Fortschritt.</li>
           <li>Vor einem Löschlauf startet die App zunächst eine Analyse, wenn die letzte Analyse älter als 6 h ist.</li>
           <li><b>Abbrechen:</b> „Nach diesem Paket abbrechen“. Was HA schon übernommen hat, löscht HA zu Ende, danach bricht der Löschlauf ab.</li>
@@ -4832,6 +4833,12 @@ function laufRest(r) {
 // Protokolls abgeleitet – auch bei älteren Läufen; die Plan-Zahl je Auftrag („geplant“) trägt erst 0.5.6b19
 const ergebnisKern = e => String(e || "").split(" – ")[0];
 const ART_B = { kurz: "5-Min-Statistik", lts: "Langzeit", events: "Events" };
+// Punkt 295 (0.5.6b29): Attribute haben eine eigene Obergrenze (abgetrennte States); bis 0.5.6b28 zählten sie auf Statistik/Events
+function grenzeGrund(r, art, bGeloescht, abgetr) {
+  if (art === "states" || r.grenze_b == null) return "";
+  if (r.grenze_attr == null) return `: Statistik/Events ${zahl(r.grenze_b)} Zeilen = ${zahl(bGeloescht)} gelöscht + ${zahl(abgetr)} States abgetrennt`;
+  return art === "attr" ? `: Abtrennen ${zahl(r.grenze_attr)} States, ${zahl(abgetr)} abgetrennt` : `: Statistik/Events ${zahl(r.grenze_b)} Zeilen, ${zahl(bGeloescht)} gelöscht`;
+}
 function ueberhang(r) {
   if (r.status === "läuft") return null;
   const p = r.pakete || [], zeilen = Math.max(0, (r.geplant_zeilen || 0) - (r.geloescht || 0));
@@ -4845,7 +4852,7 @@ function ueberhang(r) {
     const was = attrArt ? mzahl(l.length, "Attribut-Auftrag", "Attribut-Aufträge") : art === "states" ? mzahl(l.length, "States-Paket", "States-Pakete") : mzahl(l.length, `${ART_B[art] || art}-Auftrag`, `${ART_B[art] || art}-Aufträge`);
     const menge = hat ? ` (${zahl(plan)} ${attrArt ? "Attributzeilen" : "Zeilen"} geplant)` : "";
     if (e === "Obergrenze erreicht" || e === "nichts zu löschen oder Obergrenze erreicht")
-      gruende.push({ art, n: l.length, text: `${was} nicht begonnen${menge} – Obergrenze erreicht${r.grenze_b != null && art !== "states" ? `: Statistik/Events ${zahl(r.grenze_b)} Zeilen = ${zahl(bGeloescht)} gelöscht + ${zahl(abgetr)} States abgetrennt` : ""}` });
+      gruende.push({ art, n: l.length, text: `${was} nicht begonnen${menge} – Obergrenze erreicht${grenzeGrund(r, art, bGeloescht, abgetr)}` });
     else if (e === "Rest im nächsten Lauf") gruende.push({ art, n: l.length, text: `${was} nur teilweise${menge}: Rest folgt im nächsten Lauf (Obergrenze erreicht)` });
     else gruende.push({ art, n: l.length, text: `${was}: ${e}` });
   }
@@ -4869,7 +4876,7 @@ const ueberhangTip = r => {
     ...(x ? [`Nach diesem Lauf noch fällig (alles, nicht nur der Plan): ${zahl(x.zeilen)} Zeilen – bei gleicher Obergrenze ≈ ${mzahl(x.laeufe, "weiterer Lauf", "weitere Läufe")} (Schätzung; neue Zeilen kommen täglich dazu)`] : [])].join("\n");
 };
 // ab 0.4.3 (Punkt 82): getrennte Obergrenzen für States und Stufe B (5-Min-Statistik, Langzeit, Events)
-const obergrenzeText =x => x.grenze_b != null ? `States ${zahl(x.grenze)} Zeilen, Statistik und Events ${zahl(x.grenze_b)} Zeilen` : `${zahl(x.grenze)} Zeilen`;
+const obergrenzeText =x => x.grenze_b != null ? `States ${zahl(x.grenze)} Zeilen, Statistik und Events ${zahl(x.grenze_b)} Zeilen${x.grenze_attr != null ? `, Abtrennen der Attribute ${zahl(x.grenze_attr)} States` : ""}` : `${zahl(x.grenze)} Zeilen`;   // Punkt 295
 // Punkt 84: Verwaiste, die beim Lauf wieder als Zustand vorhanden waren, wurden übersprungen
 function uebersprungenText(r) {
   const u = (r.pakete || []).flatMap(p => (p.uebersprungen || []).map(e => [e, p.uebersprungen_grund]));
@@ -4909,6 +4916,7 @@ $("#tLaeufe").addEventListener("click", ev => {
   const uhText = uh && uh.summe ? `<div class="sperre" style="margin:6px 0"><b>Überhang ${zahl(uh.summe)}</b> (${zahl(uh.zeilen)} Zeilen, ${zahl(uh.attr)} Attributzeilen) – geplant, aber in diesem Lauf nicht gelöscht:<ul style="margin:4px 0 0 18px;padding:0">${uh.gruende.map(g => `<li>${esc(g.text)}</li>`).join("")}</ul></div>` : "";
   dialog(`Löschlauf ${zeit(r.start)} – ${r.status}`,
     `<p>Umfang: ${esc(r.nur_regel || "alle aktiven Regeln")} · Obergrenze ${obergrenzeText(r)}${r.analyse_zeit ? ` · Analyse ${zeit(r.analyse_zeit)}${r.analyse_vorher ? " (vorher neu gestartet)" : ""}` : ""} · gelöscht ${zahl(laufSumme(r))} von geplant ca. ${zahl(geplantLauf(r))}${r.ende ? ` · Dauer ${dauerText(r.ende - r.start)}` : ""}${r.backup_warte_s ? `, davon <b>${backupText(r)}</b> auf Backup gewartet` : ""}</p>
+     ${r.abgetrennt != null ? `<p class="sub">Attribute: ${zahl(r.abgetrennt)} States abgetrennt, ${zahl(r.attr_geloescht || 0)} Attributzeilen entfernt${r.behalten != null ? ` · ${zahl(r.behalten)} alte States behalten ihre Attribute (Attributzeile noch in Gebrauch, Punkt 295)` : ""}</p>` : ""}
      ${uhText}
      ${uebersprungenText(r)}
      ${r.fehler ? `<p class="fehler">${esc(r.fehler)}</p>` : ""}
@@ -4970,7 +4978,7 @@ async function ladeLoeschen() {
     if (p.stufe_b) for (const [art, name] of [["kurz", "5-Min-Statistik"], ["lts", "Langzeit"], ["events", "Events"]]) if (zb[art]) teile.push(`${name} ${zahl(zb[art])}`);
     const attrText = su.zeilen_states && su.attr_bekannt && su.attr_zeilen ? `; mit den States fallen ca. ${zahl(su.attr_zeilen)} Attributzeilen weg` : "";
     // Punkt 256: Attribute, die von den States getrennt werden (Attribut-Wert kürzer als die Kurzzeit) – kein Löschen, die States bleiben
-    if (p.stufe_b && su.attr_getrennt) teile.push(`Attribute ${zahl(su.attr_getrennt)} Zeilen von ${mz(su.attr_getrennt_entitaeten, "Entität", "Entitäten")} (die States bleiben, verlieren aber ihre Attribute)`);
+    if (p.stufe_b && su.attr_getrennt) teile.push(`Attribute ${zahl(su.attr_getrennt)} Zeilen von ${mz(su.attr_getrennt_entitaeten, "Entität", "Entitäten")} (die States bleiben; abgetrennt werden nur States, deren Attributzeile danach frei wird)`);
     const laufText = (su.zeilen || (p.stufe_b && su.attr_getrennt)) && teile.length ? `ca. ${zahl(su.zeilen + (p.stufe_b ? su.attr_getrennt || 0 : 0))} Zeilen – ${teile.join(" · ")}${attrText}.` : "nichts zu löschen.";
     // Punkt 200 (0.5.5b12): wie viele Läufe der Rückstand ungefähr braucht (je Obergrenze aufgerundet)
     const restLaeufe = su.laeufe > 1 ? ` Bei der Obergrenze von ${obergrenzeText(p)} sind das <b title="Schätzung: je Obergrenze aufgerundet; täglich kommen neue Zeilen dazu, und Entitäten, die nicht mehr ganz in einen Lauf passen, warten auf den nächsten">≈ ${mzahl(su.laeufe, "Lauf", "Läufe")}</b> (dieser und ${zahl(su.laeufe - 1)} weitere).` : "";
@@ -5107,7 +5115,7 @@ async function starteLoeschen() {
     const l = b.filter(a => a.art === art);
     if (l.length && zb[art]) teile.push(`• ${name}: ca. ${zahl(l.reduce((s, a) => s + (a.zeilen_lauf ?? a.zeilen), 0))} Zeilen in ${mz(l.length, "Auftrag", "Aufträgen")} (${l.slice(0, 3).map(a => a.name).join(", ")}${l.length > 3 ? " …" : ""})`);
   }
-  if (p.stufe_b && p.summe.attr_getrennt) teile.push(`• Attribute: ca. ${zahl(p.summe.attr_getrennt)} Attributzeilen von ${mz(p.summe.attr_getrennt_entitaeten, "Entität", "Entitäten")} werden gelöscht – die States bleiben erhalten, verlieren aber ihre Attribute (rs_db_hygiene.purge, Tabelle states_attribute)`);   // Punkt 256
+  if (p.stufe_b && p.summe.attr_getrennt) teile.push(`• Attribute: ca. ${zahl(p.summe.attr_getrennt)} Attributzeilen von ${mz(p.summe.attr_getrennt_entitaeten, "Entität", "Entitäten")} werden gelöscht – die States bleiben erhalten; ihre Attribute verlieren nur die States, deren Attributzeile danach frei wird (rs_db_hygiene.purge, Tabelle states_attribute)`);   // Punkt 256, 295
   const text = `Umfang: ${umfang}\nGelöscht werden ca. ${zahl(p.summe.zeilen + (p.stufe_b ? p.summe.attr_getrennt || 0 : 0))} Zeilen:\n${teile.join("\n")}\n\n` +
     `Das lässt sich nicht rückgängig machen. Vor jedem Paket wird nachgezählt; gelöscht werden höchstens ${obergrenzeText(p)}` +
     (p.summe.ausnahmen ? ` – außer bei ${zahl(p.summe.ausnahmen)} Entitäten mit bestätigter Ausnahme (je ihr ältester Tag)` : "") + "." +

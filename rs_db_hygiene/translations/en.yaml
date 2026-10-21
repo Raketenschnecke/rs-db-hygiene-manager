@@ -17,6 +17,9 @@ configuration:
   loeschen_max_zeilen_b:
     name: Höchstens gelöschte Zeilen pro Lauf (Statistik und Events)
     description: Eigene Obergrenze für 5-Min-Statistik, Langzeit und Events (Stufe B, über die Integration RS DB Hygiene). Sie gilt zusätzlich zur Obergrenze der States; Stufe B läuft zuerst.
+  loeschen_max_zeilen_attr:
+    name: Höchstens abgetrennte States pro Lauf (Attribute)
+    description: Eigene Obergrenze für Attribut-Regeln (Attribute kürzer als die States). Gezählt werden States, deren Verweis auf eine Attributzeile entfernt wird; abgetrennt werden nur States, deren Attributzeile danach frei wird. Die Attribute laufen nach den States.
   protokoll_tage:
     name: Aufbewahrung Löschprotokoll (Tage)
     description: Ältere Läufe werden gelöscht; 0 = unbegrenzt. Die Monatssumme je Entität bleibt immer erhalten.
