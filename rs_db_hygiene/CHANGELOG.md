@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b31 (Beta)
+- **Dashboard: Balken je Spalte (Punkt 304):** In den Tabellenkarten steht rechts neben jeder Spalte ein Balken mit der geschätzten Größe der Spaltenwerte. Die Nulllinie liegt am rechten Kartenrand, die Balken wachsen nach links; Maßstab ist die größte Spalte der Karte, Größe und Byte je Zeile im Tooltip. Die Größen werden als Schritt 7 der Analyse aus einer Stichprobe der jüngsten 100.000 Zeilen je Tabelle auf die Zeilenzahl hochgerechnet (ca. 1 s, ohne Indizes) und im Tagesstand `struktur.db` gespeichert; bis zur nächsten Analyse zeigt das Dashboard noch keine Balken. Die Karten sind dafür etwas breiter
+
 ## 0.5.6b30 (Beta)
 - **Vorhaltung im Löschplan (Punkt 299):** Die Spalte „Vorhaltung · in diesem Lauf“ schreibt die Tage wie sonst in der App ohne Leerzeichen und deutsch: „K 7T · L 7T“ statt „K 7 d · L 7 d“, ebenso „(Ziel 30T)“ und die Gruppen in der Rückfrage („12 × 7T“)
 - **Warnung im Tooltip „Analyse starten“ (Punkt 300):** Zeigt der Knopf das gelbe Ausrufezeichen, beginnt die auslösende Zeile im Tooltip mit „! Analyse:“ bzw. „! Attribut-Analyse:“, fett in der Warnfarbe

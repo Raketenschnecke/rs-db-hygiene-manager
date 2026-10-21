@@ -28,6 +28,27 @@ TABELLEN = ("states_meta", "states", "state_attributes", "event_types", "events"
 # Zeitspalte mit Index je großer Tabelle
 ZEITSPALTE = {"states": "last_updated_ts", "events": "time_fired_ts", "statistics": "start_ts", "statistics_short_term": "start_ts"}
 
+# Punkt 302: Spalten, die die Kästen im Dashboard zeigen: Tabelle -> (Primärschlüssel, [(Anzeigename, [Spalten])]); Größe je Spalte
+# wird aus einer Stichprobe der jüngsten Zeilen hochgerechnet (dbstat kennt nur Tabellen und Indizes, keine Spalten)
+SPALTEN = {
+    "states_meta": ("metadata_id", [("metadata_id", ["metadata_id"]), ("entity_id", ["entity_id"])]),
+    "states": ("state_id", [(c, [c]) for c in ("state_id", "metadata_id", "attributes_id", "old_state_id", "state", "last_updated_ts",
+                                                "last_changed_ts", "last_reported_ts", "context_id_bin")]),
+    "state_attributes": ("attributes_id", [(c, [c]) for c in ("attributes_id", "hash", "shared_attrs")]),
+    "event_types": ("event_type_id", [(c, [c]) for c in ("event_type_id", "event_type")]),
+    "events": ("event_id", [(c, [c]) for c in ("event_id", "event_type_id", "data_id", "time_fired_ts", "origin_idx", "context_id_bin",
+                                                "context_user_id_bin", "context_parent_id_bin")]),
+    "event_data": ("data_id", [(c, [c]) for c in ("data_id", "hash", "shared_data")]),
+    "statistics_meta": ("id", [("id", ["id"]), ("statistic_id", ["statistic_id"]), ("source", ["source"]),
+                               ("unit_of_measurement", ["unit_of_measurement"]), ("mean_type", ["mean_type"]), ("has_sum", ["has_sum"]),
+                               ("name, unit_class", ["name", "unit_class"])]),
+}
+for _t in ("statistics", "statistics_short_term"):
+    SPALTEN[_t] = ("id", [("id", ["id"]), ("metadata_id", ["metadata_id"]), ("start_ts", ["start_ts"]),
+                          ("mean / min / max", ["mean", "mean_weight", "min", "max"]), ("state", ["state"]), ("sum", ["sum"]),
+                          ("last_reset_ts", ["last_reset_ts"])])
+STICHPROBE = 100000      # jüngste Zeilen je Tabelle für die Spaltengrößen
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS info (schluessel TEXT PRIMARY KEY, wert TEXT);
 CREATE TABLE IF NOT EXISTS stand (tag INTEGER PRIMARY KEY, zeit REAL NOT NULL, daten TEXT NOT NULL);
@@ -46,6 +67,38 @@ def _bytes(ha):
         else:
             e["indizes"] += groesse
             e["index"][name] = groesse
+    return out
+
+
+def _feldgroesse(c):
+    """SQL-Ausdruck: Bytes, die der Wert c im Datensatz belegt (SQLite-Serientypen; Text/Blob = Länge)."""
+    return (f"CASE typeof({c}) WHEN 'null' THEN 0 WHEN 'real' THEN 8 WHEN 'integer' THEN CASE "
+            f"WHEN {c} BETWEEN -128 AND 127 THEN 1 WHEN {c} BETWEEN -32768 AND 32767 THEN 2 "
+            f"WHEN {c} BETWEEN -8388608 AND 8388607 THEN 3 WHEN {c} BETWEEN -2147483648 AND 2147483647 THEN 4 "
+            f"WHEN {c} BETWEEN -140737488355328 AND 140737488355327 THEN 6 ELSE 8 END "
+            f"ELSE LENGTH(CAST({c} AS BLOB)) END")
+
+
+def _spalten(ha, zeilen):
+    """Geschätzte Bytes je angezeigter Spalte: {tabelle: {name: bytes}}; Stichprobe der jüngsten Zeilen × Zeilenzahl der Tabelle.
+    Ohne Index; die Summe liegt knapp unter dem Platz der Tabelle (Datensatzköpfe, Seitenreste, Indizes fehlen)."""
+    out = {}
+    for tab, (pk, felder) in SPALTEN.items():
+        n = zeilen.get(tab)
+        if not n:
+            continue
+        vorhanden = {r[1] for r in ha.execute(f"PRAGMA table_info({tab})")}
+        auswahl = [(name, [c for c in cols if c in vorhanden]) for name, cols in felder]
+        auswahl = [(name, cols) for name, cols in auswahl if cols]
+        if not auswahl:
+            continue
+        summen = ", ".join("SUM(" + " + ".join(_feldgroesse(c) for c in cols) + ")" for _, cols in auswahl)
+        grenze = ha.execute(f"SELECT MAX({pk}) FROM {tab}").fetchone()[0] - STICHPROBE
+        row = ha.execute(f"SELECT COUNT(*), {summen} FROM {tab} WHERE {pk} > ?", (grenze,)).fetchone()
+        if not row[0]:
+            continue
+        faktor = n / row[0]
+        out[tab] = {name: int(round((row[1 + i] or 0) * faktor)) for i, (name, _) in enumerate(auswahl)}
     return out
 
 
@@ -101,12 +154,20 @@ def erfasse(ha, ziel_pfad, zeilen=None, extra=None, monate=None):
         groessen = {}
     t_dbstat = time.time() - t_dbstat
 
+    t_spalten = time.time()
+    try:
+        spalten = _spalten(ha, zeilen)
+    except sqlite3.Error as e:                     # Zusatzanzeige – ohne Stichprobe zeigt das Dashboard keine Spaltenbalken
+        _LOG.warning("Spaltengrößen nicht erfasst: %s", e)
+        spalten = {}
+    t_spalten = time.time() - t_spalten
+
     seite = ha.execute("PRAGMA page_size").fetchone()[0]
     datei = {"seite": seite, "seiten": ha.execute("PRAGMA page_count").fetchone()[0],
              "frei": ha.execute("PRAGMA freelist_count").fetchone()[0]}
     jetzt = time.time()
-    stand = {"zeit": jetzt, "zeilen": zeilen, "bytes": groessen, "datei": datei, "zeitraum": zeitraum,
-             "details": d, "planer": _planer(ha), "dauer_s": round(jetzt - start, 1), "dbstat_s": round(t_dbstat, 1)}
+    stand = {"zeit": jetzt, "zeilen": zeilen, "bytes": groessen, "spalten": spalten, "datei": datei, "zeitraum": zeitraum,
+             "details": d, "planer": _planer(ha), "dauer_s": round(jetzt - start, 1), "dbstat_s": round(t_dbstat, 1), "spalten_s": round(t_spalten, 1)}
 
     heute = int((jetzt + time.localtime(jetzt).tm_gmtoff) // 86400)      # lokaler Kalendertag wie analyse.lokaler_tag
     con = sqlite3.connect(ziel_pfad)
@@ -152,4 +213,4 @@ if __name__ == "__main__":
     verbindung.execute("PRAGMA query_only = 1")
     s = erfasse(verbindung, arg.ziel)
     verbindung.close()
-    print(json.dumps({k: s[k] for k in ("zeilen", "datei", "dauer_s", "dbstat_s")}, indent=1))
+    print(json.dumps({k: s[k] for k in ("zeilen", "datei", "dauer_s", "dbstat_s", "spalten_s", "spalten")}, indent=1))

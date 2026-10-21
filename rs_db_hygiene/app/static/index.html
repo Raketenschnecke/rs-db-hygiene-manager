@@ -57,6 +57,10 @@
 .dash svg .d-ring-grund { fill: var(--panel); stroke: var(--line); stroke-width: 2; }
 .dash svg .d-ring-bogen { fill: none; stroke: var(--c); stroke-width: 2; stroke-linecap: round; }
 .dash svg .d-ring-wert { font-size: 8.5px; font-weight: 700; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--text); }
+/* Punkt 302: Balken je Spalte am rechten Rand der Kästen */
+.dash svg .d-sp { cursor: help; }
+.dash svg .d-sp-grund { fill: var(--chip); rx: 1.5px; }
+.dash svg .d-sp-bar { fill: var(--c); opacity: .75; }
 .dash svg .link { stroke: var(--muted); stroke-width: 1.5; fill: none; }
 .dash svg .soft { stroke: var(--text); stroke-width: 1.4; stroke-dasharray: 5 4; fill: none; }
 .dash .d-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); padding: 10px 4px 0; }
@@ -5172,9 +5176,19 @@ function dashRing(s, name, cx, cy) {
     + `<text x="${cx}" y="${cy + 3.2}" class="d-ring-wert" text-anchor="middle">${esc(text)}</text></g>`;
 }
 
+// Balken je Spalte am rechten Rand der Kästen (Punkt 302; Nulllinie rechts, Balken wachsen nach links): geschätzte Größe der Spaltenwerte, Maßstab = größte Spalte des Kastens.
+// Quelle: Stichprobe der jüngsten Zeilen × Zeilenzahl (struktur.py) – ohne Indizes und Datensatzköpfe, daher kleiner als der Platz im Ring.
+function dashSpaltenBalken(tab, spalte, bytes, max, zeilen, bx, by, bb) {
+  const w = bytes > 0 ? Math.max(1.5, bb * bytes / max) : 0;
+  const tip = `${tab}.${spalte}: ca. ${gbmb(bytes)} Spaltenwerte` + (zeilen ? ` (ca. ${(bytes / zeilen).toLocaleString("de-DE", { maximumFractionDigits: 1 })} Byte je Zeile)` : "")
+    + `\nGeschätzt aus einer Stichprobe der jüngsten Zeilen, ohne Indizes. Maßstab: größte Spalte dieser Tabelle.`;
+  return `<g class="d-sp" title="${esc(tip)}"><rect x="${bx}" y="${by}" width="${bb}" height="9" class="d-sp-grund"/>`
+    + (w ? `<rect x="${(bx + bb - w).toFixed(1)}" y="${by}" width="${w.toFixed(1)}" height="9" rx="1.5" class="d-sp-bar"/>` : "") + `</g>`;
+}
+
 // Beziehungen als SVG: drei Zeilen (Zweige) zu je Register | Faktentabelle | Pool; Kastenhöhe nach Spaltenzahl, Zeilen so hoch wie ihr größter Kasten
 function dashDiagramm(s) {
-  const z = s.zeilen || {}, W = 230, X = [40, 365, 690], LZ = 15.5;
+  const z = s.zeilen || {}, W = 270, X = [40, 400, 760], LZ = 15.5;
   const K = [
     [["states_meta", "Entität", [["PK", "metadata_id"], ["", "entity_id", "UNIQUE"]]],
      ["states", "Zustand (State)", [["PK", "state_id"], ["FK", "metadata_id"], ["FK", "attributes_id"], ["FK", "old_state_id", "→ states"], ["", "state"],
@@ -5198,7 +5212,9 @@ function dashDiagramm(s) {
       + `<path d="M${x} ${y + 34}V${y + 6}a6 6 0 0 1 6-6H${x + W - 6}a6 6 0 0 1 6 6V${y + 34}Z" class="hd"/>`
       + `<text x="${x + 10}" y="${y + 16}" class="t-name">${esc(name)}</text><text x="${x + 10}" y="${y + 29}" class="t-term">${esc(term)}</text>`
       + dashRing(s, name, x + W - 19, y + 17);
+    const sg = (s.spalten || {})[name] || {}, sgMax = Math.max(1, ...spalten.map(c => sg[c[1]] || 0));
     spalten.forEach((s_, i) => {
+      if (sg[s_[1]] != null) o += dashSpaltenBalken(name, s_[1], sg[s_[1]], sgMax, z[name], x + W - 88, y + 52 + i * LZ - 8.5, 78);
       o += `<text x="${x + 10}" y="${y + 52 + i * LZ}" class="t-col"><tspan font-weight="700">${s_[0] ? esc(s_[0]) + " " : "   "}</tspan>${esc(s_[1])}`
         + (s_[2] ? `<tspan class="t-note">  ${esc(s_[2])}</tspan>` : "") + `</text>`;
     });
@@ -5221,7 +5237,7 @@ function dashDiagramm(s) {
     + `<text x="12" y="${ym}" class="t-lbl t-logik" text-anchor="middle" transform="rotate(-90 12 ${ym})">statistic_id = entity_id, kein FK</text>`
     + `<polyline points="${X[1] + W / 2},${R[0] + RH[0]} ${X[1] + W / 2},${R[1]}" class="soft"/>`
     + `<text x="${X[1] + W / 2 + 10}" y="${R[0] + RH[0] + ABST / 2 + 4}" class="t-lbl t-logik">gleiche context_id, kein FK</text>`;
-  return `<svg viewBox="0 0 960 ${H}" role="img" aria-label="Beziehungen der Recorder-Tabellen: states verweist auf states_meta, state_attributes und sich selbst; events auf event_types und event_data; statistics und statistics_short_term auf statistics_meta">`
+  return `<svg viewBox="0 0 1070 ${H}" role="img" aria-label="Beziehungen der Recorder-Tabellen: states verweist auf states_meta, state_attributes und sich selbst; events auf event_types und event_data; statistics und statistics_short_term auf statistics_meta">`
     + `<defs><marker id="dPfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>${o}</svg>`;
 }
 
