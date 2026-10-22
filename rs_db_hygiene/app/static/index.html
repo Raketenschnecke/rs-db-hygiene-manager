@@ -624,6 +624,51 @@ table.ana-t .fein { color: var(--muted); font-size: 11px; }
 .ana-ab { color: var(--text); }   /* weißer Pfeil nach unten: Drilldown in dieser Tabelle */
 .ana-oeffne { border: 0; background: transparent; color: var(--accent);   /* blauer Pfeil schräg nach oben: öffnet den Tab Entitäten */ cursor: pointer; padding: 0 4px; }
 .ana-mehr { color: var(--muted); font-size: 12px; padding: 6px 2px; }
+/* Punkt 306: Donut im Reiter Dashboard; Palette: kategoriale Farben, hell und dunkel, je Integration fest */
+.dd { --dd-s1:#2a78d6; --dd-s2:#eb6834; --dd-s3:#1baf7a; --dd-s4:#eda100; --dd-s5:#e87ba4; --dd-s6:#008300; --dd-s7:#6250d6; --dd-s8:#e34948; --dd-grau:#9a9890; --dd-hl:#00000010; margin-bottom: 22px; }
+@media (prefers-color-scheme: dark) { .dd { --dd-s1:#3987e5; --dd-s2:#d95926; --dd-s3:#199e70; --dd-s4:#c98500; --dd-s5:#d55181; --dd-s6:#008300; --dd-s7:#9085e9; --dd-s8:#e66767; --dd-grau:#77756e; --dd-hl:#ffffff14; } }
+.dd h2 { font-size: 17px; margin: 0; }
+.dd-kopf { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; }
+.dd-steuer { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin: 8px 0 12px; }
+.dd-steuer .gr { display: flex; align-items: center; gap: 6px; }
+.dd-steuer .gr > span { color: var(--muted); font-size: 13px; }
+button.dd-sg[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.dd-haupt { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.dd-links { flex: 0 0 auto; width: min(640px, 100%); }
+#ddPfad { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; min-height: 34px; margin-bottom: 6px; }
+#ddPfad button { border-radius: 999px; padding: 2px 12px; }
+#ddPfad button[aria-current="true"] { font-weight: 600; cursor: default; border-color: var(--text); }
+.dd-tr { color: var(--muted); }
+#ddChart svg { width: 100%; height: auto; display: block; }
+#ddLegende { flex: 1 1 380px; min-width: 300px; max-height: 780px; overflow: auto; padding-right: 4px; }
+.dd-box { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px; margin-bottom: 10px; padding: 8px 12px; }
+.dd-box h3 { margin: 0; font: 600 14px var(--mono); display: flex; justify-content: space-between; gap: 8px; }
+.dd-box h3 small { color: var(--muted); font: 12px system-ui, sans-serif; font-weight: 400; text-align: right; }
+.dd-zoom { cursor: pointer; }
+.dd-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 13px; }
+.dd-row.dd-hl, .dd-box h3.dd-hl { background: var(--dd-hl); }
+.dd-sw { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+.dd-n { flex: 1; font-family: var(--mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-v { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; }
+.dd-hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+path.dd-seg { stroke: var(--bg); stroke-width: 1.5; cursor: default; transition: opacity .12s; }
+path.dd-seg.dd-zoomb { cursor: pointer; }
+path.dd-seg.dim { opacity: .28; }
+#ddChart text { fill: var(--text); font-family: system-ui, sans-serif; }
+#ddChart .dd-lbl { font-size: 10px; pointer-events: none; fill: #fff; paint-order: stroke; stroke: #0000008c; stroke-width: 2.6px; stroke-linejoin: round; }
+#ddChart .dd-mt { fill: var(--muted); }
+/* einklappbare Blöcke unter dem Donut (bisheriger Inhalt des Dashboards) */
+.dash details.d-block { margin-bottom: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.dash details.d-block > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+.dash details.d-block > summary::-webkit-details-marker { display: none; }
+.dash details.d-block > summary::before { content: "▸"; color: var(--muted); width: 1em; }
+.dash details.d-block[open] > summary::before { content: "▾"; }
+.dash details.d-block > summary h2 { margin: 0; }
+.dash details.d-block[open] > summary { margin-bottom: 8px; }
+/* Punkt 306: Analyse-Tabelle mit einstellbaren Spaltenbreiten */
+table.ana-t.fest { table-layout: fixed; width: auto; }
+table.ana-t.fest td { overflow: hidden; text-overflow: ellipsis; }
+table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14px; overflow: hidden; }
 </style>
 </head>
 <body>
@@ -1150,6 +1195,18 @@ actions:
     <div class="ana" id="anaInhalt"><p class="sub">Lädt …</p></div>
   </section>
   <section id="tab-dash">
+    <section class="dd" id="ddAbschnitt">
+      <div class="dd-kopf"><h2>Datenmenge nach Integration, Gerät und Entität</h2><span class="sub" id="ddStand"></span></div>
+      <div class="dd-steuer">
+        <div class="gr"><span title="Welche Vorhaltezeit betrachtet wird: Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik)">Vorhaltezeit:</span><span id="ddVz"></span></div>
+        <div class="gr"><span title="Was die Zahlen zeigen: den Zuwachs je Tag oder den Bestand von heute">Sicht:</span><span id="ddSicht"></span></div>
+        <button id="ddAnalyse" hidden title="Im Reiter Analyse mit denselben Einstellungen und demselben Pfad weiterarbeiten (Tabelle, Filter, Sortierung)">↗ Im Reiter Analyse öffnen</button>
+      </div>
+      <div class="dd-haupt">
+        <div class="dd-links"><nav id="ddPfad" aria-label="Auswahl"></nav><div id="ddChart"><p class="sub">Lädt …</p></div></div>
+        <div id="ddLegende"></div>
+      </div>
+    </section>
     <div class="dash" id="dashInhalt"><p class="d-sub">Lädt …</p></div>
   </section>
 </main>
@@ -5388,7 +5445,16 @@ function dashKarten(s) {
   return K.map(([n, term, zw, text, fuss]) => `<div class="d-karte" style="--c:${D_ZWEIG[zw]}"><h3>${esc(n)}</h3><span class="term">${esc(term)}</span>${[].concat(text).map(t => t.startsWith("<ul") ? t : `<p>${t}</p>`).join("")}<span class="meta">${fuss}</span></div>`).join("");
 }
 
+// Punkt 306: Blöcke unter dem Donut sind einklappbar; welche offen sind, merkt sich der Browser (Standard: zu)
+const dashOffen = n => { try { return JSON.parse(speicher.lies("dbh_dash_offen", "[]")).includes(n) ? "open" : ""; } catch { return ""; } };
+$("#dashInhalt").addEventListener("toggle", ev => {
+  const d = ev.target; if (!d.dataset || !d.dataset.block) return;
+  let l = []; try { l = JSON.parse(speicher.lies("dbh_dash_offen", "[]")); } catch { /* neu */ }
+  l = l.filter(x => x !== d.dataset.block); if (d.open) l.push(d.dataset.block);
+  speicher.schreib("dbh_dash_offen", JSON.stringify(l));
+}, true);
 async function ladeDash() {
+  Donut.laden();   // Punkt 306: Donut oben (eigene Daten aus der Analyse), unabhängig vom Stand der Datenbank-Struktur
   const ziel = $("#dashInhalt");
   let r;
   try { r = await api("struktur"); }
@@ -5408,8 +5474,7 @@ async function ladeDash() {
       <span><code>states</code> samt Indizes <b>${stAnteil}</b> des belegten Platzes</span>
       <span title="Erfassung: ${esc(String(s.dauer_s))} s, davon Platzmessung (dbstat) ${esc(String(s.dbstat_s))} s">${zahl(r.tage)} ${r.tage === 1 ? "Tagesstand" : "Tagesstände"} gespeichert</span>
     </div>
-    <section>
-      <h2>Beziehungen der Tabellen</h2>
+    <details class="d-block" data-block="beziehungen" ${dashOffen("beziehungen")}><summary><h2>Beziehungen der Tabellen</h2></summary>
       <p class="d-sub">Drei Zweige teilen sich die Datenbank: der Zustandsverlauf, der Event-Bus und die Statistik. Jeder Zweig hat eine kleine Register-Tabelle links, eine große Faktentabelle in der Mitte und einen Text-Pool rechts, der doppelte Inhalte spart.</p>
       <figure>
         <div class="d-scroll">${dashDiagramm(s)}</div>
@@ -5422,19 +5487,316 @@ async function ladeDash() {
         </div>
         <figcaption>Jede Zeile in <code>states</code> zeigt auf genau eine Entität und einen Attributsatz. Das Attribut-JSON liegt nur einmal in <code>state_attributes</code>, egal wie oft es sich wiederholt. Die Statistik kennt die Entität nur über denselben Namen, nicht über einen Schlüssel.</figcaption>
       </figure>
-    </section>
-    <section>
-      <h2>Wo der Platz liegt</h2>
+    </details>
+    <details class="d-block" data-block="platz" ${dashOffen("platz")}><summary><h2>Wo der Platz liegt</h2></summary>
       <p class="d-sub">Größe je Tabelle, getrennt nach Nutzdaten (kräftig) und zugehörigen Indizes (blass), gemessen mit <code>dbstat</code>. Belegt sind ${gb(belegt)}; der Rest der Datei sind freie Seiten (${gb(frei)}).${v ? ` Veränderung gegenüber dem Stand vom ${dDatum(v.zeit)}.` : ""} Überfahren zeigt die einzelnen Indizes.</p>
       <div class="d-balken">${dashPlatz(s, v)}</div>
       ${dashGroessen(r.zeilengroessen)}
-    </section>
-    <section>
-      <h2>Was in welcher Tabelle steht</h2>
+    </details>
+    <details class="d-block" data-block="tabellen" ${dashOffen("tabellen")}><summary><h2>Was in welcher Tabelle steht</h2></summary>
       <p class="d-sub">Zeilenzahlen und Zeiträume aus der Analyse vom ${dDatum(s.zeit)}.</p>
       <div class="d-karten">${dashKarten(s)}</div>
-    </section>`;
+    </details>`;
 }
+
+// ================================================ Punkt 306: Donut im Reiter Dashboard
+// Zoombarer Donut Integration → Gerät → Entität (Klick zoomt hinein, Mitte/Pfad zurück). Daten: GET api/verursacher/baum (Analyse-Cache),
+// je Vorhaltezeit (Alle/Kurzzeit/Langzeit) und Sicht (Zuwachs je Tag/Bestand). Alles in einer Funktion, damit keine Namen der App überschrieben werden.
+const Donut = (() => {
+  const VZ = { alle: "Alle Daten", kurz: "Kurzzeit (States, 5-Min, Attribute)", lang: "Langzeit (Stundenstatistik)" };
+  const SICHTEN = { z: "Zuwachs je Tag", b: "Bestand" };
+  const MIN_SEG = 0.012;      // Segmente unter 1,2 % des Kreises → „weitere …“ (Klick darauf zoomt hinein)
+  const TOP_ENT = 30;
+  const DAUER = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 480;
+  const NAME_OHNE = k => k === "-" ? "(ohne Integration)" : k;
+  const waehle = (schl, erlaubt, std) => { const v = speicher.lies(schl, std); return erlaubt.includes(v) ? v : std; };
+  let vz = waehle("dbh_dash_vz", ["alle", "kurz", "lang"], "alle"), sicht = waehle("dbh_dash_sicht", ["z", "b"], "z"), pfad = [];
+  let D = null, wurzel = null, fokusKette = [], aktuell = null, geladenFuer = null;
+
+  // ---- Formate ----
+  const fmtZ = n => n >= 1e6 ? (n / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " Mio" : Math.round(n).toLocaleString("de-DE");
+  const fmtB = b => b >= 1e9 ? (b / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " GB"
+    : (b / 1e6).toLocaleString("de-DE", { maximumFractionDigits: b < 1e7 ? 1 : 0 }) + " MB";
+  const fmtP = p => (p * 100).toLocaleString("de-DE", { minimumFractionDigits: p < 0.1 ? 1 : 0, maximumFractionDigits: 1 }) + " %";
+  const einheit = () => sicht === "z" ? "Zeilen/Tag" : "Zeilen";
+  const platz = k => fmtB(sicht === "z" ? k.zb : k.bb) + (sicht === "z" ? "/Tag" : "");
+  const wertTxt = k => fmtZ(k.wert) + " " + einheit();
+  const kurz = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+  const hash = s => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+  // Geräte und Entitäten: Töne der Farbe des Elternknotens (positiv = mit Weiß, negativ = mit Schwarz gemischt); der Ton folgt dem Namen
+  const TON = [0, -26, 24, -12, 38, -38, 12];
+  const ton = (c, id) => { const p = TON[hash(id) % TON.length]; return p === 0 ? c : `color-mix(in srgb, ${c} ${100 - Math.abs(p)}%, ${p > 0 ? "white" : "black"})`; };
+
+  // ---- Baum für die gewählte Vorhaltezeit und Sicht ----
+  function baue() {
+    const w = o => sicht === "z" ? o.z : o.b;
+    const knoten = (o, extra) => ({ wert: w(o), zb: o.zb, bb: o.bb, n: o.n, kinder: [], ...extra });
+    wurzel = knoten(D.gesamt, { id: "root", art: "root", name: "Alle Integrationen", farbe: "var(--dd-grau)" });
+    D.integrationen.filter(i => w(i) > 0).forEach(i => {
+      const fi = D.slots[i.key] ? `var(--dd-s${D.slots[i.key]})` : "var(--dd-grau)";
+      const ni = knoten(i, { id: "i:" + i.key, art: "int", key: i.key, name: NAME_OHNE(i.key), farbe: fi, up: wurzel });
+      i.geraete.filter(g => w(g) > 0).forEach(g => {
+        const id = "d:" + i.key + "/" + g.key, fg = ton(fi, id);
+        const ng = knoten(g, { id, art: "dev", key: g.key, name: g.name, farbe: fg, up: ni });
+        if (g.ent) {
+          const es = g.ent.map(e => ({ id: e[0], wert: sicht === "z" ? e[1] : e[2], zb: e[3], bb: e[4] })).filter(e => e.wert > 0).sort((a, b) => b.wert - a.wert).slice(0, TOP_ENT);
+          es.forEach(e => ng.kinder.push({ id: "e:" + e.id, art: "ent", name: e.id, wert: e.wert, zb: e.zb, bb: e.bb, n: 1, kinder: [], farbe: ton(fg, e.id), up: ng }));
+          const rest = ng.wert - es.reduce((a, e) => a + e.wert, 0);
+          if (rest > 0.5) ng.kinder.push({ id: "r:" + id, art: "rest", name: `weitere Entitäten (${Math.max(1, g.n - es.length)})`, wert: rest, n: Math.max(1, g.n - es.length),
+            zb: Math.max(0, g.zb - es.reduce((a, e) => a + e.zb, 0)), bb: Math.max(0, g.bb - es.reduce((a, e) => a + e.bb, 0)), kinder: [], farbe: "var(--dd-grau)", up: ng });
+        }
+        ni.kinder.push(ng);
+      });
+      ni.kinder.sort((a, b) => b.wert - a.wert);
+      wurzel.kinder.push(ni);
+    });
+    wurzel.kinder.sort((a, b) => b.wert - a.wert);
+  }
+
+  // Sichtbare Kinder eines Knotens: Segmente unter MIN_SEG des Kreises werden zu einer Sammelgruppe, in die man hineinzoomen kann
+  const GRUPPENNAME = { int: "Übrige Integrationen", dev: "weitere Geräte", ent: "weitere Entitäten", rest: "weitere Entitäten" };
+  function sichtbar(knoten, kreis) {
+    const k = knoten.kinder || [];
+    if (!k.length) return [];
+    const gross = k.filter(c => c.wert / kreis >= MIN_SEG), klein = k.filter(c => c.wert / kreis < MIN_SEG);
+    gross.forEach(c => { c.up = knoten; });
+    if (klein.length === 1) { klein[0].up = knoten; gross.push(klein[0]); }
+    else if (klein.length > 1) {
+      const g = { id: "g:" + knoten.id, art: "gruppe", name: `${GRUPPENNAME[klein[0].art]} (${klein.length})`, wert: klein.reduce((a, c) => a + c.wert, 0), zb: klein.reduce((a, c) => a + c.zb, 0),
+        bb: klein.reduce((a, c) => a + c.bb, 0), n: klein.reduce((a, c) => a + c.n, 0), kinder: klein, farbe: "var(--dd-grau)", up: knoten, detail: klein.map(c => c.name).join(", ") };
+      klein.forEach(c => { c.up = g; });
+      gross.push(g);
+    }
+    return gross;
+  }
+  const zoombar = k => k.kinder && k.kinder.length > 0;
+  function kette(k) { const l = []; for (let x = k; x && x.id !== "root"; x = x.up) l.unshift(x); return l; }
+  // Pfad nach einem Wechsel von Vorhaltezeit, Sicht oder Daten neu auflösen; was es nicht mehr gibt, fällt weg
+  function loesePfad(ids) {
+    ids = ids.filter((id, i) => !id.startsWith("g:") || i === ids.length - 1);   // Sammelgruppen sind abgeleitet; nur als letzter Eintrag (man hat in die Gruppe gezoomt) zählen sie
+    let cur = wurzel; const ahn = [wurzel.wert], erg = [];
+    for (const id of ids) {
+      let f = null;
+      for (const kreis of [...ahn].reverse()) {
+        const liste = sichtbar(cur, kreis); f = liste.find(c => c.id === id);
+        if (!f) {   // inzwischen in einer Sammelgruppe (z. B. „Übrige Integrationen“): der Pfad führt dann über die Gruppe
+          const g = liste.find(c => c.art === "gruppe" && c.kinder.some(k => k.id === id));
+          if (g) { erg.push(g); cur = g; ahn.push(g.wert); f = g.kinder.find(k => k.id === id); }
+        }
+        if (f) break;
+      }
+      if (!f) break;
+      erg.push(f); cur = f; ahn.push(f.wert);
+    }
+    return erg;
+  }
+  const fokus = () => fokusKette.length ? fokusKette[fokusKette.length - 1] : wurzel;
+
+  // ---- Geometrie ----
+  const SVGNS = "http://www.w3.org/2000/svg", C = 300, R0 = 105, R1 = 172, R2 = 180, R3 = 268, REND = 252, GAP = 0.004;
+  const pol = (r, a) => [C + r * Math.sin(a), C - r * Math.cos(a)];
+  function bogen(a0, a1, ri, ra) {
+    if (a1 - a0 < 1e-4 || ra - ri < 0.5) return "";
+    const g = Math.min(GAP, (a1 - a0) / 4); a0 += g; a1 -= g;
+    const gr = a1 - a0 > Math.PI ? 1 : 0, [x0, y0] = pol(ra, a0), [x1, y1] = pol(ra, a1), [x2, y2] = pol(ri, a1), [x3, y3] = pol(ri, a0);
+    return `M${x0} ${y0}A${ra} ${ra} 0 ${gr} 1 ${x1} ${y1}L${x2} ${y2}A${ri} ${ri} 0 ${gr} 0 ${x3} ${y3}Z`;
+  }
+  const el = (n, a = {}) => { const e = document.createElementNS(SVGNS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+
+  // Ziele der Ansicht: zwei Ebenen unterhalb des Fokus (Innen- und Außenring); ohne Enkel füllt der Innenring beide Ringe
+  function ziele() {
+    const F = fokus(), z = [];
+    const r1 = sichtbar(F, F.wert), summe1 = r1.reduce((a, c) => a + c.wert, 0) || 1;
+    const kinder2 = r1.map(c => c.art === "gruppe" ? [] : sichtbar(c, F.wert));
+    const hatAussen = kinder2.some(k => k.length);
+    let w = 0;
+    r1.forEach((c, i) => {
+      const a0 = w * 2 * Math.PI, a1 = (w + c.wert / summe1) * 2 * Math.PI; w += c.wert / summe1;
+      z.push({ id: c.id, k: c, a0, a1, ri: R0, ra: hatAussen ? R1 : REND, ring: 1, aussen: hatAussen });
+      const s2 = kinder2[i], sum2 = s2.reduce((a, x) => a + x.wert, 0) || 1; let v = a0;
+      s2.forEach(x => { const b1 = v + (a1 - a0) * x.wert / sum2; z.push({ id: x.id, k: x, a0: v, a1: b1, ri: R2, ra: R3, ring: 2, eltern: c }); v = b1; });
+    });
+    return { F, z, r1, kinder2, hatAussen };
+  }
+
+  // ---- Zeichenfläche und Animation ----
+  let svg, gSeg, gLbl, gMitte, hit, segs = new Map(), anim = null;
+  function geruest() {
+    const chart = $("#ddChart"); chart.replaceChildren();
+    svg = el("svg", { viewBox: "0 0 600 600", role: "img" });
+    gSeg = el("g"); gLbl = el("g"); gMitte = el("g");
+    hit = el("circle", { cx: C, cy: C, r: R0 - 4, fill: "transparent" });
+    hit.onclick = () => { if (pfad.length) zoomZurueck(pfad.length - 1); };
+    svg.append(gSeg, gLbl, hit, gMitte); chart.appendChild(svg);
+    segs = new Map();
+  }
+  const mt = (y, s, size, w, cls) => { const e = el("text", { x: C, y, "text-anchor": "middle" }); e.style.fontSize = size + "px"; e.style.fontWeight = w; if (cls) e.setAttribute("class", cls); e.textContent = s; e.style.pointerEvents = "none"; return e; };
+  const zeigeMitte = (l1, l2, l3, l4, hinweis) => gMitte.replaceChildren(mt(C - 30, l1, 14, 600), mt(C - 4, l2, 21, 600), mt(C + 16, l3, 12, 400, "dd-mt"), mt(C + 32, l4 || "", 12, 400, "dd-mt"), mt(C + 54, hinweis || "", 11, 400, "dd-mt"));
+  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const mix = (a, b, t) => a + (b - a) * t;
+  function zeichneSeg(s) {
+    const c = s.cur;
+    s.path.setAttribute("d", bogen(c.a0, c.a1, c.ri, c.ra));
+    s.path.style.fillOpacity = c.op; s.path.style.strokeOpacity = c.op;
+    const am = (c.a0 + c.a1) / 2, rm = (c.ri + c.ra) / 2, [tx, ty] = pol(rm, am);
+    const plakat = (c.a1 - c.a0) * rm, dick = c.ra - c.ri, wagrecht = s.ziel.ring === 1 && s.ziel.aussen;
+    const ok = wagrecht ? plakat > 30 : (plakat > 14 && dick > 40);
+    s.lbl.style.opacity = ok ? Math.max(0, c.op * 2 - 1) : 0;
+    if (wagrecht) s.lbl.setAttribute("transform", `translate(${tx} ${ty})`);
+    else { let rot = am * 180 / Math.PI - 90; if (am > Math.PI) rot += 180; s.lbl.setAttribute("transform", `translate(${tx} ${ty}) rotate(${rot})`); }
+  }
+  // gemeinsamer Anfang der Entitätsnamen eines Rings (bis zum letzten „_“ oder „.“), damit im Segment der unterscheidende Teil steht
+  const gemeinsam = namen => { if (namen.length < 2) return 0; let p = namen[0]; for (const n of namen) { while (!n.startsWith(p)) p = p.slice(0, -1); } return Math.max(p.lastIndexOf("_"), p.lastIndexOf(".")) + 1; };
+  function uebergang(neu) {
+    const ids = new Set(neu.z.map(x => x.id));
+    const pre = [0, gemeinsam(neu.z.filter(t => t.k.art === "ent" && t.ring === 1).map(t => t.k.name)), gemeinsam(neu.z.filter(t => t.k.art === "ent" && t.ring === 2).map(t => t.k.name))];
+    const beschrifte = t => t.k.art === "ent" ? (t.k.name.slice(pre[t.ring]) || t.k.name) : t.k.name;
+    segs.forEach((s, id) => { if (!ids.has(id)) { s.von = { ...s.cur }; s.nach = { ...s.cur, op: 0 }; s.weg = true; } });
+    neu.z.forEach(t => {
+      let s = segs.get(t.id);
+      if (!s) {
+        const p = el("path", { class: "dd-seg" }); gSeg.appendChild(p);
+        const l = el("text", { class: "dd-lbl", "text-anchor": "middle", "dominant-baseline": "middle" }); gLbl.appendChild(l);
+        s = { path: p, lbl: l, cur: null }; segs.set(t.id, s);
+        // neu: wächst aus dem Elternsegment nach außen, sonst blendet es an Ort und Stelle ein
+        const par = t.k.up && segs.get(t.k.up.id);
+        s.cur = par && par.cur ? { a0: par.cur.a0, a1: par.cur.a1, ri: par.cur.ra, ra: par.cur.ra, op: 0 } : { a0: t.a0, a1: t.a1, ri: t.ri, ra: t.ra, op: 0 };
+      }
+      s.k = t.k; s.ziel = t; s.weg = false;
+      s.path.style.fill = t.k.farbe;
+      s.path.classList.toggle("dd-zoomb", zoombar(t.k));
+      s.von = { ...s.cur }; s.nach = { a0: t.a0, a1: t.a1, ri: t.ri, ra: t.ra, op: 1 };
+      const txt = t.ring === 1 && t.aussen ? fmtP(t.k.wert / neu.F.wert) : beschrifte(t), dick = t.ra - t.ri;
+      s.lbl.textContent = kurz(txt, t.ring === 1 && t.aussen ? 6 : Math.max(8, Math.floor(dick / 6.4)));
+      s.lbl.style.fontWeight = t.ring === 1 ? 600 : 400;
+      s.path.innerHTML = `<title>${esc(t.k.name)}${t.k.detail ? ": " + esc(kurz(t.k.detail, 400)) : ""} – ${wertTxt(t.k)} (${fmtP(t.k.wert / wurzel.wert)} gesamt, ${fmtP(t.k.wert / neu.F.wert)} von ${esc(neu.F.name)}), ${platz(t.k)}${zoombar(t.k) ? " · Klick: hineinzoomen" : ""}</title>`;
+      s.path.onclick = zoombar(t.k) ? () => zoomZu(t.k) : null;
+      s.path.onmouseenter = () => hover(t.k, t); s.path.onmouseleave = () => hover(null);
+    });
+    if (anim) cancelAnimationFrame(anim);
+    const t0 = performance.now();
+    const schritt = now => {
+      const t = DAUER ? Math.min(1, (now - t0) / DAUER) : 1, e = ease(t);
+      segs.forEach(s => {
+        if (!s.von) return;
+        s.cur = { a0: mix(s.von.a0, s.nach.a0, e), a1: mix(s.von.a1, s.nach.a1, e), ri: mix(s.von.ri, s.nach.ri, e), ra: mix(s.von.ra, s.nach.ra, e), op: mix(s.von.op, s.nach.op, e) };
+        zeichneSeg(s);
+      });
+      if (t < 1) anim = requestAnimationFrame(schritt);
+      else { anim = null; segs.forEach((s, id) => { if (s.weg) { s.path.remove(); s.lbl.remove(); segs.delete(id); } }); }
+    };
+    anim = requestAnimationFrame(schritt);
+  }
+
+  // ---- Hervorheben (Mauszeiger) ----
+  function hover(k, t) {
+    const F = aktuell.F;
+    if (!k) { segs.forEach(s => s.path.classList.remove("dim")); document.querySelectorAll("#ddLegende .dd-hl").forEach(e => e.classList.remove("dd-hl")); standard(); return; }
+    const behalten = new Set([k.id]); if (t && t.eltern) behalten.add(t.eltern.id);
+    aktuell.z.forEach(x => { if (x.eltern && x.eltern.id === k.id) behalten.add(x.id); });
+    segs.forEach((s, id) => s.path.classList.toggle("dim", !behalten.has(id) && !s.weg));
+    document.querySelectorAll("#ddLegende [data-k]").forEach(e => e.classList.toggle("dd-hl", e.dataset.k === k.id));
+    zeigeMitte(kurz(k.name, 28), fmtZ(k.wert), einheit() + " · " + platz(k), fmtP(k.wert / wurzel.wert) + " gesamt · " + fmtP(k.wert / F.wert) + " von " + kurz(F.name, 16), zoombar(k) ? "Klick: hineinzoomen" : "");
+  }
+  function standard() {
+    const F = fokus();
+    zeigeMitte(kurz(F.name, 28), fmtZ(F.wert), einheit() + " · " + SICHTEN[sicht], platz(F) + " · " + F.n.toLocaleString("de-DE") + (F.n === 1 ? " Entität" : " Entitäten"),
+      pfad.length ? "↑ Klick: eine Ebene zurück" : "Segment anklicken zum Hineinzoomen");
+  }
+
+  // ---- Navigation ----
+  function zoomZu(k) { pfad = kette(k).map(x => x.id); render(); }
+  function zoomZurueck(n) { pfad = pfad.slice(0, n); render(); }
+
+  // ---- Pfad oben und Legende ----
+  function zeichnePfad() {
+    const nav = $("#ddPfad"); nav.replaceChildren();
+    const teile = [wurzel, ...fokusKette];
+    teile.forEach((k, i) => {
+      if (i) { const s = document.createElement("span"); s.className = "dd-tr"; s.textContent = "›"; nav.appendChild(s); }
+      const b = document.createElement("button"); b.textContent = kurz(k.name, 26); b.title = k.name + (k.art === "root" ? "" : " – " + wertTxt(k));
+      if (i === teile.length - 1) b.setAttribute("aria-current", "true"); else b.onclick = () => zoomZurueck(i);
+      nav.appendChild(b);
+    });
+  }
+  function zeichneLegende(neu) {
+    const L = $("#ddLegende"); L.replaceChildren();
+    const F = neu.F;
+    const zeile = (k, anteilVon) => {
+      const r = document.createElement("div"); r.className = "dd-row" + (zoombar(k) ? " dd-zoom" : ""); r.dataset.k = k.id; if (zoombar(k)) { r.tabIndex = 0; r.setAttribute("role", "button"); }
+      r.innerHTML = `<span class="dd-sw" style="background:${k.farbe}"></span><span class="dd-n" title="${esc(k.detail || k.name)}">${esc(k.name)}</span><span class="dd-v">${fmtZ(k.wert)} · ${fmtP(k.wert / wurzel.wert)} · ${fmtP(k.wert / anteilVon.wert)} der Gruppe</span>`;
+      if (zoombar(k)) { r.onclick = () => zoomZu(k); r.onkeydown = e => { if (e.key === "Enter") zoomZu(k); }; }
+      r.onmouseenter = () => hover(k, neu.z.find(x => x.id === k.id)); r.onmouseleave = () => hover(null);
+      return r;
+    };
+    if (!neu.hatAussen) {   // Blattebene: eine Liste
+      const box = document.createElement("div"); box.className = "dd-box"; box.style.setProperty("--c", F.farbe);
+      box.innerHTML = `<h3><span>${esc(F.name)}</span><small>${wertTxt(F)} · ${fmtP(F.wert / wurzel.wert)}<br>${platz(F)} · ${F.n.toLocaleString("de-DE")} Entitäten</small></h3>`;
+      neu.r1.forEach(k => box.appendChild(zeile(k, F)));
+      L.appendChild(box);
+    } else neu.r1.forEach((c, i) => {
+      const box = document.createElement("div"); box.className = "dd-box"; box.style.setProperty("--c", c.farbe);
+      const h = document.createElement("h3"); h.dataset.k = c.id; if (zoombar(c)) h.className = "dd-zoom";
+      h.innerHTML = `<span>${esc(c.name)}</span><small>${wertTxt(c)} · ${fmtP(c.wert / wurzel.wert)}<br>${platz(c)} · ${c.n.toLocaleString("de-DE")} Entitäten</small>`;
+      if (zoombar(c)) h.onclick = () => zoomZu(c);
+      h.onmouseenter = () => hover(c, neu.z.find(x => x.id === c.id)); h.onmouseleave = () => hover(null);
+      box.appendChild(h);
+      neu.kinder2[i].forEach(k => box.appendChild(zeile(k, c)));
+      L.appendChild(box);
+    });
+    const h = document.createElement("div"); h.className = "dd-hint";
+    h.textContent = "Klick auf ein Segment (oder einen Eintrag rechts) zoomt hinein: Integration → Gerät → Entität; Klick in die Mitte oder auf den Pfad oben geht zurück. "
+      + "Nur Entitätsdaten (States mit Attributen sowie 5-Min- und Stundenstatistik), keine Events. Zuwachs = Ø der letzten 7 vollen Kalendertage; in der Kurzzeit zählen 288 Zeilen je Tag 5-Min-Statistik je aktiver Entität mit Statistik, in der Langzeit 24 Stundenzeilen. "
+      + "Der Platz ist aus gemessenen Zeilengrößen geschätzt. Von jedem Gerät ab 1 % seiner Integration sind die größten 30 Entitäten nach Zuwachs und nach Bestand enthalten, der Rest steht als „weitere Entitäten“. "
+      + "Die acht größten Integrationen behalten in allen Ansichten ihre Farbe; Segmente unter 1,2 % des Kreises sind zu grauen Sammelsegmenten zusammengefasst, in die man hineinzoomen kann.";
+    L.appendChild(h);
+  }
+
+  // ---- Gesamtablauf ----
+  function render() {
+    if (!D) return;
+    fokusKette = loesePfad(pfad); pfad = fokusKette.map(x => x.id);
+    aktuell = ziele();
+    svg.setAttribute("aria-label", `Donut: ${SICHTEN[sicht]} (${VZ[vz]}), ${aktuell.F.name}`);
+    hit.style.cursor = pfad.length ? "pointer" : "default"; hit.setAttribute("title", pfad.length ? "Eine Ebene zurück" : "");
+    zeichnePfad(); zeichneLegende(aktuell); uebergang(aktuell); standard();
+    $("#ddAnalyse").hidden = !fokusKette.some(k => k.art === "int");
+  }
+  function schalter(ziel, werte, aktuellWert, setze, schl) {
+    const box = $(ziel); box.replaceChildren();
+    const keys = Object.keys(werte);
+    keys.forEach(k => {
+      const b = document.createElement("button"); b.className = "dd-sg"; b.textContent = werte[k].replace(/ \(.*\)/, ""); b.title = werte[k]; b.setAttribute("aria-pressed", String(k === aktuellWert()));
+      b.onclick = async () => { setze(k); speicher.schreib(schl, k); box.querySelectorAll("button").forEach((c, i) => c.setAttribute("aria-pressed", String(keys[i] === k))); if (schl === "dbh_dash_sicht" && D) { baue(); render(); } else await laden(true); };
+      box.appendChild(b); box.appendChild(document.createTextNode(" "));
+    });
+  }
+  async function laden(erzwingen) {
+    const ziel = $("#ddChart");
+    let neu;
+    try { neu = await api("verursacher/baum?daten=" + vz + "&" + par()); }
+    catch (e) { ziel.innerHTML = `<p class="d-sub">${esc(e.message)}</p>`; $("#ddLegende").replaceChildren(); $("#ddPfad").replaceChildren(); D = null; svg = null; return; }
+    if (!erzwingen && D && svg && D.stand === neu.stand && D.daten === neu.daten && geladenFuer === par().toString()) return;   // nichts Neues: Zoom und Animation nicht stören
+    geladenFuer = par().toString();
+    if (!svg || !svg.isConnected) geruest();
+    D = neu; baue(); render();
+    $("#ddStand").textContent = "Stand der Analyse " + zeit(D.stand);
+  }
+  // Springt mit dem aktuellen Pfad in den Reiter Analyse (Vorhaltezeit, Sicht, Integration und Gerät übernehmen)
+  function inAnalyse() {
+    const i = fokusKette.find(k => k.art === "int"), g = fokusKette.find(k => k.art === "dev");
+    A.vz = vz; A.mass = sicht === "z" ? "zuwachs" : "bestand"; A.plattform = i ? i.key : null; A.geraet = i && g ? g.key : null;
+    speicher.schreib("dbh_ana_daten", A.vz); speicher.schreib("dbh_ana_mass", A.mass);
+    document.querySelector('#tabs button[data-tab="ana"]').click();
+  }
+  function start() {
+    schalter("#ddVz", VZ, () => vz, k => { vz = k; }, "dbh_dash_vz");
+    schalter("#ddSicht", SICHTEN, () => sicht, k => { sicht = k; }, "dbh_dash_sicht");
+    $("#ddAnalyse").onclick = inAnalyse;
+  }
+  start();
+  return { laden: () => laden(false) };
+})();
 
 // ================================================ Punkt 305: Reiter Analyse
 // Integration → Gerät → Entität nach Zuwachs je Tag (rows_24h, Standard) oder Bestand; Pareto-Kurve über alle Entitäten und Kohorten nach
@@ -5565,10 +5927,37 @@ function anaTabelle(d) {
     : `<tr data-k="${esc(k.schluessel)}" title="Klick: ${d.ebene === "plattform" ? "Geräte dieser Integration" : "Entitäten dieses Geräts"} anzeigen"><td>${esc(k.name)} <span class="ana-ab" aria-hidden="true">↓</span></td><td>${zahl(k.entitaeten)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${kk ? erstTxt(k, "erst_k", "juengst_k", "unbekannt_k") : erstTxt(k)}</td><td>${zahl(k.geschuetzt)} <span class="fein">von ${zahl(k.entitaeten)}</span></td></tr>`).join("");
   const gcls = (i, g) => `gr gr-ana${i > 0 && sp[i - 1][2] !== g ? " gstart" : ""}`;
   const gruppenzeile = GRUPPEN.map((g, gi) => { const n = sp.filter(s => s[2] === gi).length, i0 = sp.findIndex(s => s[2] === gi); return `<th class="gruppe gr gr-ana${i0 > 0 ? " gstart" : ""}" colspan="${n}">${esc(g)}</th>`; }).join("");
-  const kopf = sp.map(([h, k, g], i) => `<th class="${k === "name" ? "" : "n "}${gcls(i, g)}"${k ? ` data-sort="${k}"` : ""} title="${esc(h.replace(/ (.*)$/, "") + (tips[k] ? ": " + tips[k] : "") + (k ? SORT_TIP : ""))}">${kopfZweizeilig(h).replace("<span class=\"pfeil\"></span>", `<span class="pfeil">${k ? pfeilText(A.sort, k) : ""}</span>`)}</th>`).join("");
-  return `<div class="tabelle" style="max-height:none"><table class="ana-t gruppiert"><thead><tr class="gruppenzeile">${gruppenzeile}</tr><tr class="titelzeile">${kopf}</tr></thead><tbody>${zeilen || `<tr><td colspan="${sp.length}">Keine Entitäten in dieser Auswahl.</td></tr>`}</tbody></table></div>` +
+  const kopf = sp.map(([h, k, g], i) => `<th class="${k === "name" ? "" : "n "}${gcls(i, g)}"${k ? ` data-sort="${k}"` : ""} title="${esc(h.replace(/ (.*)$/, "") + (tips[k] ? ": " + tips[k] : "") + (k ? SORT_TIP : ""))}">${kopfZweizeilig(h).replace("<span class=\"pfeil\"></span>", `<span class="pfeil">${k ? pfeilText(A.sort, k) : ""}</span>`)}${griff(k)}</th>`).join("");
+  return `<div class="tabelle" style="max-height:none"><table class="ana-t gruppiert fest"><colgroup>${sp.map(([, k]) => `<col data-k="${k}">`).join("")}</colgroup><thead><tr class="gruppenzeile">${gruppenzeile}</tr><tr class="titelzeile">${kopf}</tr></thead><tbody>${zeilen || `<tr><td colspan="${sp.length}">Keine Entitäten in dieser Auswahl.</td></tr>`}</tbody></table></div>` +
     (d.knoten_gesamt > d.knoten.length ? `<div class="ana-mehr">Gezeigt werden die ${zahl(d.knoten.length)} größten von ${zahl(d.knoten_gesamt)} Entitäten; alle über „In Entitäten öffnen“.</div>` : "");
 }
+// Spaltenbreiten (Punkt 306): Griff am Spaltenkopf ziehen, Doppelklick = Standardbreite, je Ebene im Browser gemerkt, Knopf „Spaltenbreiten zurücksetzen“
+const ANA_BREITE_STD = { name: 260, n2: 100, haupt: 150, anteil: 170, zweit: 130, plz: 140, plb: 120, erst: 210, last: 130 };
+A.breiten = (() => { try { return JSON.parse(speicher.lies("dbh_breiten_ana", "{}")) || {}; } catch { return {}; } })();
+const anaBreite = (eb, k) => A.breiten[eb]?.[k] || (k === "name" && eb === "entitaet" ? 480 : ANA_BREITE_STD[k] || 120);
+function anaBreitenSetzen() {
+  const t = $("#anaTab table"); if (!t || !A.daten) return;
+  let summe = 0;
+  t.querySelectorAll("colgroup col").forEach(c => { const b = anaBreite(A.daten.ebene, c.dataset.k); c.style.width = b + "px"; summe += b; });
+  t.style.width = summe + "px";
+}
+const anaBreitenMerken = () => speicher.schreib("dbh_breiten_ana", JSON.stringify(A.breiten));
+$("#anaInhalt").addEventListener("pointerdown", ev => {
+  const g = ev.target.closest(".griff"); if (!g || !A.daten) return;
+  ev.preventDefault(); ev.stopPropagation();
+  const eb = A.daten.ebene, k = g.dataset.k, x0 = ev.clientX, b0 = anaBreite(eb, k);
+  g.classList.add("aktiv"); g.setPointerCapture(ev.pointerId);
+  const zieh = e => { (A.breiten[eb] = A.breiten[eb] || {})[k] = Math.max(48, Math.round(b0 + e.clientX - x0)); anaBreitenSetzen(); };
+  const ende = () => { g.classList.remove("aktiv"); g.removeEventListener("pointermove", zieh); anaBreitenMerken(); A.gezogen = Date.now(); };
+  g.addEventListener("pointermove", zieh);
+  g.addEventListener("pointerup", ende, { once: true });
+  g.addEventListener("pointercancel", ende, { once: true });
+});
+$("#anaInhalt").addEventListener("dblclick", ev => {
+  const g = ev.target.closest(".griff"); if (!g || !A.daten) return;
+  if (A.breiten[A.daten.ebene]) delete A.breiten[A.daten.ebene][g.dataset.k];
+  anaBreitenSetzen(); anaBreitenMerken();
+});
 async function ladeAna() {
   const ziel = $("#anaInhalt");
   let d;
@@ -5600,7 +5989,7 @@ async function ladeAna() {
         <option value="datum">Datum …</option><option value="unbekannt">ohne Statistik (unbekannt)</option></select></label>
       ${d.statistik_ab ? `<span class="sub" title="Die Langzeitstatistik reicht in dieser Datenbank so weit zurück; davor gibt es kein Erstauftreten">Statistik seit ${anaTs(d.statistik_ab)}</span>` : ""}
       ${chips.map(c => `<span class="ana-chip">${esc(c)}<button data-koh-weg aria-label="Filter aufheben" title="Filter aufheben">✕</button></span>`).join("")}
-      <span style="flex:1"></span><span class="sub">Stand der Analyse ${zeit(d.stand)}</span>
+      <span style="flex:1"></span><button id="anaBreitenReset" title="alle Spaltenbreiten der Tabelle auf Standard; einzelne Spalte: Doppelklick auf den Griff">Spaltenbreiten zurücksetzen</button><span class="sub">Stand der Analyse ${zeit(d.stand)}</span>
     </div>
     <div class="ana-kopf">
       <span><b>${zahl(g.entitaeten)}</b> Entitäten</span>
@@ -5627,6 +6016,7 @@ async function ladeAna() {
     </div>`;
   $("#anaErst").value = anaErstWert();
   $("#anaErst").classList.toggle("aktiv", anaErstWert() !== "");
+  anaBreitenSetzen();
 }
 $("#anaInhalt").addEventListener("change", ev => {
   const s = ev.target.closest("#anaErst"); if (!s) return;
@@ -5649,13 +6039,15 @@ $("#anaInhalt").addEventListener("click", async ev => {
   const t = ev.target;
   const zu = t.closest("[data-zu]");
   if (zu) return document.querySelector(`#tabs button[data-tab="${zu.dataset.zu}"]`).click();
+  if (t.closest(".griff") || Date.now() - (A.gezogen || 0) < 300) return;   // Ziehen am Griff ist kein Sortierklick
+  if (t.closest("#anaBreitenReset")) { A.breiten = {}; anaBreitenMerken(); return anaBreitenSetzen(); }
   const th = t.closest("th[data-sort]");
   if (th && A.daten) {
     const k = th.dataset.sort, text = k === "name" || (A.daten.ebene === "entitaet" && ["n2", "last"].includes(k));
     A.sort = sortKlick(A.sort, k, ev.shiftKey, !text);
     if (!A.sort.length) A.sort = [...ANA_SORT_STD];
     speicher.schreib("dbh_sort_ana", JSON.stringify(A.sort));
-    $("#anaTab").innerHTML = anaTabelle(A.daten);
+    $("#anaTab").innerHTML = anaTabelle(A.daten); anaBreitenSetzen();
     return;
   }
   const sv = t.closest("[data-vz]");

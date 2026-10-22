@@ -463,6 +463,15 @@ async def verursacher_lesen(request):
         return web.json_response({"fehler": "von/bis als JJJJ-MM-TT angeben"}, status=400)
 
 
+async def verursacher_baum(request):
+    """Punkt 306: Baum Integration → Gerät → Entität für den zoombaren Donut im Reiter Dashboard (je Vorhaltezeit)."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response(await asyncio.to_thread(verursacher.baum, r, request.query))
+
+
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
               "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
@@ -1322,6 +1331,7 @@ def erstelle_app():
         web.get("/api/plattformen", plattformen),
         web.get("/api/pareto", pareto),
         web.get("/api/verursacher", verursacher_lesen),
+        web.get("/api/verursacher/baum", verursacher_baum),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),

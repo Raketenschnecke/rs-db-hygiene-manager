@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b33 (Beta)
+- **Dashboard: Donut als Hauptansicht (Punkt 306):** Oben im Reiter Dashboard steht ein zoombarer Donut über Integration → Gerät → Entität. Klick auf ein Segment oder einen Legendeneintrag zoomt hinein, die Mitte und der Pfad darüber gehen eine Ebene zurück. Vorhaltezeit (Alle, Kurzzeit, Langzeit) und Sicht (Zuwachs, Bestand) lassen sich umschalten, der Pfad bleibt dabei erhalten. Der Knopf „Im Reiter Analyse öffnen“ übernimmt Vorhaltezeit, Sicht, Integration und Gerät. Die Farben der größten Integrationen bleiben in allen Ansichten gleich.
+- **Bisherige Dashboard-Inhalte einklappbar:** Beziehungen der Tabellen, Wo der Platz liegt und Was in welcher Tabelle steht sind jetzt Blöcke unter dem Donut, standardmäßig zu; der Browser merkt sich die geöffneten.
+- **Analyse: Spaltenbreiten einstellbar:** Griff am Spaltenkopf ziehen, Doppelklick stellt die Standardbreite wieder her, „Spaltenbreiten zurücksetzen“ setzt alle zurück. Die Breiten werden je Ebene im Browser gemerkt.
+- Neue Schnittstelle `GET /api/verursacher/baum` (Baum aus dem Analyse-Cache). Die Integration ändert sich nicht.
+
 ## 0.5.6b32 (Beta)
 - **Neuer Reiter „Analyse“ (Punkt 305):** Zeigt, wer die Datenmenge treibt – nach Integration → Gerät → Entität (Klick auf eine Zeile führt eine Ebene tiefer, Pfad und aktive Filter als Chips über der Tabelle). Nur Entitätsdaten: States mit Attributen sowie 5-Min- und Stundenstatistik; Events, Statistik ohne Entität und die Verwaltungstabellen gehören nicht dazu. Der Reiter steht zwischen Dashboard und Entitäten und trägt das Rot der Marke (`--zf-ana`), damit er sich von Istzustand, Löschmenge und Prognose abhebt.
 - **Sicht und Vorhaltezeit:** „Sicht“ schaltet zwischen Zuwachs je Tag (Standard, Ø der letzten 7 vollen Kalendertage) und Bestand. „Vorhaltezeit“ wählt Alle, Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik); Zuwachs, Bestand, geschätzter Platz und Erstauftreten folgen der Auswahl. In der Langzeit schreibt jede aktive Entität mit Statistik gleich viel, die Kurve ist dort flach.

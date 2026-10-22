@@ -231,3 +231,63 @@ def baue(r, q):
             "filter": {"von": q.get("von") or None, "bis": q.get("bis") or None, "unbekannt": nur_unbekannt},
             "statistik_ab": min((e["lts_first_ts"] for e, _w in alle if e.get("lts_first_ts")), default=None),
             "zeilengroessen": r["stand"].get("zeilengroessen")}
+
+
+TOP_ENTITAETEN = 30      # je Gerät und Maß die größten Entitäten für den Donut
+MIN_GERAET = 0.01        # Geräte unter 1 % ihrer Integration (in Zuwachs und Bestand) bekommen keine Entitätenliste
+FARB_SLOTS = 8           # so viele Integrationen behalten in allen Ansichten ihre Farbe
+
+
+def _farben(r):
+    """Fester Farbplatz (1–8) der Integrationen mit dem größten Anteil in irgendeiner Vorhaltezeit und Sicht – damit eine Integration beim
+    Wechsel der Ansicht ihre Farbe behält."""
+    score = {}
+    for d in SICHTEN:
+        summen, gesamt = {}, {"z": 0, "b": 0}
+        for e in r["entitaeten"]:
+            if not _in_sicht(e, d):
+                continue
+            w = werte(e, d)
+            s = summen.setdefault(e.get("plattform") or OHNE, {"z": 0, "b": 0})
+            for m in ("z", "b"):
+                s[m] += w[m]
+                gesamt[m] += w[m]
+        for k, s in summen.items():
+            for m in ("z", "b"):
+                if gesamt[m]:
+                    score[k] = max(score.get(k, 0), s[m] / gesamt[m])
+    return {k: i + 1 for i, k in enumerate(sorted(score, key=lambda k: -score[k])[:FARB_SLOTS])}
+
+
+def baum(r, q):
+    """Antwort für /api/verursacher/baum: Integration → Gerät → Entität für den Donut im Dashboard, für die Vorhaltezeit daten=alle|kurz|lang.
+    Je Gerät mit mindestens 1 % seiner Integration die größten 30 Entitäten nach Zuwachs und nach Bestand (Vereinigung)."""
+    daten = q.get("daten") if q.get("daten") in SICHTEN else "alle"
+    leer = lambda: {"n": 0, "z": 0, "b": 0, "zb": 0, "bb": 0}
+    plus = lambda a, w: a.update(n=a["n"] + 1, z=a["z"] + w["z"], b=a["b"] + w["b"], zb=a["zb"] + w["zb"], bb=a["bb"] + w["bb"])
+    gesamt, ints = leer(), {}
+    for e in r["entitaeten"]:
+        if not _in_sicht(e, daten):
+            continue
+        w = werte(e, daten)
+        plus(gesamt, w)
+        i = ints.setdefault(e.get("plattform") or OHNE, {**leer(), "g": {}})
+        plus(i, w)
+        g = i["g"].setdefault(e.get("device_id") or OHNE, {**leer(), "name": None, "e": []})
+        plus(g, w)
+        if not g["name"] and e.get("herkunft_art") == "geraet" and e.get("herkunft"):
+            g["name"] = e["herkunft"]
+        if w["z"] or w["b"]:
+            g["e"].append([e["entity_id"], w["z"], w["b"], round(w["zb"]), round(w["bb"])])
+    rund = lambda a: {k: (round(v) if k in ("zb", "bb") else v) for k, v in a.items() if k in ("n", "z", "b", "zb", "bb")}
+    aus = []
+    for ik, i in ints.items():
+        geraete = []
+        for gk, g in i["g"].items():
+            x = {"key": gk, "name": g["name"] or ("(ohne Gerät)" if gk == OHNE else gk[:8]), **rund(g)}
+            if (i["z"] and g["z"] / i["z"] >= MIN_GERAET) or (i["b"] and g["b"] / i["b"] >= MIN_GERAET):
+                top = {e[0]: e for e in sorted(g["e"], key=lambda e: -e[1])[:TOP_ENTITAETEN] + sorted(g["e"], key=lambda e: -e[2])[:TOP_ENTITAETEN]}
+                x["ent"] = list(top.values())
+            geraete.append(x)
+        aus.append({"key": ik, "name": ik, **rund(i), "geraete": geraete})
+    return {"stand": r["stand"]["analyse_zeit"], "daten": daten, "gesamt": rund(gesamt), "slots": _farben(r), "integrationen": aus, "top": TOP_ENTITAETEN}
