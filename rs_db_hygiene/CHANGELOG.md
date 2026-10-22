@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b35 (Beta)
+- **Dashboard: neuer Unterreiter „Entwicklung“ (Punkt 308):** Zuwachs im Zeitverlauf als gestapelte Balken, per Klick hineinzoomen: Jahr → Monat → Woche (mindestens 12 Wochen) → Tag. Vor/zurück-Knöpfe verschieben den gezeigten Zeitraum. Darstellung nach Integration (folgt der Auswahl: Gerät, Entität) oder nach DB-Tabelle; Sicht Zeilen oder Platz (geschätzt); Vorhaltezeit Alle, Kurzzeit, Langzeit.
+- **Aufschlüsselung und Filter:** Die Liste unter dem Diagramm zeigt, wer den gezeigten Zeitraum (oder den gewählten Tag) treibt; ein Klick darauf filtert die Balken. ▲ markiert auffällige Tage (über dem 2,5-Fachen des Tagesmedians), blasse Balken sind nicht ganz erfasste Zeiträume, Wochenenden sind hinterlegt.
+- **Tooltips im Diagramm** im Design der eigenen Tooltip-Anzeige, mit Farbmarke je Serie.
+- **Dashboard:** Überschriften der Unterreiter um etwa 30 % größer; „Stand der Analyse“ neben den Überschriften und der Untertext bei „Was in welcher Tabelle steht“ entfallen (stehen schon im Kopf).
+- Neue Datei `verlauf.py`, neue Schnittstelle `GET /api/verlauf` (rechnet nur auf der Zuwachs-Statistik und dem Analyse-Cache). Die Integration ändert sich nicht.
+
 ## 0.5.6b34 (Beta)
 - **Dashboard in Unterreitern (Punkt 307):** Datenmenge (Donut), Beziehungen, Wo der Platz liegt und Was in welcher Tabelle steht sind eigene Unterreiter, die die Höhe bis zum Fensterrand ohne Scrollbalken füllen (Diagramme skalieren, Texte werden bei Bedarf verkleinert). Der Browser merkt sich den gewählten Unterreiter. Die Legende des Donuts steht in Spalten, ihr Erklärtext liegt hinter dem ⓘ; die Statuszeile ist gekürzt.
 - **Dezentere aktive Knöpfe:** im Dashboard (Unterreiter, Vorhaltezeit, Sicht) und im Reiter Analyse (abgetönte Fläche statt voller Füllung).
