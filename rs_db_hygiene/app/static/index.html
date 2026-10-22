@@ -573,9 +573,9 @@ table.gruppiert thead tr.gruppenzeile th.gruppe.gruppe { white-space: nowrap; ov
 table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: visible; text-overflow: clip; }
 /* Punkt 305: Reiter Analyse (Integration → Gerät → Entität, Pareto, Erstauftreten) */
 .ana { --ana: var(--zf-ana); --ana-fg: var(--zf-ana-fg); display: flex; flex-direction: column; gap: 18px; }
-.ana button.primaer { background: var(--ana); border-color: var(--ana); color: #fff; }
+.ana button.primaer { background: color-mix(in srgb, var(--ana) 22%, var(--panel)); border-color: var(--ana); color: var(--ana-fg); font-weight: 600; }
 .ana h2 { font-size: 15px; margin: 0 0 6px; }
-.ana-leiste { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.ana-leiste { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; position: sticky; top: calc(var(--kleb-oben-h, 10px) - 10px); z-index: 5; background: var(--bg); padding: 10px 0 8px; margin: -10px 0 -10px; }   /* Punkt 307: bleibt beim Scrollen unter den Reitern stehen */
 .ana-leiste .sub { margin: 0; }
 .ana-kopf { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 14px; border: 1px solid var(--line); border-left: 4px solid var(--ana); border-radius: 10px; background: var(--panel); }
 .ana-chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 4px 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ana) 18%, transparent); border: 1px solid color-mix(in srgb, var(--ana) 45%, transparent); color: var(--ana-fg); font-size: 12px; }
@@ -632,7 +632,7 @@ table.ana-t .fein { color: var(--muted); font-size: 11px; }
 .dd-steuer { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin: 8px 0 12px; }
 .dd-steuer .gr { display: flex; align-items: center; gap: 6px; }
 .dd-steuer .gr > span { color: var(--muted); font-size: 13px; }
-button.dd-sg[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+button.dd-sg[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 600; }
 .dd-haupt { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
 .dd-links { flex: 0 0 auto; width: min(640px, 100%); }
 #ddPfad { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; min-height: 34px; margin-bottom: 6px; }
@@ -642,14 +642,14 @@ button.dd-sg[aria-pressed="true"] { background: var(--text); color: var(--bg); b
 #ddChart svg { width: 100%; height: auto; display: block; }
 #ddLegende { flex: 1 1 380px; min-width: 300px; max-height: 780px; overflow: auto; padding-right: 4px; }
 .dd-box { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px; margin-bottom: 10px; padding: 8px 12px; }
-.dd-box h3 { margin: 0; font: 600 14px var(--mono); display: flex; justify-content: space-between; gap: 8px; }
-.dd-box h3 small { color: var(--muted); font: 12px system-ui, sans-serif; font-weight: 400; text-align: right; }
+.dd-box h3 { margin: 0; font: 600 1.08em var(--mono); display: flex; justify-content: space-between; gap: 8px; }
+.dd-box h3 small { color: var(--muted); font: .92em system-ui, sans-serif; font-weight: 400; text-align: right; }
 .dd-zoom { cursor: pointer; }
-.dd-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 13px; }
+.dd-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 1em; }
 .dd-row.dd-hl, .dd-box h3.dd-hl { background: var(--dd-hl); }
 .dd-sw { width: 11px; height: 11px; border-radius: 2px; flex: none; }
-.dd-n { flex: 1; font-family: var(--mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dd-v { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; }
+.dd-n { flex: 1; font-family: var(--mono); font-size: .92em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-v { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: .92em; }
 .dd-hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
 path.dd-seg { stroke: var(--bg); stroke-width: 1.5; cursor: default; transition: opacity .12s; }
 path.dd-seg.dd-zoomb { cursor: pointer; }
@@ -657,14 +657,47 @@ path.dd-seg.dim { opacity: .28; }
 #ddChart text { fill: var(--text); font-family: system-ui, sans-serif; }
 #ddChart .dd-lbl { font-size: 10px; pointer-events: none; fill: #fff; paint-order: stroke; stroke: #0000008c; stroke-width: 2.6px; stroke-linejoin: round; }
 #ddChart .dd-mt { fill: var(--muted); }
-/* einklappbare Blöcke unter dem Donut (bisheriger Inhalt des Dashboards) */
-.dash details.d-block { margin-bottom: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
-.dash details.d-block > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
-.dash details.d-block > summary::-webkit-details-marker { display: none; }
-.dash details.d-block > summary::before { content: "▸"; color: var(--muted); width: 1em; }
-.dash details.d-block[open] > summary::before { content: "▾"; }
-.dash details.d-block > summary h2 { margin: 0; }
-.dash details.d-block[open] > summary { margin-bottom: 8px; }
+/* Punkt 307: Reiter Dashboard in Unterreiter; jeder füllt die Höhe bis zum Fensterrand exakt, ohne Scrollbalken
+   (SVG skaliert, Texte werden von dashPasse() verkleinert, bis alles passt) */
+#tab-dash { height: calc(100vh - var(--kleb-h) - 26px); min-height: 460px; display: flex; flex-direction: column; gap: 8px; }
+#tab-dash[hidden] { display: none; }
+.dsub-bar { display: flex; flex-wrap: wrap; gap: 6px 20px; align-items: center; flex: none; }
+.dsub-bar .gr { display: flex; gap: 6px; }
+.dsub-bar .d-kopf { margin-left: auto; font-size: 12.5px; justify-content: flex-end; }
+.dsub-pane { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.dsub-pane[hidden] { display: none; }
+.dash.dsub-pane { padding: 0; gap: 0; }
+.dsub-pane > h2 { flex: none; }
+.dsub-pane > .d-sub { flex: none; margin-bottom: 8px; }
+.dsub-fit { font-size: 13px; }   /* Grundschrift, dashPasse() verkleinert sie bei Bedarf; alles Innere in em */
+#dpPlatz .d-balken { flex: 1 1 0; min-height: 0; max-width: none; justify-content: space-evenly; gap: .4em; }
+#dpPlatz .d-bar { gap: .2em .9em; grid-template-columns: minmax(10em, 15em) 1fr; }
+#dpPlatz .d-bar .nm { font-size: 1em; }
+#dpPlatz .d-bar .val { font-size: .92em; }
+#dpPlatz .d-spur { height: 1.7em; }
+#dpPlatz > .d-sub { font-size: 1em; }
+#dpTab .d-karten { flex: 1 1 0; min-height: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); grid-auto-rows: 1fr; gap: .8em; }
+#dpTab .d-karte { overflow: hidden; padding: .8em 1em; gap: .4em; font-size: 1em; }
+#dpTab .d-karte h3 { font-size: 1.08em; }
+#dpTab .d-karte .term { font-size: 1em; }
+#dpTab .d-karte .meta { font-size: .92em; }
+#dpTab .d-karte ul.d-liste { padding-left: 1.6em; }
+#dpTab > .d-sub { font-size: 1em; }
+#dpBez figure { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+#dpBez .d-scroll { flex: 1 1 0; min-height: 0; overflow: hidden; }
+#dpBez .d-scroll svg { min-width: 0; max-width: none; width: 100%; height: 100%; }
+#dpBez figcaption { flex: none; padding-top: 4px; text-align: center; max-width: none; }
+#dpBez .d-legende { flex: none; padding-top: 6px; justify-content: center; }
+/* Donut: Kreis so groß wie die Höhe, Legende in Spalten daneben */
+.dd { height: 100%; margin-bottom: 0; display: flex; flex-direction: column; }
+.dd-kopf, .dd-steuer { flex: none; }
+.dd-steuer { margin: 4px 0 8px; }
+.dd-haupt { flex: 1 1 0; min-height: 0; flex-wrap: nowrap; gap: 20px; }
+.dd-links { display: flex; flex-direction: column; }
+#ddChart { flex: none; }
+#ddLegende { flex: 1 1 0; min-width: 0; height: 100%; max-height: none; column-width: 21em; column-gap: 14px; column-fill: auto; overflow: hidden; padding-right: 0; }
+.dd-box { break-inside: avoid; }
+.dd-info { color: var(--muted); cursor: help; }
 /* Punkt 306: Analyse-Tabelle mit einstellbaren Spaltenbreiten */
 table.ana-t.fest { table-layout: fixed; width: auto; }
 table.ana-t.fest td { overflow: hidden; text-overflow: ellipsis; }
@@ -1195,8 +1228,11 @@ actions:
     <div class="ana" id="anaInhalt"><p class="sub">Lädt …</p></div>
   </section>
   <section id="tab-dash">
+    <!-- Punkt 307: Unterreiter statt untereinander stehender Blöcke -->
+    <div class="dsub-bar"><div class="gr" id="dashSub" role="tablist" aria-label="Dashboard-Ansicht"></div><div class="d-kopf" id="dashKopf"></div></div>
+    <div class="dsub-pane" id="dpDonut">
     <section class="dd" id="ddAbschnitt">
-      <div class="dd-kopf"><h2>Datenmenge nach Integration, Gerät und Entität</h2><span class="sub" id="ddStand"></span></div>
+      <div class="dd-kopf"><h2>Datenmenge nach Integration, Gerät und Entität</h2><span class="sub" id="ddStand"></span><span class="dd-info" id="ddInfo" tabindex="0" role="note">ⓘ</span></div>
       <div class="dd-steuer">
         <div class="gr"><span title="Welche Vorhaltezeit betrachtet wird: Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik)">Vorhaltezeit:</span><span id="ddVz"></span></div>
         <div class="gr"><span title="Was die Zahlen zeigen: den Zuwachs je Tag oder den Bestand von heute">Sicht:</span><span id="ddSicht"></span></div>
@@ -1207,7 +1243,10 @@ actions:
         <div id="ddLegende"></div>
       </div>
     </section>
-    <div class="dash" id="dashInhalt"><p class="d-sub">Lädt …</p></div>
+    </div>
+    <div class="dsub-pane dash" id="dpBez" hidden><p class="d-sub">Lädt …</p></div>
+    <div class="dsub-pane dash dsub-fit" id="dpPlatz" hidden><p class="d-sub">Lädt …</p></div>
+    <div class="dsub-pane dash dsub-fit" id="dpTab" hidden><p class="d-sub">Lädt …</p></div>
   </section>
 </main>
 
@@ -5445,36 +5484,66 @@ function dashKarten(s) {
   return K.map(([n, term, zw, text, fuss]) => `<div class="d-karte" style="--c:${D_ZWEIG[zw]}"><h3>${esc(n)}</h3><span class="term">${esc(term)}</span>${[].concat(text).map(t => t.startsWith("<ul") ? t : `<p>${t}</p>`).join("")}<span class="meta">${fuss}</span></div>`).join("");
 }
 
-// Punkt 306: Blöcke unter dem Donut sind einklappbar; welche offen sind, merkt sich der Browser (Standard: zu)
-const dashOffen = n => { try { return JSON.parse(speicher.lies("dbh_dash_offen", "[]")).includes(n) ? "open" : ""; } catch { return ""; } };
-$("#dashInhalt").addEventListener("toggle", ev => {
-  const d = ev.target; if (!d.dataset || !d.dataset.block) return;
-  let l = []; try { l = JSON.parse(speicher.lies("dbh_dash_offen", "[]")); } catch { /* neu */ }
-  l = l.filter(x => x !== d.dataset.block); if (d.open) l.push(d.dataset.block);
-  speicher.schreib("dbh_dash_offen", JSON.stringify(l));
-}, true);
+// Punkt 307: Unterreiter im Reiter Dashboard; jeder füllt die Höhe exakt (kein Scrollbalken). Welcher offen ist, merkt sich der Browser.
+const DASH_SUB = [["donut", "Datenmenge", "dpDonut", "Wer die Datenmenge treibt: Integration → Gerät → Entität als Donut"],
+  ["bez", "Beziehungen", "dpBez", "Wie die Tabellen der Recorder-Datenbank zusammenhängen"],
+  ["platz", "Wo der Platz liegt", "dpPlatz", "Größe je Tabelle, getrennt nach Nutzdaten und Indizes"],
+  ["tab", "Was in welcher Tabelle steht", "dpTab", "Zeilenzahlen und Zeiträume je Tabelle"]];
+let dashSub = (() => { const v = speicher.lies("dbh_dash_sub", "donut"); return DASH_SUB.some(s => s[0] === v) ? v : "donut"; })();
+
+// Schrift eines Panes in 0,5-px-Schritten verkleinern (Grundschrift 13 px), bis nichts mehr über Höhe oder Breite hinausragt
+function dashPasseText(el) {
+  if (!el || el.hidden || el.offsetParent === null) return;
+  let px = 13; el.style.fontSize = px + "px";
+  while (px > 7 && (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)) { px -= 0.5; el.style.fontSize = px + "px"; }
+}
+// Donut: Kreis so groß wie der Platz hergibt (Höhe abzüglich Pfad), Legende bekommt den Rest
+function dashPasseDonut() {
+  const p = $("#dpDonut"); if (p.hidden || p.offsetParent === null) return;
+  const haupt = p.querySelector(".dd-haupt"), pfad = $("#ddPfad");
+  const d = Math.max(200, Math.min(haupt.clientHeight - pfad.offsetHeight - 6, haupt.clientWidth * 0.6));
+  $(".dd-links").style.width = d + "px"; $("#ddChart").style.height = d + "px";
+  dashPasseText($("#ddLegende"));
+}
+function dashPasse() { dashPasseDonut(); ["dpPlatz", "dpTab"].forEach(i => dashPasseText($("#" + i))); }
+function dashZeige(sub) {
+  dashSub = sub; speicher.schreib("dbh_dash_sub", sub);
+  DASH_SUB.forEach(([k, , id]) => $("#" + id).hidden = k !== sub);
+  $("#dashSub").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sub === sub)));
+  dashPasse();
+}
+{
+  const box = $("#dashSub");
+  DASH_SUB.forEach(([k, t, , tip]) => {
+    const b = document.createElement("button"); b.className = "dd-sg"; b.dataset.sub = k; b.textContent = t; b.title = tip;
+    b.onclick = () => dashZeige(k); box.appendChild(b);
+  });
+  new ResizeObserver(dashPasse).observe($("#tab-dash"));
+  $("#ddInfo").title = "Klick auf ein Segment (oder einen Eintrag rechts) zoomt hinein: Integration → Gerät → Entität; Klick in die Mitte oder auf den Pfad oben geht zurück. "
+    + "Nur Entitätsdaten (States mit Attributen sowie 5-Min- und Stundenstatistik), keine Events. Zuwachs = Ø der letzten 7 vollen Kalendertage; in der Kurzzeit zählen 288 Zeilen je Tag 5-Min-Statistik je aktiver Entität mit Statistik, in der Langzeit 24 Stundenzeilen. "
+    + "Der Platz ist aus gemessenen Zeilengrößen geschätzt. Von jedem Gerät ab 1 % seiner Integration sind die größten 30 Entitäten nach Zuwachs und nach Bestand enthalten, der Rest steht als „weitere Entitäten“. "
+    + "Die acht größten Integrationen behalten in allen Ansichten ihre Farbe; Segmente unter 1,2 % des Kreises sind zu grauen Sammelsegmenten zusammengefasst, in die man hineinzoomen kann.";
+}
 async function ladeDash() {
-  Donut.laden();   // Punkt 306: Donut oben (eigene Daten aus der Analyse), unabhängig vom Stand der Datenbank-Struktur
-  const ziel = $("#dashInhalt");
+  Donut.laden();   // Punkt 306: Donut (eigene Daten aus der Analyse), unabhängig vom Stand der Datenbank-Struktur
+  dashZeige(dashSub);
+  const ziele = ["#dpBez", "#dpPlatz", "#dpTab"].map($);
   let r;
   try { r = await api("struktur"); }
-  catch (e) { ziel.innerHTML = `<p class="d-sub">${esc(e.message)}</p>`; return; }
+  catch (e) { ziele.forEach(z => z.innerHTML = `<p class="d-sub">${esc(e.message)}</p>`); return; }
   const s = r.stand;
-  if (!s) { ziel.innerHTML = `<div class="hinweisbox">Noch kein Stand erfasst. Die nächste Analyse (nachts oder über „Analyse starten“) liest den Aufbau der Datenbank ein.</div>`; return; }
+  if (!s) { ziele.forEach(z => z.innerHTML = `<div class="hinweisbox">Noch kein Stand erfasst. Die nächste Analyse (nachts oder über „Analyse starten“) liest den Aufbau der Datenbank ein.</div>`); return; }
   const v = r.vorher, dt = s.datei || {}, z = s.zeilen || {};
   const datei = dt.seite * dt.seiten, frei = dt.seite * dt.frei;
   const belegt = Object.values(s.bytes || {}).reduce((a, t) => a + t.daten + t.indizes, 0);
   const st = s.bytes?.states, stAnteil = st ? dProz(st.daten + st.indizes, belegt) : "–";
-  ziel.innerHTML = `
-    <div class="d-kopf">
+  $("#dashKopf").innerHTML = `
       <span>Stand <b>${new Date(s.zeit * 1000).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</b></span>
       <span>Datei <b>${gb(datei)}</b>, davon frei <b>${gb(frei)}</b></span>
       <span>Zustände <b>${dMio(z.states)}</b></span>
-      <span>Entitäten <b>${zahl(z.states_meta)}</b></span>
-      <span><code>states</code> samt Indizes <b>${stAnteil}</b> des belegten Platzes</span>
-      <span title="Erfassung: ${esc(String(s.dauer_s))} s, davon Platzmessung (dbstat) ${esc(String(s.dbstat_s))} s">${zahl(r.tage)} ${r.tage === 1 ? "Tagesstand" : "Tagesstände"} gespeichert</span>
-    </div>
-    <details class="d-block" data-block="beziehungen" ${dashOffen("beziehungen")}><summary><h2>Beziehungen der Tabellen</h2></summary>
+      <span>Entitäten <b>${zahl(z.states_meta)}</b></span>`;
+  $("#dpBez").innerHTML = `
+      <h2>Beziehungen der Tabellen</h2>
       <p class="d-sub">Drei Zweige teilen sich die Datenbank: der Zustandsverlauf, der Event-Bus und die Statistik. Jeder Zweig hat eine kleine Register-Tabelle links, eine große Faktentabelle in der Mitte und einen Text-Pool rechts, der doppelte Inhalte spart.</p>
       <figure>
         <div class="d-scroll">${dashDiagramm(s)}</div>
@@ -5486,17 +5555,17 @@ async function ladeDash() {
           <span>Gestrichelt: logische Verbindung ohne Fremdschlüssel</span>
         </div>
         <figcaption>Jede Zeile in <code>states</code> zeigt auf genau eine Entität und einen Attributsatz. Das Attribut-JSON liegt nur einmal in <code>state_attributes</code>, egal wie oft es sich wiederholt. Die Statistik kennt die Entität nur über denselben Namen, nicht über einen Schlüssel.</figcaption>
-      </figure>
-    </details>
-    <details class="d-block" data-block="platz" ${dashOffen("platz")}><summary><h2>Wo der Platz liegt</h2></summary>
+      </figure>`;
+  $("#dpPlatz").innerHTML = `
+      <h2>Wo der Platz liegt</h2>
       <p class="d-sub">Größe je Tabelle, getrennt nach Nutzdaten (kräftig) und zugehörigen Indizes (blass), gemessen mit <code>dbstat</code>. Belegt sind ${gb(belegt)}; der Rest der Datei sind freie Seiten (${gb(frei)}).${v ? ` Veränderung gegenüber dem Stand vom ${dDatum(v.zeit)}.` : ""} Überfahren zeigt die einzelnen Indizes.</p>
       <div class="d-balken">${dashPlatz(s, v)}</div>
-      ${dashGroessen(r.zeilengroessen)}
-    </details>
-    <details class="d-block" data-block="tabellen" ${dashOffen("tabellen")}><summary><h2>Was in welcher Tabelle steht</h2></summary>
+      ${dashGroessen(r.zeilengroessen)}`;
+  $("#dpTab").innerHTML = `
+      <h2>Was in welcher Tabelle steht</h2>
       <p class="d-sub">Zeilenzahlen und Zeiträume aus der Analyse vom ${dDatum(s.zeit)}.</p>
-      <div class="d-karten">${dashKarten(s)}</div>
-    </details>`;
+      <div class="d-karten">${dashKarten(s)}</div>`;
+  dashPasse();
 }
 
 // ================================================ Punkt 306: Donut im Reiter Dashboard
@@ -5744,12 +5813,6 @@ const Donut = (() => {
       neu.kinder2[i].forEach(k => box.appendChild(zeile(k, c)));
       L.appendChild(box);
     });
-    const h = document.createElement("div"); h.className = "dd-hint";
-    h.textContent = "Klick auf ein Segment (oder einen Eintrag rechts) zoomt hinein: Integration → Gerät → Entität; Klick in die Mitte oder auf den Pfad oben geht zurück. "
-      + "Nur Entitätsdaten (States mit Attributen sowie 5-Min- und Stundenstatistik), keine Events. Zuwachs = Ø der letzten 7 vollen Kalendertage; in der Kurzzeit zählen 288 Zeilen je Tag 5-Min-Statistik je aktiver Entität mit Statistik, in der Langzeit 24 Stundenzeilen. "
-      + "Der Platz ist aus gemessenen Zeilengrößen geschätzt. Von jedem Gerät ab 1 % seiner Integration sind die größten 30 Entitäten nach Zuwachs und nach Bestand enthalten, der Rest steht als „weitere Entitäten“. "
-      + "Die acht größten Integrationen behalten in allen Ansichten ihre Farbe; Segmente unter 1,2 % des Kreises sind zu grauen Sammelsegmenten zusammengefasst, in die man hineinzoomen kann.";
-    L.appendChild(h);
   }
 
   // ---- Gesamtablauf ----
@@ -5759,7 +5822,7 @@ const Donut = (() => {
     aktuell = ziele();
     svg.setAttribute("aria-label", `Donut: ${SICHTEN[sicht]} (${VZ[vz]}), ${aktuell.F.name}`);
     hit.style.cursor = pfad.length ? "pointer" : "default"; hit.setAttribute("title", pfad.length ? "Eine Ebene zurück" : "");
-    zeichnePfad(); zeichneLegende(aktuell); uebergang(aktuell); standard();
+    zeichnePfad(); zeichneLegende(aktuell); dashPasseDonut(); uebergang(aktuell); standard();
     $("#ddAnalyse").hidden = !fokusKette.some(k => k.art === "int");
   }
   function schalter(ziel, werte, aktuellWert, setze, schl) {
@@ -5914,7 +5977,7 @@ function anaTabelle(d) {
   const GRUPPEN = ["Verursacher", "Menge", "Platz (geschätzt)", "Alter und Schutz"];
   const zT = kk ? "Ø der letzten 7 vollen Kalendertage an States-Zeilen plus 288 Zeilen 5-Min-Statistik je Tag (bei aktiven Entitäten mit Statistik)" : lg ? "Stundenstatistik: 24 Zeilen je Tag bei aktiven Entitäten mit Statistik – für alle gleich" : "Ø der letzten 7 vollen Kalendertage, geteilt durch die tatsächlich vorhandenen Tage (wie die Spalte im Tab Entitäten)";
   const bT = kk ? "Zeilen in states plus statistics_short_term" : lg ? "Zeilen in statistics (Stundenstatistik)" : "Zeilen in der Tabelle states";
-  const tips = { anteil: "So viel der Gesamtmenge dieser Sicht (Zuwachs je Tag bzw. Bestand) macht diese Zeile aus. Gesamtmenge = alle Entitäten im aktuellen Erstauftreten-Filter.", plz: "Geschätzter Platz, den die Zeilen aller Tabellen (States, Attribute, 5-Min- und Stundenstatistik) je Tag neu belegen – mit den gemessenen Zeilengrößen", plb: "Geschätzter Platz des heutigen Bestands in allen Tabellen",
+  const tips = { anteil: "So viel der angezeigten Ebene (Zuwachs je Tag bzw. Bestand) macht diese Zeile aus: bei den Integrationen alle Entitäten, bei den Geräten die gewählte Integration, bei den Entitäten das gewählte Gerät – jeweils im aktuellen Erstauftreten-Filter. Die Zeilen ergeben zusammen 100 %. Der Anteil an allem steht im Kopf und im Donut im Reiter Dashboard.", plz: "Geschätzter Platz, den die Zeilen aller Tabellen (States, Attribute, 5-Min- und Stundenstatistik) je Tag neu belegen – mit den gemessenen Zeilengrößen", plb: "Geschätzter Platz des heutigen Bestands in allen Tabellen",
     haupt: zuw ? zT : bT,
     zweit: zuw ? bT : zT,
     erst: kk ? "Erste noch vorhandene Zeile in States oder 5-Min-Statistik (das frühere von beiden) – durch die Vorhaltezeit begrenzt, sagt wenig über das Alter" : "Erste Langzeitstatistik (Stundenstatistik) der Entität; ohne Langzeitstatistik unbekannt – dieser Wert ist auch der Filter „Erstauftreten“", last: zk ? "Wirksame Vorhaltezeit der Kurzzeit (States, 5-Min) und ihre Regel" : "Anzahl geschützter Entitäten (Schutz vor dem Löschen)" };

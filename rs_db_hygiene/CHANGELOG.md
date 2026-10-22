@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b34 (Beta)
+- **Dashboard in Unterreitern (Punkt 307):** Datenmenge (Donut), Beziehungen, Wo der Platz liegt und Was in welcher Tabelle steht sind eigene Unterreiter, die die Höhe bis zum Fensterrand ohne Scrollbalken füllen (Diagramme skalieren, Texte werden bei Bedarf verkleinert). Der Browser merkt sich den gewählten Unterreiter. Die Legende des Donuts steht in Spalten, ihr Erklärtext liegt hinter dem ⓘ; die Statuszeile ist gekürzt.
+- **Dezentere aktive Knöpfe:** im Dashboard (Unterreiter, Vorhaltezeit, Sicht) und im Reiter Analyse (abgetönte Fläche statt voller Füllung).
+- **Analyse: Anteil bezogen auf die angezeigte Ebene:** Die Anteile der Zeilen ergeben 100 % (Integrationen: alle Entitäten, Geräte: die gewählte Integration, Entitäten: das gewählte Gerät); bisher bezogen sie sich immer auf alle Integrationen.
+- **Analyse: Knopfleiste bleibt beim Scrollen stehen** (Vorhaltezeit, Sicht, Erstauftreten) unter den Reitern.
+
 ## 0.5.6b33 (Beta)
 - **Dashboard: Donut als Hauptansicht (Punkt 306):** Oben im Reiter Dashboard steht ein zoombarer Donut über Integration → Gerät → Entität. Klick auf ein Segment oder einen Legendeneintrag zoomt hinein, die Mitte und der Pfad darüber gehen eine Ebene zurück. Vorhaltezeit (Alle, Kurzzeit, Langzeit) und Sicht (Zuwachs, Bestand) lassen sich umschalten, der Pfad bleibt dabei erhalten. Der Knopf „Im Reiter Analyse öffnen“ übernimmt Vorhaltezeit, Sicht, Integration und Gerät. Die Farben der größten Integrationen bleiben in allen Ansichten gleich.
 - **Bisherige Dashboard-Inhalte einklappbar:** Beziehungen der Tabellen, Wo der Platz liegt und Was in welcher Tabelle steht sind jetzt Blöcke unter dem Donut, standardmäßig zu; der Browser merkt sich die geöffneten.

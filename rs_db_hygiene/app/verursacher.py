@@ -207,17 +207,19 @@ def baue(r, q):
     else:
         pfad["plattform"] = "(ohne Integration)" if plat == OHNE else plat
         in_plat = [p for p in paare if (p[0].get("plattform") or OHNE) == plat]
+        ebenen_summe = sum(w["z"] if mass == "zuwachs" else w["b"] for _e, w in in_plat)   # Anteil bezieht sich auf die angezeigte Ebene, die Zeilen ergeben 100 %
         if geraet is None:
             ebene = "geraet"
             gruppen = {}
             for p in in_plat:
                 gruppen.setdefault(p[0].get("device_id") or OHNE, []).append(p)
-            knoten = [_knoten(k, "(ohne Gerät)" if k == OHNE else (_geraetename(v) or k[:8]), v, mass, gesamt) for k, v in gruppen.items()]
+            knoten = [_knoten(k, "(ohne Gerät)" if k == OHNE else (_geraetename(v) or k[:8]), v, mass, ebenen_summe) for k, v in gruppen.items()]
         else:
             ebene = "entitaet"
             liste = [p for p in in_plat if (p[0].get("device_id") or OHNE) == geraet]
             pfad["geraet"] = "(ohne Gerät)" if geraet == OHNE else (_geraetename(liste) or geraet[:8])
-            knoten = [_zeile(e, w, mass, gesamt) for e, w in liste]
+            gesamt_geraet = sum(w["z"] if mass == "zuwachs" else w["b"] for _e, w in liste)
+            knoten = [_zeile(e, w, mass, gesamt_geraet) for e, w in liste]
     insgesamt = len(knoten)
     if ebene == "entitaet":
         knoten.sort(key=lambda k: (-k["_m"], k["entity_id"]))
