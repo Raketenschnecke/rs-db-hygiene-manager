@@ -390,6 +390,8 @@ def _basis(e):
     anf = [t for t in (b["st_first_ts"], b["kurz_first_ts"], b["lts_first_ts"]) if t is not None]
     end = [t for t in (b["st_last_ts"], b["kurz_last_ts"], b["lts_last_ts"]) if t is not None]
     b["first_ts"], b["last_ts"] = (min(anf) if anf else None), (max(end) if end else None)
+    kz = [t for t in (b["st_first_ts"], b["kurz_first_ts"]) if t is not None]   # Punkt 309: erster Kurzzeit-Datensatz (States, 5-Min); Langzeit: lts_first_ts
+    b["kz_first_ts"] = min(kz) if kz else None
     return b
 
 

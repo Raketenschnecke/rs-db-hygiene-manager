@@ -624,6 +624,8 @@ table.ana-t td.anteil { width: 150px; text-align: left; }
 table.ana-t .fein { color: var(--muted); font-size: 11px; }
 .ana-ab { color: var(--text); }   /* weißer Pfeil nach unten: Drilldown in dieser Tabelle */
 .ana-oeffne { border: 0; background: transparent; color: var(--accent);   /* blauer Pfeil schräg nach oben: öffnet den Tab Entitäten */ cursor: pointer; padding: 0 4px; }
+button.ana-oeffne { border: 1px solid color-mix(in srgb, var(--ana) 55%, var(--line)); background: color-mix(in srgb, var(--ana) 14%, var(--panel)); color: var(--ana-fg); padding: 5px 12px; }   /* Knopf in den Farben der Analyse (wie „Im Reiter Analyse öffnen“ im Cockpit) */
+button.ana-oeffne:hover { background: color-mix(in srgb, var(--ana) 28%, var(--panel)); border-color: var(--ana); }
 .ana-mehr { color: var(--muted); font-size: 12px; padding: 6px 2px; }
 /* Punkt 306: Donut im Reiter Dashboard; Palette: kategoriale Farben, hell und dunkel, je Integration fest */
 .dd { --dd-s1:#2a78d6; --dd-s2:#eb6834; --dd-s3:#1baf7a; --dd-s4:#eda100; --dd-s5:#e87ba4; --dd-s6:#008300; --dd-s7:#6250d6; --dd-s8:#e34948; --dd-grau:#9a9890; --dd-hl:#00000010; margin-bottom: 22px; }
@@ -633,6 +635,7 @@ table.ana-t .fein { color: var(--muted); font-size: 11px; }
 .dd-steuer { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin: 8px 0 12px; }
 .dd-steuer .gr { display: flex; align-items: center; gap: 6px; }
 .dd-steuer .gr > span { color: var(--muted); font-size: 13px; }
+.dd-steuer > button#ddAnalyse, .dd-steuer > button#dzAnalyse { margin-left: auto; }   /* Übernahme in die Analyse: rechter Rand */
 button.dd-sg[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 600; }
 .dd-haupt { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
 .dd-links { flex: 0 0 auto; width: min(640px, 100%); }
@@ -726,6 +729,9 @@ path.dd-seg.dim { opacity: .28; }
 .dz-liste { flex: 0 0 34%; min-height: 0; overflow: auto; column-width: 21em; column-gap: 14px; padding-right: 2px; }
 .dz-liste .dz-kopfz { column-span: all; color: var(--muted); font-size: 12.5px; margin-bottom: 4px; }
 .dz-liste .dd-row { break-inside: avoid; }
+.dz-liste .dz-leg { column-span: all; display: flex; flex-wrap: wrap; gap: 2px 18px; margin-bottom: 6px; }
+.dz-liste .dz-leg span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dz-liste .dd-sw.neutral { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
 /* Punkt 306: Analyse-Tabelle mit einstellbaren Spaltenbreiten */
 table.ana-t.fest { table-layout: fixed; width: auto; }
 table.ana-t.fest td { overflow: hidden; text-overflow: ellipsis; }
@@ -775,7 +781,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
     <nav class="tabs" id="tabs">
       <!-- Punkt 158 (0.5.3): Reihenfolge Istzustand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
       <!-- Punkt 288: Dashboard ganz links und Startreiter beim Laden der Seite (bis dahin Entitäten) -->
-      <button data-tab="dash" class="an rf-dash" title="Aufbau der Recorder-Datenbank: Tabellen, Beziehungen, Platz – Stand der letzten Analyse">Dashboard</button>
+      <button data-tab="dash" class="an rf-dash" title="Aufbau der Recorder-Datenbank: Tabellen, Beziehungen, Platz – Stand der letzten Analyse">Cockpit</button>
       <!-- Punkt 305: Analyse zwischen Dashboard und Entitäten (Überblick vor der Arbeitstabelle) -->
       <button data-tab="ana" class="rf-ana" title="Wer treibt die Datenmenge? Integration → Gerät → Entität nach Zuwachs je Tag oder Bestand, mit Pareto-Kurve und Erstauftreten">Analyse</button>
       <button data-tab="ent" class="rf-ist">Entitäten</button>
@@ -785,7 +791,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
       <button data-tab="regeln" class="rf-loesch">Regeln</button>
       <button data-tab="loeschen" class="rf-loesch">Löschen</button>
       <button data-tab="protokoll" class="rf-loesch">Löschprotokolle</button>
-      <button data-tab="probe" class="rf-prog">Prognosen je Regel</button>
+      <button data-tab="probe" class="rf-prog">Prognose</button>
       <button data-tab="hilfe" class="rechts" title="Einstieg, Begriffe, Regel-Rangfolge, FAQ">Hilfe</button>
     </nav>
     <!-- Punkte 271/272: Status-Chips (Standards, Schutz, Stand, Integration, Sperren) auf allen Reitern, die mit Entitäten zu tun haben -->
@@ -832,7 +838,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
       <button data-reset-filter="probe">Filter zurücksetzen</button>
       <button data-reset-breiten="probe">Spaltenbreiten zurücksetzen</button>
       <button data-spalten="probe">Spalten …</button>
-      <button class="hilfeknopf" data-hilfe="prognosen" aria-label="Erläuterung: Prognosen je Regel">ⓘ Was zeigt dieser Tab?</button>
+      <button class="hilfeknopf" data-hilfe="prognosen" aria-label="Erläuterung: Prognose">ⓘ Was zeigt dieser Tab?</button>
       <span style="flex:1"></span>
       <a href="#" data-csv="probe">CSV</a>
     </div>
@@ -984,7 +990,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
           <li><b>Zähler-Schutz:</b> glob-, klasse-, integration- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der bei Zählern nur die Kurzzeit kürzt – ihre Langzeit bleibt immer unbegrenzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
           <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days: 10</code></a>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Die Kurzzeit ist einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events. Auch die <b>Langzeit</b> ist einstellbar (Voreinstellung unbegrenzt): Mit z. B. 1 Jahr wird die Regel zum <b>Lumpensammler</b> für die Stundenstatistik aller Entitäten ohne eigene Langzeit-Regel, <a class="hverweis" href="#h-faq-langzeit">Wie begrenze ich die Langzeit?</a> Die Langzeit der Zähler bleibt dabei immer erhalten. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen und unbegrenzter Langzeit. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
-          <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob eine andere Regel irgendwo Vorrang hat. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognosen je Regel) zählen Entitäten, keine Zeilen.</li>
+          <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob eine andere Regel irgendwo Vorrang hat. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognose) zählen Entitäten, keine Zeilen.</li>
         </ul>
         <h3 id="h-passiv">Aktiv und passiv</h3>
         <p><b>Passive</b> Regeln werden in Löschläufen ignoriert. Mit „passive Regeln mitrechnen“ (unter dem Kachelraster) kannst du allerdings simulieren, was sie bewirken würden. Siehe auch <a class="hverweis" href="#h-faq-passiv">FAQ: Warum steht in der Löschtabelle nie „passiv“?</a></p>
@@ -1013,7 +1019,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
             <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten, optimieren (Spalte Regelwerk-Check/Empfehlungen); Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen; der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> prüft das Regelwerk. Beim Speichern bekommt der Name die Vorhaltedauer als Suffix, z. B. „– 30T/2J“ (Kurzzeit/Langzeit, ∞ = unbegrenzt; Event-Regeln nur „– 7T“).</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“ (daneben der Umfang – alle aktiven Regeln oder nur eine – und „Plan neu laden“); der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
             <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Pause wegen eines Backups; ein Klick auf einen Lauf zeigt die Einzelheiten je Entität; dazu die Monatssumme je Entität</td></tr>
-            <tr><td><b>Prognosen je Regel</b></td><td>was jede Regel bringt: prognostizierte Ersparnis im Dauerbetrieb (Wachstum der SQLite-DB)</td></tr>
+            <tr><td><b>Prognose</b></td><td>was jede Regel bringt: prognostizierte Ersparnis im Dauerbetrieb (Wachstum der SQLite-DB)</td></tr>
             <tr><td><b>Hilfe</b></td><td>diese Seite</td></tr>
           </tbody>
         </table>
@@ -1257,7 +1263,7 @@ actions:
   </section>
   <section id="tab-dash">
     <!-- Punkt 307: Unterreiter statt untereinander stehender Blöcke -->
-    <div class="dsub-bar"><div class="gr" id="dashSub" role="tablist" aria-label="Dashboard-Ansicht"></div><div class="d-kopf" id="dashKopf"></div></div>
+    <div class="dsub-bar"><div class="gr" id="dashSub" role="tablist" aria-label="Cockpit-Ansicht"></div><div class="d-kopf" id="dashKopf"></div></div>
     <div class="dsub-pane" id="dpDonut">
     <section class="dd" id="ddAbschnitt">
       <div class="dd-kopf"><h2>Datenmenge nach Integration, Gerät und Entität</h2><span class="dd-info" id="ddInfo" tabindex="0" role="note">ⓘ</span></div>
@@ -1280,6 +1286,7 @@ actions:
         <div class="gr"><span title="Welche Vorhaltezeit betrachtet wird: Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik)">Vorhaltezeit:</span><span id="dzVz"></span></div>
         <div class="gr"><span title="Was die Balken zeigen: neue Zeilen oder den dafür geschätzten Platz">Sicht:</span><span id="dzMass"></span></div>
         <div class="gr"><span title="Wie die Balken unterteilt sind: nach Integration (nach Gerät bzw. Entität, sobald unten eine Integration bzw. ein Gerät gewählt ist) oder nach DB-Tabelle (States, 5-Min-Statistik, Stundenstatistik, Attribute, Events)">Darstellung:</span><span id="dzGrp"></span></div>
+        <button id="dzAnalyse" title="Im Reiter Analyse mit derselben Teilmenge weiterarbeiten: Vorhaltezeit, Integration und Gerät werden übernommen (Sicht: Zuwachs je Tag). Der Zeitraum gehört nicht dazu – die Analyse rechnet mit dem aktuellen Zuwachs je Tag bzw. dem Bestand.">↗ Im Reiter Analyse öffnen</button>
       </div>
       <div class="dz-pfade"><nav id="dzZeitPfad" aria-label="Zeitraum"></nav><nav id="dzKatPfad" aria-label="Auswahl"></nav></div>
       <div class="dz-chart" id="dzChart"><p class="sub">Lädt …</p></div>
@@ -1624,7 +1631,9 @@ class LokaleTabelle {
       if (box) box.addEventListener("scroll", () => { box.classList.toggle("nach-rechts", box.scrollLeft > 0); box.classList.toggle("nach-unten", box.scrollTop > 0); }, { passive: true });
     }
     // Spaltenauswahl (Punkt 23): je Tabelle im Browser gemerkt; Spalten mit fest:1 sind immer sichtbar
-    this.sichtbar = ladeSichtbar(o.schluessel + "_spalten", o.spalten.map(s => s.k));
+    // Punkt 309: Option standardAus = Spalten, die ohne gemerkte Auswahl zunächst ausgeblendet sind (über „Spalten …“ zuschaltbar, Ansicht „Standard“)
+    if (o.standardAus) this.standardSpalten = o.spalten.map(s => s.k).filter(k => !o.standardAus.includes(k));
+    this.sichtbar = ladeSichtbar(o.schluessel + "_spalten", this.standardSpalten || o.spalten.map(s => s.k));
     // Punkt 279: Spalten, die eine neue Version bringt (Option neueSpalten), erscheinen einmal auch bei gemerkter Spaltenauswahl – sonst bliebe
     // jede neue Spalte unsichtbar, sobald jemand je Spalten abgewählt hat; danach gilt wieder die Wahl des Benutzers
     for (const k of o.neueSpalten || []) {
@@ -2009,7 +2018,7 @@ const HILFE = {
     "Prognosezeitraum variieren, um die Wirkung zu sehen."],
   c_db: ["DB-Größe",
     "Istzustand: Größe der Datei home-assistant_v2.db. Löschmenge sofort: Platz der Zeilen, die ein Lauf jetzt löschen würde. Prognose: erwartete Größe im Dauerbetrieb, darunter ohne Regeln.",
-    "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile misst jede Analyse (Reiter Dashboard, „Wo der Platz liegt“); ohne Messung gelten Festwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
+    "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile misst jede Analyse (Reiter Cockpit, „Wo der Platz liegt“); ohne Messung gelten Festwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
     "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren)."],
   c_zeilen: ["Datenzeilen gesamt",
     "Summe der Spalten States, 5-Min, Attribute (Zeilen), Langzeit und Events in dieser Zeile.",
@@ -2039,7 +2048,7 @@ const HILFE = {
     "Für welchen Zeitraum die Prognose rechnet: So groß wird die DB nach diesem Zeitraum, wenn die aktiven Regeln wirken. Auch die Langzeitstatistik rechnet über diesen Zeitraum.",
     "Ändert nichts an Home Assistant; der Wert wird nur in diesem Browser gemerkt. Die Prognose nimmt je Entität ihre wirksame Vorhaltezeit (Regel bzw. global = purge_keep_days), höchstens aber diesen Zeitraum. Die Spalten „wirksam“ und die Löschmenge sofort hängen nicht davon ab – sie rechnen immer mit purge_keep_days, wie der Löschlauf.",
     "Mehrere Werte ausprobieren (z. B. 0,5 / 1 / 2 Jahre) und die Prognose vergleichen. Aktuell in HA eingestellt: purge_keep_days = {pkd} Tage."],
-  prognosen: ["Prognosen je Regel",
+  prognosen: ["Prognose",
     "Wirkungsbilanz jeder Regel – ohne dass etwas gelöscht wird. Löschmenge sofort betrifft den Bestand: Was ist heute zu viel? Ersparnis (Dauerbetrieb) betrifft den Zufluss: Was sammelt sich ohne Regel künftig an?",
     "Entitäten: wie viele Entitäten diese Regel tatsächlich bestimmt (nur wo sie den Vorrang gewinnt) · Entitäten mit Kurzzeit bzw. Langzeit aus dieser Regel: bei wie vielen Entitäten der Wert aus dieser Regel stammt (Anzahl, keine Zeilen) · Löschmenge sofort: was ein scharfer Lauf jetzt löschen würde (bei Regeln länger als purge_keep_days = {pkd} Tage steht 0) · Ersparnis (Dauerbetrieb): wie viel kleiner die DB über den Prognosezeitraum von {ziel} bleibt, aufgeteilt in States und Attribute. Beispiel R21: 0 Zeilen sofort, trotzdem Ersparnis auf Dauer.",
     "Nach „Ersparnis (Dauerbetrieb)“ sortieren, um die Hebel zu sehen; Regeln mit 0 Entitäten treffen nichts, oder andere Regeln haben überall Vorrang."],
@@ -2489,8 +2498,11 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   // Punkt 135 (0.5.3): Bestand der 5-Min-Statistik je Entität (lag schon in Analyse, API und CSV vor)
   ["kurz_rows", "5-Min (Zeilen)", 1, "zahl", ">0", 105, "Zeilen in statistics_short_term (5-Min-Statistik) dieser Entität"],
   // Punkte 118/120 (0.4.11): über alle Datenarten der Zeile; Aufteilung im Tooltip der Zelle
-  ["first_ts", "erster (States, 5-Min, Langzeit)", 0, "datum", "<1.9.2026", 150,
-    "frühester Zeitstempel über States, 5-Min-Statistik und Langzeit – bei Entitäten mit Langzeit meist deren Beginn. Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
+  // Punkt 309: „erster“ getrennt nach Kurzzeit (States, 5-Min) und Langzeit; der gemeinsame früheste Wert (first_ts) steht weiter in API und CSV
+  ["kz_first_ts", "erster KZe (States, 5-Min)", 0, "datum", "<1.9.2026", 150,
+    "frühester Zeitstempel der Kurzzeit-Datensätze (States und 5-Min-Statistik). Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
+  ["lts_first_ts", "erster LZe (Langzeit)", 0, "datum", "<1.9.2026", 150,
+    "frühester Zeitstempel der Langzeitstatistik (Stundenwerte) – ohne Langzeit leer. Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
   ["last_ts", "letzter (States, 5-Min, Langzeit)", 0, "datum", "<8.10.2026", 150,
     "spätester Zeitstempel über States, 5-Min-Statistik und Langzeit. Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
   ["lts_rows", "Langzeit (Zeilen)", 1, "zahl", ">0", 110, "Zeilen in statistics (Stundenstatistik, Langzeit) dieser Entität"],
@@ -2499,7 +2511,7 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["langzeit", WNAME.langzeit, 0, "wert", "", 190, "wirksame Langzeit und ihre Quelle (Regel oder Std.) – gilt für die Stundenstatistik"],
   // Punkt 63: Block „Löschmenge sofort“ wie in der Monatssumme – Summe, davon je Tabelle, dahinter die Attributzeilen
   ["loesch_summe", "Summe", 1, "zahl", ">0", 175,
-    "Zeilen, die ein Lauf sofort löschen würde (Bestand): States + 5-Min-Statistik + Attribute + Langzeit (Attribute nur mit Attribut-Analyse). Gegenstück: Ersparnis (Dauerbetrieb) im Tab Prognosen je Regel."],
+    "Zeilen, die ein Lauf sofort löschen würde (Bestand): States + 5-Min-Statistik + Attribute + Langzeit (Attribute nur mit Attribut-Analyse). Gegenstück: Ersparnis (Dauerbetrieb) im Tab Prognose."],
   // Punkt 197 (0.5.5b9): ersetzt die Spalte „Attribute (MB)“ – Platz der ganzen Löschmenge sofort
   // Punkt 209 (0.5.5b12): „Speicher“ statt „Platz“
   ["loesch_mb", "Speicher frei (MB)", 1, "zahl", ">1 (MB)", 125,
@@ -2523,7 +2535,7 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
 const SPALTENGRUPPEN = [
   ["Stammdaten", "stamm", ["entity_id", "herkunft", "device_class", "labels", "status"]],
   ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]],
-  ["Istzustand", "ist", ["first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
+  ["Istzustand", "ist", ["kz_first_ts", "lts_first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows", "attr_anteil", "attr_bytes", "attr_zuwachs_tag", "attr_avg"]],
   ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"]],
 ];
 const SPALTEN = SPALTENGRUPPEN.flatMap(([, , ks]) => ks.map(k => SPALTEN_ROH.find(s => s[0] === k)));
@@ -2541,7 +2553,7 @@ const mitKlasse = (html, kl) => {
 // Punkt 132: Spaltenkopf zweizeilig – „Titel (Zusatz)“ → Zeile 1 Titel mit Sortierpfeil, Zeile 2 Zusatz (leer, wenn keiner)
 const kopfZweizeilig = t => { const m = /^(.+?)\s*\(([^()]*)\)$/.exec(t || ""); return `<span class="kz1"><span class="tk">${esc(m ? m[1] : t)}</span><span class="pfeil"></span></span><span class="kz2">${m ? esc(m[2]) : ""}</span>`; };
 const SPALTE =Object.fromEntries(SPALTEN.map(s => [s[0], s]));
-const SORTIERBAR = new Set(["entity_id", "herkunft", "device_class", "labels", "status", "rows", "rows_24h", "kurz_rows", "first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
+const SORTIERBAR = new Set(["entity_id", "herkunft", "device_class", "labels", "status", "rows", "rows_24h", "kurz_rows", "kz_first_ts", "lts_first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
                             "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_anteil", "loesch_mb"]);
 const FILTERHILFE = {
   text: "enthält … (Groß/klein egal); * und ? als Platzhalter, z. B. sensor.*_power",
@@ -2559,14 +2571,15 @@ const ATTR_SPALTEN = ["attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_anteil
 const ANSICHTEN_ENT = {
   Standard: SPALTEN.map(s => s[0]).filter(k => !ATTR_SPALTEN.includes(k)),
   // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
-  "States & Statistik": ["entity_id", "herkunft", "device_class", "status", "kurzzeit", "attribute", "langzeit", "first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
+  "States & Statistik": ["entity_id", "herkunft", "device_class", "status", "kurzzeit", "attribute", "langzeit", "kz_first_ts", "lts_first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
                          "loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"],
   Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen", "loesch_mb"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
 };
 // Punkt 115 (0.4.10): neue Spalten der Standardansicht auch bei gemerkter Spaltenauswahl einmal einblenden
 const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels", kurz_rows: "dbh_spalte_neu_kurz_rows", device_class: "dbh_spalte_neu_device_class",   // Punkt 167
-  loesch_mb: "dbh_spalte_neu_loesch_mb" };   // Punkt 197
+  loesch_mb: "dbh_spalte_neu_loesch_mb",   // Punkt 197
+  kz_first_ts: "dbh_spalte_neu_kz_first_ts", lts_first_ts: "dbh_spalte_neu_lts_first_ts" };   // Punkt 309: ersetzen „erster“
 const ladeSichtbar = (schluessel, standard) => {
   try { const l = JSON.parse(speicher.lies(schluessel, "null")); if (Array.isArray(l) && l.length) return new Set(l); } catch { /* Standard */ }
   return new Set(standard);
@@ -2687,7 +2700,8 @@ function zeigeSummen(su) {
     kurzzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "kurzzeit"), teil(a, "kurzzeit"))),
     attribute: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "attribute"), teil(a, "attribute"))),
     langzeit: anz(`Anzahl Entitäten – ${GEF}` + vgl(teil(g, "langzeit"), teil(a, "langzeit"))),
-    first_ts: zelle(datum(g.first_ts), datum(a.first_ts), `frühester Zeitstempel – ${GEF}`),
+    kz_first_ts: zelle(datum(g.kz_first_ts), datum(a.kz_first_ts), `frühester Kurzzeit-Zeitstempel – ${GEF}`),
+    lts_first_ts: zelle(datum(g.lts_first_ts), datum(a.lts_first_ts), `frühester Langzeit-Zeitstempel – ${GEF}`),
     last_ts: zelle(datum(g.last_ts), datum(a.last_ts), `spätester Zeitstempel – ${GEF}`),
     rows: zz("rows", `Zeilen in states – ${GEF}`), rows_24h: zz("rows_24h", `neue Zeilen in states je Tag (Ø 7 volle Tage) – ${GEF}`),
     kurz_rows: zz("kurz_rows", `Zeilen 5-Min-Statistik – ${GEF}`), lts_rows: zz("lts_rows", `Zeilen Langzeit – ${GEF}`),
@@ -2821,7 +2835,8 @@ const ZELLEN = {
   status: e => `<td class="status-${e.status}" title="Entität ${esc(STATUS_TEXT[e.status] || e.status)}">${esc(STATUS_TEXT[e.status] || e.status)}</td>`,   // Punkt 128
   rows: e => `<td class="n">${zahl(e.rows)}</td>`,
   rows_24h: e => `<td class="n">${zahl(e.rows_24h)}</td>`,
-  first_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.first_ts)}</td>`,
+  kz_first_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.kz_first_ts)}</td>`,
+  lts_first_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.lts_first_ts)}</td>`,
   last_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.last_ts)}</td>`,
   lts_rows: e => `<td class="n">${e.lts_rows ? zahl(e.lts_rows) : "–"}</td>`,
   kurz_rows: e => `<td class="n">${e.kurz_rows ? zahl(e.kurz_rows) : "–"}</td>`,   // Punkt 135
@@ -2955,7 +2970,7 @@ function spaltenEnt() {
   });
 }
 
-// ================================================ Regeln, Prognosen je Regel, Statistik ohne Entität
+// ================================================ Regeln, Regel, Statistik ohne Entität
 const regelIndex = r => S.regeln.regeln.indexOf(r);
 // Punkt 199 (0.5.5b10): Rang „Stufe.Position“ – Stufe nach Typ (Schutz 0, E: 1, entity 2 … verwaist 7, event 8, HA-Standard 99),
 // Position innerhalb der Stufe in der Reihenfolge der Regelliste (aktive und passive, damit die Nummer beim Umschalten bleibt)
@@ -3542,7 +3557,7 @@ document.addEventListener("click", ev => {
   const sw = ev.target.closest("[data-spalten]");
   if (sw) {
     const t = sw.dataset.spalten;
-    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognosen je Regel", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokolle – Läufe", events: "Events", opt: "Empfehlungen" }[t]);
+    return t === "ent" ? spaltenEnt() : T[t].spaltenWahl({ regeln: "Regeln", probe: "Prognose", lts: "Statistik ohne Entität", loesch: "Löschplan", laeufe: "Löschprotokolle – Läufe", events: "Events", opt: "Empfehlungen" }[t]);
   }
   const rf = ev.target.closest("[data-reset-filter]"); if (rf) return T[rf.dataset.resetFilter].resetFilter();
   const rb = ev.target.closest("[data-reset-breiten]"); if (rb) return T[rb.dataset.resetBreiten].z.reset();
@@ -3640,7 +3655,7 @@ $("#massenEv").addEventListener("click", ev => {
   bearbeiteRegel(-1, { id, typ: "event", muster: typen, name: typen.length === 1 ? `Events ${typen[0]}` : `Events Auswahl (${zahl(typen.length)})`, kurzzeit: "7d" });
 });
 
-// ---- Punkt 97 (0.4.7): Regeln aus Löschplan und Prognosen je Regel direkt öffnen
+// ---- Punkt 97 (0.4.7): Regeln aus Löschplan und Regel direkt öffnen
 const regelIdx = id => (S.regeln?.regeln || []).findIndex(x => x.id === id);
 const regelChip = id => regelIdx(id) >= 0
   ? `<span class="chip regel regelklick" data-regel-edit="${esc(id)}" title="Regel ${esc(id)}: Klick öffnet die Regelmaske" role="button" tabindex="0">${S.regeln.regeln[regelIdx(id)].typ === "schutz" ? "🔒 " : ""}${esc(chipText(id))}</span>`
@@ -4771,7 +4786,7 @@ function bearbeiteRegel(i, vorlage) {
   typAuto(); pruefeVerdichten(); vorschau();
 }
 // Punkt 291: Ersparnis in der Regelkarte. `ersp` (Wirkung) vergleicht mit dem heutigen Regelwerk, in dem eine gespeicherte Regel
-// schon steckt – unverändert also 0, obwohl „Prognosen je Regel“ z. B. 21,5 GB zeigt. Deshalb bei gespeicherten Regeln:
+// schon steckt – unverändert also 0, obwohl „Prognose“ z. B. 21,5 GB zeigt. Deshalb bei gespeicherten Regeln:
 // Ersparnis wie in der Tabelle (gespeicherte Fassung gegenüber „ohne Regeln“) plus die Änderung; neue Regeln: „zusätzlich“.
 function ersparnisHtml(v, ersp) {
   const zr = `im Prognosezeitraum (${jahreText(zielJahre())})`;
@@ -4782,7 +4797,7 @@ function ersparnisHtml(v, ersp) {
       + `${ersp >= 0 ? "zusätzliche Ersparnis" : "Mehrbedarf"} ${zr} <b>${gbmb(Math.abs(ersp))}</b>${teile ? ` <span class="sub">(${teile})</span>` : ""}</span>`;
   }
   const gesp = v.ersparnis_gespeichert || 0, ges = gesp + ersp;
-  const tip = `Ersparnis: wie in „Prognosen je Regel“ – wie viel kleiner die DB im Prognosezeitraum durch diese Regel bleibt, verglichen mit „ohne Regeln“\n`
+  const tip = `Ersparnis: wie in „Prognose“ – wie viel kleiner die DB im Prognosezeitraum durch diese Regel bleibt, verglichen mit „ohne Regeln“\n`
     + `Gespeicherte Fassung: ${gbmb(gesp)}${v.ersparnis_gespeichert == null ? " (die Regel wirkt im Probelauf nicht – passiv oder überall überstimmt)" : ""}\n`
     + `Änderung in der Maske: ${aenderung ? (ersp >= 0 ? "+" : "−") + gbmb(Math.abs(ersp)) : "keine"}${aenderung && teile ? ` (${teile})` : ""}`;
   return `<span title="${esc(tip)}">${ges >= 0 ? "Ersparnis" : "Mehrbedarf"} ${zr} <b>${gbmb(Math.abs(ges))}</b>`
@@ -4984,7 +4999,7 @@ const mitAttr = r => r.geplant_attr !== undefined;
 const laufSumme = r => (r.geloescht || 0) + (mitAttr(r) ? r.attr_geloescht || 0 : 0);
 const geplantLauf = r => (r.geplant_zeilen || 0) + (mitAttr(r) ? r.geplant_attr || 0 : 0);
 T.laeufe = new LokaleTabelle({
-  id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true }, wahlOrt: "#laeufeZeilen", neueSpalten: ["ueberhang"],   // Punkt 279
+  id: "#tLaeufe", treffer: "#trefferLaeufe", schluessel: "dbh_breiten_laeufe", einheit: "Läufen", sortStd: { k: "start", desc: true }, wahlOrt: "#laeufeZeilen", neueSpalten: ["ueberhang"], standardAus: ["gezaehlt"],   // Punkt 279
   seiten: [10, 25, 50, 250], seiteStd: 25,   // Punkt 69
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Lauf", "stamm", ["start", "dauer", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
@@ -5947,8 +5962,6 @@ const Zeit = (() => {
     });
   }
   const serienFarbe = s => farben.get(s.key) || GRAU;
-  // Farbe einer Zeile der Aufschlüsselung, wenn die Balken nach Tabelle gestapelt sind (sonst die der Serie)
-  const zeilenFarbe = k => k.key === "~ev" ? "var(--dd-ev)" : !k.slot ? GRAU : D.ebene === "plattform" ? `var(--dd-s${k.slot})` : ton(`var(--dd-s${k.slot})`, k.key);
 
   const isoDat = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const addTage = (iso, n) => { const d = dt(iso); d.setDate(d.getDate() + n); return isoDat(d); };
@@ -6091,11 +6104,20 @@ const Zeit = (() => {
     const ebeneName = { plattform: "Integrationen", geraet: "Geräte", entitaet: "Entitäten" }[D.ebene];
     kopf.textContent = `${ebeneName} in „${wo}“: ${fmtW(a.summe)}${a.knoten_gesamt > a.knoten.length ? ` · die größten ${a.knoten.length} von ${zahl(a.knoten_gesamt)}` : ""}${D.ebene !== "entitaet" ? " · Klick auf einen Eintrag filtert die Balken" : ""}`;
     L.appendChild(kopf);
+    // Bei „nach DB-Tabelle“ sind die Balken nach Tabellen gefärbt, die Liste zeigt aber Integrationen/Geräte/Entitäten: Die Farben der Tabellen stehen
+    // deshalb als Legende darüber (für den gewählten Tag bzw. den ganzen Zeitraum), die Listenmarken sind neutral
+    if (grp === "tabelle") {
+      const b = sel && D.buckets.find(x => x.key === sel), leg = document.createElement("div"); leg.className = "dz-leg";
+      const wert = s => b ? (b.werte[s.key] || 0) : s.summe, ges = D.serien.reduce((n, s) => n + wert(s), 0) || 1;
+      D.serien.forEach(s => { if (!wert(s)) return; const e = document.createElement("span");
+        e.innerHTML = `<i class="dd-sw" style="background:${serienFarbe(s)}"></i>${esc(s.name)}: ${fmtW(wert(s))} · ${fmtP(100 * wert(s) / ges)}`; leg.appendChild(e); });
+      L.appendChild(leg);
+    }
     if (!a.knoten.length) { const p = document.createElement("p"); p.className = "sub"; p.textContent = "Keine Zuwächse in diesem Zeitraum."; L.appendChild(p); return; }
     a.knoten.forEach(k => {
       const r = document.createElement("div"); r.className = "dd-row" + (k.tiefer ? " dd-zoom" : "");
-      const fb = grp === "tabelle" ? zeilenFarbe(k) : (farben.get(k.key) || GRAU);
-      r.innerHTML = `<span class="dd-sw" style="background:${fb}"></span><span class="dd-n" title="${esc(k.name)}">${esc(k.name)}</span><span class="dd-v">${fmtW(k.wert)} · ${fmtP(k.anteil)}</span>`;
+      const sw = grp === "tabelle" ? `<span class="dd-sw neutral"></span>` : `<span class="dd-sw" style="background:${farben.get(k.key) || GRAU}"></span>`;
+      r.innerHTML = `${sw}<span class="dd-n" title="${esc(k.name)}">${esc(k.name)}</span><span class="dd-v">${fmtW(k.wert)} · ${fmtP(k.anteil)}</span>`;
       if (k.tiefer) {
         r.tabIndex = 0; r.setAttribute("role", "button");
         const los = () => { if (D.ebene === "plattform") plat = k.key; else geraet = k.key; laden(); };
@@ -6134,13 +6156,23 @@ const Zeit = (() => {
     const g1 = $("#dzGrp button"); if (g1) g1.textContent = { plattform: "nach Integration", geraet: "nach Gerät", entitaet: "nach Entität" }[D.ebene];   // folgt der Auswahl
     baueFarben(); zeichnePfade(); zeichne(); zeichneListe();
     const attr = D.abdeckung.attr, tag = iso => dt(iso).toLocaleDateString("de-DE");
-    $("#dzHinweis").textContent = `Tageswerte der Zuwachs-Statistik vom ${tag(D.erster)} bis ${tag(D.letzter)}`
-      + (D.fruehester < D.erster ? ` (die Stundenstatistik reicht bis ${tag(D.fruehester)} zurück – unter „Vorhaltezeit: Langzeit“)` : "")
-      + (attr && vz !== "lang" ? `; Attribute erst ab ${tag(attr.von)}` : "")
-      + ". Blasse Balken: Zeitraum nicht ganz erfasst (laufender oder vom Recorder angeschnittener Monat)."
+    const deckung = [];
+    if (D.fruehester < D.erster) deckung.push(`Die Stundenstatistik reicht bis ${tag(D.fruehester)} zurück (unter „Vorhaltezeit: Langzeit“)`);
+    if (attr && vz !== "lang") deckung.push(`Attribute erst ab ${tag(attr.von)}`);
+    $("#dzHinweis").textContent = (deckung.length ? deckung.join("; ") + ". " : "")
+      + "Blasse Balken: Zeitraum nicht ganz erfasst (laufender oder vom Recorder angeschnittener Monat)."
       + (D.median != null ? ` ▲ = Tag über dem 2,5-Fachen des Tagesmedians (${fmtW(D.median)}).` : "");
   }
+  // Übernahme in den Reiter Analyse: dieselbe Teilmenge (Vorhaltezeit, Integration, Gerät); ein dort gesetzter Erstauftreten-Filter entfällt,
+  // sonst wäre es eine andere Teilmenge. Zeitraum und Darstellung der Balken gibt es in der Analyse nicht.
+  function inAnalyse() {
+    A.vz = vz; A.mass = "zuwachs"; A.plattform = plat; A.geraet = plat != null ? geraet : null;
+    A.von = A.bis = null; A.unbekannt = false; A.preset = A.datumText = null;
+    speicher.schreib("dbh_ana_daten", A.vz); speicher.schreib("dbh_ana_mass", A.mass);
+    document.querySelector('#tabs button[data-tab="ana"]').click();
+  }
   function start() {
+    $("#dzAnalyse").onclick = inAnalyse;
     steuerung("#dzVz", VZ, () => vz, k => { vz = k; }, "dbh_zeit_vz");
     steuerung("#dzMass", MASS, () => mass, k => { mass = k; }, "dbh_zeit_mass");
     steuerung("#dzGrp", GRP, () => grp, k => { grp = k; }, "dbh_zeit_grp");
@@ -6244,6 +6276,8 @@ function anaSortWert(k, e, mass, sicht) {
     case "plb": return e.bestand_bytes;
     case "erst": return (knoten ? (sicht === "kurz" ? e.erst_k : e.erst) : (sicht === "kurz" ? e.kurz_first_ts : e.lts_first_ts)) ?? -1;
     case "last": return knoten ? e.geschuetzt : (e.kurzzeit || "");
+    case "attr": return e.attribute || "";
+    case "lang": return e.langzeit || "";
     default: return 0;
   }
 }
@@ -6266,7 +6300,7 @@ function anaTabelle(d) {
   const bN = kk ? "Bestand (States + 5-Min)" : lg ? "Bestand (Stundenzeilen)" : "Bestand (Zeilen)";
   const m1 = zuw ? zN : bN, m2 = zuw ? bN : zN;
   const erstT = kk ? "Erstauftreten (States, 5-Min)" : "Erstauftreten (Langzeitstatistik)";
-  const sp = zk ? [["Entität", "name", 0], ["Status", "n2", 0], [m1, "haupt", 1], ["Anteil (%)", "anteil", 1], [m2, "zweit", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Kurzzeit (Vorhaltezeit)", "last", 3]]
+  const sp = zk ? [["Entität", "name", 0], ["Status", "n2", 0], [m1, "haupt", 1], ["Anteil (%)", "anteil", 1], [m2, "zweit", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Kurzzeit (Vorhaltezeit)", "last", 3], ["Attribute (Vorhaltezeit)", "attr", 3], ["Langzeit (Vorhaltezeit)", "lang", 3]]
     : [[d.ebene === "plattform" ? "Integration" : "Gerät", "name", 0], ["Entitäten", "n2", 0], [m1, "haupt", 1], ["Anteil (%)", "anteil", 1], [m2, "zweit", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Geschützt (Entitäten)", "last", 3]];
   const GRUPPEN = ["Verursacher", "Menge", "Platz (geschätzt)", "Alter und Schutz"];
   const zT = kk ? "Ø der letzten 7 vollen Kalendertage an States-Zeilen plus 288 Zeilen 5-Min-Statistik je Tag (bei aktiven Entitäten mit Statistik)" : lg ? "Stundenstatistik: 24 Zeilen je Tag bei aktiven Entitäten mit Statistik – für alle gleich" : "Ø der letzten 7 vollen Kalendertage, geteilt durch die tatsächlich vorhandenen Tage (wie die Spalte im Tab Entitäten)";
@@ -6274,13 +6308,14 @@ function anaTabelle(d) {
   const tips = { anteil: "So viel der angezeigten Ebene (Zuwachs je Tag bzw. Bestand) macht diese Zeile aus: bei den Integrationen alle Entitäten, bei den Geräten die gewählte Integration, bei den Entitäten das gewählte Gerät – jeweils im aktuellen Erstauftreten-Filter. Die Zeilen ergeben zusammen 100 %. Der Anteil an allem steht im Kopf und im Donut im Reiter Dashboard.", plz: "Geschätzter Platz, den die Zeilen aller Tabellen (States, Attribute, 5-Min- und Stundenstatistik) je Tag neu belegen – mit den gemessenen Zeilengrößen", plb: "Geschätzter Platz des heutigen Bestands in allen Tabellen",
     haupt: zuw ? zT : bT,
     zweit: zuw ? bT : zT,
-    erst: kk ? "Erste noch vorhandene Zeile in States oder 5-Min-Statistik (das frühere von beiden) – durch die Vorhaltezeit begrenzt, sagt wenig über das Alter" : "Erste Langzeitstatistik (Stundenstatistik) der Entität; ohne Langzeitstatistik unbekannt – dieser Wert ist auch der Filter „Erstauftreten“", last: zk ? "Wirksame Vorhaltezeit der Kurzzeit (States, 5-Min) und ihre Regel" : "Anzahl geschützter Entitäten (Schutz vor dem Löschen)" };
+    erst: kk ? "Erste noch vorhandene Zeile in States oder 5-Min-Statistik (das frühere von beiden) – durch die Vorhaltezeit begrenzt, sagt wenig über das Alter" : "Erste Langzeitstatistik (Stundenstatistik) der Entität; ohne Langzeitstatistik unbekannt – dieser Wert ist auch der Filter „Erstauftreten“", attr: "Wirksame Vorhaltezeit der Attribute und ihre Regel (nach dieser Frist werden die Attribute von den States getrennt)", lang: "Wirksame Vorhaltezeit der Langzeit (Stundenstatistik) und ihre Regel",
+    last: zk ? "Wirksame Vorhaltezeit der Kurzzeit (States, 5-Min) und ihre Regel" : "Anzahl geschützter Entitäten (Schutz vor dem Löschen)" };
     const zelleAnteil = a => `<td class="anteil"><div class="ana-anteil"><span class="ana-bar"><i style="width:${Math.min(100, Math.max(a, 0.3))}%"></i></span><b>${a.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</b></div></td>`;
   const zweit = k => zuw ? k.bestand : k.zuwachs;
   const haupt = k => zuw ? k.zuwachs : k.bestand;
   const erstTxt = (k, a = "erst", b = "juengst", u = "unbekannt") => k[a] ? (anaTs(k[a]) + (k[b] && anaTs(k[b]) !== anaTs(k[a]) ? ` – ${anaTs(k[b])}` : "")) + (k[u] ? ` <span class="fein">+ ${zahl(k[u])} unbekannt</span>` : "") : `<span class="fein">unbekannt</span>`;
   const zeilen = anaSortiert(d).map(k => zk
-    ? `<tr data-e="${esc(k.entity_id)}" title="Klick: diese Entität im Tab Entitäten öffnen"><td><code>${esc(k.entity_id)}</code>${k.geschuetzt ? " 🔒" : ""} <span class="ana-oeffne" aria-hidden="true">↗</span></td><td>${esc(STATUS_TEXT[k.status] || k.status)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${(kk ? k.kurz_first_ts : k.lts_first_ts) ? anaTs(kk ? k.kurz_first_ts : k.lts_first_ts) : `<span class="fein">unbekannt</span>`}</td><td>${esc(k.kurzzeit)}${k.regel ? ` <span class="fein">${esc(k.regel)}</span>` : ""}</td></tr>`
+    ? `<tr data-e="${esc(k.entity_id)}" title="Klick: diese Entität im Tab Entitäten öffnen"><td><code>${esc(k.entity_id)}</code>${k.geschuetzt ? " 🔒" : ""} <span class="ana-oeffne" aria-hidden="true">↗</span></td><td>${esc(STATUS_TEXT[k.status] || k.status)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${(kk ? k.kurz_first_ts : k.lts_first_ts) ? anaTs(kk ? k.kurz_first_ts : k.lts_first_ts) : `<span class="fein">unbekannt</span>`}</td><td>${esc(k.kurzzeit)}${k.regel ? ` <span class="fein">${esc(k.regel)}</span>` : ""}</td><td>${esc(k.attribute)}${k.regel_a ? ` <span class="fein">${esc(k.regel_a)}</span>` : ""}</td><td>${esc(k.langzeit)}${k.regel_l ? ` <span class="fein">${esc(k.regel_l)}</span>` : ""}</td></tr>`
     : `<tr data-k="${esc(k.schluessel)}" title="Klick: ${d.ebene === "plattform" ? "Geräte dieser Integration" : "Entitäten dieses Geräts"} anzeigen"><td>${esc(k.name)} <span class="ana-ab" aria-hidden="true">↓</span></td><td>${zahl(k.entitaeten)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${kk ? erstTxt(k, "erst_k", "juengst_k", "unbekannt_k") : erstTxt(k)}</td><td>${zahl(k.geschuetzt)} <span class="fein">von ${zahl(k.entitaeten)}</span></td></tr>`).join("");
   const gcls = (i, g) => `gr gr-ana${i > 0 && sp[i - 1][2] !== g ? " gstart" : ""}`;
   const gruppenzeile = GRUPPEN.map((g, gi) => { const n = sp.filter(s => s[2] === gi).length, i0 = sp.findIndex(s => s[2] === gi); return `<th class="gruppe gr gr-ana${i0 > 0 ? " gstart" : ""}" colspan="${n}">${esc(g)}</th>`; }).join("");
@@ -6289,7 +6324,7 @@ function anaTabelle(d) {
     (d.knoten_gesamt > d.knoten.length ? `<div class="ana-mehr">Gezeigt werden die ${zahl(d.knoten.length)} größten von ${zahl(d.knoten_gesamt)} Entitäten; alle über „In Entitäten öffnen“.</div>` : "");
 }
 // Spaltenbreiten (Punkt 306): Griff am Spaltenkopf ziehen, Doppelklick = Standardbreite, je Ebene im Browser gemerkt, Knopf „Spaltenbreiten zurücksetzen“
-const ANA_BREITE_STD = { name: 260, n2: 100, haupt: 150, anteil: 170, zweit: 130, plz: 140, plb: 120, erst: 210, last: 130 };
+const ANA_BREITE_STD = { name: 260, n2: 100, haupt: 150, anteil: 170, zweit: 130, plz: 140, plb: 120, erst: 210, last: 130, attr: 130, lang: 130 };
 A.breiten = (() => { try { return JSON.parse(speicher.lies("dbh_breiten_ana", "{}")) || {}; } catch { return {}; } })();
 const anaBreite = (eb, k) => A.breiten[eb]?.[k] || (k === "name" && eb === "entitaet" ? 480 : ANA_BREITE_STD[k] || 120);
 function anaBreitenSetzen() {

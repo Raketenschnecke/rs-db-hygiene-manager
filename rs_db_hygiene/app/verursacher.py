@@ -161,10 +161,12 @@ def _sortiert(knoten):
 
 def _zeile(e, w, mass, gesamt):
     m = w["z"] if mass == "zuwachs" else w["b"]
-    k = (e.get("werte") or {}).get("kurzzeit") or {}
+    w3 = e.get("werte") or {}
+    k, at, lz = (w3.get(a) or {} for a in ("kurzzeit", "attribute", "langzeit"))   # Punkt 311: Vorhaltezeiten der Entität
     return {"entity_id": e["entity_id"], "status": e["status"], "zuwachs": w["z"], "bestand": w["b"],
             "zuwachs_bytes": round(w["zb"]), "bestand_bytes": round(w["bb"]), "anteil": round(100 * m / gesamt, 2) if gesamt else 0, "_m": m,
             "lts_first_ts": e.get("lts_first_ts"), "kurz_first_ts": _kurz_erst(e), "kurzzeit": k.get("anzeige") or "", "regel": k.get("regel") or "",
+            "attribute": at.get("anzeige") or "", "regel_a": at.get("regel") or "", "langzeit": lz.get("anzeige") or "", "regel_l": lz.get("regel") or "",
             "geschuetzt": bool(e.get("geschuetzt")), "klasse": e.get("device_class") or ""}
 
 

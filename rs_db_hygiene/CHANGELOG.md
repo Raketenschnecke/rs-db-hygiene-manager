@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b36 (Beta)
+- **Reiter „Dashboard“ heißt „Cockpit“, „Prognosen je Regel“ heißt „Prognose“** (Texte, Hilfe, Tooltips).
+- **Entwicklung (Punkt 308, Fortsetzung):** Legende der Tabellenfarben über der Liste bei „nach DB-Tabelle“ (die Listenmarken sind dort neutral); Knopf „↗ Im Reiter Analyse öffnen“ übernimmt Vorhaltezeit, Integration und Gerät, in Cockpit und Entwicklung am rechten Rand; Text unter dem Diagramm gekürzt; das Diagramm zeichnet sich bei Größenänderung neu (Beschriftung der X-Achse blieb sonst abgeschnitten).
+- **Analyse:** „↗ Integration in Entitäten öffnen“ ist ein Knopf in den Farben der Analyse; auf Entitäten-Ebene zusätzlich die Spalten Attribute und Langzeit (Vorhaltezeit mit Regel, wie Kurzzeit).
+- **Entitäten (Punkt 309):** „erster“ ist getrennt in „erster KZe“ (States, 5-Min) und „erster LZe“ (Langzeit), mit Filter und Sortierung; die Summenzeile zeigt die jeweils frühesten Werte. `first_ts` bleibt in API und CSV.
+- **Läufe:** Die Spalte „gezählt“ ist standardmäßig ausgeblendet (über „Spalten …“ zuschaltbar; neue Tabellenoption `standardAus`).
+- Cockpit: Überschriften der Unterreiter größer, „Stand der Analyse“ neben den Überschriften und der Untertext bei „Was in welcher Tabelle steht“ entfallen.
+
 ## 0.5.6b35 (Beta)
 - **Dashboard: neuer Unterreiter „Entwicklung“ (Punkt 308):** Zuwachs im Zeitverlauf als gestapelte Balken, per Klick hineinzoomen: Jahr → Monat → Woche (mindestens 12 Wochen) → Tag. Vor/zurück-Knöpfe verschieben den gezeigten Zeitraum. Darstellung nach Integration (folgt der Auswahl: Gerät, Entität) oder nach DB-Tabelle; Sicht Zeilen oder Platz (geschätzt); Vorhaltezeit Alle, Kurzzeit, Langzeit.
 - **Aufschlüsselung und Filter:** Die Liste unter dem Diagramm zeigt, wer den gezeigten Zeitraum (oder den gewählten Tag) treibt; ein Klick darauf filtert die Balken. ▲ markiert auffällige Tage (über dem 2,5-Fachen des Tagesmedians), blasse Balken sind nicht ganz erfasste Zeiträume, Wochenenden sind hinterlegt.

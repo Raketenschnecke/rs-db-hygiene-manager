@@ -487,7 +487,7 @@ async def verlauf_lesen(request):
         return web.json_response({"fehler": f"Ungültige Angabe: {e}"}, status=400)
 
 
-SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
+SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "kz_first_ts", "lts_first_ts", "lts_rows", "kurz_rows",
               "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
               "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb"}
@@ -499,7 +499,7 @@ def summen(liste):
     s = {"entitaeten": len(liste), "geraete": len({e["device_id"] for e in liste if e.get("device_id")}),
          "aktiv": 0, "deaktiviert": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
          "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None, "loesch_mb": 0,
-         "first_ts": None, "last_ts": None,
+         "first_ts": None, "last_ts": None, "kz_first_ts": None, "lts_first_ts": None,
          # Punkt 115: Entitäten mit Label und Zahl verschiedener Labels
          "labels": sum(1 for e in liste if e.get("labels")),
          "label_namen": len({x["name"] for e in liste for x in e.get("labels_info") or []})}
@@ -525,6 +525,9 @@ def summen(liste):
             s["loesch_attr_zeilen"] = (s["loesch_attr_zeilen"] or 0) + e["loesch_attr_zeilen"]
         if e["first_ts"] and (s["first_ts"] is None or e["first_ts"] < s["first_ts"]):
             s["first_ts"] = e["first_ts"]
+        for k in ("kz_first_ts", "lts_first_ts"):   # Punkt 309
+            if e.get(k) and (s[k] is None or e[k] < s[k]):
+                s[k] = e[k]
         if e["last_ts"] and (s["last_ts"] is None or e["last_ts"] > s["last_ts"]):
             s["last_ts"] = e["last_ts"]
         for art in rg.WERTE:
