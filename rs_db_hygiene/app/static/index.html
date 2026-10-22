@@ -37,7 +37,7 @@
    Signalfarben, untereinander ≥ 13,6; Petrol verworfen, zu nah am Grün). Logische Verbindungen und Veränderungen in Textfarbe statt Rot/Gelb/Grün. */
 .dash { --d-st: #2e3f63; --d-ev: #7a3a9e; --d-lt: #8a5a2b; --d-adm: #7a8290; display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
 @media (prefers-color-scheme: dark) { .dash { --d-st: #b3c2f7; --d-ev: #a974d8; --d-lt: #e0b48a; --d-adm: #6f7784; } }   /* Grau dunkler, damit es sich vom hellen Nachtblau abhebt */
-.dash h2 { font-size: 17px; margin: 0 0 4px; }
+.dash h2 { font-size: 22px; margin: 0 0 4px; }
 .dash .d-sub { color: var(--muted); max-width: 95ch; margin: 0 0 12px; }
 .dash .d-kopf { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--muted); }
 .dash .d-kopf b { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -131,6 +131,7 @@ h1 { margin: 0; line-height: 0; flex: none; }
 #tip div + div { margin-top: 2px; }
 #tip .tip-luecke { height: 4px; }
 #tip b { font-weight: 700; }
+#tip .tip-farbe { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 /* Punkt 300 (0.5.6b30): Thema mit „! “ davor = Grund einer Warnung (z. B. das ! am Knopf Analyse) – fett in der Warnfarbe */
 #tip b.tip-warn { color: var(--warn); }
 @media (max-width: 900px) { header { --kopf-h: calc(26px * 1.2); --logo-h: 52px; } }
@@ -627,7 +628,7 @@ table.ana-t .fein { color: var(--muted); font-size: 11px; }
 /* Punkt 306: Donut im Reiter Dashboard; Palette: kategoriale Farben, hell und dunkel, je Integration fest */
 .dd { --dd-s1:#2a78d6; --dd-s2:#eb6834; --dd-s3:#1baf7a; --dd-s4:#eda100; --dd-s5:#e87ba4; --dd-s6:#008300; --dd-s7:#6250d6; --dd-s8:#e34948; --dd-grau:#9a9890; --dd-hl:#00000010; margin-bottom: 22px; }
 @media (prefers-color-scheme: dark) { .dd { --dd-s1:#3987e5; --dd-s2:#d95926; --dd-s3:#199e70; --dd-s4:#c98500; --dd-s5:#d55181; --dd-s6:#008300; --dd-s7:#9085e9; --dd-s8:#e66767; --dd-grau:#77756e; --dd-hl:#ffffff14; } }
-.dd h2 { font-size: 17px; margin: 0; }
+.dd h2 { font-size: 22px; margin: 0; }
 .dd-kopf { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; }
 .dd-steuer { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin: 8px 0 12px; }
 .dd-steuer .gr { display: flex; align-items: center; gap: 6px; }
@@ -698,6 +699,33 @@ path.dd-seg.dim { opacity: .28; }
 #ddLegende { flex: 1 1 0; min-width: 0; height: 100%; max-height: none; column-width: 21em; column-gap: 14px; column-fill: auto; overflow: hidden; padding-right: 0; }
 .dd-box { break-inside: avoid; }
 .dd-info { color: var(--muted); cursor: help; }
+/* Punkt 308: Zeitverlauf im Reiter Dashboard (Palette und Kopf wie der Donut) */
+.dz { --dd-ev:#b7791f; }
+@media (prefers-color-scheme: dark) { .dz { --dd-ev:#d9a441; } }
+.dz-pfade { flex: none; display: flex; flex-wrap: wrap; gap: 4px 28px; align-items: center; margin-bottom: 6px; }
+.dz-pfade nav { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; min-height: 30px; }
+.dz-pfade nav > .dz-vor { color: var(--muted); font-size: 12px; margin-right: 2px; }
+.dz-pfade button { border-radius: 999px; padding: 2px 12px; }
+.dz-pfade button.dz-nav { padding: 2px 9px; }
+.dz-pfade button.dz-nav:disabled { opacity: .35; cursor: default; }
+.dz-pfade button[aria-current="true"] { font-weight: 600; cursor: default; border-color: var(--text); }
+.dz-chart { flex: 1 1 0; min-height: 140px; position: relative; overflow: hidden; }
+.dz-chart svg { display: block; }
+.dz-chart text { fill: var(--muted); font-family: system-ui, sans-serif; font-size: 11px; }
+.dz-chart line.dz-g { stroke: var(--line); stroke-width: 1; }
+.dz-chart rect.dz-we { fill: var(--dd-hl); }
+.dz-chart rect.dz-b { stroke: var(--bg); stroke-width: .8; }
+.dz-chart rect.dz-teil { opacity: .5; }
+.dz-chart g.dz-sp rect.dz-hit { fill: transparent; cursor: pointer; }
+.dz-chart g.dz-sp:hover rect.dz-hit { fill: var(--dd-hl); }
+.dz-chart rect.dz-sel { fill: none; stroke: var(--text); stroke-width: 1.6; pointer-events: none; }
+.dz-chart text.dz-auff { fill: #e34948; font-size: 12px; text-anchor: middle; pointer-events: none; }
+.dz-chart text.dz-ach { text-anchor: middle; }
+.dz-chart text.dz-y { text-anchor: end; }
+.dz-hinweis { flex: none; color: var(--muted); font-size: 12px; padding: 4px 0 6px; }
+.dz-liste { flex: 0 0 34%; min-height: 0; overflow: auto; column-width: 21em; column-gap: 14px; padding-right: 2px; }
+.dz-liste .dz-kopfz { column-span: all; color: var(--muted); font-size: 12.5px; margin-bottom: 4px; }
+.dz-liste .dd-row { break-inside: avoid; }
 /* Punkt 306: Analyse-Tabelle mit einstellbaren Spaltenbreiten */
 table.ana-t.fest { table-layout: fixed; width: auto; }
 table.ana-t.fest td { overflow: hidden; text-overflow: ellipsis; }
@@ -1232,7 +1260,7 @@ actions:
     <div class="dsub-bar"><div class="gr" id="dashSub" role="tablist" aria-label="Dashboard-Ansicht"></div><div class="d-kopf" id="dashKopf"></div></div>
     <div class="dsub-pane" id="dpDonut">
     <section class="dd" id="ddAbschnitt">
-      <div class="dd-kopf"><h2>Datenmenge nach Integration, Gerät und Entität</h2><span class="sub" id="ddStand"></span><span class="dd-info" id="ddInfo" tabindex="0" role="note">ⓘ</span></div>
+      <div class="dd-kopf"><h2>Datenmenge nach Integration, Gerät und Entität</h2><span class="dd-info" id="ddInfo" tabindex="0" role="note">ⓘ</span></div>
       <div class="dd-steuer">
         <div class="gr"><span title="Welche Vorhaltezeit betrachtet wird: Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik)">Vorhaltezeit:</span><span id="ddVz"></span></div>
         <div class="gr"><span title="Was die Zahlen zeigen: den Zuwachs je Tag oder den Bestand von heute">Sicht:</span><span id="ddSicht"></span></div>
@@ -1242,6 +1270,21 @@ actions:
         <div class="dd-links"><nav id="ddPfad" aria-label="Auswahl"></nav><div id="ddChart"><p class="sub">Lädt …</p></div></div>
         <div id="ddLegende"></div>
       </div>
+    </section>
+    </div>
+    <!-- Punkt 308: Zeitverlauf – Zuwachs je Jahr/Monat/Tag, gestapelt nach Kategorie oder Tabelle, mit Aufschlüsselung des gezeigten Zeitraums -->
+    <div class="dsub-pane" id="dpZeit" hidden>
+    <section class="dd dz" id="dzAbschnitt">
+      <div class="dd-kopf"><h2>Zuwachs im Zeitverlauf</h2><span class="dd-info" id="dzInfo" tabindex="0" role="note">ⓘ</span></div>
+      <div class="dd-steuer">
+        <div class="gr"><span title="Welche Vorhaltezeit betrachtet wird: Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik)">Vorhaltezeit:</span><span id="dzVz"></span></div>
+        <div class="gr"><span title="Was die Balken zeigen: neue Zeilen oder den dafür geschätzten Platz">Sicht:</span><span id="dzMass"></span></div>
+        <div class="gr"><span title="Wie die Balken unterteilt sind: nach Integration (nach Gerät bzw. Entität, sobald unten eine Integration bzw. ein Gerät gewählt ist) oder nach DB-Tabelle (States, 5-Min-Statistik, Stundenstatistik, Attribute, Events)">Darstellung:</span><span id="dzGrp"></span></div>
+      </div>
+      <div class="dz-pfade"><nav id="dzZeitPfad" aria-label="Zeitraum"></nav><nav id="dzKatPfad" aria-label="Auswahl"></nav></div>
+      <div class="dz-chart" id="dzChart"><p class="sub">Lädt …</p></div>
+      <div class="dz-hinweis" id="dzHinweis"></div>
+      <div class="dz-liste" id="dzListe"></div>
     </section>
     </div>
     <div class="dsub-pane dash" id="dpBez" hidden><p class="d-sub">Lädt …</p></div>
@@ -5486,6 +5529,7 @@ function dashKarten(s) {
 
 // Punkt 307: Unterreiter im Reiter Dashboard; jeder füllt die Höhe exakt (kein Scrollbalken). Welcher offen ist, merkt sich der Browser.
 const DASH_SUB = [["donut", "Datenmenge", "dpDonut", "Wer die Datenmenge treibt: Integration → Gerät → Entität als Donut"],
+  ["zeit", "Entwicklung", "dpZeit", "Wann wie viel dazukam: Jahr → Monat → Woche → Tag, gestapelt nach Integration, Gerät, Entität oder Tabelle"],
   ["bez", "Beziehungen", "dpBez", "Wie die Tabellen der Recorder-Datenbank zusammenhängen"],
   ["platz", "Wo der Platz liegt", "dpPlatz", "Größe je Tabelle, getrennt nach Nutzdaten und Indizes"],
   ["tab", "Was in welcher Tabelle steht", "dpTab", "Zeilenzahlen und Zeiträume je Tabelle"]];
@@ -5505,11 +5549,12 @@ function dashPasseDonut() {
   $(".dd-links").style.width = d + "px"; $("#ddChart").style.height = d + "px";
   dashPasseText($("#ddLegende"));
 }
-function dashPasse() { dashPasseDonut(); ["dpPlatz", "dpTab"].forEach(i => dashPasseText($("#" + i))); }
+function dashPasse() { dashPasseDonut(); Zeit.passe(); ["dpPlatz", "dpTab"].forEach(i => dashPasseText($("#" + i))); }
 function dashZeige(sub) {
   dashSub = sub; speicher.schreib("dbh_dash_sub", sub);
   DASH_SUB.forEach(([k, , id]) => $("#" + id).hidden = k !== sub);
   $("#dashSub").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sub === sub)));
+  if (sub === "zeit") Zeit.laden();
   dashPasse();
 }
 {
@@ -5563,7 +5608,6 @@ async function ladeDash() {
       ${dashGroessen(r.zeilengroessen)}`;
   $("#dpTab").innerHTML = `
       <h2>Was in welcher Tabelle steht</h2>
-      <p class="d-sub">Zeilenzahlen und Zeiträume aus der Analyse vom ${dDatum(s.zeit)}.</p>
       <div class="d-karten">${dashKarten(s)}</div>`;
   dashPasse();
 }
@@ -5843,7 +5887,6 @@ const Donut = (() => {
     geladenFuer = par().toString();
     if (!svg || !svg.isConnected) geruest();
     D = neu; baue(); render();
-    $("#ddStand").textContent = "Stand der Analyse " + zeit(D.stand);
   }
   // Springt mit dem aktuellen Pfad in den Reiter Analyse (Vorhaltezeit, Sicht, Integration und Gerät übernehmen)
   function inAnalyse() {
@@ -5859,6 +5902,257 @@ const Donut = (() => {
   }
   start();
   return { laden: () => laden(false) };
+})();
+
+// ================================================ Punkt 308: Zeitverlauf im Reiter Dashboard
+// Gestapelte Balken je Jahr/Monat/Woche/Tag (Klick zoomt hinein, Tag: Klick wählt ihn für die Aufschlüsselung). Die Liste darunter schlüsselt den gezeigten
+// Zeitraum nach Integration → Gerät → Entität auf; ein Klick darauf filtert die Balken (die Balken zeigen dann die Geräte bzw. Entitäten).
+// Daten: GET api/verlauf (Tageswerte der Zuwachs-Statistik, Zuordnung aus der Analyse). Alles in einer Funktion, damit keine Namen der App überschrieben werden.
+const Zeit = (() => {
+  const VZ = { alle: "Alle (States, 5-Min, Attribute, Stundenstatistik, Events)", kurz: "Kurzzeit (States, 5-Min, Attribute)", lang: "Langzeit (Stundenstatistik)" };
+  const MASS = { zeilen: "Zeilen", platz: "Platz (geschätzt)" };
+  const GRP = { kategorie: "nach Integration", tabelle: "nach DB-Tabelle" };
+  const NAECHSTE = { jahr: "monat", monat: "woche", woche: "tag" };
+  const MIN_WOCHEN = 12, TAGE_UMFELD = 28;   // Wochenansicht zeigt mindestens 12 Wochen, die Tagesansicht aus einer Woche 4 Wochen (Umfeld)
+  const TAB_FARBE = { states: "var(--dd-s1)", kurz: "var(--dd-s3)", lts: "var(--dd-s7)", attr: "var(--dd-s4)", events: "var(--dd-ev)" };
+  const waehle = (schl, erlaubt, std) => { const v = speicher.lies(schl, std); return erlaubt.includes(v) ? v : std; };
+  let vz = waehle("dbh_zeit_vz", Object.keys(VZ), "alle"), mass = waehle("dbh_zeit_mass", Object.keys(MASS), "zeilen"), grp = waehle("dbh_zeit_grp", Object.keys(GRP), "kategorie");
+  let ansichten = [{ aufl: null, von: null, bis: null, label: "Gesamtzeitraum" }];   // gezoomte Zeiträume; die letzte ist die aktuelle
+  let plat = null, geraet = null, sel = null, D = null, nr = 0;
+
+  const fmtZ = n => n >= 1e6 ? (n / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " Mio" : Math.round(n).toLocaleString("de-DE");
+  const fmtB = b => b >= 1e9 ? (b / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " GB" : (b / 1e6).toLocaleString("de-DE", { maximumFractionDigits: b < 1e7 ? 1 : 0 }) + " MB";
+  const fmtW = v => mass === "platz" ? fmtB(v) : fmtZ(v);
+  const fmtP = p => p.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %";
+  const dt = iso => new Date(iso + "T12:00:00");
+  const hash = s => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+  const TON = [0, -26, 24, -12, 38, -38, 12];
+  const mischen = (c, p) => p === 0 ? c : `color-mix(in srgb, ${c} ${100 - Math.abs(p)}%, ${p > 0 ? "white" : "black"})`;
+  const ton = (c, id) => mischen(c, TON[hash(id) % TON.length]);
+  const GRAU = "var(--dd-grau)";
+  // Farben der Serien: Integrationen mit festem Platz behalten ihre Farbe aus dem Donut, die übrigen bekommen freie Plätze der Palette; Geräte und Entitäten
+  // sind Töne der Farbe ihrer Integration (nach Reihenfolge verteilt, damit keine zwei Serien gleich aussehen)
+  let farben = new Map();
+  function baueFarben() {
+    farben = new Map();
+    const frei = [1, 2, 3, 4, 5, 6, 7, 8].filter(n => !D.serien.some(s => s.slot === n));
+    D.serien.forEach((s, i) => {
+      let c;
+      if (grp === "tabelle") c = TAB_FARBE[s.key] || GRAU;
+      else if (s.key === "~ev") c = "var(--dd-ev)";
+      else if (s.key === "~rest") c = GRAU;
+      else if (D.ebene === "plattform") { const n = s.slot || frei.shift(); c = n ? `var(--dd-s${n})` : ton(GRAU, s.key); }
+      else c = mischen(s.slot ? `var(--dd-s${s.slot})` : GRAU, TON[i % TON.length]);
+      farben.set(s.key, c);
+    });
+  }
+  const serienFarbe = s => farben.get(s.key) || GRAU;
+  // Farbe einer Zeile der Aufschlüsselung, wenn die Balken nach Tabelle gestapelt sind (sonst die der Serie)
+  const zeilenFarbe = k => k.key === "~ev" ? "var(--dd-ev)" : !k.slot ? GRAU : D.ebene === "plattform" ? `var(--dd-s${k.slot})` : ton(`var(--dd-s${k.slot})`, k.key);
+
+  const isoDat = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const addTage = (iso, n) => { const d = dt(iso); d.setDate(d.getDate() + n); return isoDat(d); };
+  const montag = iso => addTage(iso, -((dt(iso).getDay() + 6) % 7));
+  const kw = iso => { const d = dt(iso); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); const j = d.getFullYear(), e = new Date(j, 0, 4);   // Donnerstag der Woche bestimmt Jahr und Nummer
+    return { kw: 1 + Math.round(((d - e) / 864e5 - 3 + ((e.getDay() + 6) % 7)) / 7), jahr: j }; };
+  const kurzDat = iso => dt(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  const zeitLabel = (b, aufl, lang) => aufl === "jahr" ? b.key
+    : aufl === "woche" ? (lang ? `KW ${kw(b.von).kw}/${kw(b.von).jahr} (${kurzDat(b.von)}–${dt(b.bis).toLocaleDateString("de-DE")})` : "KW" + kw(b.von).kw)
+    : aufl === "monat" ? dt(b.von).toLocaleDateString("de-DE", lang ? { month: "long", year: "numeric" } : { month: "short", year: "2-digit" })
+    : lang ? dt(b.von).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : String(dt(b.von).getDate());
+  const nice = m => { const e = Math.pow(10, Math.floor(Math.log10(m))), f = m / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; };
+
+  // ---- Diagramm ----
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const el = (n, a = {}) => { const e = document.createElementNS(SVGNS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  function zeichne() {
+    const box = $("#dzChart");
+    if (!D || !D.buckets || !D.buckets.length || box.offsetParent === null) return;
+    const W = Math.max(320, box.clientWidth), H = Math.max(140, box.clientHeight);
+    const L = 74, R = 8, T = 20, B = 26, n = D.buckets.length, bw = (W - L - R) / n, luecke = Math.min(4, bw * 0.2);
+    const top = nice(Math.max(...D.buckets.map(b => b.summe), 1)), ph = H - T - B;
+    const y = v => T + ph * (1 - v / top);
+    const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Zuwachs im Zeitverlauf" });
+    for (let i = 0; i <= 4; i++) {
+      const v = top * i / 4;
+      svg.append(el("line", { class: "dz-g", x1: L, x2: W - R, y1: y(v), y2: y(v) }));
+      const t = el("text", { class: "dz-y", x: L - 6, y: y(v) + 4 }); t.textContent = fmtW(v); svg.append(t);
+    }
+    const jedes = Math.max(1, Math.ceil(26 / bw));
+    D.buckets.forEach((b, i) => {
+      const g = el("g", { class: "dz-sp" }), x0 = L + i * bw, x = x0 + luecke / 2, w = Math.max(1, bw - luecke);
+      if (D.aufl === "tag") { const wt = dt(b.von).getDay(); if (wt === 0 || wt === 6) g.append(el("rect", { class: "dz-we", x: x0, y: T, width: bw, height: ph })); }
+      let unten = H - B;
+      D.serien.forEach(s => {
+        const v = b.werte[s.key]; if (!v) return;
+        const h = ph * v / top; unten -= h;
+        g.append(el("rect", { class: "dz-b" + (b.voll ? "" : " dz-teil"), x, y: unten, width: w, height: h, fill: serienFarbe(s) }));
+      });
+      const zeilen = [`${zeitLabel(b, D.aufl, true)}: ${fmtW(b.summe)}${b.voll ? "" : " (nicht vollständig erfasst)"}`]
+        .concat(D.serien.filter(s => b.werte[s.key]).map(s => `${s.name}: ${fmtW(b.werte[s.key])} (${fmtP(100 * b.werte[s.key] / b.summe)})`));
+      if (b.auffaellig) zeilen.push(`! ▲ auffällig: mehr als das ${String(2.5).replace(".", ",")}-Fache des Tagesmedians (${fmtW(D.median)})`);
+      zeilen.push(NAECHSTE[D.aufl] ? "Klick: hineinzoomen" : "Klick: Aufschlüsselung nur für diesen Tag");
+      const hit = el("rect", { class: "dz-hit", x: x0, y: T, width: bw, height: H - T - B });
+      hit.dataset.tipFarben = JSON.stringify([null, ...D.serien.filter(s => b.werte[s.key]).map(serienFarbe)]);   // Farbmarke je Serienzeile (Legendenfarbe)
+      hit.setAttribute("title", zeilen.join("\n"));   // Punkt 308: title-Attribut statt SVG-<title> → eigene Tooltip-Anzeige (Punkt 216)
+      hit.onclick = () => klick(b);
+      g.append(hit);
+      if (b.key === D.sel) g.append(el("rect", { class: "dz-sel", x: x0 + 0.8, y: T, width: bw - 1.6, height: ph }));
+      if (b.auffaellig) { const a = el("text", { class: "dz-auff", x: x0 + bw / 2, y: Math.max(T - 4, y(b.summe) - 3) }); a.textContent = "▲"; g.append(a); }
+      if (i % jedes === 0) { const t = el("text", { class: "dz-ach", x: x0 + bw / 2, y: H - 9 }); t.textContent = zeitLabel(b, D.aufl, false); g.append(t); }
+      svg.append(g);
+    });
+    box.replaceChildren(svg);
+  }
+
+  // ---- Navigation ----
+  // Zeitraum der nächsten Stufe. Monat → Wochen: ganze Wochen, mindestens MIN_WOCHEN (nicht auf den Monat beschränkt, das Umfeld kommt dazu);
+  // Woche → Tage: TAGE_UMFELD Tage um die Woche. Das Umfeld wird innerhalb der erfassten Tage (erster … letzter) gehalten.
+  function zoomZiel(b, naechste) {
+    const lang = zeitLabel(b, D.aufl, true);
+    if (naechste === "woche") {
+      let von = montag(b.von), bis = addTage(montag(b.bis), 6), vorn = true;
+      while ((dt(bis) - dt(von)) / 864e5 + 1 < MIN_WOCHEN * 7) {
+        const zurueck = addTage(von, -7) >= D.erster, vor = addTage(bis, 7) <= addTage(montag(D.letzter), 6);
+        if (!zurueck && !vor) break;
+        if ((vorn && zurueck) || !vor) von = addTage(von, -7); else bis = addTage(bis, 7);
+        vorn = !vorn;
+      }
+      return { aufl: "woche", von, bis, label: `${Math.round((dt(bis) - dt(von)) / 864e5 / 7 + 1 / 7)} Wochen um ${lang}` };
+    }
+    if (naechste === "tag" && D.aufl === "woche") {
+      let von = addTage(b.von, -(TAGE_UMFELD - 7) / 2), bis = addTage(von, TAGE_UMFELD - 1);
+      if (bis > D.letzter) { bis = D.letzter; von = addTage(bis, -(TAGE_UMFELD - 1)); }
+      if (von < D.erster) { von = D.erster; bis = addTage(von, TAGE_UMFELD - 1) > D.letzter ? D.letzter : addTage(von, TAGE_UMFELD - 1); }
+      return { aufl: "tag", von, bis, label: `Tage um KW ${kw(b.von).kw}/${kw(b.von).jahr}` };
+    }
+    return { aufl: naechste, von: b.von, bis: b.bis, label: lang };
+  }
+  // Vor/zurück: den gezeigten Zeitraum um seine eigene Länge verschieben (Monatsansicht: um so viele Monate, sonst um so viele Tage), die Auflösung bleibt.
+  // Die Gesamtansicht hat keinen festen Zeitraum und lässt sich nicht verschieben; am Rand der erfassten Tage ist die Richtung gesperrt.
+  const monatsEnde = (j, m) => isoDat(new Date(j, m + 1, 0));
+  const randWoche = (v, r) => v.aufl === "woche" ? (r < 0 ? montag(D.erster) : addTage(montag(D.letzter), 6)) : (r < 0 ? D.erster : D.letzter);
+  function verschoben(r) {
+    const v = ansichten[ansichten.length - 1];
+    if (ansichten.length < 2 || !v.von || !D) return null;
+    const rand = randWoche(v, r);
+    if (r < 0 ? v.von <= rand : v.bis >= rand) return null;
+    let von, bis, label;
+    if (v.aufl === "monat") {
+      const a = dt(v.von), e = dt(v.bis), n = (e.getFullYear() - a.getFullYear()) * 12 + e.getMonth() - a.getMonth() + 1;
+      von = isoDat(new Date(a.getFullYear(), a.getMonth() + r * n, 1));
+      bis = monatsEnde(e.getFullYear(), e.getMonth() + r * n);
+      const b2 = dt(von), e2 = dt(bis);
+      label = n === 12 && b2.getMonth() === 0 ? String(b2.getFullYear())
+        : `${b2.toLocaleDateString("de-DE", { month: "short", year: "2-digit" })} – ${e2.toLocaleDateString("de-DE", { month: "short", year: "2-digit" })}`;
+    } else {
+      const n = Math.round((dt(v.bis) - dt(v.von)) / 864e5) + 1, lo = randWoche({ aufl: v.aufl }, -1), hi = randWoche({ aufl: v.aufl }, 1);
+      von = addTage(v.von, r * n); bis = addTage(v.bis, r * n);
+      if (von < lo) { bis = addTage(bis, (dt(lo) - dt(von)) / 864e5); von = lo; }
+      if (bis > hi) { von = addTage(von, -(dt(bis) - dt(hi)) / 864e5); bis = hi; }
+      label = v.aufl === "woche" ? `${Math.round(((dt(bis) - dt(von)) / 864e5 + 1) / 7)} Wochen ab KW ${kw(von).kw}/${kw(von).jahr}`
+        : `${kurzDat(von)}–${dt(bis).toLocaleDateString("de-DE")}`;
+    }
+    return { aufl: v.aufl, von, bis, label };
+  }
+  const grenze = r => { const z = verschoben(r); return z ? z.label : ""; };   // Text für den Tooltip des Knopfs; leer = gesperrt
+  function verschiebe(r) { const z = verschoben(r); if (!z) return; ansichten[ansichten.length - 1] = z; sel = null; laden(); }
+  function klick(b) {
+    const naechste = NAECHSTE[D.aufl];
+    if (naechste) { ansichten.push(zoomZiel(b, naechste)); sel = null; }
+    else sel = sel === b.key ? null : b.key;
+    laden();
+  }
+  function zeichnePfade() {
+    const knopf = (box, text, titel, aktiv, fn) => {
+      const b = document.createElement("button"); b.textContent = text; b.title = titel;
+      if (aktiv) b.setAttribute("aria-current", "true"); else b.onclick = fn; box.appendChild(b);
+    };
+    const vor = (box, t) => { const s = document.createElement("span"); s.className = "dz-vor"; s.textContent = t; box.appendChild(s); };
+    const zp = $("#dzZeitPfad"); zp.replaceChildren(); vor(zp, "Zeit:");
+    [[-1, "◀", "Voriger Zeitraum"], [1, "▶", "Nächster Zeitraum"]].forEach(([r, zeichen, titel]) => {
+      const b = document.createElement("button"); b.className = "dz-nav"; b.textContent = zeichen;
+      const g = grenze(r); b.disabled = !g; b.title = g ? titel + ": " + g : "Kein weiterer Zeitraum (hier gibt es nichts zu verschieben bzw. keine Daten dahinter)";
+      b.onclick = () => verschiebe(r); zp.appendChild(b);
+    });
+    ansichten.forEach((a, i) => knopf(zp, a.label, "Zeitraum " + a.label, i === ansichten.length - 1 && !sel, () => { ansichten = ansichten.slice(0, i + 1); sel = null; laden(); }));
+    if (sel) knopf(zp, zeitLabel(D.buckets.find(b => b.key === sel) || { key: sel, von: sel }, D.aufl, true), "Aufschlüsselung nur für diesen Tag – Klick hebt die Auswahl auf", true);
+    const kp = $("#dzKatPfad"); kp.replaceChildren(); vor(kp, "Auswahl:");
+    knopf(kp, "Alle Integrationen", "Alle Integrationen", plat == null, () => { plat = geraet = null; laden(); });
+    if (plat != null) knopf(kp, D.pfad.plattform || plat, "Integration " + (D.pfad.plattform || plat), geraet == null, () => { geraet = null; laden(); });
+    if (geraet != null) knopf(kp, D.pfad.geraet || geraet, "Gerät " + (D.pfad.geraet || geraet), true);
+  }
+
+  // ---- Aufschlüsselung ----
+  function zeichneListe() {
+    const L = $("#dzListe"); L.replaceChildren();
+    const a = D.aufschluesselung, wo = sel ? zeitLabel(D.buckets.find(b => b.key === sel) || { key: sel, von: sel }, D.aufl, true) : ansichten[ansichten.length - 1].label;
+    const kopf = document.createElement("div"); kopf.className = "dz-kopfz";
+    const ebeneName = { plattform: "Integrationen", geraet: "Geräte", entitaet: "Entitäten" }[D.ebene];
+    kopf.textContent = `${ebeneName} in „${wo}“: ${fmtW(a.summe)}${a.knoten_gesamt > a.knoten.length ? ` · die größten ${a.knoten.length} von ${zahl(a.knoten_gesamt)}` : ""}${D.ebene !== "entitaet" ? " · Klick auf einen Eintrag filtert die Balken" : ""}`;
+    L.appendChild(kopf);
+    if (!a.knoten.length) { const p = document.createElement("p"); p.className = "sub"; p.textContent = "Keine Zuwächse in diesem Zeitraum."; L.appendChild(p); return; }
+    a.knoten.forEach(k => {
+      const r = document.createElement("div"); r.className = "dd-row" + (k.tiefer ? " dd-zoom" : "");
+      const fb = grp === "tabelle" ? zeilenFarbe(k) : (farben.get(k.key) || GRAU);
+      r.innerHTML = `<span class="dd-sw" style="background:${fb}"></span><span class="dd-n" title="${esc(k.name)}">${esc(k.name)}</span><span class="dd-v">${fmtW(k.wert)} · ${fmtP(k.anteil)}</span>`;
+      if (k.tiefer) {
+        r.tabIndex = 0; r.setAttribute("role", "button");
+        const los = () => { if (D.ebene === "plattform") plat = k.key; else geraet = k.key; laden(); };
+        r.onclick = los; r.onkeydown = e => { if (e.key === "Enter") los(); };
+      }
+      L.appendChild(r);
+    });
+  }
+
+  // ---- Laden ----
+  function steuerung(ziel, werte, get, set, schl) {
+    const box = $(ziel); box.replaceChildren();
+    Object.keys(werte).forEach(k => {
+      const b = document.createElement("button"); b.className = "dd-sg"; b.textContent = werte[k].replace(/ \(.*\)/, ""); b.title = werte[k]; b.setAttribute("aria-pressed", String(k === get()));
+      b.onclick = () => { set(k); speicher.schreib(schl, k); box.querySelectorAll("button").forEach((c, i) => c.setAttribute("aria-pressed", String(Object.keys(werte)[i] === k))); laden(); };
+      box.appendChild(b); box.appendChild(document.createTextNode(" "));
+    });
+  }
+  async function laden() {
+    const mein = ++nr, ziel = $("#dzChart"), v = ansichten[ansichten.length - 1];
+    const p = par();
+    p.set("daten", vz); p.set("mass", mass); p.set("grp", grp);
+    if (v.von) { p.set("von", v.von); p.set("bis", v.bis); }
+    if (v.aufl) p.set("aufl", v.aufl);
+    if (plat != null) p.set("plattform", plat);
+    if (geraet != null) p.set("geraet", geraet);
+    if (sel) p.set("sel", sel);
+    let neu;
+    try { neu = await api("verlauf?" + p); }
+    catch (e) { if (mein === nr) { D = null; ziel.innerHTML = `<p class="sub">${esc(e.message)}</p>`; $("#dzListe").replaceChildren(); $("#dzHinweis").textContent = ""; } return; }
+    if (mein !== nr) return;   // ein neuerer Aufruf läuft schon
+    if (neu.fehler || !neu.buckets.length) { D = null; ziel.innerHTML = `<p class="sub">${esc(neu.fehler || "Keine Daten im Zeitverlauf.")}</p>`; $("#dzListe").replaceChildren(); return; }
+    D = neu;
+    if (!ansichten[0].aufl) ansichten[0].aufl = D.aufl;
+    if (sel && D.sel !== sel) sel = null;
+    const g1 = $("#dzGrp button"); if (g1) g1.textContent = { plattform: "nach Integration", geraet: "nach Gerät", entitaet: "nach Entität" }[D.ebene];   // folgt der Auswahl
+    baueFarben(); zeichnePfade(); zeichne(); zeichneListe();
+    const attr = D.abdeckung.attr, tag = iso => dt(iso).toLocaleDateString("de-DE");
+    $("#dzHinweis").textContent = `Tageswerte der Zuwachs-Statistik vom ${tag(D.erster)} bis ${tag(D.letzter)}`
+      + (D.fruehester < D.erster ? ` (die Stundenstatistik reicht bis ${tag(D.fruehester)} zurück – unter „Vorhaltezeit: Langzeit“)` : "")
+      + (attr && vz !== "lang" ? `; Attribute erst ab ${tag(attr.von)}` : "")
+      + ". Blasse Balken: Zeitraum nicht ganz erfasst (laufender oder vom Recorder angeschnittener Monat)."
+      + (D.median != null ? ` ▲ = Tag über dem 2,5-Fachen des Tagesmedians (${fmtW(D.median)}).` : "");
+  }
+  function start() {
+    steuerung("#dzVz", VZ, () => vz, k => { vz = k; }, "dbh_zeit_vz");
+    steuerung("#dzMass", MASS, () => mass, k => { mass = k; }, "dbh_zeit_mass");
+    steuerung("#dzGrp", GRP, () => grp, k => { grp = k; }, "dbh_zeit_grp");
+    $("#dzInfo").title = "Neue Zeilen (oder der dafür geschätzte Platz) je Jahr, Monat, Woche und Tag aus den Tageswerten der Zuwachs-Statistik. Klick auf einen Balken zoomt hinein: Jahr → Monat → Woche (mindestens 12 Wochen) → Tag; "
+      + "auf Tagesebene wählt der Klick den Tag für die Aufschlüsselung unten. Die Liste darunter zeigt, wer den gezeigten Zeitraum treibt; ein Klick darauf filtert die Balken (Integration → Gerät → Entität), "
+      + "die Pfade oben gehen zurück. „Darstellung: nach DB-Tabelle“ trennt stattdessen nach States, 5-Min-Statistik, Stundenstatistik, Attributen und Events. "
+      + "Events gehören keiner Entität und stehen nur bei „Alle“ (ohne Filter auf eine Integration). Der Platz ist aus gemessenen Zeilengrößen geschätzt. "
+      + "Die Tageswerte gehen nur so weit zurück, wie die Zuwachs-Statistik sie aufbewahrt.";
+  }
+  new ResizeObserver(() => zeichne()).observe($("#dzChart"));   // Texte unter dem Diagramm ändern dessen Höhe erst nach dem Zeichnen
+  start();
+  return { laden, passe: zeichne };
 })();
 
 // ================================================ Punkt 305: Reiter Analyse
@@ -6308,7 +6602,13 @@ function tipVerbergen() {
 }
 function tipZeigen() {
   if (!TIP.ziel || !TIP.text) return;
-  TIP.el.innerHTML = tipSchema(TIP.ziel, TIP.text).map(z => z.trim() ? `<div>${tipZeile(z)}</div>` : `<div class="tip-luecke"></div>`).join("");
+  const zl = tipSchema(TIP.ziel, TIP.text);
+  let farben = []; try { farben = JSON.parse(TIP.ziel.dataset?.tipFarben || "[]"); } catch (e) {}   // Punkt 308: optionale Farbmarke je Zeile
+  // die Farben sind var(--dd-…)/color-mix im Bereich des Diagramms; der Tooltip liegt außerhalb → dort zu echten Farben auflösen
+  const wurzel = TIP.ziel.closest(".dz") || document.body;
+  const echt = c => { const p = document.createElement("span"); p.style.background = c; wurzel.appendChild(p); const r = getComputedStyle(p).backgroundColor; p.remove(); return r; };
+  const marke = i => farben[i] ? `<span class="tip-farbe" style="background:${esc(echt(farben[i]))}"></span>` : "";
+  TIP.el.innerHTML = zl.map((z, i) => z.trim() ? `<div>${marke(i)}${tipZeile(z)}</div>` : `<div class="tip-luecke"></div>`).join("");
   if (TIP.el.matches(":popover-open")) TIP.el.hidePopover();
   TIP.el.showPopover();          // neu öffnen = zuoberst, auch über einem eben geöffneten Dialog
   const r = TIP.el.getBoundingClientRect(), w = innerWidth, h = innerHeight;

@@ -26,6 +26,7 @@ import regeln as rg
 import spaltenfilter
 import struktur
 import tote
+import verlauf
 import verursacher
 import warnungen
 import zuwachs
@@ -470,6 +471,20 @@ async def verursacher_baum(request):
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
     return web.json_response(await asyncio.to_thread(verursacher.baum, r, request.query))
+
+
+async def verlauf_lesen(request):
+    """Punkt 308: Reiter Dashboard › Zeitverlauf – Zuwachs im Jahr/Monat/Tag-Verlauf, aufgeteilt nach Kategorie oder Tabelle."""
+    if not os.path.exists(ZUWACHS):
+        return web.json_response({"fehler": "Noch keine Zuwachs-Statistik vorhanden"}, status=404)
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    try:
+        return web.json_response(await asyncio.to_thread(verlauf.baue, r, ZUWACHS, request.query))
+    except ValueError as e:
+        return web.json_response({"fehler": f"Ungültige Angabe: {e}"}, status=400)
 
 
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
@@ -1332,6 +1347,7 @@ def erstelle_app():
         web.get("/api/pareto", pareto),
         web.get("/api/verursacher", verursacher_lesen),
         web.get("/api/verursacher/baum", verursacher_baum),
+        web.get("/api/verlauf", verlauf_lesen),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),
