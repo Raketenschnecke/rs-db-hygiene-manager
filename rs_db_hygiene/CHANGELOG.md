@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b32 (Beta)
+- **Neuer Reiter „Analyse“ (Punkt 305):** Zeigt, wer die Datenmenge treibt – nach Integration → Gerät → Entität (Klick auf eine Zeile führt eine Ebene tiefer, Pfad und aktive Filter als Chips über der Tabelle). Nur Entitätsdaten: States mit Attributen sowie 5-Min- und Stundenstatistik; Events, Statistik ohne Entität und die Verwaltungstabellen gehören nicht dazu. Der Reiter steht zwischen Dashboard und Entitäten und trägt das Rot der Marke (`--zf-ana`), damit er sich von Istzustand, Löschmenge und Prognose abhebt.
+- **Sicht und Vorhaltezeit:** „Sicht“ schaltet zwischen Zuwachs je Tag (Standard, Ø der letzten 7 vollen Kalendertage) und Bestand. „Vorhaltezeit“ wählt Alle, Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik); Zuwachs, Bestand, geschätzter Platz und Erstauftreten folgen der Auswahl. In der Langzeit schreibt jede aktive Entität mit Statistik gleich viel, die Kurve ist dort flach.
+- **Pareto-Kurve und Erstauftreten:** Die Kurve über alle Entitäten nennt, wie viele Entitäten 50, 80 und 90 % ausmachen. Die Balken „Seit wann gibt es die Entitäten?“ gruppieren nach der ersten Langzeitstatistik, nach Alter abgestuft (Tage, Wochen, Monate, Jahre); ein Klick filtert. Das Dropdown „Erstauftreten“ bietet seit 7, 30, 90 Tagen, 1 Jahr, ein Datum aus dem Kalender und „ohne Statistik (unbekannt)“.
+- **Bedienung:** Spalten sortierbar wie in den anderen Tabellen (Klick, Umschalt+Klick), Spaltenköpfe mit Gruppenzeile, weißer Pfeil ↓ für den Drilldown, blaues ↗ öffnet den Tab Entitäten (eine Entität, alle einer Integration oder eines Geräts; vorherige Filter werden geleert).
+- **Knopf „Analyse starten“** im Design des Reiters (Marken-Rot statt Signalrot).
+- Neue Datei `verursacher.py`, neue Schnittstelle `GET /api/verursacher`; sie rechnet nur auf dem Analyse-Cache. Die Integration ändert sich nicht.
+
 ## 0.5.6b31 (Beta)
 - **Dashboard: Balken je Spalte (Punkt 304):** In den Tabellenkarten steht rechts neben jeder Spalte ein Balken mit der geschätzten Größe der Spaltenwerte. Die Nulllinie liegt am rechten Kartenrand, die Balken wachsen nach links; Maßstab ist die größte Spalte der Karte, Größe und Byte je Zeile im Tooltip. Die Größen werden als Schritt 7 der Analyse aus einer Stichprobe der jüngsten 100.000 Zeilen je Tabelle auf die Zeilenzahl hochgerechnet (ca. 1 s, ohne Indizes) und im Tagesstand `struktur.db` gespeichert; bis zur nächsten Analyse zeigt das Dashboard noch keine Balken. Die Karten sind dafür etwas breiter
 

@@ -26,6 +26,7 @@ import regeln as rg
 import spaltenfilter
 import struktur
 import tote
+import verursacher
 import warnungen
 import zuwachs
 
@@ -448,6 +449,18 @@ async def pareto(request):
     def rechne():
         return optimierung.pareto(r, optimierung.histogramme(CACHE, ATTR), warnungen.kontext(HA_CONFIG), ziel, tage)
     return web.json_response(await asyncio.to_thread(rechne))
+
+
+async def verursacher_lesen(request):
+    """Punkt 305: Reiter Analyse – Plattform → Gerät → Entität nach Zuwachs je Tag oder Bestand, Pareto-Kurve, Erstauftreten-Kohorten."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    try:
+        return web.json_response(await asyncio.to_thread(verursacher.baue, r, request.query))
+    except ValueError:
+        return web.json_response({"fehler": "von/bis als JJJJ-MM-TT angeben"}, status=400)
 
 
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
@@ -1308,6 +1321,7 @@ def erstelle_app():
         web.get("/api/klassen", klassen),
         web.get("/api/plattformen", plattformen),
         web.get("/api/pareto", pareto),
+        web.get("/api/verursacher", verursacher_lesen),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),

@@ -12,6 +12,8 @@
   --kleb-h: 120px; --zeile-hell: #ffffff; --zeile-dunkel: #f2f4f7;
   --reiter: #e3e7ee; --reiter-hover: #d5dbe5; --reiter-rand: #c9d0db;
   --zf-ist: #d98880; --zf-loesch: #d4a72c; --zf-prog: #4fa36a;
+  /* Punkt 305: Analyse im Rot der Marke (Icon #5c0000), abgesetzt von Istzustand/Löschmenge/Prognose; -fg = Text und Linien */
+  --zf-ana: #5c0000; --zf-ana-fg: #5c0000;
   /* Punkt 132 (0.5.3): Spaltengruppen im Tab Entitäten – zwei Blautöne, dazu Rot/Gelb wie die Kachelzeilen */
   --zf-stamm: #5fa0d6; --zf-vorh: #6f7fd6;
   /* Punkt 122 (0.5.1): Bedienelemente des Browsers (Checkboxen, Scrollbalken) folgen dem hellen/dunklen Modus
@@ -26,6 +28,7 @@
           --ok: #3fb950; --bad: #ff6b6b; --tot: #f06bc4; --chip: #242b35; --zeile-hell: #1f252d; --zeile-dunkel: #161b21;
           --reiter: #232a34; --reiter-hover: #2d3643; --reiter-rand: #3a4452;
           --zf-ist: #b5615c; --zf-loesch: #b8912a; --zf-prog: #3d8a55;
+          --zf-ana: #9b1c1c; --zf-ana-fg: #e6e9ee;   /* dunkel: Weinrot nur für Flächen (OKLab ≥ 15 zu Istzustand und Fehlerrot), Text in Textfarbe – helle Rottöne lägen zu nah an --bad */
           --zf-stamm: #3f80b0; --zf-vorh: #5561b0; }
 }
 /* Punkt 289: eigenes Farbschema, das sich von den Signalfarben der App abhebt (Istzustand rot, Löschmenge gelb,
@@ -113,6 +116,10 @@ h1 { margin: 0; line-height: 0; flex: none; }
 /* Punkt 125: Markierung oben rechts, wenn eine Analyse veraltet ist (Grund im Tooltip) – gelb, damit sie auf dem Rot auffällt */
 #btnAnalyse.alt::after { content: "!"; position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
   background: #f5c400; color: #1d2330; border: 2px solid var(--bg); font-size: 11px; line-height: 16px; font-weight: 800; }
+/* Punkt 305 (abgenommen 22.10.): Knopf „Analyse starten“ im Design des Reiters Analyse – Marken-Rot statt Signalrot, Fläche und Rand wie ein aktiver
+   Reiter. Überschreibt die ältere Gestaltung (Kachel-Rot) darüber. */
+#btnAnalyse { background: var(--panel); color: var(--zf-ana-fg); border: 1px solid var(--reiter-rand); border-top: 3px solid var(--zf-ana); }
+#btnAnalyse:hover:not(:disabled), #btnAnalyse:focus-visible { background: color-mix(in srgb, var(--zf-ana) 14%, var(--panel)); }
 .kopf-job { display: flex; align-items: center; gap: 10px; flex: none; }
 /* Punkt 216 (0.5.5b12): eigene Tooltip-Anzeige – „Thema:“ fett, Inhalt normal; Popover liegt auch über Dialogen */
 #tip { position: fixed; inset: auto; margin: 0; max-width: min(460px, 92vw); padding: 7px 10px; border-radius: 6px;
@@ -286,9 +293,11 @@ input[type=number] { width: 72px; }
    Istzustand rot, Vorhaltezeiten blau, Prognose grün, Löschmenge gelb; aktiv volle Farbe und farbige Schrift; Hilfe bleibt neutral */
 .tabs button.rf-ist { --rf: var(--zf-ist); } .tabs button.rf-vorh { --rf: var(--zf-vorh); }
 .tabs button.rf-prog { --rf: var(--zf-prog); } .tabs button.rf-loesch { --rf: var(--zf-loesch); }
+.tabs button.rf-ana { --rf: var(--zf-ana); }
 .tabs button.rf-dash { --rf: var(--muted); }   /* Punkt 288: Dashboard grau, ganz links */
 .tabs button[class*="rf-"] { border-top-color: color-mix(in srgb, var(--rf) 75%, var(--reiter)); }
 .tabs button.an[class*="rf-"] { color: color-mix(in srgb, var(--rf) 70%, var(--text)); border-top-color: var(--rf); }
+.tabs button.an.rf-ana { color: var(--zf-ana-fg); }
 /* Eigener Scrollbereich bis zur Fensterhöhe: darin bleibt der Tabellenkopf stehen */
 .tabelle { overflow: auto; max-height: calc(100vh - var(--kleb-h) - var(--unten, 56px));   /* --unten: Punkt 240, tabelleUnten() */ min-height: 240px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 table { border-collapse: separate; border-spacing: 0; width: 100%; }
@@ -323,6 +332,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .gr-stamm { --gf: var(--zf-stamm); } .gr-vorh { --gf: var(--zf-vorh); } .gr-ist { --gf: var(--zf-ist); } .gr-loesch { --gf: var(--zf-loesch); }
 /* Punkte 144–151 (0.5.3): Prognose grün wie die Kachelzeile; Spalten ohne Gruppe neutral */
 .gr-prog { --gf: var(--zf-prog); } .gr-neutral { --gf: var(--reiter-rand); }
+.gr-ana { --gf: var(--zf-ana); }   /* Punkt 305: Reiter Analyse */
 tr.gruppenzeile th.gruppe { text-align: center; font-size: 16px; font-weight: 700; padding: 5px 9px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   color: color-mix(in srgb, var(--gf) 55%, var(--text)); background: color-mix(in srgb, var(--gf) 22%, var(--panel)); border-top: 3px solid var(--gf); }   /* Punkt 142: 16 → 22 % */
 tr.gruppenzeile th.gruppe-leer { border-top: 3px solid transparent; }
@@ -561,6 +571,59 @@ table.gruppiert thead tr th.fix.fix, table.gruppiert tbody tr td.fix.fix { posit
 table.gruppiert thead tr.gruppenzeile th.gruppe.gruppe { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Name der ersten Gruppe über dem fixierten Teil darf in den nicht fixierten Rest ragen (z. B. nur „Regel“ fixiert) */
 table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: visible; text-overflow: clip; }
+/* Punkt 305: Reiter Analyse (Integration → Gerät → Entität, Pareto, Erstauftreten) */
+.ana { --ana: var(--zf-ana); --ana-fg: var(--zf-ana-fg); display: flex; flex-direction: column; gap: 18px; }
+.ana button.primaer { background: var(--ana); border-color: var(--ana); color: #fff; }
+.ana h2 { font-size: 15px; margin: 0 0 6px; }
+.ana-leiste { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.ana-leiste .sub { margin: 0; }
+.ana-kopf { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 14px; border: 1px solid var(--line); border-left: 4px solid var(--ana); border-radius: 10px; background: var(--panel); }
+.ana-chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 4px 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ana) 18%, transparent); border: 1px solid color-mix(in srgb, var(--ana) 45%, transparent); color: var(--ana-fg); font-size: 12px; }
+.ana-chip button { border: 0; background: transparent; color: inherit; padding: 0 6px; cursor: pointer; }
+.ana-zwei { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr); gap: 18px; }
+@media (max-width: 900px) { .ana-zwei { grid-template-columns: 1fr; } }
+.ana-box { border: 1px solid var(--line); border-top: 3px solid var(--ana); border-radius: 10px; background: var(--panel); padding: 10px 14px; min-width: 0; }
+.ana-box svg { width: 100%; height: auto; display: block; }
+.ana-box svg text { fill: var(--muted); font-size: 11px; }
+.ana-box svg .ak { stroke: var(--line); }
+.ana-box svg .ak2 { stroke: var(--muted); stroke-dasharray: 3 3; }
+.ana-box svg .kurve { fill: none; stroke: var(--ana-fg); stroke-width: 2; }
+.ana-box svg .flaeche { fill: color-mix(in srgb, var(--ana) 22%, transparent); stroke: none; }
+.ana-koh { display: grid; grid-template-columns: minmax(110px, 190px) 1fr auto; gap: 3px 10px; align-items: center; font-size: 12px; }
+.ana-koh .zeile { display: contents; cursor: pointer; }
+.ana-koh .zeile:hover > * { background: color-mix(in srgb, var(--ana) 14%, transparent); }
+.ana-koh .zeile.an > span:first-child { font-weight: 600; }
+.ana-bar { height: 12px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+.ana-bar i { display: block; height: 100%; background: var(--ana); }
+.ana-bar i.unb { background: var(--muted); }
+.ana-pfad { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 17px; font-weight: 700; }
+.ana-pfad .sub { font-size: 12px; font-weight: 400; }
+.ana-balken { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 8px; padding: 10px 14px; border: 1px solid var(--line); border-left: 4px solid var(--ana); border-radius: 10px;
+  background: color-mix(in srgb, var(--ana) 8%, var(--panel)); }
+.ana-balken .ana-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ana-balken .ana-hinweis { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }
+.ana-kopf .ana-erkl { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }
+.ana-kopf .ana-erkl a { color: var(--ana-fg); cursor: pointer; text-decoration: underline dotted; }
+.ana-leiste select.aktiv { border-color: var(--ana); box-shadow: 0 0 0 1px var(--ana); }
+.ana-pfad a { color: var(--ana-fg); cursor: pointer; text-decoration: underline dotted; }
+.ana-pfad a:hover { text-decoration: underline; }
+table.ana-t { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.ana-t th, table.ana-t td { padding: 5px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+table.ana-t th:first-child, table.ana-t td:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+table.ana-t tbody tr:nth-child(odd) td { background: color-mix(in srgb, var(--zf-ana) 4%, var(--zeile-hell)); }
+table.ana-t tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--zf-ana) 4%, var(--zeile-dunkel)); }
+table.ana-t thead tr.gruppenzeile th { text-align: center; }
+table.ana-t td:nth-child(3), table.ana-t td:nth-child(6), table.ana-t td:nth-child(8) { border-left: 1px solid color-mix(in srgb, var(--zf-ana) 60%, var(--line)); }
+table.ana-t tbody tr[data-k], table.ana-t tbody tr[data-e] { cursor: pointer; }
+table.ana-t tbody tr[data-k]:hover td, table.ana-t tbody tr[data-e]:hover td { background: color-mix(in srgb, var(--ana) 16%, var(--panel)); }
+table.ana-t td.anteil { width: 150px; text-align: left; }
+.ana-anteil { display: flex; align-items: center; gap: 6px; }
+.ana-anteil .ana-bar { flex: 1; min-width: 50px; }
+.ana-anteil b { font-weight: 400; min-width: 42px; text-align: right; }
+table.ana-t .fein { color: var(--muted); font-size: 11px; }
+.ana-ab { color: var(--text); }   /* weißer Pfeil nach unten: Drilldown in dieser Tabelle */
+.ana-oeffne { border: 0; background: transparent; color: var(--accent);   /* blauer Pfeil schräg nach oben: öffnet den Tab Entitäten */ cursor: pointer; padding: 0 4px; }
+.ana-mehr { color: var(--muted); font-size: 12px; padding: 6px 2px; }
 </style>
 </head>
 <body>
@@ -607,6 +670,8 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
       <!-- Punkt 158 (0.5.3): Reihenfolge Istzustand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
       <!-- Punkt 288: Dashboard ganz links und Startreiter beim Laden der Seite (bis dahin Entitäten) -->
       <button data-tab="dash" class="an rf-dash" title="Aufbau der Recorder-Datenbank: Tabellen, Beziehungen, Platz – Stand der letzten Analyse">Dashboard</button>
+      <!-- Punkt 305: Analyse zwischen Dashboard und Entitäten (Überblick vor der Arbeitstabelle) -->
+      <button data-tab="ana" class="rf-ana" title="Wer treibt die Datenmenge? Integration → Gerät → Entität nach Zuwachs je Tag oder Bestand, mit Pareto-Kurve und Erstauftreten">Analyse</button>
       <button data-tab="ent" class="rf-ist">Entitäten</button>
       <button data-tab="events" class="rf-ist">Events</button>
       <button data-tab="lts" class="rf-ist">Statistik ohne Entität</button>
@@ -1081,6 +1146,9 @@ actions:
     <div class="tabelle"><table id="tLts" class="baustein"></table></div>
   </section>
   <!-- Punkt 288: Aufbau der Recorder-Datenbank, Tagesstand aus der Analyse (struktur.db) -->
+  <section id="tab-ana" hidden>
+    <div class="ana" id="anaInhalt"><p class="sub">Lädt …</p></div>
+  </section>
   <section id="tab-dash">
     <div class="dash" id="dashInhalt"><p class="d-sub">Lädt …</p></div>
   </section>
@@ -5368,6 +5436,285 @@ async function ladeDash() {
     </section>`;
 }
 
+// ================================================ Punkt 305: Reiter Analyse
+// Integration → Gerät → Entität nach Zuwachs je Tag (rows_24h, Standard) oder Bestand; Pareto-Kurve über alle Entitäten und Kohorten nach
+// Erstauftreten (lts_first_ts). Rechnet der Server aus dem Analyse-Cache (api/verursacher), ohne Zugriff auf die Recorder-DB.
+const A = { vz: ["alle", "kurz", "lang"].includes(speicher.lies("dbh_ana_daten", "alle")) ? speicher.lies("dbh_ana_daten", "alle") : "alle",
+             mass: speicher.lies("dbh_ana_mass", "zuwachs") === "bestand" ? "bestand" : "zuwachs", plattform: null, geraet: null, von: null, bis: null, unbekannt: false, daten: null,
+             preset: null, datumText: null,
+             sort: ladeSort("dbh_sort_ana", [{ k: "anteil", desc: true }]) };
+const OHNE_SCHL = "-";
+const anaB = b => b == null ? "–" : gbmb(b);
+const anaDat = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString("de-DE") : "";
+const anaTs = ts => ts ? new Date(ts * 1000).toLocaleDateString("de-DE") : "–";
+const anaTag = d => { const x = new Date(); x.setDate(x.getDate() - d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+function anaParam() {
+  const p = par();
+  p.set("daten", A.vz);
+  p.set("mass", A.mass);
+  if (A.plattform != null) p.set("plattform", A.plattform);
+  if (A.geraet != null) p.set("geraet", A.geraet);
+  if (A.von) p.set("von", A.von);
+  if (A.bis) p.set("bis", A.bis);
+  if (A.unbekannt) p.set("kohorte", "unbekannt");
+  return p;
+}
+const anaMassName = () => A.mass === "zuwachs" ? "Zuwachs je Tag" : "Bestand";
+const ANA_VZ = { alle: "alle Daten", kurz: "Kurzzeit", lang: "Langzeit" };
+function anaPareto(p) {
+  if (!p || !p.punkte.length) return `<p class="sub">Keine Daten.</p>`;
+  const W = 520, H = 224, l = 38, r = 12, o = 12, u = 40, n = p.punkte[p.punkte.length - 1][0], lg = Math.log(Math.max(n, 2));
+  const x = rk => l + (W - l - r) * Math.log(rk) / lg, y = v => o + (H - o - u) * (1 - v / 100);
+  const achse = [1, 10, 100, 1000, 10000].filter(t => t < n && x(n) - x(t) > 34).concat([n]);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pareto-Kurve: kumulierter Anteil nach Rang der Entitäten">`;
+  [0, 25, 50, 75, 100].forEach(v => { s += `<line class="ak" x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}"/><text x="${l - 5}" y="${y(v) + 4}" text-anchor="end">${v} %</text>`; });
+  achse.forEach(t => { s += `<line class="ak" x1="${x(t)}" x2="${x(t)}" y1="${y(0)}" y2="${y(0) + 4}"/><text x="${x(t)}" y="${H - 14}" text-anchor="middle">${zahl(t)}</text>`; });
+  s += `<text x="${(l + W - r) / 2}" y="${H - 1}" text-anchor="middle">Rang der Entität (logarithmisch)</text>`;
+  Object.entries(p.marken).forEach(([m, rk]) => {
+    s += `<line class="ak2" x1="${x(rk)}" x2="${x(rk)}" y1="${y(+m)}" y2="${y(0)}"/><line class="ak2" x1="${l}" x2="${x(rk)}" y1="${y(+m)}" y2="${y(+m)}"/>` +
+         `<text x="${Math.min(x(rk) + 4, W - 100)}" y="${y(+m) + 14}">${m} % = ${zahl(rk)}</text>`;
+  });
+  s += `<polygon class="flaeche" points="${x(p.punkte[0][0]).toFixed(1)},${y(0)} ${p.punkte.map(([rk, v]) => `${x(rk).toFixed(1)},${y(v).toFixed(1)}`).join(" ")} ${x(n).toFixed(1)},${y(0)}"/>`;
+  s += `<polyline class="kurve" points="${p.punkte.map(([rk, v]) => `${x(rk).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}"/></svg>`;
+  return s;
+}
+// Zeitraum eines Kohorten-Balkens (Server: Tage, Wochen, Monate, Jahre je nach Alter; von inklusive, bis exklusive)
+function anaKLabel(k) {
+  if (k.art === "unbekannt") return "ohne Statistik (unbekannt)";
+  const v = new Date(k.von + "T12:00:00"), b = new Date(k.bis_inkl + "T12:00:00");
+  const kurz = x => x.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  if (k.art === "tag") return kurz(v);
+  if (k.art === "monat" && v.getDate() === 1 && new Date(b.getTime() + 864e5).getDate() === 1) return v.toLocaleDateString("de-DE", { month: "short", year: "numeric" });
+  if (k.art === "jahr" && v.getMonth() === 0 && v.getDate() === 1 && b.getMonth() === 11 && b.getDate() === 31) return String(v.getFullYear());
+  return `${kurz(v)} – ${kurz(b)}`;
+}
+function anaKohorten(liste) {
+  if (!liste.length) return `<p class="sub">Keine Daten.</p>`;
+  const wahl = k => k.schluessel === "unbekannt" ? A.unbekannt : (!A.unbekannt && (A.von || null) === (k.von || null) && (A.bis || null) === (k.bis || null) && (A.von || A.bis));
+  const tip = k => k.schluessel === "unbekannt" ? "Erstauftreten: Entitäten ohne Langzeitstatistik, ihr Alter ist nicht bekannt. Klick: nur diese anzeigen"
+    : `Erstauftreten: erste Langzeitstatistik ${k.art === "tag" ? "am" : "im Zeitraum"} ${anaKLabel(k)}. Klick: nur diese anzeigen`;
+  return `<div class="ana-koh">${liste.map(k => `<div class="zeile${wahl(k) ? " an" : ""}" data-koh="${esc(k.schluessel)}" data-von="${esc(k.von || "")}" data-bis="${esc(k.bis || "")}" title="${esc(tip(k))}">
+      <span>${esc(anaKLabel(k))}</span><span class="ana-bar"><i class="${k.schluessel === "unbekannt" ? "unb" : ""}" style="width:${Math.max(k.anteil, 0.5)}%"></i></span>
+      <span>${zahl(k.entitaeten)} · ${k.anteil.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</span></div>`).join("")}</div>`;
+}
+// Auswahl im Dropdown „Erstauftreten“: leer = alle, Zahl = seit n Tagen, datum = Kalender (Bereich oder Balken), unbekannt
+const anaErstWert = () => A.unbekannt ? "unbekannt" : !(A.von || A.bis) ? "" : A.preset ? String(A.preset) : "datum";
+function anaPlusTag(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+// Ausdruck des Kalenders (z. B. „>=1.10.2026“, „1.10.2026-15.10.2026“) → { von inklusive, bis exklusive } als ISO-Datum
+function anaDatumBereich(a) {
+  const iso = s => isoAus(DATUM_RE.exec(s));
+  let m = /^\s*(\d{1,2}\.\d{1,2}\.\d{2,4})\s*-\s*(\d{1,2}\.\d{1,2}\.\d{2,4})\s*$/.exec(a);
+  if (m) return { von: iso(m[1]), bis: anaPlusTag(iso(m[2]), 1) };
+  m = /^\s*(<=|>=|<|>)?\s*(\d{1,2}\.\d{1,2}\.\d{2,4})\s*$/.exec(a);
+  if (!m) return null;
+  const d = iso(m[2]);
+  return { "<": { von: null, bis: d }, "<=": { von: null, bis: anaPlusTag(d, 1) }, ">=": { von: d, bis: null }, ">": { von: anaPlusTag(d, 1), bis: null } }[m[1]] || { von: d, bis: anaPlusTag(d, 1) };
+}
+// Sortierung wie in den anderen Tabellen (Punkt 74): Klick = nur diese Spalte, Umschalt+Klick = weitere Stufe; hier im Browser, die Daten sind schon da.
+// Standard: größter Anteil zuerst (= Reihenfolge des Servers).
+const ANA_SORT_STD = [{ k: "anteil", desc: true }];
+function anaSortWert(k, e, mass, sicht) {
+  const knoten = e.entity_id === undefined;
+  switch (k) {
+    case "name": return (e.name || e.entity_id || "").toLowerCase();
+    case "n2": return knoten ? e.entitaeten : (e.status || "");
+    case "haupt": return mass === "zuwachs" ? e.zuwachs : e.bestand;
+    case "zweit": return mass === "zuwachs" ? e.bestand : e.zuwachs;
+    case "anteil": return mass === "zuwachs" ? e.zuwachs : e.bestand;   // der Anteil selbst ist auf 2 Stellen gerundet – gleiche Anteile sonst in Namensreihenfolge
+    case "plz": return e.zuwachs_bytes;
+    case "plb": return e.bestand_bytes;
+    case "erst": return (knoten ? (sicht === "kurz" ? e.erst_k : e.erst) : (sicht === "kurz" ? e.kurz_first_ts : e.lts_first_ts)) ?? -1;
+    case "last": return knoten ? e.geschuetzt : (e.kurzzeit || "");
+    default: return 0;
+  }
+}
+function anaSortiert(d) {
+  const stufen = [...A.sort, { k: "anteil", desc: true }, { k: "name", desc: false }];
+  return [...d.knoten].sort((a, b) => {
+    for (const s of stufen) {
+      const x = anaSortWert(s.k, a, d.mass, d.daten), y = anaSortWert(s.k, b, d.mass, d.daten);
+      const c = typeof x === "string" || typeof y === "string" ? String(x).localeCompare(String(y), "de") : x - y;
+      if (c) return s.desc ? -c : c;
+    }
+    return 0;
+  });
+}
+function anaTabelle(d) {
+  const zk = d.ebene === "entitaet", zuw = d.mass === "zuwachs", kk = d.daten === "kurz", lg = d.daten === "lang";
+  const zweitName = zuw ? "Bestand" : "Zuwachs je Tag";
+  // Spaltenköpfe wie in den anderen Tabellen: Gruppenzeile in Gruppenfarbe, darunter Titel (fett) und Zusatz/Einheit in Klammern (klein, grau)
+  const zN = kk ? "Zuwachs (States + 5-Min je Tag)" : lg ? "Zuwachs (Stundenzeilen je Tag)" : "Zuwachs (Zeilen je Tag)";
+  const bN = kk ? "Bestand (States + 5-Min)" : lg ? "Bestand (Stundenzeilen)" : "Bestand (Zeilen)";
+  const m1 = zuw ? zN : bN, m2 = zuw ? bN : zN;
+  const erstT = kk ? "Erstauftreten (States, 5-Min)" : "Erstauftreten (Langzeitstatistik)";
+  const sp = zk ? [["Entität", "name", 0], ["Status", "n2", 0], [m1, "haupt", 1], ["Anteil (%)", "anteil", 1], [m2, "zweit", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Kurzzeit (Vorhaltezeit)", "last", 3]]
+    : [[d.ebene === "plattform" ? "Integration" : "Gerät", "name", 0], ["Entitäten", "n2", 0], [m1, "haupt", 1], ["Anteil (%)", "anteil", 1], [m2, "zweit", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Geschützt (Entitäten)", "last", 3]];
+  const GRUPPEN = ["Verursacher", "Menge", "Platz (geschätzt)", "Alter und Schutz"];
+  const zT = kk ? "Ø der letzten 7 vollen Kalendertage an States-Zeilen plus 288 Zeilen 5-Min-Statistik je Tag (bei aktiven Entitäten mit Statistik)" : lg ? "Stundenstatistik: 24 Zeilen je Tag bei aktiven Entitäten mit Statistik – für alle gleich" : "Ø der letzten 7 vollen Kalendertage, geteilt durch die tatsächlich vorhandenen Tage (wie die Spalte im Tab Entitäten)";
+  const bT = kk ? "Zeilen in states plus statistics_short_term" : lg ? "Zeilen in statistics (Stundenstatistik)" : "Zeilen in der Tabelle states";
+  const tips = { anteil: "So viel der Gesamtmenge dieser Sicht (Zuwachs je Tag bzw. Bestand) macht diese Zeile aus. Gesamtmenge = alle Entitäten im aktuellen Erstauftreten-Filter.", plz: "Geschätzter Platz, den die Zeilen aller Tabellen (States, Attribute, 5-Min- und Stundenstatistik) je Tag neu belegen – mit den gemessenen Zeilengrößen", plb: "Geschätzter Platz des heutigen Bestands in allen Tabellen",
+    haupt: zuw ? zT : bT,
+    zweit: zuw ? bT : zT,
+    erst: kk ? "Erste noch vorhandene Zeile in States oder 5-Min-Statistik (das frühere von beiden) – durch die Vorhaltezeit begrenzt, sagt wenig über das Alter" : "Erste Langzeitstatistik (Stundenstatistik) der Entität; ohne Langzeitstatistik unbekannt – dieser Wert ist auch der Filter „Erstauftreten“", last: zk ? "Wirksame Vorhaltezeit der Kurzzeit (States, 5-Min) und ihre Regel" : "Anzahl geschützter Entitäten (Schutz vor dem Löschen)" };
+    const zelleAnteil = a => `<td class="anteil"><div class="ana-anteil"><span class="ana-bar"><i style="width:${Math.min(100, Math.max(a, 0.3))}%"></i></span><b>${a.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</b></div></td>`;
+  const zweit = k => zuw ? k.bestand : k.zuwachs;
+  const haupt = k => zuw ? k.zuwachs : k.bestand;
+  const erstTxt = (k, a = "erst", b = "juengst", u = "unbekannt") => k[a] ? (anaTs(k[a]) + (k[b] && anaTs(k[b]) !== anaTs(k[a]) ? ` – ${anaTs(k[b])}` : "")) + (k[u] ? ` <span class="fein">+ ${zahl(k[u])} unbekannt</span>` : "") : `<span class="fein">unbekannt</span>`;
+  const zeilen = anaSortiert(d).map(k => zk
+    ? `<tr data-e="${esc(k.entity_id)}" title="Klick: diese Entität im Tab Entitäten öffnen"><td><code>${esc(k.entity_id)}</code>${k.geschuetzt ? " 🔒" : ""} <span class="ana-oeffne" aria-hidden="true">↗</span></td><td>${esc(STATUS_TEXT[k.status] || k.status)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${(kk ? k.kurz_first_ts : k.lts_first_ts) ? anaTs(kk ? k.kurz_first_ts : k.lts_first_ts) : `<span class="fein">unbekannt</span>`}</td><td>${esc(k.kurzzeit)}${k.regel ? ` <span class="fein">${esc(k.regel)}</span>` : ""}</td></tr>`
+    : `<tr data-k="${esc(k.schluessel)}" title="Klick: ${d.ebene === "plattform" ? "Geräte dieser Integration" : "Entitäten dieses Geräts"} anzeigen"><td>${esc(k.name)} <span class="ana-ab" aria-hidden="true">↓</span></td><td>${zahl(k.entitaeten)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${kk ? erstTxt(k, "erst_k", "juengst_k", "unbekannt_k") : erstTxt(k)}</td><td>${zahl(k.geschuetzt)} <span class="fein">von ${zahl(k.entitaeten)}</span></td></tr>`).join("");
+  const gcls = (i, g) => `gr gr-ana${i > 0 && sp[i - 1][2] !== g ? " gstart" : ""}`;
+  const gruppenzeile = GRUPPEN.map((g, gi) => { const n = sp.filter(s => s[2] === gi).length, i0 = sp.findIndex(s => s[2] === gi); return `<th class="gruppe gr gr-ana${i0 > 0 ? " gstart" : ""}" colspan="${n}">${esc(g)}</th>`; }).join("");
+  const kopf = sp.map(([h, k, g], i) => `<th class="${k === "name" ? "" : "n "}${gcls(i, g)}"${k ? ` data-sort="${k}"` : ""} title="${esc(h.replace(/ (.*)$/, "") + (tips[k] ? ": " + tips[k] : "") + (k ? SORT_TIP : ""))}">${kopfZweizeilig(h).replace("<span class=\"pfeil\"></span>", `<span class="pfeil">${k ? pfeilText(A.sort, k) : ""}</span>`)}</th>`).join("");
+  return `<div class="tabelle" style="max-height:none"><table class="ana-t gruppiert"><thead><tr class="gruppenzeile">${gruppenzeile}</tr><tr class="titelzeile">${kopf}</tr></thead><tbody>${zeilen || `<tr><td colspan="${sp.length}">Keine Entitäten in dieser Auswahl.</td></tr>`}</tbody></table></div>` +
+    (d.knoten_gesamt > d.knoten.length ? `<div class="ana-mehr">Gezeigt werden die ${zahl(d.knoten.length)} größten von ${zahl(d.knoten_gesamt)} Entitäten; alle über „In Entitäten öffnen“.</div>` : "");
+}
+async function ladeAna() {
+  const ziel = $("#anaInhalt");
+  let d;
+  try { d = await api("verursacher?" + anaParam()); }
+  catch (e) { ziel.innerHTML = `<p class="sub">${esc(e.message)}</p>`; return; }
+  A.daten = d;
+  const g = d.gesamt, chips = [];
+  if (A.unbekannt) chips.push("Erstauftreten: unbekannt (ohne Langzeitstatistik)");
+  else if (A.von || A.bis) chips.push(`Erstauftreten: ${A.von ? "ab " + anaDat(A.von) : ""}${A.von && A.bis ? " " : ""}${A.bis ? "vor " + anaDat(A.bis) : ""}`);
+  const chip = (text, attr) => `<span class="ana-chip">${esc(text)}<button ${attr} aria-label="Filter aufheben" title="Filter aufheben">✕</button></span>`;
+  const balkenChips = [...(d.pfad.plattform ? [chip(`Integration: ${d.pfad.plattform}`, 'data-chip="plattform"')] : []),
+    ...(d.pfad.geraet ? [chip(`Gerät: ${d.pfad.geraet}`, 'data-chip="geraet"')] : []),
+    ...chips.map(c => chip(c, "data-koh-weg"))];
+  const pfad = [`<a data-ebene="0">Alle Integrationen</a>`];
+  if (d.pfad.plattform) pfad.push(d.ebene === "entitaet" ? `<a data-ebene="1">${esc(d.pfad.plattform)}</a>` : `<b>${esc(d.pfad.plattform)}</b>`);
+  if (d.pfad.geraet) pfad.push(`<b>${esc(d.pfad.geraet)}</b>`);
+  if (!d.pfad.plattform) pfad[0] = "<b>Alle Integrationen</b>";
+  ziel.innerHTML = `
+    <div class="ana-leiste">
+      <span title="Welche Vorhaltezeit betrachtet wird: Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik)">Vorhaltezeit:</span>
+      <button data-vz="alle" class="${A.vz === "alle" ? "primaer" : ""}" title="Alle Daten: Zeilen der States, Attribute und beider Statistiktabellen zusammen (Zeilen: States)">Alle</button>
+      <button data-vz="kurz" class="${A.vz === "kurz" ? "primaer" : ""}" title="Kurzzeit: States, 5-Min-Statistik und Attribute – das steuert die Kurzzeit-Vorhaltezeit">Kurzzeit</button>
+      <button data-vz="lang" class="${A.vz === "lang" ? "primaer" : ""}" title="Langzeit: Stundenstatistik – das steuert die Langzeit-Vorhaltezeit. Nur Entitäten mit Statistik">Langzeit</button>
+      <span style="width:12px"></span><span title="Was die Zahlen zeigen: den Zuwachs je Tag oder den Bestand von heute">Sicht:</span>
+      <button data-mass="zuwachs" class="${A.mass === "zuwachs" ? "primaer" : ""}" title="Zuwachs je Tag: Ø der letzten 7 vollen Kalendertage, geteilt durch die tatsächlich vorhandenen Tage – so wachsen die Daten heute">Zuwachs je Tag</button>
+      <button data-mass="bestand" class="${A.mass === "bestand" ? "primaer" : ""}" title="Bestand: Zeilen, die heute in states liegen – hängt von den Vorhaltezeiten ab">Bestand</button>
+      <span style="width:12px"></span><label title="Nur Entitäten, deren erste Langzeitstatistik in diesem Zeitraum liegt. „Datum …“ öffnet den Kalender (ab, vor, zwischen)">Erstauftreten: <select id="anaErst">
+        <option value="">alle</option><option value="7">seit 7 Tagen</option><option value="30">seit 30 Tagen</option><option value="90">seit 90 Tagen</option><option value="365">seit 1 Jahr</option>
+        <option value="datum">Datum …</option><option value="unbekannt">ohne Statistik (unbekannt)</option></select></label>
+      ${d.statistik_ab ? `<span class="sub" title="Die Langzeitstatistik reicht in dieser Datenbank so weit zurück; davor gibt es kein Erstauftreten">Statistik seit ${anaTs(d.statistik_ab)}</span>` : ""}
+      ${chips.map(c => `<span class="ana-chip">${esc(c)}<button data-koh-weg aria-label="Filter aufheben" title="Filter aufheben">✕</button></span>`).join("")}
+      <span style="flex:1"></span><span class="sub">Stand der Analyse ${zeit(d.stand)}</span>
+    </div>
+    <div class="ana-kopf">
+      <span><b>${zahl(g.entitaeten)}</b> Entitäten</span>
+      <span>Zuwachs <b>${zahl(g.zuwachs)}</b> Zeilen/Tag · ${anaB(g.zuwachs_bytes)}/Tag</span>
+      <span>Bestand <b>${zahl(g.bestand)}</b> Zeilen · ${anaB(g.bestand_bytes)}</span>
+      ${g.unbekannt ? `<span title="Entitäten ohne Langzeitstatistik: ihr Erstauftreten ist nicht bekannt">davon ${zahl(g.unbekannt)} mit unbekanntem Erstauftreten</span>` : ""}
+      <p class="ana-erkl">Nur Entitätsdaten: States mit Attributen sowie 5-Min- und Stundenstatistik. Nicht enthalten: Events (Tab <a data-zu="events">Events</a>), <a data-zu="lts">Statistik ohne Entität</a> und die Verwaltungstabellen. Der Platz ist aus den gemessenen Zeilengrößen geschätzt.</p>
+    </div>
+    <div class="ana-zwei">
+      <div class="ana-box"><h2>Wie konzentriert ist es? <span class="sub">(${esc(anaMassName())}, ${esc(ANA_VZ[d.daten])}, alle Entitäten)</span></h2>${anaPareto(d.pareto)}
+        <p class="sub" style="margin:4px 0 0">${Object.keys(d.pareto.marken).length ? `Die ${zahl(d.pareto.marken["80"])} größten von ${zahl(d.pareto.mit_wert)} Entitäten mit Wert erzeugen 80 %.` : ""}${d.daten === "lang" && d.mass === "zuwachs" ? " In der Langzeit schreibt jede aktive Entität mit Statistik gleich viel (24 Zeilen je Tag), die Kurve ist deshalb flach – der Hebel ist die Langzeit-Vorhaltezeit, nicht die Schreibrate. Aussagekräftig ist hier der Bestand." : ""}</p></div>
+      <div class="ana-box"><h2>Seit wann gibt es die Entitäten? <span class="sub">(Anteil an der Sicht je Erstauftreten, Klick filtert)</span></h2>${anaKohorten(d.kohorten)}
+        <p class="sub" style="margin:6px 0 0">Erstauftreten = erste Langzeitstatistik der Entität. Ohne Langzeitstatistik ist es unbekannt. Je älter, desto gröber die Zeiträume: Tage, Wochen, Monate, Jahre.</p></div>
+    </div>
+    <div>
+      <div class="ana-balken">
+        <nav class="ana-pfad" aria-label="Auswahl">${pfad.join(" › ")}<span class="sub">${d.ebene === "plattform" ? mzahl(d.knoten_gesamt, "Integration", "Integrationen") : d.ebene === "geraet" ? mzahl(d.knoten_gesamt, "Gerät", "Geräte") : mzahl(d.knoten_gesamt, "Entität", "Entitäten")}</span></nav>
+        <span class="ana-chips" aria-label="Aktive Filter">${balkenChips.length ? "<span class=\"sub\">Filter:</span> " + balkenChips.join("") : "<span class=\"sub\">kein Filter aktiv</span>"}</span>
+        <span style="flex:1"></span>
+        ${d.pfad.plattform && !(d.ebene === "geraet" && A.plattform === OHNE_SCHL) ? ` <button class="ana-oeffne" data-oeffne-alle title="In Entitäten öffnen: zeigt ${d.ebene === "geraet" ? "alle Entitäten dieser Integration" : "alle Entitäten dieses Geräts"} im Tab Entitäten">↗ ${d.ebene === "geraet" ? "Integration" : "Gerät"} in Entitäten öffnen</button>` : ""}
+        <p class="ana-hinweis">${d.ebene === "plattform" ? "Klick auf eine Integration (↓) zeigt ihre Geräte." : d.ebene === "geraet" ? "Klick auf ein Gerät (↓) zeigt seine Entitäten." : "Klick auf eine Entität (↗) öffnet sie im Tab Entitäten."}</p>
+      </div>
+      <div id="anaTab">${anaTabelle(d)}</div>
+    </div>`;
+  $("#anaErst").value = anaErstWert();
+  $("#anaErst").classList.toggle("aktiv", anaErstWert() !== "");
+}
+$("#anaInhalt").addEventListener("change", ev => {
+  const s = ev.target.closest("#anaErst"); if (!s) return;
+  const v = s.value;
+  const neu = (von, bis, unbekannt, preset, text) => { A.plattform = A.geraet = null; A.von = von; A.bis = bis; A.unbekannt = unbekannt; A.preset = preset; A.datumText = text; ladeAna(); };
+  if (v === "") return neu(null, null, false, null, null);
+  if (v === "unbekannt") return neu(null, null, true, null, null);
+  if (v === "datum") {   // Kalender wie in den Tabellen; ohne Übernahme springt die Auswahl zurück
+    $("#kalender").addEventListener("close", () => { const x = $("#anaErst"); if (x) x.value = anaErstWert(); }, { once: true });
+    return oeffneKalender("Erstauftreten", A.datumText, a => {
+      if (!a) return neu(null, null, false, null, null);
+      const r = anaDatumBereich(a);
+      if (r) neu(r.von, r.bis, false, null, a);
+    });
+  }
+  neu(anaTag(+v), null, false, +v, null);
+});
+$("#anaInhalt").addEventListener("mousedown", ev => { if (ev.shiftKey && ev.target.closest("th[data-sort]")) ev.preventDefault(); });
+$("#anaInhalt").addEventListener("click", async ev => {
+  const t = ev.target;
+  const zu = t.closest("[data-zu]");
+  if (zu) return document.querySelector(`#tabs button[data-tab="${zu.dataset.zu}"]`).click();
+  const th = t.closest("th[data-sort]");
+  if (th && A.daten) {
+    const k = th.dataset.sort, text = k === "name" || (A.daten.ebene === "entitaet" && ["n2", "last"].includes(k));
+    A.sort = sortKlick(A.sort, k, ev.shiftKey, !text);
+    if (!A.sort.length) A.sort = [...ANA_SORT_STD];
+    speicher.schreib("dbh_sort_ana", JSON.stringify(A.sort));
+    $("#anaTab").innerHTML = anaTabelle(A.daten);
+    return;
+  }
+  const sv = t.closest("[data-vz]");
+  if (sv) { A.vz = sv.dataset.vz; speicher.schreib("dbh_ana_daten", A.vz); A.plattform = A.geraet = null; return ladeAna(); }   // andere Sicht: wieder bei „Alle Integrationen“, der Pfad könnte dort leer sein
+  const m = t.closest("[data-mass]");
+  if (m) { A.mass = m.dataset.mass; speicher.schreib("dbh_ana_mass", A.mass); return ladeAna(); }
+  if (t.closest("[data-koh-weg]")) { A.von = A.bis = null; A.unbekannt = false; A.preset = A.datumText = null; return ladeAna(); }
+  const koh = t.closest("[data-koh]");
+  if (koh) {
+    A.plattform = A.geraet = null; A.preset = A.datumText = null;   // ein neuer Erstauftreten-Filter beginnt wieder bei „Alle Integrationen“: in der geöffneten Integration gäbe es oft keinen Treffer
+    if (koh.dataset.koh === "unbekannt") { A.unbekannt = !A.unbekannt; A.von = A.bis = null; }
+    else { const gleich = !A.unbekannt && A.von === (koh.dataset.von || null) && A.bis === (koh.dataset.bis || null); A.unbekannt = false; A.von = gleich ? null : koh.dataset.von || null; A.bis = gleich ? null : koh.dataset.bis || null; }
+    return ladeAna();
+  }
+  const cp = t.closest("[data-chip]");
+  if (cp) { if (cp.dataset.chip === "plattform") A.plattform = null; A.geraet = null; return ladeAna(); }
+  const eb = t.closest("[data-ebene]");
+  if (eb) { if (eb.dataset.ebene === "0") A.plattform = null; A.geraet = null; return ladeAna(); }
+  if (t.closest("[data-oeffne-alle]")) {
+    if (A.geraet == null) return anaOeffne(A.plattform, null);
+    const g = await anaGeraetIds().catch(e => { meldung("Analyse", e.message); return null; });
+    return g && anaOeffne(A.plattform, g.ids, g.name);
+  }
+  const er = t.closest("tr[data-e]");
+  if (er) return anaOeffne(A.plattform, [er.dataset.e], er.dataset.e);
+  const z = t.closest("tr[data-k]");
+  if (z) { if (A.plattform == null) A.plattform = z.dataset.k; else A.geraet = z.dataset.k; ladeAna(); }
+});
+// „In Entitäten öffnen“ (blauer Pfeil): eine Entität, alle einer Integration (Filter Integration) oder alle eines Geräts (ID-Liste, wie „Ansehen“
+// in den Empfehlungen). Vorher werden alle bestehenden Filter der Entitätentabelle geleert (wie „Filter zurücksetzen“, nur ohne eigenes Laden) –
+// sonst bliebe die Tabelle leer, wenn ein früherer Filter nicht zur Auswahl passt. Geladen wird danach einmal durch setzeFilter.
+function anaFilterLeeren() {
+  S.sortierung = [...SORT_STD_ENT]; speicher.schreib("dbh_sort_ent", JSON.stringify(S.sortierung)); zeigeSortierung();
+  S.f = {}; S.geraetName = ""; $("#tEntKopf").querySelectorAll("[data-f]").forEach(el => el.value = "");
+  $("#fDomain").value = ""; $("#fRegel").value = ""; $("#fHinweis").checked = false;
+  S.offset = 0;
+}
+// ids: Liste von Entity-IDs (Entität oder Gerät), sonst nur die Integration; name: Anzeige im Filter-Chip
+async function anaOeffne(plattform, ids, name) {
+  try {
+    if (!ids) {
+      document.querySelector('#tabs button[data-tab="ent"]').click();
+      anaFilterLeeren();
+      return setzeFilter("plattform", plattform === OHNE_SCHL ? "" : plattform, true);
+    }
+    const { schluessel } = await postJson("idliste", { ids });
+    document.querySelector('#tabs button[data-tab="ent"]').click();
+    S.listeName = `Analyse: ${name}`;
+    anaFilterLeeren();
+    setzeFilter("liste", schluessel, true);
+  } catch (e) { meldung("Analyse", e.message); }
+}
+// alle Entitäten des Geräts der aktuellen Pfadzeile (der Server liefert bis zu 500, bei mehr gilt die ID-Liste der gezeigten)
+async function anaGeraetIds() {
+  const p = anaParam(); p.set("plattform", A.plattform); p.set("geraet", A.geraet);
+  const dd = await api("verursacher?" + p);
+  return { ids: dd.knoten.map(k => k.entity_id), name: dd.pfad.geraet || "Gerät" };
+}
+
 // ================================================ Steuerung
 // Punkt 112: Inhaltsverzeichnis der Hilfe öffnet den Abschnitt und springt hin;
 // ab 0.4.11 auch Verweise im Text (Ziel kann eine Frage oder ein Unterabschnitt sein) – kurz hervorgehoben
@@ -5387,12 +5734,13 @@ document.querySelector(".hilfe")?.addEventListener("click", ev => {
 $("#tabs").addEventListener("click", ev => {
   const b = ev.target.closest("button[data-tab]"); if (!b) return;
   document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("an", x === b));
-  ["ent", "events", "opt", "regeln", "probe", "lts", "dash", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
+  ["ent", "events", "opt", "regeln", "probe", "lts", "dash", "ana", "loeschen", "protokoll", "hilfe"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
   document.querySelectorAll("[data-leiste]").forEach(l => l.hidden = l.dataset.leiste !== b.dataset.tab);
   zeigeChips();   // Punkte 271/272
   zeigeAuswahl(); zeigeAuswahlEnt(); zeigeAuswahlEv(); zeigeAuswahlOpt();
   if (b.dataset.tab === "lts") ladeLts();
   if (b.dataset.tab === "dash") ladeDash();   // Punkt 288
+  if (b.dataset.tab === "ana") ladeAna();   // Punkt 305
   if (b.dataset.tab === "opt") ladeOpt();   // Punkt 176
   if (b.dataset.tab === "loeschen") ladeLoeschen();
   if (b.dataset.tab === "protokoll") ladeProtokoll();
@@ -5420,6 +5768,7 @@ async function ladeAlles(regelnAuch = true) {
   if (!$("#tab-protokoll").hidden) ladeProtokoll();
   if (!$("#tab-opt").hidden) ladeOpt();   // Punkt 176: nach Regeländerung, Prognosezeitraum, Analyse
   if (!$("#tab-dash").hidden) ladeDash();   // Punkt 288: nach einer Analyse frischer Stand
+  if (!$("#tab-ana").hidden) ladeAna();   // Punkt 305
 }
 T.opt.daten([]); T.probe.daten([]); T.lts.daten([]); T.events.daten([]); T.loesch.daten([]); T.laeufe.daten([]); T.summe.daten([]);
 // Punkt 278: Wartesignal ausblenden, sobald die ersten Tabellen da sind (auch bei einem Fehler, damit nichts hängen bleibt)
