@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b37 (Beta)
+- **Analyse, Chart „Konzentration der Daten“ (Punkt 310):** Überschrift von „Wie konzentriert ist es?“ geändert; die X-Achse (Rang der Entität) ist linear statt logarithmisch (Beschriftung 0, ¼, ½, ¾, Maximum); der Satz unter dem Chart lautet „Die 460 größten von 8.339 Entitäten erzeugen 80 % des Aufkommens.“ und hat mehr Abstand zur Achsenbeschriftung.
+
 ## 0.5.6b36 (Beta)
 - **Reiter „Dashboard“ heißt „Cockpit“, „Prognosen je Regel“ heißt „Prognose“** (Texte, Hilfe, Tooltips).
 - **Entwicklung (Punkt 308, Fortsetzung):** Legende der Tabellenfarben über der Liste bei „nach DB-Tabelle“ (die Listenmarken sind dort neutral); Knopf „↗ Im Reiter Analyse öffnen“ übernimmt Vorhaltezeit, Integration und Gerät, in Cockpit und Entwicklung am rechten Rand; Text unter dem Diagramm gekürzt; das Diagramm zeichnet sich bei Größenänderung neu (Beschriftung der X-Achse blieb sonst abgeschnitten).

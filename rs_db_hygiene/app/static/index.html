@@ -6214,13 +6214,13 @@ const anaMassName = () => A.mass === "zuwachs" ? "Zuwachs je Tag" : "Bestand";
 const ANA_VZ = { alle: "alle Daten", kurz: "Kurzzeit", lang: "Langzeit" };
 function anaPareto(p) {
   if (!p || !p.punkte.length) return `<p class="sub">Keine Daten.</p>`;
-  const W = 520, H = 224, l = 38, r = 12, o = 12, u = 40, n = p.punkte[p.punkte.length - 1][0], lg = Math.log(Math.max(n, 2));
-  const x = rk => l + (W - l - r) * Math.log(rk) / lg, y = v => o + (H - o - u) * (1 - v / 100);
-  const achse = [1, 10, 100, 1000, 10000].filter(t => t < n && x(n) - x(t) > 34).concat([n]);
+  const W = 520, H = 224, l = 38, r = 12, o = 12, u = 40, n = p.punkte[p.punkte.length - 1][0];
+  const x = rk => l + (W - l - r) * rk / n, y = v => o + (H - o - u) * (1 - v / 100);
+  const achse = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(n * f));
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pareto-Kurve: kumulierter Anteil nach Rang der Entitäten">`;
   [0, 25, 50, 75, 100].forEach(v => { s += `<line class="ak" x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}"/><text x="${l - 5}" y="${y(v) + 4}" text-anchor="end">${v} %</text>`; });
   achse.forEach(t => { s += `<line class="ak" x1="${x(t)}" x2="${x(t)}" y1="${y(0)}" y2="${y(0) + 4}"/><text x="${x(t)}" y="${H - 14}" text-anchor="middle">${zahl(t)}</text>`; });
-  s += `<text x="${(l + W - r) / 2}" y="${H - 1}" text-anchor="middle">Rang der Entität (logarithmisch)</text>`;
+  s += `<text x="${(l + W - r) / 2}" y="${H - 1}" text-anchor="middle">Rang der Entität</text>`;
   Object.entries(p.marken).forEach(([m, rk]) => {
     s += `<line class="ak2" x1="${x(rk)}" x2="${x(rk)}" y1="${y(+m)}" y2="${y(0)}"/><line class="ak2" x1="${l}" x2="${x(rk)}" y1="${y(+m)}" y2="${y(+m)}"/>` +
          `<text x="${Math.min(x(rk) + 4, W - 100)}" y="${y(+m) + 14}">${m} % = ${zahl(rk)}</text>`;
@@ -6391,8 +6391,8 @@ async function ladeAna() {
       <p class="ana-erkl">Nur Entitätsdaten: States mit Attributen sowie 5-Min- und Stundenstatistik. Nicht enthalten: Events (Tab <a data-zu="events">Events</a>), <a data-zu="lts">Statistik ohne Entität</a> und die Verwaltungstabellen. Der Platz ist aus den gemessenen Zeilengrößen geschätzt.</p>
     </div>
     <div class="ana-zwei">
-      <div class="ana-box"><h2>Wie konzentriert ist es? <span class="sub">(${esc(anaMassName())}, ${esc(ANA_VZ[d.daten])}, alle Entitäten)</span></h2>${anaPareto(d.pareto)}
-        <p class="sub" style="margin:4px 0 0">${Object.keys(d.pareto.marken).length ? `Die ${zahl(d.pareto.marken["80"])} größten von ${zahl(d.pareto.mit_wert)} Entitäten mit Wert erzeugen 80 %.` : ""}${d.daten === "lang" && d.mass === "zuwachs" ? " In der Langzeit schreibt jede aktive Entität mit Statistik gleich viel (24 Zeilen je Tag), die Kurve ist deshalb flach – der Hebel ist die Langzeit-Vorhaltezeit, nicht die Schreibrate. Aussagekräftig ist hier der Bestand." : ""}</p></div>
+      <div class="ana-box"><h2>Konzentration der Daten <span class="sub">(${esc(anaMassName())}, ${esc(ANA_VZ[d.daten])}, alle Entitäten)</span></h2>${anaPareto(d.pareto)}
+        <p class="sub" style="margin:14px 0 0">${Object.keys(d.pareto.marken).length ? `Die ${zahl(d.pareto.marken["80"])} größten von ${zahl(d.pareto.mit_wert)} Entitäten erzeugen 80 % des Aufkommens.` : ""}${d.daten === "lang" && d.mass === "zuwachs" ? " In der Langzeit schreibt jede aktive Entität mit Statistik gleich viel (24 Zeilen je Tag), die Kurve ist deshalb flach – der Hebel ist die Langzeit-Vorhaltezeit, nicht die Schreibrate. Aussagekräftig ist hier der Bestand." : ""}</p></div>
       <div class="ana-box"><h2>Seit wann gibt es die Entitäten? <span class="sub">(Anteil an der Sicht je Erstauftreten, Klick filtert)</span></h2>${anaKohorten(d.kohorten)}
         <p class="sub" style="margin:6px 0 0">Erstauftreten = erste Langzeitstatistik der Entität. Ohne Langzeitstatistik ist es unbekannt. Je älter, desto gröber die Zeiträume: Tage, Wochen, Monate, Jahre.</p></div>
     </div>
