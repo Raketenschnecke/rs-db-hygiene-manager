@@ -725,6 +725,11 @@ path.dd-seg.dim { opacity: .28; }
 .dz-chart text.dz-auff { fill: #e34948; font-size: 12px; text-anchor: middle; pointer-events: none; }
 .dz-chart text.dz-ach { text-anchor: middle; }
 .dz-chart text.dz-y { text-anchor: end; }
+.dz-chart line.dz-kwl { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: .55; pointer-events: none; }
+.dz-chart line.dz-kwb { stroke: var(--muted); stroke-width: 1.5; }
+.dz-chart text.dz-kwt { text-anchor: middle; }
+.dz-chart line.dz-kwb.dz-kwf { stroke: var(--text); stroke-width: 3; }
+.dz-chart text.dz-kwt.dz-kwf { fill: var(--text); font-weight: 700; }
 .dz-hinweis { flex: none; color: var(--muted); font-size: 12px; padding: 4px 0 6px; }
 .dz-liste { flex: 0 0 34%; min-height: 0; overflow: auto; column-width: 21em; column-gap: 14px; padding-right: 2px; }
 .dz-liste .dz-kopfz { column-span: all; color: var(--muted); font-size: 12.5px; margin-bottom: 4px; }
@@ -5132,10 +5137,16 @@ $("#tLaeufe").addEventListener("click", ev => {
   for (const p of r.pakete) {
     const offen = !Object.keys(p.je_entitaet || {}).length && p.ergebnis && ergebnisKern(p.ergebnis) !== "fertig";
     for (const eid of p.entitaeten || []) {
+      const stPlan = (p.art || "states") === "states" ? (p.geplant_je || {})[eid] : null;     // Punkt 311: Plan je Entität bei States-Paketen
       if (!offen && p.geplant == null) continue;
+      if (!offen && (p.art || "states") === "states" && !stPlan) continue;
       const z = je[eid] ||= { states: 0, kurz: 0, lts: 0, events: 0, attr: null, rest: 0, teile: {}, ergebnis: new Set() };
       if (offen) { z.teile[p.art || "states"] = { wert: ((r.vorhaltung || {})[eid] || {})[p.art || "states"], tage: p.keep_days, alle: p.alle }; z.ergebnis.add(p.ergebnis); }
-      if (p.geplant != null && (p.art || "states") !== "states") {
+      if (stPlan) {
+        z.geplant = (z.geplant || 0) + stPlan;
+        const v = (p.je_entitaet || {})[eid];
+        z.erledigt = (z.erledigt || 0) + (v ? Math.max(0, (v.vorher || 0) - (v.nachher || 0)) : 0);
+      } else if (p.geplant != null && (p.art || "states") !== "states") {
         z.geplant = (z.geplant || 0) + p.geplant;
         z.erledigt = (z.erledigt || 0) + (p.art === "attr" ? (p.attr_geloescht || 0) : (p.geloescht || 0));
       }
@@ -5168,7 +5179,7 @@ $("#tLaeufe").addEventListener("click", ev => {
         summe: (g, a) => [zahl(g.length), zahl(a.length)] },
       { k: "keep", titel: "Vorhaltedauer", typ: "text", breite: 150, wert: x => x.keep, zelle: x => esc(x.keep), csv: x => x.keep,
         hilfe: "K = Kurzzeit (gilt für States, 5-Min-Statistik und Events), A = Attribute, L = Langzeit; Einheit wie in der Regel gewählt (T Tage, W Wochen, M Monate, J Jahre), „alle“ = alles gelöscht. Läufe aus früheren Versionen zeigen Tage." },
-      blockSpalte("geplant", "geplant", "Plan dieses Auftrags (Zeilen bzw. Attributzeilen) – nur für Aufträge von 5-Min-Statistik, Langzeit, Events und Attributen, erst ab 0.5.6b19 im Protokoll", 100),
+      blockSpalte("geplant", "geplant", "Plan dieser Entität (Zeilen bzw. Attributzeilen) laut Analyse – 5-Min-Statistik, Langzeit, Events und Attribute erst ab 0.5.6b19, States erst ab 0.5.6b38 im Protokoll", 100),
       blockSpalte("ueberhang", "Überhang", "geplant minus erledigt (gelöschte Zeilen bzw. entfernte Attributzeilen) – was im nächsten Lauf folgt; bei Aufträgen ohne Plan „–“", 100),
       blockSpalte("summe", "Summe (Zeilen)", mitAttr(r) ?"Summe aus States, 5-Min-Statistik, Attributen, Langzeit und Events" : "Summe aus States, 5-Min-Statistik, Langzeit und Events (dieser Lauf stammt aus einer früheren Version – ohne Attribute)", 130),
       blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term", 145),
@@ -5972,7 +5983,7 @@ const Zeit = (() => {
   const zeitLabel = (b, aufl, lang) => aufl === "jahr" ? b.key
     : aufl === "woche" ? (lang ? `KW ${kw(b.von).kw}/${kw(b.von).jahr} (${kurzDat(b.von)}–${dt(b.bis).toLocaleDateString("de-DE")})` : "KW" + kw(b.von).kw)
     : aufl === "monat" ? dt(b.von).toLocaleDateString("de-DE", lang ? { month: "long", year: "numeric" } : { month: "short", year: "2-digit" })
-    : lang ? dt(b.von).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : String(dt(b.von).getDate());
+    : lang ? dt(b.von).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) + ` · KW ${kw(b.von).kw}` : String(dt(b.von).getDate());
   const nice = m => { const e = Math.pow(10, Math.floor(Math.log10(m))), f = m / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; };
 
   // ---- Diagramm ----
@@ -5982,7 +5993,7 @@ const Zeit = (() => {
     const box = $("#dzChart");
     if (!D || !D.buckets || !D.buckets.length || box.offsetParent === null) return;
     const W = Math.max(320, box.clientWidth), H = Math.max(140, box.clientHeight);
-    const L = 74, R = 8, T = 20, B = 26, n = D.buckets.length, bw = (W - L - R) / n, luecke = Math.min(4, bw * 0.2);
+    const tage = D.aufl === "tag", L = 74, R = 8, T = 20, B = tage ? 44 : 26, n = D.buckets.length, bw = (W - L - R) / n, luecke = Math.min(4, bw * 0.2);
     const top = nice(Math.max(...D.buckets.map(b => b.summe), 1)), ph = H - T - B;
     const y = v => T + ph * (1 - v / top);
     const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Zuwachs im Zeitverlauf" });
@@ -6012,9 +6023,23 @@ const Zeit = (() => {
       g.append(hit);
       if (b.key === D.sel) g.append(el("rect", { class: "dz-sel", x: x0 + 0.8, y: T, width: bw - 1.6, height: ph }));
       if (b.auffaellig) { const a = el("text", { class: "dz-auff", x: x0 + bw / 2, y: Math.max(T - 4, y(b.summe) - 3) }); a.textContent = "▲"; g.append(a); }
-      if (i % jedes === 0) { const t = el("text", { class: "dz-ach", x: x0 + bw / 2, y: H - 9 }); t.textContent = zeitLabel(b, D.aufl, false); g.append(t); }
+      if (i % jedes === 0) { const t = el("text", { class: "dz-ach", x: x0 + bw / 2, y: tage ? H - 27 : H - 9 }); t.textContent = zeitLabel(b, D.aufl, false); g.append(t); }
+      if (tage && i > 0 && dt(b.von).getDay() === 1) svg.append(el("line", { class: "dz-kwl", x1: x0, x2: x0, y1: T, y2: H - 20 }));   // Wochengrenze (Montag)
       svg.append(g);
     });
+    if (tage) {   // Punkt 312: Band „KW nn“ unter den Tageszahlen, die Woche, aus der man hineingezoomt hat, hervorgehoben
+      const fokus = ansichten[ansichten.length - 1].fokus;
+      let i = 0;
+      while (i < n) {
+        const k = kw(D.buckets[i].von); let j = i;
+        while (j + 1 < n && kw(D.buckets[j + 1].von).kw === k.kw) j++;
+        const xa = L + i * bw + 2, xe = L + (j + 1) * bw - 2, hell = fokus && kw(fokus).kw === k.kw && kw(fokus).jahr === k.jahr;
+        const l = el("line", { class: "dz-kwb" + (hell ? " dz-kwf" : ""), x1: xa, x2: xe, y1: H - 16, y2: H - 16 }); svg.append(l);
+        const t = el("text", { class: "dz-kwt" + (hell ? " dz-kwf" : ""), x: (xa + xe) / 2, y: H - 3 });
+        t.textContent = xe - xa >= 52 ? `KW ${k.kw}` : xe - xa >= 22 ? String(k.kw) : ""; svg.append(t);
+        i = j + 1;
+      }
+    }
     box.replaceChildren(svg);
   }
 
@@ -6037,7 +6062,7 @@ const Zeit = (() => {
       let von = addTage(b.von, -(TAGE_UMFELD - 7) / 2), bis = addTage(von, TAGE_UMFELD - 1);
       if (bis > D.letzter) { bis = D.letzter; von = addTage(bis, -(TAGE_UMFELD - 1)); }
       if (von < D.erster) { von = D.erster; bis = addTage(von, TAGE_UMFELD - 1) > D.letzter ? D.letzter : addTage(von, TAGE_UMFELD - 1); }
-      return { aufl: "tag", von, bis, label: `Tage um KW ${kw(b.von).kw}/${kw(b.von).jahr}` };
+      return { aufl: "tag", von, bis, label: `Tage um KW ${kw(b.von).kw}/${kw(b.von).jahr}`, fokus: b.von };
     }
     return { aufl: naechste, von: b.von, bis: b.bis, label: lang };
   }
@@ -6066,7 +6091,7 @@ const Zeit = (() => {
       label = v.aufl === "woche" ? `${Math.round(((dt(bis) - dt(von)) / 864e5 + 1) / 7)} Wochen ab KW ${kw(von).kw}/${kw(von).jahr}`
         : `${kurzDat(von)}–${dt(bis).toLocaleDateString("de-DE")}`;
     }
-    return { aufl: v.aufl, von, bis, label };
+    return { aufl: v.aufl, von, bis, label, fokus: v.fokus };
   }
   const grenze = r => { const z = verschoben(r); return z ? z.label : ""; };   // Text für den Tooltip des Knopfs; leer = gesperrt
   function verschiebe(r) { const z = verschoben(r); if (!z) return; ansichten[ansichten.length - 1] = z; sel = null; laden(); }

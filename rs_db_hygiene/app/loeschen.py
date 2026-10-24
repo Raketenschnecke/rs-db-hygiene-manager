@@ -694,6 +694,8 @@ class Lauf:
         self._attr_alt = None      # Punkt 256: erster „Integration zu alt“-Eintrag; weitere Attribut-Aufträge werden nur gezählt
         # Punkt 53 (1): bestätigte Ausnahmen dürfen die Obergrenze einmalig überschreiten (nur ihr ältester Tag)
         self.ausnahmen = {c["entity_id"] for c in p.get("entitaeten", []) if c.get("ausnahme")}
+        # Punkt 311: Plan je Entität (States dieses Laufs laut Analyse) – kommt als „geplant“ je Paket und Entität ins Protokoll
+        self.plan_states = {c["entity_id"]: c.get("zeilen") or 0 for c in p.get("entitaeten", []) if c.get("keep_days") is not None}
         # Punkt 84: Verwaiste des Plans; vor ihrem Paket wird geprüft, ob sie inzwischen wieder existieren
         self.verwaiste = {c["entity_id"] for c in p.get("entitaeten", []) if c.get("status", "aktiv") != "aktiv"}
         self.vorhanden = vorhanden or vorhandene_entitaeten
@@ -1064,7 +1066,10 @@ class Lauf:
                     eintrag = {"keep_days": d, "entitaeten": teil, "gesendet": auswahl, "vorher": summe,
                                "nachher": None, "geloescht": 0, "beginn": time.time(), "dauer_s": None,
                                "ergebnis": None,
-                               "je_entitaet": {eid: {"vorher": vorher[mid[eid]]} for eid in auswahl}}
+                               "je_entitaet": {eid: {"vorher": vorher[mid[eid]]} for eid in auswahl},
+                               # Punkt 311: Plan der Entitäten dieses Pakets (auch derer, die die Obergrenze nicht mehr erreichen)
+                               "geplant": sum(self.plan_states.get(e, 0) for e in teil),
+                               "geplant_je": {e: self.plan_states[e] for e in teil if self.plan_states.get(e)}}
                     if wieder:
                         eintrag.update(uebersprungen=wieder, uebersprungen_grund=wieder_grund)
                     self.prot["pakete"].append(eintrag)

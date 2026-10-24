@@ -4,6 +4,9 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b38 (Beta)
+- **Löschprotokoll, Plan der States (Punkt 311):** Die Spalten „geplant“ und „Überhang“ im Lauf-Dialog gelten jetzt auch für States-Pakete (Stufe A): Das Protokoll trägt je Paket und Entität den Plan laut Analyse (`geplant`, `geplant_je`). Bisher zeigten nur 5-Min-Statistik, Langzeit, Events und Attribute einen Plan, sodass die Spalte „geplant“ weit unter der Summe „gelöscht“ lag. Läufe vor 0.5.6b38 zeigen für States weiter „–“.
+
 ## 0.5.6b37 (Beta)
 - **Analyse, Chart „Konzentration der Daten“ (Punkt 310):** Überschrift von „Wie konzentriert ist es?“ geändert; die X-Achse (Rang der Entität) ist linear statt logarithmisch (Beschriftung 0, ¼, ½, ¾, Maximum); der Satz unter dem Chart lautet „Die 460 größten von 8.339 Entitäten erzeugen 80 % des Aufkommens.“ und hat mehr Abstand zur Achsenbeschriftung.
 
