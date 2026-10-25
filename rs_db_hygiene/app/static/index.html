@@ -151,7 +151,7 @@ body.offline [data-hoch], body.offline .massen button { opacity: .45; pointer-ev
 main { padding: 0 20px 24px; }
 /* Punkt 86: Kachelraster – Zeilen Istzustand / Löschmenge sofort / Prognose, Spalten je Tabelle.
    Nie waagerecht scrollen: Spalten schrumpfen bis 0, lange Texte werden gekürzt (voller Text im Tooltip). */
-.raster { display: grid; grid-template-columns: minmax(70px, max-content) repeat(7, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.raster { display: grid; grid-template-columns: minmax(70px, max-content) repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .raster .rkopf { min-width: 0; display: flex; align-items: flex-end; gap: 2px; font-size: 12px; font-weight: 600; color: var(--muted);
   text-transform: uppercase; letter-spacing: .04em; }
 .raster .rkopf > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -166,9 +166,9 @@ main { padding: 0 20px 24px; }
 .raster .kachel .u { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .raster .kachel.fehlt .z { color: var(--muted); font-size: 15px; }
 .raster .ganz { grid-column: 1 / -1; }
-/* Punkt 179: Kacheln der Spalte DB-Größe öffnen den Prognose-Verlauf */
-.raster .kachel[data-zelle$=".db"], .raster .kachel:is([data-zelle="ist.zeilen"], [data-zelle="ist.events"]) { cursor: pointer; }   /* Punkt 283: ist.zeilen öffnet den Zuwachs pro Tag */
-.raster .kachel[data-zelle$=".db"]:hover, .raster .kachel[data-zelle$=".db"]:focus-visible, .raster .kachel:is([data-zelle="ist.zeilen"], [data-zelle="ist.events"]):hover, .raster .kachel:is([data-zelle="ist.zeilen"], [data-zelle="ist.events"]):focus-visible { border-color: var(--zf); outline: none;
+/* Punkt 179: Kacheln der Spalte Daten gesamt öffnen den Prognose-Verlauf (Spalte DB-Größe entfallen) */
+.raster .kachel[data-zelle$=".zeilen"], .raster .kachel[data-zelle="ist.events"] { cursor: pointer; }
+.raster .kachel[data-zelle$=".zeilen"]:hover, .raster .kachel[data-zelle$=".zeilen"]:focus-visible, .raster .kachel[data-zelle="ist.events"]:hover, .raster .kachel[data-zelle="ist.events"]:focus-visible { border-color: var(--zf); outline: none;
   background: color-mix(in srgb, var(--zf) 14%, var(--panel)); }
 /* Punkt 188: Rot gehört dem bisherigen Verlauf; „ohne Regeln“ wird violett */
 .vl { --vl-hist: #c62828; --vl-ohne: #8e5bc4; --vl-ha: #8a919c; --vl-aktiv: #d4a72c; --vl-alle: #3f9a5c; display: grid; gap: 10px; }
@@ -198,7 +198,17 @@ main { padding: 0 20px 24px; }
   --ev-0: #5aa2ee; --ev-1: #4fb873; --ev-2: #a985e0; --ev-3: #e0bd45; --ev-4: #f06bc4; --ev-5: #3fc8dd; --ev-6: #a0a7b3; --ev-7: #ff7ab8; --ev-8: #9ec44b; --ev-9: #e0954a; --ev-10: #7c8ae0; --ev-11: #ff6b6b; } }
 #eZuwachs > summary, #eRegeln > summary, #rEvZuwachs > summary { cursor: pointer; font-weight: 600; margin: 6px 0; }
 #eZuwachs { margin-bottom: 14px; }
-#rEvZuwachs { margin-bottom: 14px; }   /* Punkt 292: Zuwachs-Chart in der Event-Regelkarte, Abstand wie #eZuwachs */
+/* Chart- und Regelbereich der Entitätenkarte dezent als zwei Felder getrennt */
+#rFeld { display: grid; gap: 10px; }
+#rFeld > .raster3:has(.wertblock) { margin-top: 18px; }   /* Vorhaltezeiten vom Eingabefeld darüber absetzen … */
+#rFeld .wertkopf { min-height: 0; }   /* … dafür die Überschriften näher an die Auswahl */
+/* Event-Regelkarte: Zuwachs-Chart und Regelfelder wie in der Entitätenkarte als zwei Felder (Chart nur bei Typ event sichtbar) */
+#rEvZuwachs:not([hidden]), #rMaske:has(#rEvZuwachs:not([hidden])) #rFeld { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; background: color-mix(in srgb, var(--text) 3%, transparent); }
+#rEvZuwachs:not([hidden]):not([open]) { padding-bottom: 2px; }
+#eZuwachs, #eRegeln { border: 1px solid var(--line); border-radius: 10px; padding: 2px 12px 10px; background: color-mix(in srgb, var(--text) 3%, transparent); }
+#eRegeln .raster3 { margin-top: 26px; }   /* Abstand der Vorhaltezeiten zum Text darüber */
+#eZuwachs:not([open]), #eRegeln:not([open]) { padding-bottom: 2px; }
+#rEvZuwachs { margin-bottom: 4px; }   /* Punkt 292: Zuwachs-Chart in der Event-Regelkarte, Abstand wie #eZuwachs */
 .zw .vl-leg { grid-template-columns: repeat(auto-fit, minmax(100px, max-content)); justify-content: center; gap: 6px; margin-bottom: 6px; }
 .zw .vl-leg > button { padding: 2px 8px; font-size: 12px; text-align: center; }
 .zw .vl-leg.ev { display: flex; flex-wrap: wrap; justify-content: center; }   /* Punkt 286: viele Event-Typen als kompakte Schilder */
@@ -216,7 +226,7 @@ main { padding: 0 20px 24px; }
   .raster .rkopf .hilfeknopf { display: none; }
 }
 @media (max-width: 600px) {
-  .raster { grid-template-columns: minmax(40px, max-content) repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .raster { grid-template-columns: minmax(40px, max-content) repeat(6, minmax(0, 1fr)); gap: 3px; }
   .raster .kachel { padding: 4px 3px; border-radius: 6px; } .raster .kachel .z { font-size: 12px; }
   .raster .zkopf { padding: 2px 4px; font-size: 12px; } .raster .zkopf .hilfeknopf { display: none; }
   .raster .rkopf { font-size: 10px; letter-spacing: 0; }
@@ -492,6 +502,7 @@ textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: 1
 .typauto { font-size: 11px; color: var(--accent); min-height: 1.2em; }
 /* Punkt 175: lange Klartexte der Typen dürfen die Maske nicht verbreitern (vgl. Punkt 168) */
 #rMaske label.feld { min-width: 0; } #rTyp { width: 100%; min-width: 0; text-overflow: ellipsis; }
+#rMaske label.feld > #rMusterHilfe { font-size: 12px; color: var(--muted); }   /* Hilfetext zum Muster wie die Hinweise unter den Eingabefeldern: klein und gedämpft */
 /* Punkt 176: Tab Empfehlungen (bis 0.5.4b7 „Optimierungen“) */
 #tOpt td.gruende { white-space: normal; font-size: 12.5px; line-height: 1.35; }
 #tOpt tr.ignoriert td { opacity: .5; }
@@ -584,6 +595,9 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
 .ana h2 { font-size: 15px; margin: 0 0 6px; }
 .ana-leiste { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; position: sticky; top: calc(var(--kleb-oben-h, 10px) - 10px); z-index: 5; background: var(--bg); padding: 10px 0 8px; margin: -10px 0 -10px; }   /* Punkt 307: bleibt beim Scrollen unter den Reitern stehen */
 .ana-leiste .sub { margin: 0; }
+/* Banner (Pfad, Filter) und Tabellenkopf bleiben beim Scrollen unter der Leiste stehen: die Tabelle scrollt in einer Box bis Fensterhöhe, Maße per anaKleb() */
+.ana-balken { position: sticky; top: calc(var(--kleb-oben-h, 10px) - 10px + var(--ana-leiste-h, 0px)); z-index: 4; box-shadow: 0 8px 0 var(--bg); }
+#anaTab .tabelle { max-height: calc(100vh - var(--kleb-oben-h, 10px) + 10px - var(--ana-leiste-h, 0px) - var(--ana-balken-h, 0px) - 34px); }
 .ana-kopf { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 14px; border: 1px solid var(--line); border-left: 4px solid var(--ana); border-radius: 10px; background: var(--panel); }
 .ana-chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 4px 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ana) 18%, transparent); border: 1px solid color-mix(in srgb, var(--ana) 45%, transparent); color: var(--ana-fg); font-size: 12px; }
 .ana-chip button { border: 0; background: transparent; color: inherit; padding: 0 6px; cursor: pointer; }
@@ -614,7 +628,7 @@ table.gruppiert thead tr.gruppenzeile th.gname-links.gname-links { overflow: vis
 .ana-leiste select.aktiv { border-color: var(--ana); box-shadow: 0 0 0 1px var(--ana); }
 .ana-pfad a { color: var(--ana-fg); cursor: pointer; text-decoration: underline dotted; }
 .ana-pfad a:hover { text-decoration: underline; }
-table.ana-t { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.ana-t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }   /* separate: bei collapse scheinen Zeilen unter dem klebenden Kopf durch */
 table.ana-t th, table.ana-t td { padding: 5px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
 table.ana-t th:first-child, table.ana-t td:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
 table.ana-t tbody tr:nth-child(odd) td { background: color-mix(in srgb, var(--zf-ana) 4%, var(--zeile-hell)); }
@@ -875,7 +889,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
         <p>Neu hier? Zuerst Home Assistant und die App einrichten: <a class="hverweis" href="#h-faq-erstinbetrieb">FAQ: Erstinbetriebnahme</a>. In der App-GUI:</p>
         <ol>
           <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 2–10 min).</li>
-          <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird). Ein Klick auf eine DB-Größe-Kachel öffnet den Verlauf „Zuwachs-Prognose der DB“: die bisherige Größe und die Prognosen für aktive Regeln, alle Regeln und ohne Regeln.</li>
+          <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird). Ein Klick auf eine Daten-gesamt-Kachel öffnet den Verlauf „Zuwachs-Prognose der DB“: die bisherige Größe und die Prognosen für aktive Regeln, alle Regeln und ohne Regeln.</li>
           <li><b>Tab Entitäten:</b> für den ersten Überblick nach „Zuwachs“ (Zeilen je Tag) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
           <li><b>Tab Empfehlungen:</b> Die App schlägt Regeln vor; „Übernehmen …“ legt sie passiv an. Hinweise zum Vorgehen: <a class="hverweis" href="#h-faq-reihenfolge">In welcher Reihenfolge lege ich Regeln an?</a></li>
           <li><b>Tab Regeln:</b> Wirkung der einzelnen Regeln analysieren (ggf. zunächst <b>passiv</b> lassen). Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert. Beim Optimieren hilft der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a>.</li>
@@ -1387,6 +1401,7 @@ const WERTE_MASKE = ["kurzzeit", "attribute", "langzeit"];   // Punkt 254: Regel
 // Punkt 67: einheitliche Beschriftung – was Kurzzeit und Langzeit umfassen
 const WNAME = { kurzzeit: "Kurzzeit (States, 5-Min)", attribute: "Attribute", langzeit: "Langzeit (Stundenstatistik, 1 h)" };
 const EV_NAME = "Vorhaltezeit (Events)";
+const EV_INFO = ["Wie lange die Events dieses Event-Typs aufbewahrt werden.","– nicht gesetzt –: keine eigene Einstellung; es gilt weiter die Regel, die jetzt greift, sonst der Standard.","global: die allgemeine Vorhaltezeit von Home Assistant (purge_keep_days).","Dauer …: eigene Frist in Tagen, Wochen, Monaten oder Jahren; die Knöpfe darunter setzen gängige Werte.","Der Wert gilt für alle Event-Typen, die das Muster der Regel trifft."].join("\n");
 // Punkt 114 (0.4.10): Zustand der Entität in HA lesbar (Werte und CSV bleiben aktiv / deaktiviert / verwaist / verwaist_geloescht)
 const STATUS_TEXT = { aktiv: "aktiv", deaktiviert: "deaktiviert", verwaist: "verwaist", verwaist_geloescht: "verwaist (gelöscht)" };
 // Punkt 128 (0.5.3): Spalte mit dem Zustand der Entität – in den Tabs Entitäten und Löschen gleich beschriftet
@@ -2103,7 +2118,7 @@ document.addEventListener("click", ev => {   // ⓘ an Raster-Köpfen und Bedien
 // [Schlüssel, Name, Kurzname für schmale Fenster, CSS-Klasse der Zeilenfarbe]
 const RZEILEN = [["ist", "Istzustand", "Ist", "r-ist"], ["loesch", "Löschmenge sofort", "Löschen", "r-loesch"], ["prog", "Prognose", "Progn.", "r-prog"]];
 // [Schlüssel, Name, Kurzname]
-const RSPALTEN = [["db", "DB-Größe", "DB"], ["zeilen", "Daten gesamt", "Daten"], ["kurz", "States, 5-Min", "St./5M"],
+const RSPALTEN = [["zeilen", "Daten gesamt", "Daten"], ["kurz", "States, 5-Min", "St./5M"],
   ["attr", "Attribute", "Attr."], ["lts", "Langzeit", "LZ"], ["events", "Events", "Ev."], ["verwaist", "Verwaist", "Verw."]];   // Punkt 285: Folge wie in den Löschtabellen
 // Kurzform für schmale Kacheln: 4.998.362 → „5,0 Mio.“ (die lange Form steht im Tooltip)
 const kzahl = n => n == null ? "–" : Math.abs(n) >= 1e9 ? (n / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " Mrd."
@@ -2175,8 +2190,8 @@ function rasterHtml(s, st) {
       const c = werte[z][k];
       const lang = c.fehlt || (c.gb ? gb(c.w) : c.b ? pb(c.w) : zahl(c.w == null ? null : Math.round(c.w))), kurz = c.fehlt || (c.gb ? kgb(c.w) : c.b ? pb(c.w) : kzahl(c.w));
       const tip = `${zname} · ${kname}${z === "prog" ? ` (${zr})` : ""}\n${lang}${c.u ? " – " + c.u : ""}\n\n${zeilenTeil(hilfeTexte("c_" + k)[0], zname)}`;
-      const vl = k === "db" || (z === "ist" && (k === "zeilen" || k === "events")) ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf; Punkt 283: Istzustand/Datenzeilen den Zuwachs pro Tag
-      h += `<div class="kachel ${klasse}${c.fehlt ? " fehlt" : ""}" title="${esc(tip + (vl ? (k === "db" ? "\n\nKlick: Prognose-Verlauf je Monat" : k === "events" ? "\n\nKlick: Zuwachs pro Tag, Summe und je Event-Typ" : "\n\nKlick: Zuwachs pro Tag (alle Entitäten)") : ""))}" data-zelle="${z}.${k}"${vl}>
+      const vl = k === "zeilen" || (z === "ist" && k === "events") ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf; Punkt 283: Istzustand/Datenzeilen den Zuwachs pro Tag
+      h += `<div class="kachel ${klasse}${c.fehlt ? " fehlt" : ""}" title="${esc(tip + (vl ? (k === "zeilen" ? "\n\nKlick: Prognose-Verlauf der DB je Monat" : "\n\nKlick: Zuwachs pro Tag, Summe und je Event-Typ") : ""))}" data-zelle="${z}.${k}"${vl}>
         <div class="z"><span class="lang">${esc(lang)}</span><span class="kurz">${esc(kurz)}</span></div>${c.u ? `<div class="u">${esc(c.u)}</div>` : ""}</div>`;   // Punkt 316/317: Speicherbedarf groß, darunter die Zeilen
     }
   }
@@ -2208,9 +2223,9 @@ const VL_AUS = new Set();   // per Klick auf die Legende ausgeblendete Linien (A
 const VL_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const VL_MASS = { W: 1000, H: 380, L: 62, R: 16, O: 14, U: 34 };
 const MONAT = 365 / 12;      // Tage je Monat wie probelauf.MONAT
-const KACHEL_KLICK = '#raster .kachel[data-zelle$=".db"], #raster .kachel[data-zelle="ist.zeilen"], #raster .kachel[data-zelle="ist.events"]';
-// jede Kachel öffnet genau ein Popup: DB-Größe den Prognose-Verlauf, Istzustand/Datenzeilen und Istzustand/Events ihren Zuwachs pro Tag
-const kachelOeffnen = el => ({ "ist.zeilen": zeigeZuwachsGesamt, "ist.events": zeigeEventZuwachs }[el.dataset.zelle] || zeigeVerlauf)();
+const KACHEL_KLICK = '#raster .kachel[data-zelle$=".zeilen"], #raster .kachel[data-zelle="ist.events"]';
+// jede Kachel öffnet genau ein Popup: Daten gesamt den Prognose-Verlauf, Istzustand/Events ihren Zuwachs pro Tag
+const kachelOeffnen = el => (el.dataset.zelle === "ist.events" ? zeigeEventZuwachs : zeigeVerlauf)();
 document.addEventListener("click", ev => {
   const k = ev.target.closest(KACHEL_KLICK);
   if (k && !ev.target.closest("[data-hilfe]")) kachelOeffnen(k);
@@ -4017,13 +4032,18 @@ function wertWahl(art, wert, mitNull, ohne = []) {
 const SCHNELL = { kurzzeit: [["7d", "7 T"], ["14d", "14 T"], ["30d", "30 T"], ["90d", "90 T"], ["1j", "1 J"], ["global", "global"]],
                   attribute: [["7d", "7 T"], ["14d", "14 T"], ["30d", "30 T"], ["90d", "90 T"], ["wie_kurzzeit", "wie Kurzzeit"]],
                   langzeit: [["1j", "1 J"], ["2j", "2 J"], ["5j", "5 J"], ["unbegrenzt", "unbegrenzt"]] };
-function wertBlock(art, wert, mitNull, unter, ohne, schnell) {
+// Erläuterung der Auswahl je Wert (ⓘ an der Überschrift, nur Entitätenkarte)
+const WERT_INFO = {
+  kurzzeit: "Wie lange States und 5-Min-Statistik aufbewahrt werden.\n– nicht gesetzt –: keine eigene Einstellung; es gelten weiter die anderen Regeln, die die Entität treffen, sonst der Standard.\nglobal: die allgemeine Vorhaltezeit von Home Assistant (purge_keep_days).\nDauer …: eigene Frist in Tagen, Wochen, Monaten oder Jahren; die Knöpfe darunter setzen gängige Werte.",
+  attribute: "Wie lange die Attribute der States (zum Beispiel Einheit, Name, Zusatzwerte) aufbewahrt werden.\n– nicht gesetzt –: kein eigener Wert; es gilt der Attribut-Standard.\nwie Kurzzeit: Attribute fallen mit ihren States weg, ohne zusätzliche Frist.\nDauer …: eigene Frist für die Attribute, unabhängig von der Kurzzeit.",
+  langzeit: "Wie lange die Langzeitstatistik (Stundenwerte) aufbewahrt wird.\n– nicht gesetzt –: keine eigene Einstellung; es gelten weiter die anderen Regeln, sonst der Standard.\nunbegrenzt: die Stundenstatistik bleibt für immer, wie es Home Assistant von sich aus macht.\nkeine: die Langzeitstatistik wird gelöscht.\nDauer …: eigene Frist in Tagen, Wochen, Monaten oder Jahren; die Knöpfe darunter setzen gängige Werte." };
+function wertBlock(art, wert, mitNull, unter, ohne, schnell, info) {
   // Punkt 61: Attribute haben keinen eigenen Wert mehr – Hinweis an der Kurzzeit
-  const hinweis = art === "attribute" ? `<div class="sub" style="font-size:11px;margin-top:3px">leer = ${(S.regeln?.attribut_standard || "wie_kurzzeit") === "wie_kurzzeit" ? "wie Kurzzeit" : esc(wertAnzeige(S.regeln.attribut_standard)) + " (Attribut-Standard)"}</div>`
-    : art !== "kurzzeit" ? "" : `<div class="sub kzHinweis" style="font-size:11px;margin-top:3px">gilt für States und 5-Min-Statistik</div>`;
+  const hinweis = art === "attribute" ? (info ? "" : `<div class="sub" style="font-size:11px;margin-top:3px">leer = ${(S.regeln?.attribut_standard || "wie_kurzzeit") === "wie_kurzzeit" ? "wie Kurzzeit" : esc(wertAnzeige(S.regeln.attribut_standard)) + " (Attribut-Standard)"}</div>`)
+    : art !== "kurzzeit" || info ? "" : `<div class="sub kzHinweis" style="font-size:11px;margin-top:3px">gilt für States und 5-Min-Statistik</div>`;
   const knoepfe = schnell && SCHNELL[art] ? `<div class="schnell">${SCHNELL[art].map(([w, t]) =>
     `<button type="button" data-w="${w}" class="${w === wert ? "an" : ""}" title="${esc(wertAnzeige(w))}">${t}</button>`).join("")}</div>` : "";
-  return `<div class="wertblock"><div class="wertkopf"><b>${WNAME[art]}</b>${unter ? `<span>${unter}</span>` : ""}</div>${wertWahl(art, wert, mitNull, ohne)}${knoepfe}${hinweis}</div>`;
+  return `<div class="wertblock"><div class="wertkopf"><span><b>${WNAME[art]}</b>${info && WERT_INFO[art] ? `<button type="button" class="hilfeknopf" title="${esc(WERT_INFO[art])}" aria-label="Erläuterung: ${esc(WNAME[art])}">ⓘ</button>` : ""}</span>${unter ? `<span>${unter}</span>` : ""}</div>${wertWahl(art, wert, mitNull, ohne)}${knoepfe}${hinweis}</div>`;
 }
 // Wert in eine Wertauswahl schreiben (Sonderwert oder Dauer wie 30d) und die Änderung melden
 function setzeWert(el, w) {
@@ -4384,31 +4404,31 @@ function oeffneEntitaet(e) {
   const kette = a => {
     const x = w[a] || {}, u = x.ueberstimmt || [];
     const std = a === "attribute" ? "Attribut-Standard" : "Standard";   // Punkt 262
-    return `wirksam: ${esc(x.anzeige || "–")} (${esc(x.regel || std)})` +
+    return `akt. wirksam: ${esc(x.anzeige || "–")} (${esc(x.regel || std)})` +
       (u.length ? `<br><span title="${esc(vorrangText(x.regel, u, v => v.anzeige))}">${esc(x.regel || std)} hat Vorrang vor: ${esc(u.map(v => `${v.regel} – ${v.anzeige}`).join(" · "))}</span>` : "");
   };
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
-  const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "langzeit" ? [] : ["keine"], true);   // Punkt 174: Schnellknöpfe; Punkt 262: Attribute
+  const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "langzeit" ? [] : ["keine"], true, true);   // Punkt 174: Schnellknöpfe; Punkt 262: Attribute
   const infoKopf = `<div class="mono">${esc(e.entity_id)}</div>`;
   const info = `<details id="eZuwachs"><summary>Zeilen pro Tag (Zuwachs) / gespeicherte Werte</summary>
       <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/Tag (Ø 7 T) · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
         Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
-      <div class="zw-modus"><button type="button" data-zm="zuwachs" class="an" title="Neue Zeilen pro Tag (Zuwachs-Statistik)">Zuwachs</button><button type="button" data-zm="werte" title="Die Werte, die die Entität heute in der Datenbank hat: je ein Graph für States, 5-Min-Statistik und Langzeit">Gespeicherte Werte</button></div>
+      <div class="zw-modus"><button type="button" data-zm="zuwachs" title="Neue Zeilen pro Tag (Zuwachs-Statistik)">Zuwachs</button><button type="button" data-zm="werte" class="an" title="Die Werte, die die Entität heute in der Datenbank hat: je ein Graph für States, 5-Min-Statistik und Langzeit">Gespeicherte Werte</button></div>
       <div class="zwBox"></div></details>`;
+  const verwaist = e.status === "verwaist" || e.status === "verwaist_geloescht";
   const infoRegeln = `${e.herkunft ? `<div class="sub">Herkunft: ${esc(e.herkunft)}${e.herkunft_info ? " – " + esc(e.herkunft_info) : ""}</div>` : ""}
+    ${verwaist ? "" : `<div class="knopfreihe" id="eRegelFuer"><span class="sub">Alternative Gruppenregeln:</span><button type="button" class="hilfeknopf" title="Alternative Vorschläge für Gruppenregeln (statt einer Regel nur für diese Einzelentität). Jeder Knopf legt eine neue Regel für alle gleichartigen Entitäten an – gleiches Namensmuster oder gleiche Geräteklasse; die Zahl in Klammern ist die Anzahl der betroffenen Entitäten (ohne Zähler). Ein Klick öffnet die Regelmaske mit dem Muster; erst „Speichern“ legt die Regel an. Eine Einzelregel dagegen entsteht über die Felder darunter." aria-label="Erläuterung: Alternative Gruppenregeln">ⓘ</button></div>`}
     ${[...e.hinweise, ...e.geschuetzt.map(g => "Zähler-Schutz: Regel " + g + " greift nicht")].map(h => `<div class="chip warn">${esc(h)}</div>`).join(" ")}`;
   // Verwaiste (Punkt 30): eigene Vorhaltezeiten (E:-Regel) gelten weiter – mit Vorrang vor Regeln vom Typ verwaist
-  const verwaist = e.status === "verwaist" || e.status === "verwaist_geloescht";
   const deaktiviert = e.status === "deaktiviert";   // Punkt 186: in der Registry, abgeschaltet, ohne Zustand
   const hinweisVerwaist = verwaist ? `<p class="chip warn" style="display:block">Entität verwaist – eigene Vorhaltezeiten gelten nur noch für die Altdaten.
     Was hier nicht gesetzt ist, kommt aus Regeln vom Typ „verwaist“ bzw. dem Standard.</p>` : deaktiviert ? `<p class="chip warn" style="display:block">Entität deaktiviert – eigene Vorhaltezeiten gelten für die Altdaten.
     Was hier nicht gesetzt ist, kommt aus glob-/klasse-Regeln, Regeln vom Typ „verwaist“ mit der Art deaktiviert bzw. dem Standard.</p>` : "";
   dialog(verwaist ? "Eigene Vorhaltezeiten (verwaiste Entität)" : "Eigene Vorhaltezeiten", infoKopf + hinweisVerwaist + info +
     `<details id="eRegeln" open><summary>Regeldefinitionen</summary>${infoRegeln}
-    <p class="sub">Leer lassen = wie bisher (${verwaist ? "verwaist-Regel" : "Muster-Regel"} oder Standard; bei den Attributen der Attribut-Standard). Gespeichert als Regel <span class="mono">${esc(id)}</span>;
+    <p class="sub">Wird als Regel <span class="mono">${esc(id)}</span> gespeichert;
     sie hat immer Vorrang vor allen anderen Regeln.</p>
     <div class="raster3">${WERTE_MASKE.map(zeile).join("")}</div>
-    ${verwaist ? "" : `<div class="knopfreihe" id="eRegelFuer"><span class="sub">Regel für gleichartige Entitäten …</span></div>`}
     </details>
     <div id="dlgFehler" class="fehler"></div>`, [
     ...(verwaist ? [["Regel „verwaist“ anlegen", () => bearbeiteRegel(-1, {
@@ -4432,7 +4452,8 @@ function oeffneEntitaet(e) {
   const zw = $("#eZuwachs");   // erst beim Aufklappen laden
   const zwBox = zw.querySelector(".zwBox");
   const ohneStat = e.lts_id == null && !e.lts_rows && !e.kurz_rows && !e.state_class;
-  let zwModus = "zuwachs";
+  // jedes Öffnen der Karte beginnt mit „Gespeicherte Werte“, 30 Tage, allen Graphen
+  let zwModus = "werte"; zwTage = 30; ZW_AUS.clear(); WT_AUS.clear();
   const zwLaden = () => zwModus === "werte" ? werteLaden(zwBox, e.entity_id) : zuwachsLaden(zwBox, e.entity_id, ohneStat);
   zw.querySelectorAll("[data-zm]").forEach(b => b.onclick = () => {   // Punkt 312: Umschalter Zuwachs / gespeicherte Werte
     zwModus = b.dataset.zm;
@@ -4461,7 +4482,7 @@ async function regelFuer(e) {
     if (n >= 2) angebote.push(["gleiche Klasse", m, n, "klasse"]);
   }
   if (!angebote.length) { box.remove(); return; }
-  box.innerHTML = `<span class="sub">Regel für gleichartige:</span>` + angebote.map(([t, m, n, typ]) =>
+  box.innerHTML = `<span class="sub">Alternative Gruppenregeln:</span><button type="button" class="hilfeknopf" title="Alternative Vorschläge für Gruppenregeln (statt einer Regel nur für diese Einzelentität). Jeder Knopf legt eine neue Regel für alle gleichartigen Entitäten an – gleiches Namensmuster oder gleiche Geräteklasse; die Zahl in Klammern ist die Anzahl der betroffenen Entitäten (ohne Zähler). Ein Klick öffnet die Regelmaske mit dem Muster; erst „Speichern“ legt die Regel an. Eine Einzelregel dagegen entsteht über die Felder darunter." aria-label="Erläuterung: Alternative Gruppenregeln">ⓘ</button>` + angebote.map(([t, m, n, typ]) =>
     `<button type="button" data-rf-muster="${esc(m)}" data-rf-typ="${typ}" title="${esc(`${t}: ${m} – trifft ${zahl(n)} Entitäten (ohne Zähler). Öffnet die Regelmaske ausgefüllt.`)}">${esc(t)}: <span class="mono">${esc(m)}</span> (${zahl(n)})</button>`).join("");
   box.onclick = ev => {
     const b = ev.target.closest("[data-rf-muster]"); if (!b) return;
@@ -4617,13 +4638,14 @@ function bearbeiteRegel(i, vorlage) {
     <!-- Punkt 292: wie in der Entitäten-Karte direkt unter der Überschrift -->
     <details id="rEvZuwachs" ${r.typ === "event" ? "" : "hidden"}><summary>Zeilen pro Tag (Zuwachs)</summary>
       <div class="sub" id="rEvZwInfo"></div><div id="rEvZwBox"></div></details>
+    <div id="rFeld">
     <div class="raster3">
       <label class="feld">ID${neu ? " (Vorschlag, änderbar)" : ""}<input id="rId" value="${esc(r.id)}" placeholder="z. B. R24"></label>
       <label class="feld">Name<input id="rName" value="${esc(r.name)}"></label>
       <label class="feld">Typ<select id="rTyp">${REGELTYPEN.map(t => `<option value="${t}" ${r.typ === t ? "selected" : ""}>${esc(TYP_TEXT[t])}</option>`).join("")}</select>
         <span class="typauto" id="rTypAuto"></span></label>
     </div>
-    <label class="feld"><span>Muster<span id="rProZeile" ${WAHLLISTE[r.typ] ? "hidden" : ""}> (eines pro Zeile)</span> –</span> <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
+    <label class="feld"><span>Muster<span id="rProZeile" ${WAHLLISTE[r.typ] ? "hidden" : ""}> (eines pro Zeile)</span></span> <span id="rMusterHilfe">${esc(MUSTERHILFE[r.typ])}</span>
       <textarea id="rMuster" ${WAHLLISTE[r.typ] ? "hidden" : ""} autocomplete="off" spellcheck="false">${esc(r.muster.join("\n"))}</textarea></label>
     <div id="rAuto" class="autoliste" role="listbox" hidden></div>
     <div id="rKlassen" ${WAHLLISTE[r.typ] ? "" : "hidden"}></div>
@@ -4634,11 +4656,12 @@ function bearbeiteRegel(i, vorlage) {
     <div class="sub" id="rEventHinweis" ${r.typ === "event" ? "" : "hidden"}>Event-Regeln setzen nur die <b>Vorhaltezeit der Events</b> (Feld „${EV_NAME}“). Events braucht nur das Logbuch („Aktivität“);
       Verlauf, Statistik und Energie-Dashboard sind nicht betroffen. Bei mehreren passenden Event-Regeln gilt der genaue Name vor Platzhaltern, dann die Reihenfolge.</div>
     <div class="sub" id="rSchutzHinweis" ${r.typ === "schutz" ? "" : "hidden"}>🔒 <b>Schutz:</b> Kurzzeit „global“ und Langzeit „unbegrenzt“ sind fest; die Attribute schützt die Option darunter. Höchster Rang – vor allen anderen Regeln, auch vor E:-Regeln –, gilt auch für verwaiste Entitäten und Zähler. Der Löschplan schließt diese Entitäten zusätzlich aus. „global“ heißt purge_keep_days: HA selbst löscht nach dieser Zeit.</div>
-    <div class="raster3">${WERTE_MASKE.map(a => wertBlock(a, r[a], true, "", a === "attribute" ? ["keine"] : undefined, true)).join("")}</div>
+    <div class="raster3">${WERTE_MASKE.map(a => wertBlock(a, r[a], true, "", a === "attribute" ? ["keine"] : undefined, true, true)).join("")}</div>
     <label id="rSchutzAttrZeile" ${r.typ === "schutz" ? "" : "hidden"} title="An: die Attribute bleiben so lange wie die States. Aus: es gilt der Attribut-Standard bzw. eine andere Regel – die States bleiben trotzdem geschützt."><input type="checkbox" id="rSchutzAttr" ${r.attribute_schutz === false ? "" : "checked"}> 🔒 Attribute mitschützen (aus = Attribute nach dem Attribut-Standard von den States trennen)</label>
     <label><input type="checkbox" id="rAktiv" ${r.aktiv ? "checked" : ""}> aktiv (sonst passiv)</label>
     <label class="feld">Notiz<input id="rNotiz" value="${esc(r.notiz)}" title="${esc(notizLang(r.notiz))}"></label>
     <div id="rVorschau" class="vorschau" aria-live="polite"><span class="sub">Vorschau …</span></div>
+    </div>
     <div id="dlgFehler" class="fehler"></div></div>`, [
     ...(neu ? [] : [["Regel entfernen", async () => {
       if (!await frage("Regel entfernen", `Regel ${r.id} „${r.name}“ entfernen? Es werden dabei keine Daten gelöscht.`, "Entfernen")) return;
@@ -4695,6 +4718,23 @@ function bearbeiteRegel(i, vorlage) {
     return x;
   }
   // Punkt 51: Bei Typ event nur die Vorhaltezeit zeigen
+  // Event-Regel: unter „Vorhaltezeit (Events)“ zeigen, was für die vom Muster getroffenen Event-Typen heute wirksam ist (wie „akt. wirksam“ in der Entitätenkarte)
+  const evAkt = () => {
+    const el = $("#evAkt"); if (!el) return;
+    const pat = ($("#rMuster").value || "").split("\n").map(x => x.trim()).filter(Boolean).map(globRe);
+    const treffer = (S.events || []).filter(e => pat.some(re => re.test(e.event_type)));
+    el.hidden = $("#rTyp").value !== "event";
+    if (!pat.length) { el.textContent = "akt. wirksam: Muster eintragen"; return; }
+    if (!treffer.length) { el.textContent = "akt. wirksam: kein bekannter Event-Typ getroffen"; return; }
+    const std = haStandardAktiv() ? HA_STD : "Standard", gruppe = new Map(), vor = new Map();
+    for (const e of treffer) {
+      const k = `${e.anzeige || "global"} (${e.regel || std})`;
+      gruppe.set(k, (gruppe.get(k) || 0) + 1);
+      for (const u of e.ueberstimmt || []) vor.set(`${e.regel || std} hat Vorrang vor: ${u.regel} – ${u.anzeige || wertAnzeige(u.wert)}`, 1);
+    }
+    el.innerHTML = "akt. wirksam: " + esc([...gruppe].map(([k, n]) => k + (treffer.length > 1 ? ` · ${zahl(n)} Typ${n === 1 ? "" : "en"}` : "")).join(" ; ")) +
+      ([...vor.keys()].length ? "<br>" + esc([...vor.keys()].slice(0, 4).join(" · ")) : "");
+  };
   const eventModus = t => {
     $("#rEventHinweis").hidden = t !== "event";
     $("#rEvZuwachs").hidden = t !== "event";   // Punkt 292
@@ -4704,7 +4744,15 @@ function bearbeiteRegel(i, vorlage) {
     const block = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]')?.closest(".wertblock");
     if (block) block.hidden = t === "schutz";
     const kopf = block?.querySelector(".wertkopf b");
-    if (kopf) kopf.textContent = t === "event" ? EV_NAME : WNAME.kurzzeit;
+    if (kopf) {
+      kopf.textContent = t === "event" ? EV_NAME : WNAME.kurzzeit;
+      let ib = kopf.parentElement.querySelector(".hilfeknopf");   // ⓘ mit Erläuterung nur bei Event-Regeln (wie in der Entitätenkarte)
+      if (!ib) { ib = document.createElement("button"); ib.type = "button"; ib.className = "hilfeknopf"; ib.textContent = "ⓘ"; kopf.after(ib); }
+      ib.title = t === "event" ? EV_INFO : WERT_INFO.kurzzeit; ib.setAttribute("aria-label", "Erläuterung: " + kopf.textContent);
+      let ak = $("#evAkt");
+      if (!ak) { ak = document.createElement("span"); ak.id = "evAkt"; kopf.closest(".wertkopf").append(ak); }
+      evAkt();
+    }
     const kh = block?.querySelector(".kzHinweis"); if (kh) kh.hidden = t === "event";
   };
   eventModus(r.typ);
@@ -4903,6 +4951,7 @@ function bearbeiteRegel(i, vorlage) {
   ta.addEventListener("input", () => { typAuto(); zeigeAuto(); pruefeVerdichten(); });
   // jede Änderung in der Maske aktualisiert die Vorschau (Muster, Klassen-Häkchen, Werte, Schnellknöpfe)
   $("#rMaske").addEventListener("input", vorschau);
+  $("#rMuster").addEventListener("input", () => { if (typeof evAkt === "function") evAkt(); });
   $("#rMaske").addEventListener("change", vorschau);
   typAuto(); pruefeVerdichten(); vorschau();
 }
@@ -6129,11 +6178,12 @@ const Zeit = (() => {
         g.append(el("rect", { class: "dz-b" + (b.voll ? "" : " dz-teil"), x, y: unten, width: w, height: h, fill: serienFarbe(s) }));
       });
       const zeilen = [`${zeitLabel(b, D.aufl, true)}: ${fmtW(b.summe)}${b.voll ? "" : " (nicht vollständig erfasst)"}`]
-        .concat(D.serien.filter(s => b.werte[s.key]).map(s => `${s.name}: ${fmtW(b.werte[s.key])} (${fmtP(100 * b.werte[s.key] / b.summe)})`));
+        .concat(D.serien.filter(s => b.werte[s.key]).reverse().map(s =>   // oberstes Segment zuerst, wie der Balkenstapel von oben gelesen
+ `${s.name}: ${fmtW(b.werte[s.key])} (${fmtP(100 * b.werte[s.key] / b.summe)})`));
       if (b.auffaellig) zeilen.push(`! ▲ auffällig: mehr als das ${String(2.5).replace(".", ",")}-Fache des Tagesmedians (${fmtW(D.median)})`);
       zeilen.push(NAECHSTE[D.aufl] ? "Klick: hineinzoomen" : "Klick: Aufschlüsselung nur für diesen Tag");
       const hit = el("rect", { class: "dz-hit", x: x0, y: T, width: bw, height: H - T - B });
-      hit.dataset.tipFarben = JSON.stringify([null, ...D.serien.filter(s => b.werte[s.key]).map(serienFarbe)]);   // Farbmarke je Serienzeile (Legendenfarbe)
+      hit.dataset.tipFarben = JSON.stringify([null, ...D.serien.filter(s => b.werte[s.key]).reverse().map(serienFarbe)]);   // Farbmarke je Serienzeile (Legendenfarbe)
       hit.setAttribute("title", zeilen.join("\n"));   // Punkt 308: title-Attribut statt SVG-<title> → eigene Tooltip-Anzeige (Punkt 216)
       hit.onclick = () => klick(b);
       g.append(hit);
@@ -6461,7 +6511,7 @@ function anaTabelle(d) {
   const gcls = (i, g) => `gr gr-ana${i > 0 && sp[i - 1][2] !== g ? " gstart" : ""}`;
   const gruppenzeile = GRUPPEN.map((g, gi) => { const n = sp.filter(s => s[2] === gi).length, i0 = sp.findIndex(s => s[2] === gi); return `<th class="gruppe gr gr-ana${i0 > 0 ? " gstart" : ""}" colspan="${n}">${esc(g)}</th>`; }).join("");
   const kopf = sp.map(([h, k, g], i) => `<th class="${k === "name" ? "" : "n "}${gcls(i, g)}"${k ? ` data-sort="${k}"` : ""} title="${esc(h.replace(/ (.*)$/, "") + (tips[k] ? ": " + tips[k] : "") + (k ? SORT_TIP : ""))}">${kopfZweizeilig(h).replace("<span class=\"pfeil\"></span>", `<span class="pfeil">${k ? pfeilText(A.sort, k) : ""}</span>`)}${griff(k)}</th>`).join("");
-  return `<div class="tabelle" style="max-height:none"><table class="ana-t gruppiert fest"><colgroup>${sp.map(([, k]) => `<col data-k="${k}">`).join("")}</colgroup><thead><tr class="gruppenzeile">${gruppenzeile}</tr><tr class="titelzeile">${kopf}</tr></thead><tbody>${zeilen || `<tr><td colspan="${sp.length}">Keine Entitäten in dieser Auswahl.</td></tr>`}</tbody></table></div>` +
+  return `<div class="tabelle"><table class="ana-t gruppiert fest"><colgroup>${sp.map(([, k]) => `<col data-k="${k}">`).join("")}</colgroup><thead><tr class="gruppenzeile">${gruppenzeile}</tr><tr class="titelzeile">${kopf}</tr></thead><tbody>${zeilen || `<tr><td colspan="${sp.length}">Keine Entitäten in dieser Auswahl.</td></tr>`}</tbody></table></div>` +
     (d.knoten_gesamt > d.knoten.length ? `<div class="ana-mehr">Gezeigt werden die ${zahl(d.knoten.length)} größten von ${zahl(d.knoten_gesamt)} Entitäten; alle über „In Entitäten öffnen“.</div>` : "");
 }
 // Spaltenbreiten (Punkt 306): Griff am Spaltenkopf ziehen, Doppelklick = Standardbreite, je Ebene im Browser gemerkt, Knopf „Spaltenbreiten zurücksetzen“
@@ -6550,6 +6600,16 @@ async function ladeAna() {
   $("#anaErst").value = anaErstWert();
   $("#anaErst").classList.toggle("aktiv", anaErstWert() !== "");
   anaBreitenSetzen();
+  anaKleb();
+}
+// Höhe von Leiste und Banner für die klebende Anordnung (Leiste ragt mit −10 px Rand nach oben, Banner hat 8 px Abstand nach unten)
+const anaKlebRO = new ResizeObserver(() => anaKleb());
+function anaKleb() {
+  const l = document.querySelector("#anaInhalt .ana-leiste"), b = document.querySelector("#anaInhalt .ana-balken"); if (!l || !b) return;
+  anaKlebRO.disconnect(); anaKlebRO.observe(l); anaKlebRO.observe(b);
+  const w = document.documentElement.style, hl = l.offsetHeight + "px", hb = b.offsetHeight + 8 + "px";
+  if (w.getPropertyValue("--ana-leiste-h") !== hl) w.setProperty("--ana-leiste-h", hl);
+  if (w.getPropertyValue("--ana-balken-h") !== hb) w.setProperty("--ana-balken-h", hb);
 }
 $("#anaInhalt").addEventListener("change", ev => {
   const s = ev.target.closest("#anaErst"); if (!s) return;

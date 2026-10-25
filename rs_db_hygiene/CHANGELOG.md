@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b3 (Beta)
+- **Kacheln (Punkt 324):** Die Spalte „DB-Größe“ entfällt (6 statt 7 Spalten). Die drei Kacheln der Spalte „Daten gesamt“ öffnen den Chart „Zuwachs-Prognose der DB“. Der Zuwachs pro Tag über alle Entitäten ist über das Raster nicht mehr erreichbar; die Kachel Istzustand/Events öffnet weiter ihren Zuwachs pro Tag.
+- **Chart „Zuwachs im Zeitverlauf“ (Punkt 325):** Die Reihenfolge der Einzelkategorien im Tooltip entspricht dem Balkenstapel von oben nach unten (samt Farbmarken).
+- **Entitätenkarte (Punkt 326):** Das Chart öffnet bei jedem Öffnen der Karte auf „Gespeicherte Werte“, 30 Tage, alle Graphen eingeblendet. Chart und Regeldefinitionen stehen in zwei dezent abgesetzten Feldern. „Alternative Gruppenregeln:“ (vorher „Regel für gleichartige“) steht direkt unter „Herkunft“, mit ⓘ-Erläuterung. An „Kurzzeit“, „Attribute“ und „Langzeit“ erläutert je ein ⓘ die Auswahl; „akt. wirksam“ ersetzt „wirksam“; die Hinweise „gilt für States und 5-Min-Statistik“ und „leer = … (Attribut-Standard)“ und der Satz „Leer lassen = wie bisher …“ entfallen; mehr Abstand zwischen Text und Vorhaltezeiten.
+- **Analyse, Reiter (Punkt 327):** Banner (Pfad, Filter) und Tabellenkopf bleiben beim Scrollen unter den Reitern und der Leiste stehen; die Tabelle scrollt in einer Box bis Fensterhöhe. Die Tabelle nutzt getrennte Zellränder, damit keine Zeilen durch den klebenden Kopf scheinen.
+- **Regelmaske und Event-Regeln (Punkt 328):** ⓘ-Erläuterungen an den Vorhaltezeiten, Abstände angepasst, Hinweise unter den Feldern entfallen. Bei Event-Regeln stehen Chart und Regelfelder in zwei Feldern, und unter „Vorhaltezeit (Events)“ zeigt „akt. wirksam“, was für die vom Muster getroffenen Event-Typen gilt. Der Hilfetext zum Muster ist klein und gedämpft.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b2 (Beta)
 - **Härtung (Punkte 322/323):** Die Test-Einstellungen `DBH_ERLAUBT` (zusätzlich erlaubte Client-IPs) und die Testdatei `states_test.json` wirken nur noch außerhalb des Add-ons, also ohne `SUPERVISOR_TOKEN`; im Add-on werden sie ignoriert (322). Das Basis-Image in `build.yaml` ist per Digest festgelegt, die GitHub-Actions der CI per Commit (323).
 - Die Integration ändert sich nicht
