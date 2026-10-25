@@ -40,7 +40,8 @@ def _zustaende():
     """Aktuelle Zustände aus HA. Nur für Testcontainer ohne Supervisor: Liegt im Datenordner eine states_test.json
     (Momentaufnahme von /api/states), gilt sie statt der HA-API. Im Add-on gibt es diese Datei nicht."""
     datei = os.path.join(os.environ.get("DBH_DATA", "/data"), "states_test.json")
-    if os.path.exists(datei):
+    # Punkt 322: im Add-on (SUPERVISOR_TOKEN gesetzt) wird die Testdatei nie gelesen
+    if not os.environ.get("SUPERVISOR_TOKEN") and os.path.exists(datei):
         with open(datei, encoding="utf-8") as f:
             return json.load(f)
     return analyse.hole_zustaende()

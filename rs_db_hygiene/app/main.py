@@ -265,8 +265,12 @@ async def nachtlauf():
 
 # ---------------------------------------------------------------- HTTP
 
-# Nur für Tests außerhalb des Add-ons: zusätzlich erlaubte Client-IPs (kommagetrennt)
-ERLAUBT = {INGRESS_IP, "127.0.0.1"} | {ip.strip() for ip in os.environ.get("DBH_ERLAUBT", "").split(",") if ip.strip()}
+# Nur für Tests außerhalb des Add-ons: zusätzlich erlaubte Client-IPs (kommagetrennt).
+# Punkt 322: Im Add-on (SUPERVISOR_TOKEN gesetzt) wirkt DBH_ERLAUBT nie – die Ingress-Sperre lässt sich dort nicht aufheben.
+IM_ADDON = bool(os.environ.get("SUPERVISOR_TOKEN"))
+ERLAUBT = {INGRESS_IP, "127.0.0.1"} | ({ip.strip() for ip in os.environ.get("DBH_ERLAUBT", "").split(",") if ip.strip()} if not IM_ADDON else set())
+if IM_ADDON and os.environ.get("DBH_ERLAUBT"):
+    _LOG.warning("DBH_ERLAUBT wird im Add-on ignoriert.")
 
 
 # Punkt 164 (0.5.4): Name und Version dieser App (vom Supervisor; ohne Supervisor aus DBH_APP_NAME/DBH_APP_VERSION) –

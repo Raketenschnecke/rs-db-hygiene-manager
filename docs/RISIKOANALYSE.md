@@ -29,12 +29,12 @@ Die App liest `secrets.yaml` und `.storage/auth` **nicht**. Das Dateisystem erla
 
 | Komponente | Quelle | Anmerkung |
 |---|---|---|
-| Basis-Image `ghcr.io/home-assistant/amd64-base:3.24` | Home Assistant (Alpine) | Version über Tag, nicht über Digest festgelegt |
+| Basis-Image `ghcr.io/home-assistant/amd64-base:3.24` | Home Assistant (Alpine) | ab 0.5.7b2 per Digest festgelegt |
 | `python3`, `py3-aiohttp` | Alpine-Paketquellen beim Bau des Images | Keine Versionsbindung; kein pip, keine Kompilierung |
 | Python-Standardbibliothek | Image | `sqlite3`, `urllib`, `hmac`, `secrets` u. a. |
 | Frontend | eigener Code | Keine Bibliotheken, kein CDN, keine externen Schriften oder Skripte |
 | Integration | HA-eigene Module | `requirements: []`; keine zusätzlichen Pakete |
-| CI (nur GitHub) | `actions/checkout@v4`, `home-assistant/actions/hassfest@master`, `hacs/action@main` | Ohne Secrets; zwei Actions auf beweglichem Zweig |
+| CI (nur GitHub) | `actions/checkout@v4`, `home-assistant/actions/hassfest@master`, `hacs/action@main` | Ohne Secrets; ab 0.5.7b2 auf Commits festgelegt |
 
 ## 4. Kommunikation
 
@@ -65,7 +65,7 @@ Innerhalb des Docker-Netzes läuft die Kommunikation unverschlüsselt (HA-Standa
 | A9 | XSS über Entitätsnamen, Labels, Attribute | niedrig bis mittel | Ausgabe durchgängig über `esc()`; Dialoge mit `textContent`. Siehe Restpunkte |
 | A10 | CSRF gegen die Oberfläche | niedrig | Kein eigener Schutz in der App (kein Origin-Check, Content-Type wird nicht verlangt); Schutz hängt an Ingress (Sitzungs-Cookie, zufälliger Pfad) |
 | A11 | Große Anfragen | niedrig | Begrenzung auf 4 MB |
-| A12 | Lieferkette (Alpine-Pakete, Basis-Image, CI) | niedrig | Nur Alpine/HA-Quellen; Pakete und Actions nicht an feste Versionen gebunden |
+| A12 | Lieferkette (Alpine-Pakete, Basis-Image, CI) | niedrig | Nur Alpine/HA-Quellen; ab 0.5.7b2 Basis-Image und CI-Actions festgelegt, Alpine-Pakete nicht |
 
 ## 6. Risiken durch Fehlbedienung und Datenverlust
 
@@ -85,14 +85,18 @@ Die App löscht Daten in der Recorder-Datenbank. Das ist ihr Zweck und zugleich 
 
 ## 7. Restpunkte und Maßnahmen
 
-Keiner dieser Punkte ist ein bekannter ausnutzbarer Fehler; es sind Härtungen. **Die Punkte 1 bis 3 sind in 0.5.7b1 (Beta) umgesetzt, Punkt 4 teilweise** (die Meldung „Werte nicht lesbar“ zeigt keine Datenbank-Einzelheiten mehr; Validierungsfehler der Regeln bleiben bewusst sichtbar). Die Analyse oben beschreibt den Stand 0.5.6.
+Keiner dieser Punkte war ein bekannter ausnutzbarer Fehler; es sind Härtungen. Die Analyse oben beschreibt den Stand 0.5.6; die Maßnahmen stehen in 0.5.7b1 und 0.5.7b2 (Beta).
 
-1. **Frontend-Escaping:** `esc()` maskiert das einfache Anführungszeichen nicht. Eine Stelle, an der das ausnutzbar wäre, wurde nicht gefunden. Rund 100 `innerHTML`-Stellen wurden nicht einzeln geprüft.
-2. **Origin-/Content-Type-Prüfung** für schreibende Aufrufe ergänzen.
-3. **CSV-Export:** Zellen, die mit `=`, `+`, `-` oder `@` beginnen, nicht maskiert (relevant nur bei Öffnen in Tabellenkalkulationen).
-4. **Fehlermeldungen:** Teilweise geht `str(e)` an den Browser (nur angemeldete HA-Benutzer).
-5. **Lieferkette:** Basis-Image per Digest, Alpine-Pakete mit Version, CI-Actions auf Commit-SHA festlegen.
-6. **Test-Hooks:** `DBH_ERLAUBT` (zusätzliche Client-IPs) und `states_test.json` dienen nur Testumgebungen. Sie sind im Produktivbetrieb nicht gesetzt. `DBH_ERLAUBT` hebt den Ingress-Schutz bewusst auf und darf nur in abgeschotteten Testumgebungen verwendet werden.
+| Nr. | Punkt | Stand |
+|---|---|---|
+| 1 | Frontend-Escaping: `esc()` maskierte `'` und `` ` `` nicht. Ein späterer Durchgang durch alle 119 Stellen, an denen HTML geschrieben wird, fand keine ausnutzbare Stelle; zwei Werte ohne `esc()` (Regeltyp, Attribut-Standard) waren serverseitig begrenzt | umgesetzt in 0.5.7b1 |
+| 2 | Schreibende Aufrufe: Ablehnung von `Sec-Fetch-Site: cross-site` (403) und Bodys ohne `application/json` (415) | umgesetzt in 0.5.7b1, im Add-on über Ingress getestet |
+| 3 | CSV-Export: Textzellen mit führendem `=`, `+`, `-`, `@` werden mit `'` maskiert | umgesetzt in 0.5.7b1 |
+| 4 | Fehlermeldungen: Die Meldung „Werte nicht lesbar“ zeigt keine Datenbank-Einzelheiten mehr; Regelfehler bleiben bewusst sichtbar | umgesetzt in 0.5.7b1 |
+| 5 | Lieferkette: Basis-Image per Digest, CI-Actions per Commit festgelegt. Alpine-Pakete (`py3-aiohttp`) bleiben ohne Versionsbindung, weil Alpine alte Versionen entfernt und der Bau sonst später fehlschlägt | umgesetzt in 0.5.7b2 (teilweise, bewusst) |
+| 6 | Test-Hooks: `DBH_ERLAUBT` und `states_test.json` wirken im Add-on nie (nur ohne `SUPERVISOR_TOKEN`) | umgesetzt in 0.5.7b2 |
+
+Offen bleibt: Eine Content-Security-Policy ohne `unsafe-inline` ist wegen des Inline-Skripts der Oberfläche nicht ohne Umbau möglich. Ein festgelegtes Basis-Image erhält Sicherheitsupdates erst, wenn der Digest in `build.yaml` erneuert wird.
 
 ## 8. Nicht geprüft
 

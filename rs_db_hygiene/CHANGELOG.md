@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b2 (Beta)
+- **Härtung (Punkte 322/323):** Die Test-Einstellungen `DBH_ERLAUBT` (zusätzlich erlaubte Client-IPs) und die Testdatei `states_test.json` wirken nur noch außerhalb des Add-ons, also ohne `SUPERVISOR_TOKEN`; im Add-on werden sie ignoriert (322). Das Basis-Image in `build.yaml` ist per Digest festgelegt, die GitHub-Actions der CI per Commit (323).
+- Die Integration ändert sich nicht
+
 ## 0.5.7b1 (Beta)
 - **Härtung (Punkte 319–321, aus der Risikoanalyse `docs/RISIKOANALYSE.md`):** Die Oberfläche maskiert in Texten aus der Datenbank auch `'` und `` ` `` (319). Schreibende Aufrufe der Oberfläche lehnt die App ab, wenn der Browser sie als „cross-site“ kennzeichnet (403), oder wenn sie einen Body ohne `application/json` mitschicken (415) (320). Der CSV-Export stellt Textzellen, die mit `=`, `+`, `-` oder `@` beginnen, ein `'` voran, damit Tabellenkalkulationen sie nicht als Formel ausführen (321). Zwei weitere Textstellen (Regeltyp, Attribut-Standard) laufen ebenfalls durch `esc()`. Die Meldung „Werte nicht lesbar“ zeigt keine Datenbank-Einzelheiten mehr (stehen im Protokoll der App).
 - Die Integration ändert sich nicht
