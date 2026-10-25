@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b4 (Beta)
+- **Kacheln (Punkt 329, ergänzt Punkt 324):** Daten gesamt / Prognose öffnet den Chart „Zuwachs-Prognose der DB“, Daten gesamt / Istzustand das Popup „Daten gesamt – Zuwachs pro Tag (Zeilen)“. Daten gesamt / Löschmenge sofort öffnet nichts.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b3 (Beta)
 - **Kacheln (Punkt 324):** Die Spalte „DB-Größe“ entfällt (6 statt 7 Spalten). Die drei Kacheln der Spalte „Daten gesamt“ öffnen den Chart „Zuwachs-Prognose der DB“. Der Zuwachs pro Tag über alle Entitäten ist über das Raster nicht mehr erreichbar; die Kachel Istzustand/Events öffnet weiter ihren Zuwachs pro Tag.
 - **Chart „Zuwachs im Zeitverlauf“ (Punkt 325):** Die Reihenfolge der Einzelkategorien im Tooltip entspricht dem Balkenstapel von oben nach unten (samt Farbmarken).

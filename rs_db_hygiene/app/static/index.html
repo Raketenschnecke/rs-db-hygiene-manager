@@ -167,8 +167,8 @@ main { padding: 0 20px 24px; }
 .raster .kachel.fehlt .z { color: var(--muted); font-size: 15px; }
 .raster .ganz { grid-column: 1 / -1; }
 /* Punkt 179: Kacheln der Spalte Daten gesamt öffnen den Prognose-Verlauf (Spalte DB-Größe entfallen) */
-.raster .kachel[data-zelle$=".zeilen"], .raster .kachel[data-zelle="ist.events"] { cursor: pointer; }
-.raster .kachel[data-zelle$=".zeilen"]:hover, .raster .kachel[data-zelle$=".zeilen"]:focus-visible, .raster .kachel[data-zelle="ist.events"]:hover, .raster .kachel[data-zelle="ist.events"]:focus-visible { border-color: var(--zf); outline: none;
+.raster .kachel:is([data-zelle="ist.zeilen"], [data-zelle="prog.zeilen"], [data-zelle="ist.events"]) { cursor: pointer; }
+.raster .kachel:is([data-zelle="ist.zeilen"], [data-zelle="prog.zeilen"], [data-zelle="ist.events"]):hover, .raster .kachel:is([data-zelle="ist.zeilen"], [data-zelle="prog.zeilen"], [data-zelle="ist.events"]):focus-visible { border-color: var(--zf); outline: none;
   background: color-mix(in srgb, var(--zf) 14%, var(--panel)); }
 /* Punkt 188: Rot gehört dem bisherigen Verlauf; „ohne Regeln“ wird violett */
 .vl { --vl-hist: #c62828; --vl-ohne: #8e5bc4; --vl-ha: #8a919c; --vl-aktiv: #d4a72c; --vl-alle: #3f9a5c; display: grid; gap: 10px; }
@@ -889,7 +889,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
         <p>Neu hier? Zuerst Home Assistant und die App einrichten: <a class="hverweis" href="#h-faq-erstinbetrieb">FAQ: Erstinbetriebnahme</a>. In der App-GUI:</p>
         <ol>
           <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 2–10 min).</li>
-          <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird). Ein Klick auf eine Daten-gesamt-Kachel öffnet den Verlauf „Zuwachs-Prognose der DB“: die bisherige Größe und die Prognosen für aktive Regeln, alle Regeln und ohne Regeln.</li>
+          <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird). Ein Klick auf die Kachel Daten gesamt / Prognose öffnet den Verlauf „Zuwachs-Prognose der DB“: die bisherige Größe und die Prognosen für aktive Regeln, alle Regeln und ohne Regeln. Daten gesamt / Istzustand öffnet den Zuwachs pro Tag über alle Entitäten.</li>
           <li><b>Tab Entitäten:</b> für den ersten Überblick nach „Zuwachs“ (Zeilen je Tag) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
           <li><b>Tab Empfehlungen:</b> Die App schlägt Regeln vor; „Übernehmen …“ legt sie passiv an. Hinweise zum Vorgehen: <a class="hverweis" href="#h-faq-reihenfolge">In welcher Reihenfolge lege ich Regeln an?</a></li>
           <li><b>Tab Regeln:</b> Wirkung der einzelnen Regeln analysieren (ggf. zunächst <b>passiv</b> lassen). Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert. Beim Optimieren hilft der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a>.</li>
@@ -2190,8 +2190,8 @@ function rasterHtml(s, st) {
       const c = werte[z][k];
       const lang = c.fehlt || (c.gb ? gb(c.w) : c.b ? pb(c.w) : zahl(c.w == null ? null : Math.round(c.w))), kurz = c.fehlt || (c.gb ? kgb(c.w) : c.b ? pb(c.w) : kzahl(c.w));
       const tip = `${zname} · ${kname}${z === "prog" ? ` (${zr})` : ""}\n${lang}${c.u ? " – " + c.u : ""}\n\n${zeilenTeil(hilfeTexte("c_" + k)[0], zname)}`;
-      const vl = k === "zeilen" || (z === "ist" && k === "events") ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf; Punkt 283: Istzustand/Datenzeilen den Zuwachs pro Tag
-      h += `<div class="kachel ${klasse}${c.fehlt ? " fehlt" : ""}" title="${esc(tip + (vl ? (k === "zeilen" ? "\n\nKlick: Prognose-Verlauf der DB je Monat" : "\n\nKlick: Zuwachs pro Tag, Summe und je Event-Typ") : ""))}" data-zelle="${z}.${k}"${vl}>
+      const vl = (k === "zeilen" && z !== "loesch") || (z === "ist" && k === "events") ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf; Punkt 283: Istzustand/Datenzeilen den Zuwachs pro Tag
+      h += `<div class="kachel ${klasse}${c.fehlt ? " fehlt" : ""}" title="${esc(tip + (vl ? (k === "events" ? "\n\nKlick: Zuwachs pro Tag, Summe und je Event-Typ" : z === "ist" ? "\n\nKlick: Zuwachs pro Tag (alle Entitäten)" : "\n\nKlick: Prognose-Verlauf der DB je Monat") : ""))}" data-zelle="${z}.${k}"${vl}>
         <div class="z"><span class="lang">${esc(lang)}</span><span class="kurz">${esc(kurz)}</span></div>${c.u ? `<div class="u">${esc(c.u)}</div>` : ""}</div>`;   // Punkt 316/317: Speicherbedarf groß, darunter die Zeilen
     }
   }
@@ -2223,9 +2223,9 @@ const VL_AUS = new Set();   // per Klick auf die Legende ausgeblendete Linien (A
 const VL_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const VL_MASS = { W: 1000, H: 380, L: 62, R: 16, O: 14, U: 34 };
 const MONAT = 365 / 12;      // Tage je Monat wie probelauf.MONAT
-const KACHEL_KLICK = '#raster .kachel[data-zelle$=".zeilen"], #raster .kachel[data-zelle="ist.events"]';
-// jede Kachel öffnet genau ein Popup: Daten gesamt den Prognose-Verlauf, Istzustand/Events ihren Zuwachs pro Tag
-const kachelOeffnen = el => (el.dataset.zelle === "ist.events" ? zeigeEventZuwachs : zeigeVerlauf)();
+const KACHEL_KLICK = '#raster .kachel[data-zelle="ist.zeilen"], #raster .kachel[data-zelle="prog.zeilen"], #raster .kachel[data-zelle="ist.events"]';
+// jede Kachel öffnet genau ein Popup: Daten gesamt/Prognose den Prognose-Verlauf, Daten gesamt/Istzustand und Istzustand/Events ihren Zuwachs pro Tag
+const kachelOeffnen = el => ({ "ist.zeilen": zeigeZuwachsGesamt, "ist.events": zeigeEventZuwachs }[el.dataset.zelle] || zeigeVerlauf)();
 document.addEventListener("click", ev => {
   const k = ev.target.closest(KACHEL_KLICK);
   if (k && !ev.target.closest("[data-hilfe]")) kachelOeffnen(k);
