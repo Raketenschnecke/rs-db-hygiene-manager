@@ -1371,7 +1371,8 @@ const tageJahre = n => { if (n == null) return "–"; const j = n / 365;
 const gb = b => b == null ? "–" : (b / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " GB";
 const datum = ts => ts ? new Date(ts * 1000).toLocaleDateString("de-DE") : "–";
 const zeit = ts => ts ? new Date(ts * 1000).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "–";
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// Punkt 319: auch ' und ` maskiert (Werte in einfach gequoteten Attributen)
+const esc = s => String(s ?? "").replace(/[&<>"'`]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "`": "&#96;" }[c]));
 // Punkt 211 (0.5.5b12): Notiz der Empfehlungen kurz „RS DB HM“, im Tooltip ausgeschrieben
 const notizLang = s => String(s ?? "").replace(/\bRS DB HM\b/g, "RS DB Hygiene Manager");
 // Punkt 92: Spaltentitel – Hauptbegriff prominent, Klammerteil am Ende im bisherigen Format
@@ -3157,7 +3158,7 @@ T.regeln = new LokaleTabelle({
       // Punkt 111: Schloss bei Schutz; Punkt 106: Warnung bei Platzhaltern in einer entity-Regel
       zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
         : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, Kurzzeit und Langzeit einstellbar (Auffangregel), passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
-        : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : typName(r.typ),
+        : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : esc(typName(r.typ)),
       hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · integration: Integration (Plattform) wie unifi · vielschreiber: ab n Zeilen je Tag · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
       optionen: () => TYPEN_TABELLE.map(t => [typName(t), typName(t)]),
       summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nje Typ: ${TYPEN_TABELLE.map(t => `${typName(t)} ${zahl(g.filter(r => r.typ === t).length)}`).join(" · ")}`] },
@@ -4018,7 +4019,7 @@ const SCHNELL = { kurzzeit: [["7d", "7 T"], ["14d", "14 T"], ["30d", "30 T"], ["
                   langzeit: [["1j", "1 J"], ["2j", "2 J"], ["5j", "5 J"], ["unbegrenzt", "unbegrenzt"]] };
 function wertBlock(art, wert, mitNull, unter, ohne, schnell) {
   // Punkt 61: Attribute haben keinen eigenen Wert mehr – Hinweis an der Kurzzeit
-  const hinweis = art === "attribute" ? `<div class="sub" style="font-size:11px;margin-top:3px">leer = ${(S.regeln?.attribut_standard || "wie_kurzzeit") === "wie_kurzzeit" ? "wie Kurzzeit" : wertAnzeige(S.regeln.attribut_standard) + " (Attribut-Standard)"}</div>`
+  const hinweis = art === "attribute" ? `<div class="sub" style="font-size:11px;margin-top:3px">leer = ${(S.regeln?.attribut_standard || "wie_kurzzeit") === "wie_kurzzeit" ? "wie Kurzzeit" : esc(wertAnzeige(S.regeln.attribut_standard)) + " (Attribut-Standard)"}</div>`
     : art !== "kurzzeit" ? "" : `<div class="sub kzHinweis" style="font-size:11px;margin-top:3px">gilt für States und 5-Min-Statistik</div>`;
   const knoepfe = schnell && SCHNELL[art] ? `<div class="schnell">${SCHNELL[art].map(([w, t]) =>
     `<button type="button" data-w="${w}" class="${w === wert ? "an" : ""}" title="${esc(wertAnzeige(w))}">${t}</button>`).join("")}</div>` : "";

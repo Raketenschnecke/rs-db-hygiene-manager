@@ -283,6 +283,13 @@ async def nur_ingress(request, handler):
             return web.Response(status=403, text="Schlüssel fehlt oder falsch")
     elif request.remote not in ERLAUBT:
         return web.Response(status=403, text="Nur über Home-Assistant-Ingress erreichbar")
+    else:
+        # Punkt 320: Schutz gegen Anfragen fremder Webseiten (CSRF) – zusätzlich zu Ingress
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            if request.headers.get("Sec-Fetch-Site") == "cross-site":
+                return web.Response(status=403, text="Anfrage von fremder Seite abgelehnt")
+            if request.can_read_body and request.content_type != "application/json":
+                return web.Response(status=415, text="Nur application/json erlaubt")
     try:
         return await handler(request)
     except rg.RegelFehler as e:
@@ -424,7 +431,7 @@ async def werte_lesen(request):
         return web.json_response(await asyncio.to_thread(werte.lies, db, q["entity"], tage))
     except Exception as e:  # noqa: BLE001 – HA-DB nicht lesbar (z. B. im Testcontainer ohne Datenbank)
         _LOG.exception("Werte nicht lesbar")
-        return web.json_response({"fehler": f"Werte nicht lesbar: {e}"}, status=500)
+        return web.json_response({"fehler": "Werte nicht lesbar (Einzelheiten im Protokoll der App)"}, status=500)
 
 
 async def klassen(_request):
@@ -674,13 +681,24 @@ async def entitaeten(request):
                               "zeilen": seite})
 
 
+class _SichererCsvWriter:
+    """Punkt 321: Textzellen, die mit = + - @ (oder Tab/CR) beginnen, bekommen ein ' vorangestellt – Tabellenkalkulationen
+    führen sie sonst als Formel aus. Zahlen bleiben unverändert."""
+
+    def __init__(self, buf):
+        self._w = csv.writer(buf, delimiter=";")
+
+    def writerow(self, zeile):
+        self._w.writerow([("'" + z) if isinstance(z, str) and z[:1] in ("=", "+", "-", "@", "\t", "\r") else z for z in zeile])
+
+
 async def export_csv(request):
     ziel, vm = _parameter(request)
     r = await asyncio.to_thread(Z.probelauf, ziel, vm)
     if not r:
         raise web.HTTPNotFound()
     buf = io.StringIO()
-    w = csv.writer(buf, delimiter=";")
+    w = _SichererCsvWriter(buf)
     w.writerow(["entity_id", "herkunft_art", "herkunft", "herkunft_info", "labels", "status", "rows", "rows_24h", "state_class", "device_class", "lts_rows", "kurz_rows",
                 "kurzzeit", "kurzzeit_regel", "langzeit", "langzeit_regel",
                 "loeschmenge_sofort_states", "loeschmenge_sofort_kurz", "loeschmenge_sofort_lts",

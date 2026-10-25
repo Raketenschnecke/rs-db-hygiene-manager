@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b1 (Beta)
+- **Härtung (Punkte 319–321, aus der Risikoanalyse `docs/RISIKOANALYSE.md`):** Die Oberfläche maskiert in Texten aus der Datenbank auch `'` und `` ` `` (319). Schreibende Aufrufe der Oberfläche lehnt die App ab, wenn der Browser sie als „cross-site“ kennzeichnet (403), oder wenn sie einen Body ohne `application/json` mitschicken (415) (320). Der CSV-Export stellt Textzellen, die mit `=`, `+`, `-` oder `@` beginnen, ein `'` voran, damit Tabellenkalkulationen sie nicht als Formel ausführen (321). Zwei weitere Textstellen (Regeltyp, Attribut-Standard) laufen ebenfalls durch `esc()`. Die Meldung „Werte nicht lesbar“ zeigt keine Datenbank-Einzelheiten mehr (stehen im Protokoll der App).
+- Die Integration ändert sich nicht
+
 ## 0.5.6b39 (Beta)
 - **Chart „Gespeicherte Werte“ (Punkt 312):** Im Dialog „Eigene Vorhaltezeiten“ lässt sich das Chart der Entität von „Zuwachs“ (Zeilen pro Tag) auf „Gespeicherte Werte“ umschalten: je ein Graph für States, 5-Min-Statistik und Langzeit mit den Werten, die die Datenbank heute enthält (Zähler: Zählerstand, sonst Mittelwert je Zeitfenster), mit Zeitraum 30 Tage/90 Tage/1 Jahr/alles, Einheit an der Y-Achse und im Tooltip. Neue Datei `werte.py`, neue Schnittstelle `GET /api/werte?entity=…&tage=…` (liest strikt lesend aus der HA-Datenbank, verdichtet auf höchstens 400 Zeitfenster).
 - **Knopfleisten (Punkt 313):** Die Knopfleiste jeder Tabelle steht direkt über der Tabelle, Banner und Hinweise darüber, und klebt beim Scrollen unter den Reitern. „Filter zurücksetzen“ färbt sich, solange ein Filter wirkt. „Spaltenbreiten zurücksetzen“ und „Spalten …“ stehen rechts neben „Zeilen“ und CSV am rechten Rand, alles zum Inhalt links. Der Regelwerk-Check im Reiter Regeln bleibt beim Scrollen stehen (Punkt 315).

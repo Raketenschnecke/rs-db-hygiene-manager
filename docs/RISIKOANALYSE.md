@@ -85,7 +85,7 @@ Die App löscht Daten in der Recorder-Datenbank. Das ist ihr Zweck und zugleich 
 
 ## 7. Restpunkte und Maßnahmen
 
-Keiner dieser Punkte ist ein bekannter ausnutzbarer Fehler; es sind Härtungen.
+Keiner dieser Punkte ist ein bekannter ausnutzbarer Fehler; es sind Härtungen. **Die Punkte 1 bis 3 sind in 0.5.7b1 (Beta) umgesetzt, Punkt 4 teilweise** (die Meldung „Werte nicht lesbar“ zeigt keine Datenbank-Einzelheiten mehr; Validierungsfehler der Regeln bleiben bewusst sichtbar). Die Analyse oben beschreibt den Stand 0.5.6.
 
 1. **Frontend-Escaping:** `esc()` maskiert das einfache Anführungszeichen nicht. Eine Stelle, an der das ausnutzbar wäre, wurde nicht gefunden. Rund 100 `innerHTML`-Stellen wurden nicht einzeln geprüft.
 2. **Origin-/Content-Type-Prüfung** für schreibende Aufrufe ergänzen.
