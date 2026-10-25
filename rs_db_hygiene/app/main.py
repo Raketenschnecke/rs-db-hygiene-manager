@@ -29,6 +29,7 @@ import tote
 import verlauf
 import verursacher
 import warnungen
+import werte
 import zuwachs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -241,8 +242,11 @@ async def starte_job(art, fn=None, zusatz=None, danach=None):
 JOBNAMEN = {"analyse": "Analyse", "attribute": "Attribut-Analyse", "beide": "Analyse und Attribut-Analyse", "loeschen": "Löschlauf"}
 
 
+BEIDE = {"zusatz": {"schritt": "analyse"}}      # Punkt 318: Analyse und danach Attribut-Analyse als ein Job (Zustand wie beim Knopf der GUI)
+
+
 async def nachtlauf():
-    """Täglich zur eingestellten Uhrzeit die (leichte) Analyse; beim ersten Start oder altem Cache-Aufbau sofort."""
+    """Täglich zur eingestellten Uhrzeit Analyse und Attribut-Analyse; beim ersten Start oder altem Cache-Aufbau sofort die Analyse."""
     if _cache_version() < analyse.CACHE_VERSION:
         _LOG.info("Cache fehlt oder hat alten Aufbau – starte Analyse")
         await starte_job("analyse")
@@ -252,11 +256,11 @@ async def nachtlauf():
     zuletzt = None
     while True:
         await asyncio.sleep(30)
-        uhr = optionen().get("analyse_uhrzeit", "02:15")
+        uhr = optionen().get("analyse_uhrzeit", "00:05")
         jetzt = time.localtime()
         if time.strftime("%H:%M", jetzt) == uhr and zuletzt != jetzt.tm_yday:
             zuletzt = jetzt.tm_yday
-            await starte_job("analyse")
+            await starte_job("beide", **BEIDE)
 
 
 # ---------------------------------------------------------------- HTTP
@@ -403,6 +407,24 @@ async def zuwachs_tage(request):
     except ValueError:
         return web.json_response({"fehler": "von/bis als JJJJ-MM-TT oder Tageszahl angeben"}, status=400)
     return web.json_response(await asyncio.to_thread(zuwachs.lies, ZUWACHS, q.get("entity") or None, von, bis))
+
+
+async def werte_lesen(request):
+    """Punkt 312: gespeicherte Werte einer Entität (States, 5-Min, Langzeit) aus der HA-DB, auf ≤ 400 Zeitfenster verdichtet.
+    ?entity=sensor.x&tage=90 (0 = alles)."""
+    q = request.query
+    if not q.get("entity"):
+        return web.json_response({"fehler": "entity fehlt"}, status=400)
+    try:
+        tage = max(0, min(3660, int(q.get("tage", "90"))))
+    except ValueError:
+        return web.json_response({"fehler": "tage als Zahl angeben"}, status=400)
+    db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
+    try:
+        return web.json_response(await asyncio.to_thread(werte.lies, db, q["entity"], tage))
+    except Exception as e:  # noqa: BLE001 – HA-DB nicht lesbar (z. B. im Testcontainer ohne Datenbank)
+        _LOG.exception("Werte nicht lesbar")
+        return web.json_response({"fehler": f"Werte nicht lesbar: {e}"}, status=500)
 
 
 async def klassen(_request):
@@ -1084,7 +1106,7 @@ async def _starte_lauf(p, ausgeloest):
     async def danach():   # danach Protokoll aufräumen und frische Zahlen für Kacheln und Löschpotenzial
         Z.lauf = None
         await asyncio.to_thread(_protokoll_aufraeumen)
-        await starte_job("analyse")
+        await starte_job("beide", **BEIDE)      # Punkt 318: auch die Attribut-Analyse, sonst bleibt sie bis zur nächsten Nacht stehen
 
     ok = await starte_job("loeschen", lauf.fuehre_aus, {"fortschritt": lauf.fortschritt, "nur_regel": p["nur_regel"]}, danach)
     if ok:
@@ -1342,6 +1364,7 @@ def erstelle_app():
         web.get("/api/probelauf", probelauf_summe),
         web.get("/api/prognose_verlauf", prognose_verlauf),
         web.get("/api/zuwachs", zuwachs_tage),
+        web.get("/api/werte", werte_lesen),
         web.get("/api/zuwachs/events", zuwachs_events),
         web.get("/api/struktur", struktur_lesen),
         web.get("/api/entitaeten", entitaeten),

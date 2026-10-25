@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6b39 (Beta)
+- **Chart „Gespeicherte Werte“ (Punkt 312):** Im Dialog „Eigene Vorhaltezeiten“ lässt sich das Chart der Entität von „Zuwachs“ (Zeilen pro Tag) auf „Gespeicherte Werte“ umschalten: je ein Graph für States, 5-Min-Statistik und Langzeit mit den Werten, die die Datenbank heute enthält (Zähler: Zählerstand, sonst Mittelwert je Zeitfenster), mit Zeitraum 30 Tage/90 Tage/1 Jahr/alles, Einheit an der Y-Achse und im Tooltip. Neue Datei `werte.py`, neue Schnittstelle `GET /api/werte?entity=…&tage=…` (liest strikt lesend aus der HA-Datenbank, verdichtet auf höchstens 400 Zeitfenster).
+- **Knopfleisten (Punkt 313):** Die Knopfleiste jeder Tabelle steht direkt über der Tabelle, Banner und Hinweise darüber, und klebt beim Scrollen unter den Reitern. „Filter zurücksetzen“ färbt sich, solange ein Filter wirkt. „Spaltenbreiten zurücksetzen“ und „Spalten …“ stehen rechts neben „Zeilen“ und CSV am rechten Rand, alles zum Inhalt links. Der Regelwerk-Check im Reiter Regeln bleibt beim Scrollen stehen (Punkt 315).
+- **Empfehlungen (Punkt 314):** Auswahl „Zeilen“ (25, 50, 100, 200, alle, automatisch), Standard 25.
+- **Kacheln (Punkte 316/317):** zeigen den Speicherbedarf (Zeilen × gemessene Zeilengröße) statt der Zeilenzahlen; die Zeilen stehen als Subtext darunter. „Datenzeilen gesamt“ heißt „Daten gesamt“, „Attribute (Zeilen)“ heißt „Attribute“.
+- **Analysen (Punkt 318):** Der Nachtlauf und der Lauf nach einem Löschlauf führen die Analyse und danach die Attribut-Analyse aus (ein Job wie beim Knopf „Analyse starten“); bisher lief nur die Analyse, die Attribut-Daten blieben stehen. Die Vorgabe der Uhrzeit (`analyse_uhrzeit`) ist jetzt 00:05; ein gespeicherter Wert bleibt unverändert.
+- Die Integration ändert sich nicht
+
 ## 0.5.6b38 (Beta)
 - **Löschprotokoll, Plan der States (Punkt 311):** Die Spalten „geplant“ und „Überhang“ im Lauf-Dialog gelten jetzt auch für States-Pakete (Stufe A): Das Protokoll trägt je Paket und Entität den Plan laut Analyse (`geplant`, `geplant_je`). Bisher zeigten nur 5-Min-Statistik, Langzeit, Events und Attribute einen Plan, sodass die Spalte „geplant“ weit unter der Summe „gelöscht“ lag. Läufe vor 0.5.6b38 zeigen für States weiter „–“.
 

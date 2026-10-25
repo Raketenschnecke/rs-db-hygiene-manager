@@ -1,5 +1,5 @@
 name: RS DB Hygiene Manager (Beta)
-version: "0.5.6b38"
+version: "0.5.6b39"
 slug: rs_db_hygiene
 stage: experimental
 description: >-
@@ -25,7 +25,7 @@ map:
   - homeassistant_config:ro
 options:
   db_pfad: /homeassistant/home-assistant_v2.db
-  analyse_uhrzeit: "02:15"
+  analyse_uhrzeit: "00:05"
   purge_keep_days: 0
   loeschen_freigegeben: false
   loeschen_max_zeilen: 5000000

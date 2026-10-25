@@ -203,9 +203,10 @@ main { padding: 0 20px 24px; }
 .zw .vl-leg > button { padding: 2px 8px; font-size: 12px; text-align: center; }
 .zw .vl-leg.ev { display: flex; flex-wrap: wrap; justify-content: center; }   /* Punkt 286: viele Event-Typen als kompakte Schilder */
 .zw .vl-leg.ev > button { white-space: nowrap; padding: 1px 7px; font-size: 11.5px; }
-.zw-bereich { display: flex; gap: 6px; flex-wrap: wrap; }
-.zw-bereich button { font-size: 12px; padding: 2px 8px; }
-.zw-bereich button.an { background: var(--panel); border-color: var(--muted); font-weight: 600; }
+.zw-bereich, .zw-modus { display: flex; gap: 6px; flex-wrap: wrap; }
+.zw-modus { margin: 8px 0 4px; }
+.zw-bereich button, .zw-modus button { font-size: 12px; padding: 2px 8px; }
+.zw-bereich button.an, .zw-modus button.an { background: var(--panel); border-color: var(--muted); font-weight: 600; }
 .r-ist { --zf: var(--zf-ist); } .r-loesch { --zf: var(--zf-loesch); } .r-prog { --zf: var(--zf-prog); }
 .raster .kurz { display: none; }
 @media (max-width: 1250px) { .raster .z .lang { display: none; } .raster .z .kurz { display: inline; } .raster .kachel .z { font-size: 17px; } }
@@ -232,6 +233,7 @@ main { padding: 0 20px 24px; }
 .jobblock { display: grid; gap: 2px; justify-items: start; }
 button, select, input, textarea { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
 button { cursor: pointer; }
+button.filter-aktiv { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); font-weight: 600; }   /* Punkt 313: Filter zurücksetzen bei gefilterter Tabelle */
 button.primaer { background: var(--accent); border-color: var(--accent); color: #fff; }
 /* Aktivität nach Klick auf den blauen Knopf eines Dialogs: Ring vor dem Text, Doppelklick wird ignoriert */
 button.primaer.laeuft { cursor: progress; opacity: .85; }
@@ -253,9 +255,13 @@ input[type=number] { width: 72px; }
 /* Punkt 276: Reiter + Chips kleben oben (.kleb-oben), jede sichtbare Knopfleiste klebt darunter; was dazwischen steht (Banner im Reiter Regeln) scrollt weg */
 .klebend { display: contents; }   /* Kinder kleben relativ zur Seite, nicht zu diesem Wrapper */
 .kleb-oben { position: sticky; top: 0; z-index: 6; background: var(--bg); padding-top: 4px; display: flow-root; }   /* flow-root: der untere Rand der Chips bleibt in der Leiste, sonst klebt die Knopfleiste ohne Abstand darunter */
-.klebend > .leiste { position: sticky; top: var(--kleb-oben-h, 0px); z-index: 5; background: var(--bg); }
+/* Punkt 313: die Knopfleisten stehen in ihrem Reiter direkt über der Tabelle (Banner und Hinweise darüber) und kleben beim Scrollen unter den Reitern */
+.leiste[data-leiste], .leiste.massen { position: sticky; top: calc(var(--kleb-oben-h, 0px) + var(--banner-h, 0px)); z-index: 5; background: var(--bg); }
+.leiste.massen { top: calc(var(--kleb-oben-h, 0px) + var(--banner-h, 0px) + var(--leiste-h, 0px)); z-index: 4; }
+/* Regelwerk-Check bleibt wie die Knopfleiste stehen (Abstand nach unten deckend, damit nichts durchscheint) */
+#regelCheck { position: sticky; top: var(--kleb-oben-h, 0px); z-index: 5; box-shadow: 0 8px 0 var(--bg); }
 /* 0.5.3 (Punkte 152/153): 8 px deckender Abstand unter den Knöpfen – beim Scrollen wie im Stand */
-.klebend > .leiste { margin-bottom: 0; padding-bottom: 8px; }
+.leiste[data-leiste], .leiste.massen { margin-bottom: 0; padding-bottom: 8px; }
 /* Reiter (Punkt 41): eigene Fläche und Rahmen je Tab; der aktive ist mit dem Inhalt verbunden */
 /* Punkt 80 (0.4.4): kein senkrechter Scrollbalken – overflow-y: hidden. Die Grundlinie ist ein innerer Schatten statt eines Rahmens,
    damit nichts über die Leiste hinausragt; der aktive Reiter deckt sie mit seinem unteren Rand in Flächenfarbe ab. */
@@ -806,81 +812,27 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
     <div data-leiste="regeln" hidden style="margin-bottom:16px">
       <div class="hinweisbox" id="attrStandardBox"></div>   <!-- Punkt 254: Attribut-Standard -->
     </div>
-    <div class="leiste" data-leiste="ent" hidden>
-      <select id="fDomain"><option value="">alle Domains</option></select>
-      <select id="fRegel"><option value="">mit und ohne Regel</option><option value="mit">mit Regel</option><option value="ohne">ohne Regel</option></select>
-      <label><input type="checkbox" id="fHinweis"> nur mit Hinweis/Schutz</label>
-      <button id="filterReset" title="alle Spalten- und Leistenfilter zurücksetzen">Filter zurücksetzen</button>
-      <button id="breitenReset" title="alle Spaltenbreiten auf Standard; einzelne Spalte: Doppelklick auf den Griff">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="ent" title="Spalten ein- und ausblenden, Ansichten Standard / Attribute / Alle">Spalten …</button>
-      <span style="flex:1"></span>
-      <label>Zeilen <select id="fLimit"><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="5000">5000</option><option value="0">alle</option></select></label>
-      <a id="csv" href="#">CSV</a>
-    </div>
-    <div class="leiste" data-leiste="regeln" hidden>
-      <button class="primaer" id="btnNeu">Neue Regel</button>
-      <button id="btnVerwalten" title="Regeln exportieren und importieren, auf die Startregeln zurücksetzen, Sicherungen wiederherstellen">Regeln verwalten …</button>
-      <button id="nurEvent" title="Regeltabelle auf Regeln vom Typ event filtern bzw. Filter aufheben">nur Event-Regeln</button>
-      <button data-reset-filter="regeln">Filter zurücksetzen</button>
-      <button data-reset-breiten="regeln">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="regeln">Spalten …</button>
-      <span style="flex:1"></span>
-      <a href="#" data-csv="regeln">CSV</a>
-    </div>
-    <div class="leiste massen" id="massenleiste" hidden></div>
-    <div class="leiste massen" id="massenEnt" hidden></div>
-    <div class="leiste massen" id="massenEv" hidden></div>
-    <div class="leiste massen" id="massenOpt" hidden></div>
-    <div class="leiste" data-leiste="events" hidden>
-      <button id="evNeueRegel" class="primaer">Neue Event-Regel</button>
-      <button data-reset-filter="events">Filter zurücksetzen</button>
-      <button data-reset-breiten="events">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="events">Spalten …</button>
-      <span style="flex:1"></span>
-      <a href="#" data-csv="events">CSV</a>
-    </div>
-    <div class="leiste" data-leiste="probe" hidden>
-      <button data-reset-filter="probe">Filter zurücksetzen</button>
-      <button data-reset-breiten="probe">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="probe">Spalten …</button>
-      <button class="hilfeknopf" data-hilfe="prognosen" aria-label="Erläuterung: Prognose">ⓘ Was zeigt dieser Tab?</button>
-      <span style="flex:1"></span>
-      <a href="#" data-csv="probe">CSV</a>
-    </div>
     <!-- Punkt 229: Umfang und „Plan neu laden“ stehen im Kasten neben „Jetzt ausführen“; hier liegen sie nur zwischen zwei
          Neubauten des Kastens (Auswahl und Ereignisse bleiben erhalten). Punkt 163: Tabellen-Knöpfe über der Tabelle -->
     <div id="lAblage" hidden>
       <select id="lRegel" aria-label="Umfang des Laufs" title="Umfang: alle aktiven Regeln oder nur eine Regel"><option value="">alle aktiven Regeln</option></select>
       <button id="lNeu" title="Plan aus der aktuellen Analyse und den aktiven Regeln neu berechnen">Plan neu laden</button>
     </div>
-    <div class="leiste" data-leiste="protokoll" hidden>
-      <button id="pNeu">Neu laden</button>
-      <button data-reset-filter="laeufe">Filter zurücksetzen</button>
-      <button data-reset-breiten="laeufe">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="laeufe">Spalten …</button>
-      <span style="flex:1"></span>
-      <a href="#" data-csv="laeufe">CSV</a>
-    </div>
     <!-- Punkt 176 (0.5.4): Regelvorschläge aus der letzten Analyse -->
-    <div class="leiste" data-leiste="opt" hidden>
-      <button id="oNeu" title="Vorschläge mit den aktuellen Regeln und dem Prognosezeitraum neu berechnen">Neu berechnen</button>
-      <label><input type="checkbox" id="oIgnoriert"> ignorierte zeigen</label>
-      <button data-reset-filter="opt">Filter zurücksetzen</button>
-      <button data-reset-breiten="opt">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="opt">Spalten …</button>
-      <button class="hilfeknopf" data-hilfe="optimierungen" aria-label="Erläuterung: Empfehlungen">ⓘ Was zeigt dieser Tab?</button>
-      <span style="flex:1"></span>
-      <a href="#" data-csv="opt">CSV</a>
-    </div>
-    <div class="leiste" data-leiste="lts" hidden>
-      <button data-reset-filter="lts">Filter zurücksetzen</button>
-      <button data-reset-breiten="lts">Spaltenbreiten zurücksetzen</button>
-      <button data-spalten="lts">Spalten …</button>
-      <span style="flex:1"></span>
-      <a href="#" data-csv="lts">CSV</a>
-    </div>
   </div>
   <section id="tab-ent" hidden>
+    <div class="leiste" data-leiste="ent" hidden>
+      <select id="fDomain"><option value="">alle Domains</option></select>
+      <select id="fRegel"><option value="">mit und ohne Regel</option><option value="mit">mit Regel</option><option value="ohne">ohne Regel</option></select>
+      <label><input type="checkbox" id="fHinweis"> nur mit Hinweis/Schutz</label>
+      <button id="filterReset" title="alle Spalten- und Leistenfilter zurücksetzen">Filter zurücksetzen</button>
+      <span style="flex:1"></span>
+      <button id="breitenReset" title="alle Spaltenbreiten auf Standard; einzelne Spalte: Doppelklick auf den Griff">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="ent" title="Spalten ein- und ausblenden, Ansichten Standard / Attribute / Alle">Spalten …</button>
+      <label>Zeilen <select id="fLimit"><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="5000">5000</option><option value="0">alle</option></select></label>
+      <a id="csv" href="#">CSV</a>
+    </div>
+    <div class="leiste massen" id="massenEnt" hidden></div>
     <div class="trefferzeile" id="trefferzeile"></div>
     <div class="tabelle"><table id="tEnt" class="baustein gruppiert"><colgroup id="tEntSpalten"></colgroup><thead id="tEntKopf"></thead><tbody id="tEntRumpf"></tbody></table></div>
     <div class="blaettern"><button id="zurueck">‹</button><span id="seite"></span><button id="weiter">›</button><span id="aufbau" class="sub"></span></div>
@@ -888,6 +840,15 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
   <section id="tab-events" hidden>
     <!-- Punkt 204 (0.5.5b13): Event-Typen ohne eigene Event-Regel, unabhängig von der Menge -->
     <div class="banner" id="evHinweis" style="margin:0 0 8px" hidden></div>
+    <div class="leiste" data-leiste="events" hidden>
+      <button id="evNeueRegel" class="primaer">Neue Event-Regel</button>
+      <button data-reset-filter="events">Filter zurücksetzen</button>
+      <span style="flex:1"></span>
+      <button data-reset-breiten="events">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="events">Spalten …</button>
+      <a href="#" data-csv="events">CSV</a>
+    </div>
+    <div class="leiste massen" id="massenEv" hidden></div>
     <div class="trefferzeile" id="trefferEvents"></div>
     <div class="tabelle"><table id="tEvents" class="baustein"></table></div>
     <p class="sub">Je Event-Typ die wirksame Vorhaltezeit. Gesetzt wird sie im Tab „Regeln“ mit Regeln vom Typ „event“; Klick auf eine Zeile öffnet die Regel bzw. legt eine an. Events braucht nur das Logbuch („Aktivität“).</p>
@@ -1138,7 +1099,7 @@ actions:
         <h3 id="h-faq-menge">Warum ist die Löschmenge 0, obwohl die Regel greift?</h3>
         <p>Die Daten sind noch nicht alt genug: jünger als die Vorhaltezeit, bei „keine“ von heute (siehe <a class="hverweis" href="#h-werte">Werte einer Vorhaltezeit</a>).</p>
         <h3 id="h-faq-zuwachs">Wie lange bleiben die Zuwachsdaten der Charts?</h3>
-        <p>Die Charts „Zeilen pro Tag“ (je Entität, Kachel Datenzeilen gesamt, Kachel Events) lesen die Zuwachs-Statistik. Sie speichert die Tageswerte <b>24 Monate</b>; der Wert steht in der App-Option <code>zuwachs_monate</code> (1 bis 240; Einstellungen → Apps → RS DB Hygiene Manager → Konfiguration). Ältere Tage entfernt die nächste Analyse; sie lassen sich danach nicht wiederherstellen. Die Datei ist klein (einige Zeilen je Entität und Tag) und unabhängig von den Löschläufen und von purge_keep_days.</p>
+        <p>Die Charts „Zeilen pro Tag“ (je Entität, Kachel Daten gesamt, Kachel Events) lesen die Zuwachs-Statistik. Sie speichert die Tageswerte <b>24 Monate</b>; der Wert steht in der App-Option <code>zuwachs_monate</code> (1 bis 240; Einstellungen → Apps → RS DB Hygiene Manager → Konfiguration). Ältere Tage entfernt die nächste Analyse; sie lassen sich danach nicht wiederherstellen. Die Datei ist klein (einige Zeilen je Entität und Tag) und unabhängig von den Löschläufen und von purge_keep_days.</p>
         <h3 id="h-faq-passiv">Warum steht in der Löschtabelle nie „passiv“?</h3>
         <p>Passive Regeln wirken nicht und kommen deshalb gar nicht erst in den Löschplan. Die Spalte „Entitäts-Status“ im Reiter Löschen zeigt nicht den Zustand der Regel, sondern den der <b>Entität</b> in HA:</p>
         <ul>
@@ -1209,6 +1170,17 @@ actions:
         <span class="sub">Kandidaten wie bei den Vorschlägen: aktiv, ohne Schutz und eigene Kurzzeit, keine Zähler, keine Quellen von Energie-Dashboard oder Helfern – und heute länger als die gewählte Kurzzeit.</span></div>
       <div id="paretoInhalt"><span class="sub">berechne …</span></div>
     </details>
+    <div class="leiste" data-leiste="opt" hidden>
+      <button id="oNeu" title="Vorschläge mit den aktuellen Regeln und dem Prognosezeitraum neu berechnen">Neu berechnen</button>
+      <label><input type="checkbox" id="oIgnoriert"> ignorierte zeigen</label>
+      <button data-reset-filter="opt">Filter zurücksetzen</button>
+      <button class="hilfeknopf" data-hilfe="optimierungen" aria-label="Erläuterung: Empfehlungen">ⓘ Was zeigt dieser Tab?</button>
+      <span style="flex:1"></span>
+      <button data-reset-breiten="opt">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="opt">Spalten …</button>
+      <a href="#" data-csv="opt">CSV</a>
+    </div>
+    <div class="leiste massen" id="massenOpt" hidden></div>
     <div class="trefferzeile" id="trefferOpt"></div>
     <div class="tabelle"><table id="tOpt" class="baustein"></table></div>
     <p class="sub" id="optText">Vorschläge aus der letzten Analyse – nur für Daten ohne eigene Kurzzeit (Standard bzw. HA-Standard), nie für Zähler, geschützte Entitäten,
@@ -1217,10 +1189,29 @@ actions:
   </section>
   <section id="tab-regeln" hidden>
     <div class="hinweisbox" id="regelCheck" hidden></div>   <!-- Punkt 232: Regelwerk-Check -->
+    <div class="leiste" data-leiste="regeln" hidden>
+      <button class="primaer" id="btnNeu">Neue Regel</button>
+      <button id="btnVerwalten" title="Regeln exportieren und importieren, auf die Startregeln zurücksetzen, Sicherungen wiederherstellen">Regeln verwalten …</button>
+      <button id="nurEvent" title="Regeltabelle auf Regeln vom Typ event filtern bzw. Filter aufheben">nur Event-Regeln</button>
+      <button data-reset-filter="regeln">Filter zurücksetzen</button>
+      <span style="flex:1"></span>
+      <button data-reset-breiten="regeln">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="regeln">Spalten …</button>
+      <a href="#" data-csv="regeln">CSV</a>
+    </div>
+    <div class="leiste massen" id="massenleiste" hidden></div>
     <div class="trefferzeile" id="trefferRegeln"></div>
     <div class="tabelle"><table id="tRegeln" class="baustein"></table></div>
   </section>
   <section id="tab-probe" hidden>
+    <div class="leiste" data-leiste="probe" hidden>
+      <button data-reset-filter="probe">Filter zurücksetzen</button>
+      <button class="hilfeknopf" data-hilfe="prognosen" aria-label="Erläuterung: Prognose">ⓘ Was zeigt dieser Tab?</button>
+      <span style="flex:1"></span>
+      <button data-reset-breiten="probe">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="probe">Spalten …</button>
+      <a href="#" data-csv="probe">CSV</a>
+    </div>
     <div class="trefferzeile" id="trefferProbe"></div>
     <div class="tabelle"><table id="tProbe" class="baustein"></table></div>
   </section>
@@ -1229,9 +1220,9 @@ actions:
     <!-- Punkt 163 (0.5.4): Knöpfe, die sich nur auf die Tabelle beziehen (oben bleiben Umfang und Plan) -->
     <div class="leiste" id="lTabLeiste">
       <button data-reset-filter="loesch" title="Spaltenfilter und Sortierung der Tabelle zurücksetzen (der Umfang bleibt)">Filter zurücksetzen</button>
+      <span style="flex:1"></span>
       <button data-reset-breiten="loesch">Spaltenbreiten zurücksetzen</button>
       <button data-spalten="loesch">Spalten …</button>
-      <span style="flex:1"></span>
       <a href="#" data-csv="loesch">CSV</a>
     </div>
     <div class="trefferzeile" id="trefferLoesch"></div>
@@ -1240,11 +1231,19 @@ actions:
   <section id="tab-protokoll" hidden>
     <div class="loeschkasten" id="pKopf">lade …</div>
     <h2 class="laeufe-titel">Läufe</h2>
-    <div class="leiste" style="justify-content:flex-end"><span id="laeufeZeilen"></span></div>   <!-- Punkt 276: Auswahl „Zeilen“ direkt über der Tabelle -->
+    <div class="leiste" data-leiste="protokoll" hidden>
+      <button id="pNeu">Neu laden</button>
+      <button data-reset-filter="laeufe">Filter zurücksetzen</button>
+      <span style="flex:1"></span>
+      <button data-reset-breiten="laeufe">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="laeufe">Spalten …</button>
+      <span id="laeufeZeilen"></span>
+      <a href="#" data-csv="laeufe">CSV</a>
+    </div>
     <div class="trefferzeile" id="trefferLaeufe"></div>
     <div class="tabelle" style="min-height:120px"><table id="tLaeufe" class="baustein"></table></div>
     <h2 class="laeufe-titel">Gelöscht je Entität und Monat <span class="sub">– bleibt erhalten, auch wenn alte Läufe aufgeräumt werden</span></h2>
-    <div class="leiste"><button data-reset-filter="summe">Filter zurücksetzen</button><button data-reset-breiten="summe">Spaltenbreiten zurücksetzen</button><span style="flex:1"></span><a href="#" data-csv="summe">CSV</a></div>
+    <div class="leiste"><button data-reset-filter="summe">Filter zurücksetzen</button><span style="flex:1"></span><button data-reset-breiten="summe">Spaltenbreiten zurücksetzen</button><a href="#" data-csv="summe">CSV</a></div>
     <div class="trefferzeile" id="trefferSumme"></div>
     <div class="tabelle" style="min-height:120px"><table id="tSumme" class="baustein"></table></div>
   </section>
@@ -1258,6 +1257,13 @@ actions:
         <li><b>Sie zählen bei den Entitäten nicht mit:</b> weder in der Löschmenge noch in der Prognose. Auch das Kachelraster rechnet sie nicht mit.</li>
         <li><b>Endgültig entfernen</b>, falls du die Sensoren nicht mehr brauchst: in HA unter Entwicklerwerkzeuge → Statistiken. Dort erscheinen sie meist mit einem Hinweis auf ein Problem und lassen sich löschen.</li>
       </ul>
+    </div>
+    <div class="leiste" data-leiste="lts" hidden>
+      <button data-reset-filter="lts">Filter zurücksetzen</button>
+      <span style="flex:1"></span>
+      <button data-reset-breiten="lts">Spaltenbreiten zurücksetzen</button>
+      <button data-spalten="lts">Spalten …</button>
+      <a href="#" data-csv="lts">CSV</a>
     </div>
     <div class="trefferzeile" id="trefferLts"></div>
     <div class="tabelle"><table id="tLts" class="baustein"></table></div>
@@ -1463,15 +1469,17 @@ function par() {
 {
   // --kleb-h = Reiter + Chips + die sichtbare Knopfleiste (ohne das Banner dazwischen)
   const kleb = () => {
-    const oben = $("#klebOben").offsetHeight, leiste = [...document.querySelectorAll("#klebend > .leiste:not([hidden])")].reduce((s, l) => s + l.offsetHeight, 0);
+    const oben = $("#klebOben").offsetHeight, sichtbar = sel => [...document.querySelectorAll(sel)].reduce((s, l) => s + l.offsetHeight, 0),
+      knopf = sichtbar("main .leiste[data-leiste]:not([hidden])"), banner = sichtbar("main #regelCheck:not([hidden])") ? sichtbar("main #regelCheck:not([hidden])") + 8 : 0,
+      leiste = banner + knopf + sichtbar("main .leiste.massen:not([hidden])");
     const wurzel = document.documentElement.style;
-    if (wurzel.getPropertyValue("--kleb-h") === oben + leiste + "px") return;
-    wurzel.setProperty("--kleb-oben-h", oben + "px"); wurzel.setProperty("--kleb-h", oben + leiste + "px");
+    if (wurzel.getPropertyValue("--kleb-h") === oben + leiste + "px" && wurzel.getPropertyValue("--leiste-h") === knopf + "px" && wurzel.getPropertyValue("--banner-h") === banner + "px") return;
+    wurzel.setProperty("--leiste-h", knopf + "px"); wurzel.setProperty("--banner-h", banner + "px"); wurzel.setProperty("--kleb-oben-h", oben + "px"); wurzel.setProperty("--kleb-h", oben + leiste + "px");
     document.querySelectorAll(".tabelle").forEach(b => b.dispatchEvent(new Event("dbh-hoehe")));
   };
   const ro = new ResizeObserver(kleb);
-  ro.observe($("#klebOben")); document.querySelectorAll("#klebend > .leiste").forEach(l => ro.observe(l));
-  new MutationObserver(kleb).observe($("#klebend"), { attributes: true, attributeFilter: ["hidden"], subtree: true });
+  ro.observe($("#klebOben")); document.querySelectorAll("main .leiste[data-leiste], main .leiste.massen, main #regelCheck").forEach(l => ro.observe(l));
+  new MutationObserver(kleb).observe($("main"), { attributes: true, attributeFilter: ["hidden"], subtree: true });
 }
 // Punkt 240: Platz unter einer Tabelle (Text darunter + Polster von main) von ihrer Höhe abziehen – sonst lässt sich die Seite
 // weiter scrollen, als die Tabelle hoch ist, und ihr Kopf (Gruppenzeile) verschwindet unter der klebenden Leiste
@@ -1611,6 +1619,13 @@ function ladeCsv(name, kopf, zeilen) {
 // Spalte: { k, titel, typ: text|zahl|gb|auswahl|keine, n (rechtsbündig), breite, wert(r), zelle(r), csv(r),
 //           summe(gefiltert, alle) -> [oben, unten], optionen(alle) -> [[wert, text]], passt(r, wahl), kopf (HTML statt Titel), mitte }
 // seiten: Auswahl der angezeigten Zeilen (Punkt 69/70), z. B. [10, 25, 50, 250] mit seiteStd; Filter und Summen wirken über alle Zeilen
+// Punkt 313: der Knopf „Filter zurücksetzen“ färbt sich, solange die Tabelle gefiltert ist
+function markiereFilterReset(knopf, aktiv) {
+  if (!knopf) return;
+  knopf.classList.toggle("filter-aktiv", !!aktiv);
+  knopf.dataset.titelStd ??= knopf.title;
+  knopf.title = aktiv ? (knopf.dataset.titelStd ? knopf.dataset.titelStd + "\n" : "") + "Die Tabelle ist gefiltert." : knopf.dataset.titelStd;
+}
 class LokaleTabelle {
   constructor(o) {
     Object.assign(this, { f: {}, zeilen: [] }, o);
@@ -1668,7 +1683,7 @@ class LokaleTabelle {
       const ort = o.wahlOrt && document.querySelector(o.wahlOrt);   // fester Platz statt vor dem CSV-Link
       if (anker || ort) {
         this.wahl = document.createElement("label");
-        this.wahl.innerHTML = `Zeilen <select aria-label="angezeigte Zeilen">${o.seiten.map(n => `<option value="${n}" ${!this.auto && n === this.seite ? "selected" : ""}>${n}</option>`).join("")}<option value="auto" ${this.auto ? "selected" : ""} title="so viele Zeilen, wie ins Fenster passen">automatisch</option></select>`;
+        this.wahl.innerHTML = `Zeilen <select aria-label="angezeigte Zeilen">${o.seiten.map(n => `<option value="${n}" ${!this.auto && n === this.seite ? "selected" : ""}>${n || "alle"}</option>`).join("")}<option value="auto" ${this.auto ? "selected" : ""} title="so viele Zeilen, wie ins Fenster passen">automatisch</option></select>`;
         if (ort) ort.append(this.wahl); else anker.before(this.wahl);
         this.wahl.querySelector("select").addEventListener("change", ev => {
           const v = ev.target.value; this.auto = v === "auto"; this.seite = this.auto ? (this.seite || 10) : +v;
@@ -1848,6 +1863,8 @@ class LokaleTabelle {
       const [zu, weiter] = this.pager.querySelectorAll("button");
       zu.disabled = this.pg <= 0; weiter.disabled = bis >= l.length;
     }
+    const name = Object.keys(T).find(k => T[k] === this);   // Punkt 313: „Filter zurücksetzen“ hervorheben, solange ein Filter wirkt
+    if (name) markiereFilterReset(document.querySelector(`[data-reset-filter="${name}"]`), !this.zeigbar().every(s => !String(this.f[s.k] || "").trim()));
     if (this.nachher) this.nachher(this);
   }
   resetFilter() { this.f = {}; this.pg = 0; this.sortierung = [...this.sortStdListe]; this.merkeSort(); this.baueKopf(); this.zeige(); }
@@ -2025,8 +2042,8 @@ const HILFE = {
     "Istzustand: Größe der Datei home-assistant_v2.db. Löschmenge sofort: Platz der Zeilen, die ein Lauf jetzt löschen würde. Prognose: erwartete Größe im Dauerbetrieb, darunter ohne Regeln.",
     "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile misst jede Analyse (Reiter Cockpit, „Wo der Platz liegt“); ohne Messung gelten Festwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
     "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren)."],
-  c_zeilen: ["Datenzeilen gesamt",
-    "Summe der Spalten States, 5-Min, Attribute (Zeilen), Langzeit und Events in dieser Zeile.",
+  c_zeilen: ["Daten gesamt",
+    "Speicherbedarf: Summe der Spalten States/5-Min, Attribute, Langzeit und Events in dieser Zeile.",
     "Verwaiste sind in den anderen Spalten schon enthalten und zählen nicht doppelt. Ohne Attribut-Analyse fehlen die Attributzeilen in der Summe.",
     "Die drei Zeilen vergleichen: Wie viel liegt heute, wie viel ist sofort zu viel, wie viel bleibt auf Dauer."],
   c_kurz: ["States, 5-Min",
@@ -2041,8 +2058,8 @@ const HILFE = {
     "Zeilen in der Tabelle events (Logbuch: Automation ausgelöst, Aktionen, Registry …).",
     "Die Vorhaltezeit (Events) je Event-Typ setzen Regeln vom Typ „event“; Standard ist global (purge_keep_days). Verlauf, Statistik und Energie-Dashboard brauchen keine Events, nur das Logbuch.",
     "Große, wenig genutzte Typen wie call_service kurz halten (Startwert 7 Tage)."],
-  c_attr: ["Attribute (Zeilen)",
-    "Attributzeilen in state_attributes; darunter der Platz inkl. Index.",
+  c_attr: ["Attribute",
+    "Speicherbedarf der Attribute (Tabelle state_attributes inkl. Index); die Zahl der Zeilen steht im Tooltip.",
     "Attribute haben einen eigenen Wert (Regel oder Attribut-Standard, höchstens die Kurzzeit): Nach dieser Frist werden sie von den States getrennt, sonst fallen sie mit deren States weg. Genau nur nach einer Attribut-Analyse; ohne sie steht hier „fehlt“.",
     "Attribut-Analyse nach größeren Regeländerungen neu starten. Werte aus Attributen, die lange gebraucht werden, in eigene Entitäten (z. B. Template-Sensoren) überführen."],
   c_verwaist: ["Verwaist",
@@ -2085,8 +2102,8 @@ document.addEventListener("click", ev => {   // ⓘ an Raster-Köpfen und Bedien
 // [Schlüssel, Name, Kurzname für schmale Fenster, CSS-Klasse der Zeilenfarbe]
 const RZEILEN = [["ist", "Istzustand", "Ist", "r-ist"], ["loesch", "Löschmenge sofort", "Löschen", "r-loesch"], ["prog", "Prognose", "Progn.", "r-prog"]];
 // [Schlüssel, Name, Kurzname]
-const RSPALTEN = [["db", "DB-Größe", "DB"], ["zeilen", "Datenzeilen gesamt", "Zeilen"], ["kurz", "States, 5-Min", "St./5M"],
-  ["attr", "Attribute (Zeilen)", "Attr."], ["lts", "Langzeit", "LZ"], ["events", "Events", "Ev."], ["verwaist", "Verwaist", "Verw."]];   // Punkt 285: Folge wie in den Löschtabellen
+const RSPALTEN = [["db", "DB-Größe", "DB"], ["zeilen", "Daten gesamt", "Daten"], ["kurz", "States, 5-Min", "St./5M"],
+  ["attr", "Attribute", "Attr."], ["lts", "Langzeit", "LZ"], ["events", "Events", "Ev."], ["verwaist", "Verwaist", "Verw."]];   // Punkt 285: Folge wie in den Löschtabellen
 // Kurzform für schmale Kacheln: 4.998.362 → „5,0 Mio.“ (die lange Form steht im Tooltip)
 const kzahl = n => n == null ? "–" : Math.abs(n) >= 1e9 ? (n / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " Mrd."
   : Math.abs(n) >= 1e6 ? (n / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " Mio."
@@ -2094,37 +2111,44 @@ const kzahl = n => n == null ? "–" : Math.abs(n) >= 1e9 ? (n / 1e9).toLocaleSt
 const kgb = b => b == null ? "–" : (b / 1e9).toLocaleString("de-DE", { maximumFractionDigits: b < 1e11 ? 1 : 0 }) + " GB";
 const summeOk = (...w) => w.some(x => x == null) ? null : w.reduce((a, x) => a + x, 0);
 
-// Werte je Zelle: {w: Zahl, gb: true bei Bytes, u: Unterzeile, fehlt: Text statt Wert}
+// Punkt 316: Kacheln zeigen den Speicherbedarf (Bytes, aus Zeilen × gemessener Zeilengröße); die Zeilenzahlen stehen nur noch im Tooltip.
+// Werte je Zelle: {w: Zahl, gb: true bei Bytes (DB-Größe), b: true bei Bytes (übrige Kacheln), u: Zusatz (Untertitel nur bei DB-Größe, sonst im Tooltip), fehlt: Text statt Wert}
+const pb = b => b == null ? "–" : b === 0 ? "0 MB" : Math.abs(b) >= 1e9 ? (b / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " GB"
+  : Math.abs(b) >= 1e6 ? (b / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " MB" : Math.round(b / 1e3).toLocaleString("de-DE") + " KB";
 function rasterWerte(s, st) {
-  const mitAttr = !!st.attribut_analyse, n = v => v || 0;
-  const attr = (z, u) => mitAttr ? { w: n(z), u } : { fehlt: "fehlt", u: "„Analyse starten“ ausführen" };
+  const mitAttr = !!st.attribut_analyse, n = v => v || 0, g = st.zeilengroessen?.werte || {};
+  const BS = g.B_STATE || 181, BK = g.B_KURZ || 82, BL = g.B_LTS || 79, BE = g.B_EVENT || 145;
+  const attr = (b, u) => mitAttr ? { w: n(b), b: true, u } : { fehlt: "fehlt", u: "„Analyse starten“ ausführen" };
   const ist = {
     db: { w: st.db_bytes, gb: true, u: "Datei heute" },
-    kurz: { w: n(s.bestand_states) + n(s.bestand_kurz), u: `States ${kzahl(n(s.bestand_states))} · 5-Min ${kzahl(n(s.bestand_kurz))}` },
-    lts: { w: n(s.bestand_lts), u: "Stundenstatistik" },
-    events: { w: n(s.bestand_events), u: "alle Event-Typen" },
-    attr: attr(s.bestand_attr_zeilen, `${gb(s.attr_bestand_bytes || 0)} · ${zahl(Math.round(100 * (s.attr_bestand_bytes || 0) / st.db_bytes))} % der DB`),
-    verwaist: { w: n(s.verwaist_entitaeten), u: `Entitäten · ${kzahl(n(s.verwaist_states))} Zeilen` },
+    kurz: { w: n(s.bestand_states) * BS + n(s.bestand_kurz) * BK, b: true, u: `States ${kzahl(n(s.bestand_states))} · 5-Min ${kzahl(n(s.bestand_kurz))}` },
+    lts: { w: n(s.bestand_lts) * BL, b: true, u: `${kzahl(n(s.bestand_lts))} Zeilen` },
+    events: { w: n(s.bestand_events) * BE, b: true, u: `${kzahl(n(s.bestand_events))} Zeilen` },
+    attr: attr(s.attr_bestand_bytes, `${kzahl(n(s.bestand_attr_zeilen))} Zeilen`),
+    verwaist: { w: n(s.verwaist_states) * BS, b: true, u: `${zahl(n(s.verwaist_entitaeten))} Entitäten · ${kzahl(n(s.verwaist_states))} Zeilen` },
   };
   const loesch = {
     db: { w: n(s.loesch_bytes), gb: true, u: "frei nach Repack" },
-    kurz: { w: n(s.loeschbar_states) + n(s.loeschbar_kurz), u: `States ${kzahl(n(s.loeschbar_states))} · 5-Min ${kzahl(n(s.loeschbar_kurz))}` },
-    lts: { w: n(s.loeschbar_lts), u: "Stundenstatistik" },
-    events: { w: n(s.loeschbar_events), u: "nach Event-Regeln" },
-    attr: attr(s.loeschbar_attr_zeilen, `${gb(s.loeschbar_attr_bytes || 0)} · fallen mit den States weg`),
-    verwaist: { w: n(s.verwaist_loesch_states), u: "Zeilen nach Regeln „verwaist“" },
+    kurz: { w: n(s.loeschbar_states) * BS + n(s.loeschbar_kurz) * BK, b: true, u: `States ${kzahl(n(s.loeschbar_states))} · 5-Min ${kzahl(n(s.loeschbar_kurz))}` },
+    lts: { w: n(s.loeschbar_lts) * BL, b: true, u: `${kzahl(n(s.loeschbar_lts))} Zeilen` },
+    events: { w: n(s.loeschbar_events) * BE, b: true, u: `${kzahl(n(s.loeschbar_events))} Zeilen` },
+    attr: attr(s.loeschbar_attr_bytes, `${kzahl(n(s.loeschbar_attr_zeilen))} Zeilen`),
+    verwaist: { w: n(s.verwaist_loesch_states) * BS, b: true, u: `${kzahl(n(s.verwaist_loesch_states))} Zeilen` },
   };
   const prog = {
     db: { w: s.prognose_bytes, gb: true, u: `ohne Regeln ${gb(s.basis_bytes)}` },
-    kurz: { w: n(s.prognose_zeilen_states) + n(s.prognose_zeilen_kurz), u: `States ${kzahl(n(s.prognose_zeilen_states))} · 5-Min ${kzahl(n(s.prognose_zeilen_kurz))}` },
-    lts: { w: n(s.prognose_zeilen_lts), u: "Bestand + Zuwachs" },
-    events: { w: n(s.prognose_zeilen_events), u: "nach Event-Regeln" },
-    attr: mitAttr ? { w: n(s.prognose_zeilen_attribute), u: `${gb(s.prognose_attribute || 0)} · Zuwachs ${mb(s.attr_zuwachs_tag_bytes || 0)}/Tag` }
+    kurz: { w: n(s.prognose_states) + n(s.prognose_kurz), b: true, u: `States ${kzahl(n(s.prognose_zeilen_states))} · 5-Min ${kzahl(n(s.prognose_zeilen_kurz))}` },
+    lts: { w: n(s.prognose_lts), b: true, u: `${kzahl(n(s.prognose_zeilen_lts))} Zeilen` },
+    events: { w: n(s.events_bytes), b: true, u: `${kzahl(n(s.prognose_zeilen_events))} Zeilen` },
+    attr: mitAttr ? { w: n(s.prognose_attribute), b: true, u: `${kzahl(n(s.prognose_zeilen_attribute))} Zeilen` }
       : { fehlt: "fehlt", u: `geschätzt ${gb(s.prognose_attribute || 0)}` },
-    verwaist: { w: n(s.verwaist_prognose_lts), u: "Zeilen Langzeit bleiben" },
+    verwaist: { w: n(s.verwaist_prognose_lts) * BL, b: true, u: `${kzahl(n(s.verwaist_prognose_lts))} Zeilen` },
   };
-  for (const z of [ist, loesch, prog]) {    // Datenzeilen gesamt = Summe der Tabellen-Spalten (Verwaiste stecken schon darin)
-    z.zeilen = { w: summeOk(z.kurz.w, z.lts.w, z.events.w, z.attr.w ?? 0), u: mitAttr ? "Summe der Spalten rechts" : "ohne Attribute" };
+  const zsum = { ist: n(s.bestand_states) + n(s.bestand_kurz) + n(s.bestand_lts) + n(s.bestand_events) + n(s.bestand_attr_zeilen),
+    loesch: n(s.loeschbar_states) + n(s.loeschbar_kurz) + n(s.loeschbar_lts) + n(s.loeschbar_events) + n(s.loeschbar_attr_zeilen),
+    prog: n(s.prognose_zeilen_states) + n(s.prognose_zeilen_kurz) + n(s.prognose_zeilen_lts) + n(s.prognose_zeilen_events) + n(s.prognose_zeilen_attribute) };
+  for (const [k, z] of Object.entries({ ist, loesch, prog })) {    // Daten gesamt = Summe der Tabellen-Spalten (Verwaiste stecken schon darin)
+    z.zeilen = { w: summeOk(z.kurz.w, z.lts.w, z.events.w, z.attr.w ?? 0), b: true, u: `${kzahl(zsum[k])} Zeilen${mitAttr ? "" : " · ohne Attribute"}` };
   }
   return { ist, loesch, prog };
 }
@@ -2148,11 +2172,11 @@ function rasterHtml(s, st) {
       <span class="sub">${esc(zsub[z])}</span></div>`;
     for (const [k, kname] of RSPALTEN) {
       const c = werte[z][k];
-      const lang = c.fehlt || (c.gb ? gb(c.w) : zahl(c.w == null ? null : Math.round(c.w))), kurz = c.fehlt || (c.gb ? kgb(c.w) : kzahl(c.w));
+      const lang = c.fehlt || (c.gb ? gb(c.w) : c.b ? pb(c.w) : zahl(c.w == null ? null : Math.round(c.w))), kurz = c.fehlt || (c.gb ? kgb(c.w) : c.b ? pb(c.w) : kzahl(c.w));
       const tip = `${zname} · ${kname}${z === "prog" ? ` (${zr})` : ""}\n${lang}${c.u ? " – " + c.u : ""}\n\n${zeilenTeil(hilfeTexte("c_" + k)[0], zname)}`;
       const vl = k === "db" || (z === "ist" && (k === "zeilen" || k === "events")) ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf; Punkt 283: Istzustand/Datenzeilen den Zuwachs pro Tag
       h += `<div class="kachel ${klasse}${c.fehlt ? " fehlt" : ""}" title="${esc(tip + (vl ? (k === "db" ? "\n\nKlick: Prognose-Verlauf je Monat" : k === "events" ? "\n\nKlick: Zuwachs pro Tag, Summe und je Event-Typ" : "\n\nKlick: Zuwachs pro Tag (alle Entitäten)") : ""))}" data-zelle="${z}.${k}"${vl}>
-        <div class="z"><span class="lang">${esc(lang)}</span><span class="kurz">${esc(kurz)}</span></div>${c.u ? `<div class="u">${esc(c.u)}</div>` : ""}</div>`;
+        <div class="z"><span class="lang">${esc(lang)}</span><span class="kurz">${esc(kurz)}</span></div>${c.u ? `<div class="u">${esc(c.u)}</div>` : ""}</div>`;   // Punkt 316/317: Speicherbedarf groß, darunter die Zeilen
     }
   }
   return h;
@@ -2394,9 +2418,89 @@ function zuwachsZeichnen(box, r) {
   svgEl.addEventListener("mouseleave", () => { tip.hidden = true; kreuz.setAttribute("visibility", "hidden"); });
 }
 
+// Punkt 312: Chart „Gespeicherte Werte“ – je ein Graph für States, 5-Min-Statistik und Langzeit, so wie sie heute in der HA-DB stehen (GET api/werte)
+const WT_QUELLEN = ZW_QUELLEN.slice(0, 3);
+const WT_AUS = new Set();
+async function werteLaden(box, eid) {
+  box.innerHTML = `<p class="sub">Wird aus der Datenbank gelesen …</p>`;
+  let r;
+  try { r = await api(`werte?entity=${encodeURIComponent(eid)}&tage=${zwTage}`); }
+  catch (e) { box.innerHTML = `<p class="sub">${esc(e.message)}</p>`; return; }
+  werteZeichnen(box, eid, r);
+}
+
+function werteZeichnen(box, eid, r) {
+  const { W, H, R, O, U } = ZW_MASS, da = WT_QUELLEN.filter(([k]) => r.reihen[k].punkte.length), sicht = da.filter(([k]) => !WT_AUS.has(k));
+  const bereich = `<div class="zw-bereich">${ZW_BEREICHE.map(([t, name]) => `<button type="button" data-zwb="${t}" class="${t === zwTage ? "an" : ""}">${name}</button>`).join("")}</div>`;
+  const nochmal = () => { box.querySelectorAll("[data-zwb]").forEach(b => b.onclick = () => { zwTage = +b.dataset.zwb; werteLaden(box, eid); }); };
+  if (!da.length) {
+    box.innerHTML = `<div class="vl zw">${bereich}<p class="sub">Im gewählten Zeitraum hat die Datenbank für diese Entität keine Zahlenwerte (States, 5-Min-Statistik oder Langzeit) – nicht numerisch, ohne Statistik oder bereits gelöscht.</p></div>`;
+    return nochmal();
+  }
+  const alle = sicht.flatMap(([k]) => r.reihen[k].punkte.map(p => p[1]));
+  let lo = Math.min(...alle), hi = Math.max(...alle);
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const rohSchritt = (hi - lo) / 4, pot = 10 ** Math.floor(Math.log10(rohSchritt)), schritt = [1, 2, 2.5, 5, 10].map(m => m * pot).find(s => s >= rohSchritt);
+  const unten = Math.floor(lo / schritt) * schritt, oben = Math.ceil(hi / schritt) * schritt;
+  const t0 = Math.min(...sicht.map(([k]) => r.reihen[k].punkte[0][0]), r.von), t1 = r.bis;
+  const dez = schritt >= 1 ? 0 : Math.min(6, Math.ceil(-Math.log10(schritt)) + 1), fmt = v => v.toLocaleString("de-DE", { maximumFractionDigits: dez });
+  const ein = r.einheit ? " " + r.einheit : "";   // Einheit an der Y-Achse und im Tooltip; der linke Rand wächst mit der längsten Beschriftung
+  const L = Math.max(ZW_MASS.L, Math.round(14 + 6.4 * Math.max(...[unten, oben].map(v => (fmt(v) + ein).length))));
+  const x = t => L + (W - L - R) * (t - t0) / Math.max(1, t1 - t0), y = v => O + (H - O - U) * (1 - (v - unten) / (oben - unten));
+  const dt = t => new Date(t * 1000);
+  let svg = "";
+  for (let v = unten; v <= oben + schritt / 2; v += schritt) svg += `<line class="${v === unten ? "achse" : "gitter"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}${esc(ein)}</text>`;
+  const tage = (t1 - t0) / 86400, kurz = tage <= 3;
+  for (let i = 0; i <= 6; i++) {
+    const t = t0 + (t1 - t0) * i / 6, d = dt(t);
+    svg += `<text x="${x(t)}" y="${H - U + 16}" text-anchor="${i === 6 ? "end" : i === 0 ? "start" : "middle"}">${kurz ? d.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : zwDatum(d.toISOString().slice(0, 10))}</text>`;
+  }
+  for (const [k] of sicht) {   // Lücken (mehr als 3 Fenster ohne Wert) unterbrechen die Linie
+    let teil = [], zuletzt = null;
+    const ende = () => { if (teil.length) svg += `<polyline class="linie" style="stroke: var(--zw-${k}); stroke-width: 1.8" points="${teil.join(" ")}"/>${teil.length === 1 ? `<circle cx="${teil[0].split(",")[0]}" cy="${teil[0].split(",")[1]}" r="2.5" style="fill: var(--zw-${k})"/>` : ""}`; teil = []; };
+    for (const [t, v] of r.reihen[k].punkte) { if (zuletzt != null && t - zuletzt > r.fenster * 3) ende(); teil.push(`${x(t).toFixed(1)},${y(v).toFixed(1)}`); zuletzt = t; }
+    ende();
+  }
+  svg += `<line class="kreuz" id="zwKreuz" y1="${O}" y2="${H - U}" visibility="hidden"/>`;
+  const leg = WT_QUELLEN.map(([k, name]) => {
+    const hat = da.some(([j]) => j === k), n = r.reihen[k].zeilen;
+    return `<button type="button" data-zw="${k}" class="${WT_AUS.has(k) || !hat ? "aus" : ""}" style="--c: var(--zw-${k})" ${hat ? "" : "disabled"}
+      title="${hat ? `${zahl(n)} Zeilen im Zeitraum – Klick: Linie ein-/ausblenden` : "Keine Zahlenwerte im Zeitraum"}">${esc(name)}</button>`;
+  }).join("");
+  const fenster = r.fenster >= 86400 ? `${zahl(Math.round(r.fenster / 86400))} Tag(e)` : r.fenster >= 3600 ? `${zahl(Math.round(r.fenster / 3600))} Std.` : `${zahl(Math.round(r.fenster / 60))} Min.`;
+  box.innerHTML = `<div class="vl zw">${bereich}
+    <p class="sub">Werte${r.einheit ? ` in ${esc(r.einheit)}` : ""} (Mittel je Zeitfenster von ${fenster}); States reichen nur so weit zurück wie die Kurzzeit-Vorhaltezeit, 5-Min-Statistik so weit wie deren Vorhaltezeit, die Langzeit am weitesten.
+      Bei Zählern steht der Zählerstand, sonst der Mittelwert.</p>
+    <div style="position:relative"><svg id="zwSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gespeicherte Werte">${svg}</svg><div class="vl-tip" id="zwTip" hidden></div></div>
+    <div class="vl-leg">${leg}</div></div>`;
+  nochmal();
+  box.querySelectorAll("[data-zw]").forEach(b => b.onclick = () => {
+    const k = b.dataset.zw; if (WT_AUS.has(k)) WT_AUS.delete(k); else if (sicht.length > 1) WT_AUS.add(k);
+    werteZeichnen(box, eid, r);
+  });
+  const svgEl = $("#zwSvg"), tip = $("#zwTip"), kreuz = $("#zwKreuz");
+  svgEl.addEventListener("mousemove", ev => {
+    const bx = svgEl.getBoundingClientRect(), fx = (ev.clientX - bx.left) * W / bx.width, t = t0 + (fx - L) / (W - L - R) * (t1 - t0);
+    if (t < t0 || t > t1) { tip.hidden = true; return; }
+    const px = x(t);
+    kreuz.setAttribute("x1", px); kreuz.setAttribute("x2", px); kreuz.setAttribute("visibility", "visible");
+    const zeilen = sicht.map(([k, name]) => {   // nächster Punkt je Reihe, höchstens 1,5 Fenster entfernt
+      const p = r.reihen[k].punkte.reduce((b, q) => !b || Math.abs(q[0] - t) < Math.abs(b[0] - t) ? q : b, null);
+      return `<i style="--c: var(--zw-${k})"></i>${esc(name)}: <b>${p && Math.abs(p[0] - t) <= r.fenster * 1.5 ? fmt2(p[1]) + esc(ein) : "–"}</b>`;
+    });
+    tip.innerHTML = `<b>${dt(t).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}</b><br>` + zeilen.join("<br>");
+    tip.hidden = false;
+    const links = px * bx.width / W;
+    tip.style.top = "8px";
+    tip.style.left = (links > bx.width / 2 ? links - tip.offsetWidth - 12 : links + 12) + "px";
+  });
+  const fmt2 = v => v.toLocaleString("de-DE", { maximumFractionDigits: Math.max(dez, 3) });
+  svgEl.addEventListener("mouseleave", () => { tip.hidden = true; kreuz.setAttribute("visibility", "hidden"); });
+}
+
 // Punkt 283: Kachel Istzustand / Datenzeilen gesamt – neue Zeilen pro Tag über alle Entitäten (derselbe Chart wie je Entität)
 function zeigeZuwachsGesamt() {
-  dialog("Datenzeilen gesamt – Zuwachs pro Tag", `
+  dialog("Daten gesamt – Zuwachs pro Tag (Zeilen)", `
     <p class="sub">Neue Zeilen pro Tag über <b>alle Entitäten</b>: States, 5-Min-Statistik, Langzeit, Attribute und Events.
       Grundlage ist die Zuwachs-Statistik, die nach jeder Analyse fortgeschrieben wird. ${zwAufbewahrung()}</p>
     <div id="zwGesamt"></div>`, [["Schließen", () => $("#dlg").close(), true]]);
@@ -2909,6 +3013,7 @@ async function ladeEntitaeten() {
   const csv = new URLSearchParams(p); csv.delete("offset"); csv.delete("limit");
   $("#csv").href = "api/export.csv?" + csv;
   S.entFilter = csv.toString();   // Punkt 91: für „alle N gefilterten auswählen“
+  markiereFilterReset($("#filterReset"), [...csv.keys()].some(k => !["ziel", "passiv", "sort"].includes(k)));   // Punkt 313
   // Punkt 169 (0.5.4b6): die Auswahl gilt nur für den aktuellen Filter – Sortieren und Blättern ändern ihn nicht
   const fk = new URLSearchParams(csv); fk.delete("sort");
   const filterKey = fk.toString(), neuerFilter = S.entFilterKey !== undefined && filterKey !== S.entFilterKey;
@@ -3160,7 +3265,7 @@ async function erweitereRegeln(vorschlaege) {
   return [...ziel.values()].map(({ r, neu }) => `${r.id}: +${neu.length} Muster`);
 }
 T.opt = new LokaleTabelle({
-  id: "#tOpt", treffer: "#trefferOpt", schluessel: "dbh_breiten_opt", einheit: "Vorschläge", sortStd: { k: "ersparnis", desc: true },
+  id: "#tOpt", treffer: "#trefferOpt", schluessel: "dbh_breiten_opt", einheit: "Vorschläge", sortStd: { k: "ersparnis", desc: true }, csvAnker: "opt", seiten: [25, 50, 100, 200, 0], seiteStd: 25,   // Punkt 314; 0 = alle
   gruppen: [["Vorschlag", "stamm", ["wahl", "art", "wirkt", "titel", "typ", "muster"]], ["Vorhaltezeit (Vorschlag)", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["anzahl"]],
     ["Löschmenge sofort", "loesch", ["loesch_zeilen", "loesch_mb"]], ["Prognose", "prog", ["ersparnis"]]],
   fix: ["wahl", "art", "wirkt", "titel"],
@@ -4284,9 +4389,10 @@ function oeffneEntitaet(e) {
   // Kurzzeit „keine“ ist dem Typ verwaist vorbehalten, deshalb hier nicht wählbar
   const zeile = (a) => wertBlock(a, eigene ? eigene[a] : null, true, kette(a), a === "langzeit" ? [] : ["keine"], true);   // Punkt 174: Schnellknöpfe; Punkt 262: Attribute
   const infoKopf = `<div class="mono">${esc(e.entity_id)}</div>`;
-  const info = `<details id="eZuwachs"><summary>Zeilen pro Tag (Zuwachs)</summary>
+  const info = `<details id="eZuwachs"><summary>Zeilen pro Tag (Zuwachs) / gespeicherte Werte</summary>
       <div class="sub">${zahl(e.rows)} Zeilen seit ${datum(e.st_first_ts ?? e.first_ts)} · ${zahl(e.rows_24h)}/Tag (Ø 7 T) · state_class: ${esc(e.state_class || "–")} · device_class: ${esc(e.device_class || "–")} ·
         Langzeit: ${e.lts_rows ? zahl(e.lts_rows) + " Zeilen seit " + datum(e.lts_first_ts) : "keine"}</div>
+      <div class="zw-modus"><button type="button" data-zm="zuwachs" class="an" title="Neue Zeilen pro Tag (Zuwachs-Statistik)">Zuwachs</button><button type="button" data-zm="werte" title="Die Werte, die die Entität heute in der Datenbank hat: je ein Graph für States, 5-Min-Statistik und Langzeit">Gespeicherte Werte</button></div>
       <div class="zwBox"></div></details>`;
   const infoRegeln = `${e.herkunft ? `<div class="sub">Herkunft: ${esc(e.herkunft)}${e.herkunft_info ? " – " + esc(e.herkunft_info) : ""}</div>` : ""}
     ${[...e.hinweise, ...e.geschuetzt.map(g => "Zähler-Schutz: Regel " + g + " greift nicht")].map(h => `<div class="chip warn">${esc(h)}</div>`).join(" ")}`;
@@ -4323,7 +4429,16 @@ function oeffneEntitaet(e) {
     }, true]]);
   if (!verwaist) regelFuer(e);
   const zw = $("#eZuwachs");   // erst beim Aufklappen laden
-  zw.addEventListener("toggle", () => { if (zw.open && !zw.dataset.geladen) { zw.dataset.geladen = "1"; zuwachsLaden(zw.querySelector(".zwBox"), e.entity_id, e.lts_id == null && !e.lts_rows && !e.kurz_rows && !e.state_class); } });
+  const zwBox = zw.querySelector(".zwBox");
+  const ohneStat = e.lts_id == null && !e.lts_rows && !e.kurz_rows && !e.state_class;
+  let zwModus = "zuwachs";
+  const zwLaden = () => zwModus === "werte" ? werteLaden(zwBox, e.entity_id) : zuwachsLaden(zwBox, e.entity_id, ohneStat);
+  zw.querySelectorAll("[data-zm]").forEach(b => b.onclick = () => {   // Punkt 312: Umschalter Zuwachs / gespeicherte Werte
+    zwModus = b.dataset.zm;
+    zw.querySelectorAll("[data-zm]").forEach(x => x.classList.toggle("an", x === b));
+    zwLaden();
+  });
+  zw.addEventListener("toggle", () => { if (zw.open && !zw.dataset.geladen) { zw.dataset.geladen = "1"; zwLaden(); } });
 }
 // Punkt 172 (0.5.4): aus einer Entität heraus eine Regel für gleichartige anlegen – gleiches Präfix, gleiche Endung, gleiche Klasse
 async function regelFuer(e) {
