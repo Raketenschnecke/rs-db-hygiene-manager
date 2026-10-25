@@ -5,6 +5,7 @@ Ab 0.2.0 Löschlauf Stufe A: Kurzzeit-States per recorder.purge_entities, nur ma
 """
 import asyncio
 import csv
+import hashlib
 import io
 import json
 import logging
@@ -20,9 +21,16 @@ import herkunft
 import loeschen
 import optimierung
 import probelauf
+import regelcheck
 import regeln as rg
 import spaltenfilter
+import struktur
+import tote
+import verlauf
+import verursacher
 import warnungen
+import werte
+import zuwachs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 _LOG = logging.getLogger("main")
@@ -32,6 +40,8 @@ DATA = os.environ.get("DBH_DATA", "/data")
 OPTIONEN_PFAD = os.path.join(DATA, "options.json")
 CACHE = os.path.join(DATA, "cache.db")
 ATTR = os.path.join(DATA, "attribute.db")
+ZUWACHS = os.path.join(DATA, "zuwachs.db")      # Tageswerte neuer Zeilen je Entität, wird nur fortgeschrieben (zuwachs.py)
+STRUKTUR = os.path.join(DATA, "struktur.db")    # Punkt 288: Tagesstand der Tabellen für den Reiter Dashboard (struktur.py)
 REGELN = os.path.join(DATA, "regeln.json")
 HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
 LAEUFE = os.path.join(DATA, "laeufe")
@@ -39,6 +49,7 @@ LAEUFE_SUMME = os.path.join(DATA, "laeufe_summe.json")
 VORLAGE = os.path.join(APP_DIR, "regeln_vorlage.json")
 SICHERUNGEN = os.path.join(DATA, "regeln_sicherungen")   # Punkt 123
 HA_CONFIG = "/homeassistant"
+ENTITY_REGISTRY = f"{HA_CONFIG}/.storage/core.entity_registry"
 INGRESS_IP = "172.30.32.2"
 
 
@@ -67,7 +78,8 @@ class Zustand:
     def probelauf(self, ziel, vorgemerkt):
         if not os.path.exists(CACHE):
             return None
-        schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
+        probelauf.messwerte_setzen(STRUKTUR)        # Punkt 293: gemessene Zeilengrößen (Datei-Zeit steckt im Schlüssel)
+        schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR))
         if schluessel in self._pl_cache:           # Treffer ohne Warten, auch während eine andere Rechnung läuft
             return self._pl_cache[schluessel]
         # Punkt 189: Rechnungen nacheinander – gleichzeitige Anfragen (Kacheln, Entitäten, Plan der Integration) rechnen
@@ -86,7 +98,8 @@ class Zustand:
     def verlauf(self, ziel, passiv):
         if not os.path.exists(CACHE):
             return None
-        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN))
+        probelauf.messwerte_setzen(STRUKTUR)        # Punkt 293
+        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR))
         if schluessel in self._vl_cache:
             return self._vl_cache[schluessel]
         with self._rechnen:                         # Punkt 189: wie probelauf
@@ -113,6 +126,15 @@ Z = Zustand()
 
 # ---------------------------------------------------------------- Jobs
 
+def _zuwachs_monate():
+    """Punkt 287: Speicherdauer der Zuwachsdaten in Monaten (App-Option zuwachs_monate, 1 bis 240, Vorgabe 24)."""
+    try:
+        monate = int(optionen().get("zuwachs_monate"))
+    except (TypeError, ValueError):
+        return zuwachs.ZUWACHS_MONATE
+    return monate if monate >= 1 else zuwachs.ZUWACHS_MONATE      # ungültige Werte (0, negativ) gelten als Vorgabe
+
+
 def _analyse_sync():
     # Punkt 133 (0.5.3): Schritt 0 – Recorder-Einrichtung frisch prüfen (Ergebnis zeigt die GUI als Banner)
     try:
@@ -137,7 +159,7 @@ def _analyse_sync():
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d)
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate(), STRUKTUR)
 
 
 def _cache_version():
@@ -220,19 +242,25 @@ async def starte_job(art, fn=None, zusatz=None, danach=None):
 JOBNAMEN = {"analyse": "Analyse", "attribute": "Attribut-Analyse", "beide": "Analyse und Attribut-Analyse", "loeschen": "Löschlauf"}
 
 
+BEIDE = {"zusatz": {"schritt": "analyse"}}      # Punkt 318: Analyse und danach Attribut-Analyse als ein Job (Zustand wie beim Knopf der GUI)
+
+
 async def nachtlauf():
-    """Täglich zur eingestellten Uhrzeit die (leichte) Analyse; beim ersten Start oder altem Cache-Aufbau sofort."""
+    """Täglich zur eingestellten Uhrzeit Analyse und Attribut-Analyse; beim ersten Start oder altem Cache-Aufbau sofort die Analyse."""
     if _cache_version() < analyse.CACHE_VERSION:
         _LOG.info("Cache fehlt oder hat alten Aufbau – starte Analyse")
+        await starte_job("analyse")
+    elif not os.path.exists(STRUKTUR):          # Punkt 288: erster Start mit Reiter Dashboard – Stand sofort erfassen
+        _LOG.info("Struktur der Datenbank noch nicht erfasst – starte Analyse")
         await starte_job("analyse")
     zuletzt = None
     while True:
         await asyncio.sleep(30)
-        uhr = optionen().get("analyse_uhrzeit", "02:15")
+        uhr = optionen().get("analyse_uhrzeit", "00:05")
         jetzt = time.localtime()
         if time.strftime("%H:%M", jetzt) == uhr and zuletzt != jetzt.tm_yday:
             zuletzt = jetzt.tm_yday
-            await starte_job("analyse")
+            await starte_job("beide", **BEIDE)
 
 
 # ---------------------------------------------------------------- HTTP
@@ -284,8 +312,11 @@ async def status(_request):
         con = sqlite3.connect(f"file:{ATTR}?mode=ro", uri=True)
         attr = dict(con.execute("SELECT schluessel, wert FROM info"))
         con.close()
+    await asyncio.to_thread(_integration_abfragen)
+    integration = {"da": _INTEGRATION["da"], "exakt": _INTEGRATION["exakt"],      # Punkt 272: Chips in der Oberfläche
+                   "version": _INTEGRATION["version"] if time.time() - _INTEGRATION["version_zeit"] < 300 else None}
     return web.json_response({"job": Z.job, "letzter_job": Z.letzter_job, "fehler": Z.letzter_fehler,
-                              "analyse": info, "attribute": attr, "optionen": optionen(),
+                              "analyse": info, "attribute": attr, "optionen": optionen(), "integration": integration,
                               "regeln_geaendert": Z.mtime(REGELN), "app": APP,
                               "pruefung": await asyncio.to_thread(pkd_pruefung)})
 
@@ -340,6 +371,62 @@ async def prognose_verlauf(request):
     return web.json_response({**r, "historie": await asyncio.to_thread(Z.historie)})
 
 
+async def zuwachs_events(request):
+    """Punkt 286: Event-Zuwachs pro Tag – Summe und je Event-Typ (Chart der Kachel Events). ?von=…&bis=… wie bei /api/zuwachs.
+    Punkt 292: ?muster=… (kommagetrennt, * und ? wie in Event-Regeln) beschränkt auf die passenden Event-Typen."""
+    if not os.path.exists(ZUWACHS):
+        return web.json_response({"fehler": "Noch keine Zuwachs-Statistik vorhanden"}, status=404)
+    q = request.query
+    try:
+        von = zuwachs.datum_tag(q["von"]) if q.get("von") else None
+        bis = zuwachs.datum_tag(q["bis"]) if q.get("bis") else None
+    except ValueError:
+        return web.json_response({"fehler": "von/bis als JJJJ-MM-TT oder Tageszahl angeben"}, status=400)
+    # Punkt 292: ?muster=script_*,call_service – nur passende Event-Typen (Zuwachs-Chart der Event-Regelkarte)
+    muster = [x.strip() for x in q["muster"].split(",") if x.strip()] if "muster" in q else None
+    return web.json_response(await asyncio.to_thread(zuwachs.lies_events, ZUWACHS, von, bis, muster))
+
+
+async def struktur_lesen(_request):
+    """Punkt 288: letzter Tagesstand der Datenbank-Struktur (Reiter Dashboard) und der Stand davor; stand null ohne Erfassung."""
+    erg = await asyncio.to_thread(struktur.lies, STRUKTUR)
+    await asyncio.to_thread(probelauf.messwerte_setzen, STRUKTUR)
+    erg["zeilengroessen"] = probelauf.MESSUNG          # Punkt 293: womit die Prognose rechnet
+    return web.json_response(erg)
+
+
+async def zuwachs_tage(request):
+    """Neue Zeilen pro Tag (States, 5-Min, Langzeit, Attribute) aus zuwachs.db. ?entity=sensor.x (ohne: Summe aller Entitäten),
+    ?von=2026-09-01&bis=2026-10-01 (auch als Tageszahl); None = Tag liegt außerhalb der Abdeckung der Quelle."""
+    if not os.path.exists(ZUWACHS):
+        return web.json_response({"fehler": "Noch keine Zuwachs-Statistik vorhanden"}, status=404)
+    q = request.query
+    try:
+        von = zuwachs.datum_tag(q["von"]) if q.get("von") else None
+        bis = zuwachs.datum_tag(q["bis"]) if q.get("bis") else None
+    except ValueError:
+        return web.json_response({"fehler": "von/bis als JJJJ-MM-TT oder Tageszahl angeben"}, status=400)
+    return web.json_response(await asyncio.to_thread(zuwachs.lies, ZUWACHS, q.get("entity") or None, von, bis))
+
+
+async def werte_lesen(request):
+    """Punkt 312: gespeicherte Werte einer Entität (States, 5-Min, Langzeit) aus der HA-DB, auf ≤ 400 Zeitfenster verdichtet.
+    ?entity=sensor.x&tage=90 (0 = alles)."""
+    q = request.query
+    if not q.get("entity"):
+        return web.json_response({"fehler": "entity fehlt"}, status=400)
+    try:
+        tage = max(0, min(3660, int(q.get("tage", "90"))))
+    except ValueError:
+        return web.json_response({"fehler": "tage als Zahl angeben"}, status=400)
+    db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
+    try:
+        return web.json_response(await asyncio.to_thread(werte.lies, db, q["entity"], tage))
+    except Exception as e:  # noqa: BLE001 – HA-DB nicht lesbar (z. B. im Testcontainer ohne Datenbank)
+        _LOG.exception("Werte nicht lesbar")
+        return web.json_response({"fehler": f"Werte nicht lesbar: {e}"}, status=500)
+
+
 async def klassen(_request):
     """Punkt 166: alle Paare domain|device_class aktiver und deaktivierter Entitäten (Punkt 185) aus der letzten Analyse – Auswahl für klasse-Regeln.
     zaehler = davon Zähler (state_class total/total_increasing), die der Zähler-Schutz von klasse-Regeln ausnimmt."""
@@ -383,11 +470,46 @@ async def pareto(request):
         return web.json_response({"stufen": [], "fehler": "Noch keine Analyse vorhanden"})
 
     def rechne():
-        return optimierung.pareto(r, optimierung.histogramme(CACHE), warnungen.kontext(HA_CONFIG), ziel, tage)
+        return optimierung.pareto(r, optimierung.histogramme(CACHE, ATTR), warnungen.kontext(HA_CONFIG), ziel, tage)
     return web.json_response(await asyncio.to_thread(rechne))
 
 
-SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "lts_rows", "kurz_rows",
+async def verursacher_lesen(request):
+    """Punkt 305: Reiter Analyse – Plattform → Gerät → Entität nach Zuwachs je Tag oder Bestand, Pareto-Kurve, Erstauftreten-Kohorten."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    try:
+        return web.json_response(await asyncio.to_thread(verursacher.baue, r, request.query))
+    except ValueError:
+        return web.json_response({"fehler": "von/bis als JJJJ-MM-TT angeben"}, status=400)
+
+
+async def verursacher_baum(request):
+    """Punkt 306: Baum Integration → Gerät → Entität für den zoombaren Donut im Reiter Dashboard (je Vorhaltezeit)."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response(await asyncio.to_thread(verursacher.baum, r, request.query))
+
+
+async def verlauf_lesen(request):
+    """Punkt 308: Reiter Dashboard › Zeitverlauf – Zuwachs im Jahr/Monat/Tag-Verlauf, aufgeteilt nach Kategorie oder Tabelle."""
+    if not os.path.exists(ZUWACHS):
+        return web.json_response({"fehler": "Noch keine Zuwachs-Statistik vorhanden"}, status=404)
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    try:
+        return web.json_response(await asyncio.to_thread(verlauf.baue, r, ZUWACHS, request.query))
+    except ValueError as e:
+        return web.json_response({"fehler": f"Ungültige Angabe: {e}"}, status=400)
+
+
+SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "kz_first_ts", "lts_first_ts", "lts_rows", "kurz_rows",
               "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
               "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb"}
@@ -399,7 +521,7 @@ def summen(liste):
     s = {"entitaeten": len(liste), "geraete": len({e["device_id"] for e in liste if e.get("device_id")}),
          "aktiv": 0, "deaktiviert": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
          "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None, "loesch_mb": 0,
-         "first_ts": None, "last_ts": None,
+         "first_ts": None, "last_ts": None, "kz_first_ts": None, "lts_first_ts": None,
          # Punkt 115: Entitäten mit Label und Zahl verschiedener Labels
          "labels": sum(1 for e in liste if e.get("labels")),
          "label_namen": len({x["name"] for e in liste for x in e.get("labels_info") or []})}
@@ -425,6 +547,9 @@ def summen(liste):
             s["loesch_attr_zeilen"] = (s["loesch_attr_zeilen"] or 0) + e["loesch_attr_zeilen"]
         if e["first_ts"] and (s["first_ts"] is None or e["first_ts"] < s["first_ts"]):
             s["first_ts"] = e["first_ts"]
+        for k in ("kz_first_ts", "lts_first_ts"):   # Punkt 309
+            if e.get(k) and (s[k] is None or e[k] < s[k]):
+                s[k] = e[k]
         if e["last_ts"] and (s["last_ts"] is None or e["last_ts"] > s["last_ts"]):
             s["last_ts"] = e["last_ts"]
         for art in rg.WERTE:
@@ -461,9 +586,18 @@ def _mit_labels(r):
     return r
 
 
+# Ansehen einer Empfehlung mit mehreren Entitäten: die ID-Liste wäre als GET-Parameter zu lang, daher legt die Oberfläche sie
+# vorab ab (POST /api/idliste) und filtert mit f_liste=<Schlüssel>; gehalten werden die letzten 20 Listen
+_IDLISTEN = {}
+
+
 def _gefiltert(r, q, fehler_ziel=None):
     _mit_labels(r)
     such = (q.get("q") or "").lower()
+    liste_k = (q.get("f_liste") or "").strip()
+    liste = _IDLISTEN.get(liste_k) if liste_k else None
+    if liste_k and liste is None and fehler_ziel is not None:
+        fehler_ziel["liste"] = "Liste nicht mehr vorhanden, bitte „Ansehen“ erneut wählen"
     domain, status_f, regel_f = q.get("domain"), q.get("status"), q.get("regel")
     hinweis = q.get("hinweis") == "1"
     spalten_ok, fehler, _aktiv = spaltenfilter.baue(q)
@@ -474,6 +608,8 @@ def _gefiltert(r, q, fehler_ziel=None):
         if not spalten_ok(e):
             continue
         if such and such not in e["entity_id"]:
+            continue
+        if liste is not None and e["entity_id"] not in liste:
             continue
         if domain and e["domain"] != domain:
             continue
@@ -682,9 +818,16 @@ async def regel_vorschau(request):
     if not r:
         return web.json_response({"anzahl": 0, "treffer": [], "fehler": "Noch keine Analyse vorhanden"})
     bestand = rg.lade(REGELN, VORLAGE)
-    hist = await asyncio.to_thread(optimierung.histogramme, CACHE)
+    hist = await asyncio.to_thread(optimierung.histogramme, CACHE, ATTR)
     fn = optimierung.event_wirkung if regel["typ"] == "event" else optimierung.wirkung
-    return web.json_response(await asyncio.to_thread(fn, regel, r, bestand, hist, ziel))
+    erg = await asyncio.to_thread(fn, regel, r, bestand, hist, ziel)
+    # Punkt 291: Die Wirkung oben vergleicht mit dem heutigen Regelwerk – bei einer gespeicherten Regel ist sie selbst darin
+    # enthalten, unverändert also 0. Dazu die Ersparnis der gespeicherten Fassung wie in „Prognosen je Regel“ (gegenüber
+    # „ohne Regeln“); die Karte zeigt gespeichert + Änderung. None = Regel noch nicht gespeichert bzw. im Probelauf ohne Wirkung.
+    gesp = next((x for x in r.get("regeln", []) if x.get("regel") == regel["id"]), None)
+    erg["ersparnis_gespeichert"] = gesp["ersparnis_bytes"] if gesp else None
+    erg["gespeichert"] = any(x["id"] == regel["id"] for x in bestand["regeln"])
+    return web.json_response(erg)
 
 
 async def optimierungen(request):
@@ -695,7 +838,7 @@ async def optimierungen(request):
         return web.json_response({"vorschlaege": [], "fehler": "Noch keine Analyse vorhanden"})
 
     def rechne():
-        hist = optimierung.histogramme(CACHE)
+        hist = optimierung.histogramme(CACHE, ATTR)
         ktx = warnungen.kontext(HA_CONFIG)
         return optimierung.vorschlaege(r, rg.lade(REGELN, VORLAGE), hist, ktx, HA_CONFIG,
                                        optimierung.lies_ignoriert(DATA), ziel)
@@ -704,10 +847,123 @@ async def optimierungen(request):
     return web.json_response({"vorschlaege": liste, "stand": r["stand"], "dauer_s": round(time.time() - t0, 2)})
 
 
+async def idliste_ablegen(request):
+    ids = frozenset(str(i) for i in ((await request.json()).get("ids") or []))
+    schl = hashlib.md5("\n".join(sorted(ids)).encode()).hexdigest()[:12]
+    _IDLISTEN.pop(schl, None)
+    _IDLISTEN[schl] = ids
+    while len(_IDLISTEN) > 20:
+        del _IDLISTEN[next(iter(_IDLISTEN))]
+    return web.json_response({"schluessel": schl})
+
+
 async def optimierung_ignorieren(request):
     body = await request.json()
     s = await asyncio.to_thread(optimierung.setze_ignoriert, DATA, str(body.get("id") or ""), bool(body.get("ignorieren", True)))
     return web.json_response({"ignoriert": sorted(s)})
+
+
+async def _regelcheck_daten():
+    """Punkt 232: Regelwerk-Check auf dem Probelauf (nur aktive Regeln) – zwischengespeichert je Stand."""
+    r = await asyncio.to_thread(Z.probelauf, None, False)
+    if not r:
+        return None, None, None
+    bestand = rg.lade(REGELN, VORLAGE)
+    ign = optimierung.lies_ignoriert(DATA)
+    live = await asyncio.to_thread(tote.live_oder_none, ENTITY_REGISTRY)     # Punkt 281: tote Muster live prüfen (30 s Zwischenspeicher)
+    schl = (id(r), (r.get("stand") or {}).get("analyse_zeit"), Z.mtime(REGELN), tuple(sorted(ign)), id(live[0]) if live else None)
+    return r, bestand, await asyncio.to_thread(regelcheck.berechne, r, bestand, ign, schl, live)
+
+
+async def _tote_befund():
+    """Punkt 281: (Regeldaten, Bezug der Prüfung, Probelauf-Zeilen je Entität) – live, ersatzweise nach der Analyse."""
+    bestand = rg.lade(REGELN, VORLAGE)
+    pl = await asyncio.to_thread(Z.probelauf, None, False)
+    live = await asyncio.to_thread(tote.live_oder_none, ENTITY_REGISTRY, True)
+    ents = (pl or {}).get("entitaeten", [])
+    return bestand, tote.bezug(ents, live), {e["entity_id"]: e for e in ents}, pl is not None
+
+
+async def regeln_tote(_request):
+    """Punkt 281: Regeln mit toten Entitäten samt Befund und den Daten, die noch in der DB liegen."""
+    bestand, bz, zeilen, analyse_da = await _tote_befund()
+    if bz["live"] is None and not analyse_da:
+        return web.json_response({"verfuegbar": False, "grund": "Weder HA noch eine Analyse liefert den Stand der Entitäten – bitte zuerst eine Analyse starten."})
+    gefunden = tote.finde(bestand, bz)
+    regeln, anzahl = [], 0
+    for r in bestand["regeln"]:
+        if r["id"] not in gefunden:
+            continue
+        eintraege = []
+        for t in gefunden[r["id"]]:
+            e = zeilen.get(t["muster"]) or {}
+            eintraege.append({**t, "text": tote.GRUND_TEXT[t["grund"]], "rows": e.get("rows") or 0, "lts_rows": e.get("lts_rows") or 0, "analyse": bool(e)})
+        anzahl += len(eintraege)
+        regeln.append({"regel": r["id"], "name": r["name"], "typ": r["typ"], "aktiv": r["aktiv"], "muster_gesamt": len(r["muster"]),
+                       "ganz": len(eintraege) == len(r["muster"]), "eintraege": eintraege})
+    return web.json_response({"verfuegbar": True, "live": bz["live"] is not None, "anzahl": anzahl, "regeln": regeln})
+
+
+async def regeln_tote_entfernen(request):
+    """Punkt 281: gewählte tote Einträge aus den Regeln nehmen. Der Befund wird hier frisch berechnet, die Anzeige gibt nur die Auswahl vor.
+    Sicherung der Regeln wie bei Import und Wiederherstellen; an HA und der Datenbank wird nichts verändert."""
+    body = await request.json()
+    gesperrt = _ersetzen_gesperrt(body)
+    if gesperrt is not None:
+        return gesperrt
+    bestand, bz, _zeilen, _da = await _tote_befund()
+    neu, bericht = tote.entferne(bestand, tote.finde(bestand, bz), body.get("auswahl"))
+    if not bericht["muster"]:
+        return web.json_response({"fehler": "Nichts zu entfernen – die Einträge sind inzwischen nicht mehr tot oder schon weg"}, status=409)
+    try:
+        antwort = _ersetze_regeln(neu, "tote_entitaeten")
+    except rg.RegelFehler as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    _LOG.info("Tote Entitäten aus Regeln entfernt: %d Einträge, Regeln geändert %s, ganz entfernt %s",
+              bericht["muster"], bericht["regeln_geaendert"], bericht["regeln_entfernt"])
+    return web.json_response({**json.loads(antwort.text), "bericht": bericht})
+
+
+async def regelcheck_lesen(_request):
+    t0 = time.time()
+    _r, _b, daten = await _regelcheck_daten()
+    if daten is None:
+        return web.json_response({"befunde": [], "fehler": "Noch keine Analyse vorhanden"})
+    return web.json_response({**daten, "dauer_s": round(time.time() - t0, 2)})
+
+
+async def _regelcheck_variante(body):
+    r, bestand, daten = await _regelcheck_daten()
+    if daten is None:
+        raise ValueError("Noch keine Analyse vorhanden")
+    b = regelcheck.finde(daten, str(body.get("id") or ""))
+    if not b:
+        raise ValueError("Befund nicht mehr vorhanden – bitte neu laden")
+    v = await asyncio.to_thread(regelcheck.variante_fuer, r, bestand, b, int(body.get("variante") or 0),
+                                body.get("auswahl"), body.get("name"))
+    return bestand, v
+
+
+async def regelcheck_vorschau(request):
+    """Variante eines Befunds neu bewerten (Teilauswahl und Name beim Zusammenlegen)."""
+    try:
+        _b, v = await _regelcheck_variante(await request.json())
+    except ValueError as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    return web.json_response(v)
+
+
+async def regelcheck_uebernehmen(request):
+    """Variante übernehmen – mit Sicherung der Regeln wie bei Import und Wiederherstellen."""
+    body = await request.json()
+    gesperrt = _ersetzen_gesperrt(body)
+    if gesperrt is not None:
+        return gesperrt
+    try:
+        bestand, v = await _regelcheck_variante(body)
+        return _ersetze_regeln(regelcheck.anwenden(bestand, v), "regelcheck")
+    except (rg.RegelFehler, ValueError) as e:
+        return web.json_response({"fehler": str(e)}, status=400)
 
 
 async def muster_verdichten(request):
@@ -757,7 +1013,8 @@ async def lts_ohne(_request):
 def _loesch_optionen():
     opt = optionen()
     return (bool(opt.get("loeschen_freigegeben")), int(opt.get("loeschen_max_zeilen") or 5_000_000),
-            int(opt.get("loeschen_max_zeilen_b") or 2_000_000))     # Punkt 82: eigene Grenze für Stufe B
+            int(opt.get("loeschen_max_zeilen_b") or 2_000_000),     # Punkt 82: eigene Grenze für Stufe B
+            int(opt.get("loeschen_max_zeilen_attr") or 2_000_000))  # Punkt 295: eigene Grenze fürs Abtrennen der Attribute
 
 
 def _pkd_wirksam():
@@ -781,11 +1038,11 @@ async def _loesch_plan(request_or_regel, ausnahme=None):
     uhr("Probelauf")
     if not pl:
         return None
-    frei, grenze, grenze_b = _loesch_optionen()
+    frei, grenze, grenze_b, grenze_attr = _loesch_optionen()
     stufe_b = await asyncio.to_thread(_integration_da)
     uhr("Integration prüfen (HA-API)")
     exakt = stufe_b and await asyncio.to_thread(_integration_exakt)       # Punkt 121
-    p = await asyncio.to_thread(loeschen.plan, pl, CACHE, grenze, regel, stufe_b, bool(ausnahme), grenze_b, exakt)
+    p = await asyncio.to_thread(loeschen.plan, pl, CACHE, grenze, regel, stufe_b, bool(ausnahme), grenze_b, exakt, grenze_attr)
     uhr("Löschplan")
     p["freigegeben"] = frei
     pkd = await asyncio.to_thread(_aktuelle_pkd)
@@ -844,12 +1101,12 @@ async def loesch_start(request):
 
 async def _starte_lauf(p, ausgeloest):
     db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
-    lauf = loeschen.Lauf(p, db, LAEUFE, os.environ.get("SUPERVISOR_TOKEN"), ausgeloest)
+    lauf = loeschen.Lauf(p, db, LAEUFE, os.environ.get("SUPERVISOR_TOKEN"), ausgeloest, attr_pfad=ATTR, cache_pfad=CACHE)   # Punkt 260
 
     async def danach():   # danach Protokoll aufräumen und frische Zahlen für Kacheln und Löschpotenzial
         Z.lauf = None
         await asyncio.to_thread(_protokoll_aufraeumen)
-        await starte_job("analyse")
+        await starte_job("beide", **BEIDE)      # Punkt 318: auch die Attribut-Analyse, sonst bleibt sie bis zur nächsten Nacht stehen
 
     ok = await starte_job("loeschen", lauf.fuehre_aus, {"fortschritt": lauf.fortschritt, "nur_regel": p["nur_regel"]}, danach)
     if ok:
@@ -927,7 +1184,10 @@ def _info(pfad):
         con.close()
 
 
-async def auto_status(_request):
+async def auto_status(request):
+    v = request.headers.get("X-DBH-Integration-Version")     # Punkt 272: ab 0.5.6b16 meldet die Integration ihre Version
+    if v:
+        _INTEGRATION.update(version=v[:40], version_zeit=time.time())
     uhr = _Stoppuhr("Status für HA")
     p = await _auto_plan()
     uhr("Plan (Zwischenspeicher)")
@@ -1040,7 +1300,7 @@ def _protokoll_aufraeumen():
         _LOG.exception("Löschprotokoll aufräumen fehlgeschlagen")
 
 
-_INTEGRATION = {"zeit": 0, "da": False, "exakt": False}
+_INTEGRATION = {"zeit": 0, "da": False, "exakt": False, "version": None, "version_zeit": 0}   # Punkt 272: version meldet die Integration im Kopf ihrer Anfragen
 
 
 def _integration_abfragen():
@@ -1081,6 +1341,7 @@ def _app_info():
 
 async def beim_start(app):
     await asyncio.to_thread(_protokoll_aufraeumen)
+    await asyncio.to_thread(probelauf.messwerte_setzen, STRUKTUR)   # Punkt 293: gemessene Zeilengrößen ab dem Start
     try:   # Punkt 85: Prüfung bei jedem Start (die GUI zeigt sie als Banner)
         for w in (await asyncio.to_thread(pkd_pruefung))["warnungen"]:
             _LOG.warning("%s %s", w.get("titel", ""), w["text"])
@@ -1102,10 +1363,17 @@ def erstelle_app():
         web.post("/api/job/{art}", job_starten),
         web.get("/api/probelauf", probelauf_summe),
         web.get("/api/prognose_verlauf", prognose_verlauf),
+        web.get("/api/zuwachs", zuwachs_tage),
+        web.get("/api/werte", werte_lesen),
+        web.get("/api/zuwachs/events", zuwachs_events),
+        web.get("/api/struktur", struktur_lesen),
         web.get("/api/entitaeten", entitaeten),
         web.get("/api/klassen", klassen),
         web.get("/api/plattformen", plattformen),
         web.get("/api/pareto", pareto),
+        web.get("/api/verursacher", verursacher_lesen),
+        web.get("/api/verursacher/baum", verursacher_baum),
+        web.get("/api/verlauf", verlauf_lesen),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
         web.get("/api/regeln", regeln_lesen),
@@ -1114,6 +1382,12 @@ def erstelle_app():
         web.post("/api/regeln/pruefen", regel_pruefen),
         web.get("/api/optimierungen", optimierungen),
         web.post("/api/optimierungen/ignorieren", optimierung_ignorieren),
+        web.post("/api/idliste", idliste_ablegen),
+        web.get("/api/regelcheck", regelcheck_lesen),
+        web.post("/api/regelcheck/vorschau", regelcheck_vorschau),
+        web.post("/api/regelcheck/uebernehmen", regelcheck_uebernehmen),
+        web.get("/api/regeln/tote", regeln_tote),
+        web.post("/api/regeln/tote/entfernen", regeln_tote_entfernen),
         web.post("/api/muster/verdichten", muster_verdichten),
         web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),

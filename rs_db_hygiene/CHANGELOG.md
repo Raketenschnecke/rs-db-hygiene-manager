@@ -4,6 +4,239 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.6
+Zusammenfassung der Testversionen 0.5.6b1 bis 0.5.6b39 (Einzelheiten darunter). Nach dem Update startet einmal eine neue Analyse. Die Integration 0.5.6 ist schon veröffentlicht; ihr Update über HACS ist nur nötig, falls sie noch 0.5.5 ist (Attribute gezielt abtrennen, Punkt 295).
+- **Neue Reiter:** Cockpit (Aufbau der Datenbank, Donut, Entwicklung im Zeitverlauf, Beziehungen, Platz, Tabellen) und Analyse (wer treibt die Datenmenge: Integration → Gerät → Entität, Pareto-Kurve, Erstauftreten)
+- **Regelwerk-Check und Empfehlungen:** Regelwerk prüfen (tote Muster, Verdichtung, Konflikte), Vorschläge erweitern bestehende Regeln, Sammelregeln, Attribut-Empfehlung, Langzeit begrenzen
+- **Attribute:** eigene Vorhaltezeit je Regel und Attribut-Standard; die Integration trennt Attribute gezielt ab, mit eigener Obergrenze
+- **Charts:** Zuwachs pro Tag je Entität, für alle Entitäten und je Event-Typ (Zuwachs-Statistik mit einstellbarer Speicherdauer), neu das Chart „Gespeicherte Werte“ mit States, 5-Min und Langzeit
+- **Kacheln und Tabellen:** Kacheln mit Speicherbedarf und Zeilen als Subtext; Knopfleisten über den Tabellen, Zeilenauswahl und Seitenwechsel, einstellbare Spaltenbreiten, Filter-Hervorhebung
+- **Löschprotokoll:** Überhang und Plan je Lauf, Dauer samt Backup-Pause, einheitliche Spaltenfolge
+- **Prognose und Löschmenge** rechnen mit den gemessenen Zeilengrößen der Analyse
+- **Analyse:** Nachtlauf und Lauf nach einem Löschlauf führen Analyse und Attribut-Analyse aus; Vorgabe der Uhrzeit 00:05
+
+## 0.5.6b39 (Beta)
+- **Chart „Gespeicherte Werte“ (Punkt 312):** Im Dialog „Eigene Vorhaltezeiten“ lässt sich das Chart der Entität von „Zuwachs“ (Zeilen pro Tag) auf „Gespeicherte Werte“ umschalten: je ein Graph für States, 5-Min-Statistik und Langzeit mit den Werten, die die Datenbank heute enthält (Zähler: Zählerstand, sonst Mittelwert je Zeitfenster), mit Zeitraum 30 Tage/90 Tage/1 Jahr/alles, Einheit an der Y-Achse und im Tooltip. Neue Datei `werte.py`, neue Schnittstelle `GET /api/werte?entity=…&tage=…` (liest strikt lesend aus der HA-Datenbank, verdichtet auf höchstens 400 Zeitfenster).
+- **Knopfleisten (Punkt 313):** Die Knopfleiste jeder Tabelle steht direkt über der Tabelle, Banner und Hinweise darüber, und klebt beim Scrollen unter den Reitern. „Filter zurücksetzen“ färbt sich, solange ein Filter wirkt. „Spaltenbreiten zurücksetzen“ und „Spalten …“ stehen rechts neben „Zeilen“ und CSV am rechten Rand, alles zum Inhalt links. Der Regelwerk-Check im Reiter Regeln bleibt beim Scrollen stehen (Punkt 315).
+- **Empfehlungen (Punkt 314):** Auswahl „Zeilen“ (25, 50, 100, 200, alle, automatisch), Standard 25.
+- **Kacheln (Punkte 316/317):** zeigen den Speicherbedarf (Zeilen × gemessene Zeilengröße) statt der Zeilenzahlen; die Zeilen stehen als Subtext darunter. „Datenzeilen gesamt“ heißt „Daten gesamt“, „Attribute (Zeilen)“ heißt „Attribute“.
+- **Analysen (Punkt 318):** Der Nachtlauf und der Lauf nach einem Löschlauf führen die Analyse und danach die Attribut-Analyse aus (ein Job wie beim Knopf „Analyse starten“); bisher lief nur die Analyse, die Attribut-Daten blieben stehen. Die Vorgabe der Uhrzeit (`analyse_uhrzeit`) ist jetzt 00:05; ein gespeicherter Wert bleibt unverändert.
+- Die Integration ändert sich nicht
+
+## 0.5.6b38 (Beta)
+- **Löschprotokoll, Plan der States (Punkt 311):** Die Spalten „geplant“ und „Überhang“ im Lauf-Dialog gelten jetzt auch für States-Pakete (Stufe A): Das Protokoll trägt je Paket und Entität den Plan laut Analyse (`geplant`, `geplant_je`). Bisher zeigten nur 5-Min-Statistik, Langzeit, Events und Attribute einen Plan, sodass die Spalte „geplant“ weit unter der Summe „gelöscht“ lag. Läufe vor 0.5.6b38 zeigen für States weiter „–“.
+
+## 0.5.6b37 (Beta)
+- **Analyse, Chart „Konzentration der Daten“ (Punkt 310):** Überschrift von „Wie konzentriert ist es?“ geändert; die X-Achse (Rang der Entität) ist linear statt logarithmisch (Beschriftung 0, ¼, ½, ¾, Maximum); der Satz unter dem Chart lautet „Die 460 größten von 8.339 Entitäten erzeugen 80 % des Aufkommens.“ und hat mehr Abstand zur Achsenbeschriftung.
+
+## 0.5.6b36 (Beta)
+- **Reiter „Dashboard“ heißt „Cockpit“, „Prognosen je Regel“ heißt „Prognose“** (Texte, Hilfe, Tooltips).
+- **Entwicklung (Punkt 308, Fortsetzung):** Legende der Tabellenfarben über der Liste bei „nach DB-Tabelle“ (die Listenmarken sind dort neutral); Knopf „↗ Im Reiter Analyse öffnen“ übernimmt Vorhaltezeit, Integration und Gerät, in Cockpit und Entwicklung am rechten Rand; Text unter dem Diagramm gekürzt; das Diagramm zeichnet sich bei Größenänderung neu (Beschriftung der X-Achse blieb sonst abgeschnitten).
+- **Analyse:** „↗ Integration in Entitäten öffnen“ ist ein Knopf in den Farben der Analyse; auf Entitäten-Ebene zusätzlich die Spalten Attribute und Langzeit (Vorhaltezeit mit Regel, wie Kurzzeit).
+- **Entitäten (Punkt 309):** „erster“ ist getrennt in „erster KZe“ (States, 5-Min) und „erster LZe“ (Langzeit), mit Filter und Sortierung; die Summenzeile zeigt die jeweils frühesten Werte. `first_ts` bleibt in API und CSV.
+- **Läufe:** Die Spalte „gezählt“ ist standardmäßig ausgeblendet (über „Spalten …“ zuschaltbar; neue Tabellenoption `standardAus`).
+- Cockpit: Überschriften der Unterreiter größer, „Stand der Analyse“ neben den Überschriften und der Untertext bei „Was in welcher Tabelle steht“ entfallen.
+
+## 0.5.6b35 (Beta)
+- **Dashboard: neuer Unterreiter „Entwicklung“ (Punkt 308):** Zuwachs im Zeitverlauf als gestapelte Balken, per Klick hineinzoomen: Jahr → Monat → Woche (mindestens 12 Wochen) → Tag. Vor/zurück-Knöpfe verschieben den gezeigten Zeitraum. Darstellung nach Integration (folgt der Auswahl: Gerät, Entität) oder nach DB-Tabelle; Sicht Zeilen oder Platz (geschätzt); Vorhaltezeit Alle, Kurzzeit, Langzeit.
+- **Aufschlüsselung und Filter:** Die Liste unter dem Diagramm zeigt, wer den gezeigten Zeitraum (oder den gewählten Tag) treibt; ein Klick darauf filtert die Balken. ▲ markiert auffällige Tage (über dem 2,5-Fachen des Tagesmedians), blasse Balken sind nicht ganz erfasste Zeiträume, Wochenenden sind hinterlegt.
+- **Tooltips im Diagramm** im Design der eigenen Tooltip-Anzeige, mit Farbmarke je Serie.
+- **Dashboard:** Überschriften der Unterreiter um etwa 30 % größer; „Stand der Analyse“ neben den Überschriften und der Untertext bei „Was in welcher Tabelle steht“ entfallen (stehen schon im Kopf).
+- Neue Datei `verlauf.py`, neue Schnittstelle `GET /api/verlauf` (rechnet nur auf der Zuwachs-Statistik und dem Analyse-Cache). Die Integration ändert sich nicht.
+
+## 0.5.6b34 (Beta)
+- **Dashboard in Unterreitern (Punkt 307):** Datenmenge (Donut), Beziehungen, Wo der Platz liegt und Was in welcher Tabelle steht sind eigene Unterreiter, die die Höhe bis zum Fensterrand ohne Scrollbalken füllen (Diagramme skalieren, Texte werden bei Bedarf verkleinert). Der Browser merkt sich den gewählten Unterreiter. Die Legende des Donuts steht in Spalten, ihr Erklärtext liegt hinter dem ⓘ; die Statuszeile ist gekürzt.
+- **Dezentere aktive Knöpfe:** im Dashboard (Unterreiter, Vorhaltezeit, Sicht) und im Reiter Analyse (abgetönte Fläche statt voller Füllung).
+- **Analyse: Anteil bezogen auf die angezeigte Ebene:** Die Anteile der Zeilen ergeben 100 % (Integrationen: alle Entitäten, Geräte: die gewählte Integration, Entitäten: das gewählte Gerät); bisher bezogen sie sich immer auf alle Integrationen.
+- **Analyse: Knopfleiste bleibt beim Scrollen stehen** (Vorhaltezeit, Sicht, Erstauftreten) unter den Reitern.
+
+## 0.5.6b33 (Beta)
+- **Dashboard: Donut als Hauptansicht (Punkt 306):** Oben im Reiter Dashboard steht ein zoombarer Donut über Integration → Gerät → Entität. Klick auf ein Segment oder einen Legendeneintrag zoomt hinein, die Mitte und der Pfad darüber gehen eine Ebene zurück. Vorhaltezeit (Alle, Kurzzeit, Langzeit) und Sicht (Zuwachs, Bestand) lassen sich umschalten, der Pfad bleibt dabei erhalten. Der Knopf „Im Reiter Analyse öffnen“ übernimmt Vorhaltezeit, Sicht, Integration und Gerät. Die Farben der größten Integrationen bleiben in allen Ansichten gleich.
+- **Bisherige Dashboard-Inhalte einklappbar:** Beziehungen der Tabellen, Wo der Platz liegt und Was in welcher Tabelle steht sind jetzt Blöcke unter dem Donut, standardmäßig zu; der Browser merkt sich die geöffneten.
+- **Analyse: Spaltenbreiten einstellbar:** Griff am Spaltenkopf ziehen, Doppelklick stellt die Standardbreite wieder her, „Spaltenbreiten zurücksetzen“ setzt alle zurück. Die Breiten werden je Ebene im Browser gemerkt.
+- Neue Schnittstelle `GET /api/verursacher/baum` (Baum aus dem Analyse-Cache). Die Integration ändert sich nicht.
+
+## 0.5.6b32 (Beta)
+- **Neuer Reiter „Analyse“ (Punkt 305):** Zeigt, wer die Datenmenge treibt – nach Integration → Gerät → Entität (Klick auf eine Zeile führt eine Ebene tiefer, Pfad und aktive Filter als Chips über der Tabelle). Nur Entitätsdaten: States mit Attributen sowie 5-Min- und Stundenstatistik; Events, Statistik ohne Entität und die Verwaltungstabellen gehören nicht dazu. Der Reiter steht zwischen Dashboard und Entitäten und trägt das Rot der Marke (`--zf-ana`), damit er sich von Istzustand, Löschmenge und Prognose abhebt.
+- **Sicht und Vorhaltezeit:** „Sicht“ schaltet zwischen Zuwachs je Tag (Standard, Ø der letzten 7 vollen Kalendertage) und Bestand. „Vorhaltezeit“ wählt Alle, Kurzzeit (States, 5-Min, Attribute) oder Langzeit (Stundenstatistik); Zuwachs, Bestand, geschätzter Platz und Erstauftreten folgen der Auswahl. In der Langzeit schreibt jede aktive Entität mit Statistik gleich viel, die Kurve ist dort flach.
+- **Pareto-Kurve und Erstauftreten:** Die Kurve über alle Entitäten nennt, wie viele Entitäten 50, 80 und 90 % ausmachen. Die Balken „Seit wann gibt es die Entitäten?“ gruppieren nach der ersten Langzeitstatistik, nach Alter abgestuft (Tage, Wochen, Monate, Jahre); ein Klick filtert. Das Dropdown „Erstauftreten“ bietet seit 7, 30, 90 Tagen, 1 Jahr, ein Datum aus dem Kalender und „ohne Statistik (unbekannt)“.
+- **Bedienung:** Spalten sortierbar wie in den anderen Tabellen (Klick, Umschalt+Klick), Spaltenköpfe mit Gruppenzeile, weißer Pfeil ↓ für den Drilldown, blaues ↗ öffnet den Tab Entitäten (eine Entität, alle einer Integration oder eines Geräts; vorherige Filter werden geleert).
+- **Knopf „Analyse starten“** im Design des Reiters (Marken-Rot statt Signalrot).
+- Neue Datei `verursacher.py`, neue Schnittstelle `GET /api/verursacher`; sie rechnet nur auf dem Analyse-Cache. Die Integration ändert sich nicht.
+
+## 0.5.6b31 (Beta)
+- **Dashboard: Balken je Spalte (Punkt 304):** In den Tabellenkarten steht rechts neben jeder Spalte ein Balken mit der geschätzten Größe der Spaltenwerte. Die Nulllinie liegt am rechten Kartenrand, die Balken wachsen nach links; Maßstab ist die größte Spalte der Karte, Größe und Byte je Zeile im Tooltip. Die Größen werden als Schritt 7 der Analyse aus einer Stichprobe der jüngsten 100.000 Zeilen je Tabelle auf die Zeilenzahl hochgerechnet (ca. 1 s, ohne Indizes) und im Tagesstand `struktur.db` gespeichert; bis zur nächsten Analyse zeigt das Dashboard noch keine Balken. Die Karten sind dafür etwas breiter
+
+## 0.5.6b30 (Beta)
+- **Vorhaltung im Löschplan (Punkt 299):** Die Spalte „Vorhaltung · in diesem Lauf“ schreibt die Tage wie sonst in der App ohne Leerzeichen und deutsch: „K 7T · L 7T“ statt „K 7 d · L 7 d“, ebenso „(Ziel 30T)“ und die Gruppen in der Rückfrage („12 × 7T“)
+- **Warnung im Tooltip „Analyse starten“ (Punkt 300):** Zeigt der Knopf das gelbe Ausrufezeichen, beginnt die auslösende Zeile im Tooltip mit „! Analyse:“ bzw. „! Attribut-Analyse:“, fett in der Warnfarbe
+- **Dashboard „Was in welcher Tabelle steht“ (Punkt 301):** Aufzählungen (Domains, häufigste Event-Typen, Statistik-Arten, Quellen, Einheiten, Schema-Versionen) stehen als eingerückte Liste „Kategorie: Wert“ statt als Fließtext
+- **Integration 0.5.6 (Punkte 296–298):** heißt jetzt „RS DB Hygiene Manager“ (Integration, Eintrag, Gerät; Domain, Dienste und Entitäts-IDs bleiben), zeigt ihre Version in den Gerätedaten (`sw_version`) und als Diagnose-Sensor `sensor.rs_db_hygiene_version_integration`. Sie erscheint als Release 0.5.6 in HACS; die App 0.5.5 bleibt das aktuelle App-Release
+
+## 0.5.6b29 (Beta)
+- **Attribute gezielt abtrennen (Punkt 295, Integration):** Bei Regeln, die Attribute kürzer halten als die States, trennte die Integration bisher jeden alten State von seiner Attributzeile – auch wenn neuere States dieselbe Zeile weiter benutzen und sie deshalb gar nicht frei wird. Bei Sensoren mit gleichbleibenden Attributen hieß das: z. B. 213.000 geänderte States für eine einzige entfernte Attributzeile. Jetzt trennt die Integration nur noch States ab, deren Attributzeile danach wirklich frei wird; die übrigen alten States behalten ihre (noch gebrauchten) Attribute. Freigegeben wird genau so viel Platz wie vorher. Im Live-System sinkt die Arbeit dadurch von 247.811 auf 89.854 geänderte States (−64 %). Die Antwort von `rs_db_hygiene.purge` (Tabelle `states_attribute`) nennt zusätzlich `behalten`; Löschprotokoll und Laufdialog zeigen, wie viele alte States ihre Attribute behalten
+- **Eigene Obergrenze fürs Abtrennen (Punkt 295):** Abgetrennte States zählten bisher auf die Obergrenze für Statistik und Events. Im Lauf vom 21.10. war sie damit voll (360.193 gelöscht + 1.639.807 abgetrennt = 2 Mio.); 202 Attribut-Aufträge blieben liegen und erschienen als Überhang – darunter genau die mit dem Platzgewinn (Adaptive Lighting, EnOcean). Neue App-Option `loeschen_max_zeilen_attr` „Höchstens abgetrennte States pro Lauf (Attribute)“, Vorgabe 2.000.000. Der Löschplan rechnet Attribut-Aufträge nicht mehr gegen die Grenze von Statistik und Events. Überhang-Begründung, Obergrenzen-Text und Hilfe nennen die neue Grenze; ältere Läufe behalten ihre bisherige Begründung
+- Die Integration muss mit aktualisiert werden (HA-Neustart); mit der alten Integration trennt die App wie bisher pauschal ab, aber schon mit der eigenen Grenze
+
+## 0.5.6b28 (Beta)
+- **Zuwachs-Statistik aus einer alten Datenbank nachtragen (Punkt 294):** Neues Skript `nachtrag.py` zählt in einer Kopie der Recorder-Datenbank von vorher (etwa aus einem Backup) je vollem Kalendertag dieselben Werte wie die Analyse – States, 5-Min, Langzeit, Events je Typ und neue Attribute – und schreibt sie in `zuwachs.db`. So bekommen die Zuwachs-Charts die Tage zurück, die die App oder der Recorder schon gelöscht hatte. Werte werden nie kleiner (MAX), der erste und letzte Tag der Kopie bleiben außen vor, die Kopie wird nur gelesen. Aufruf im Container: `python3 nachtrag.py --alt <Kopie> --ziel /data/zuwachs.db [--probe]` (vorher `zuwachs.db` sichern; Zeitzone wie im Add-on)
+- **Lücken in der Zuwachs-Statistik:** Liegen zwischen nachgetragenen und bisherigen Tagen Tage ohne Messung, merkt sich `zuwachs.db` sie als Lücke (`<quelle>_luecken`). Dort liefern `GET /api/zuwachs` und `GET /api/zuwachs/events` keinen Wert statt 0; die Linien der Zuwachs-Charts (auch Events und Event-Regelkarte) sind an diesen Tagen unterbrochen, der Tooltip zeigt „–“. Lücken vor der Speichergrenze (`zuwachs_monate`) entfallen mit ihren Tagen
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b27 (Beta)
+- **Eigene Farben im Dashboard (Punkt 289):** Die Zweige im Reiter Dashboard nutzen nicht mehr die Farben der Zuwachs-Charts, sondern ein eigenes Schema, das sich von den Signalfarben der App abhebt (Istzustand rot, Löschmenge gelb, Prognose grün, Vorhaltezeiten blau, Tote Muster magenta): Zustandsverlauf Nachtblau, Event-Bus Purpur, Statistik Bronze, Verwaltung grau. Im hellen Modus dunkler, im dunklen heller als die Signalfarben; die Abstände sind gemessen (OKLab). Logische Verbindungen ohne Fremdschlüssel sind schwarz bzw. weiß gestrichelt statt rot, die Veränderung im Platzbalken steht in Textfarbe mit ▲/▼ statt gelb/grün
+- **Anteil je Tabelle im Diagramm (Punkt 290):** Jeder Tabellenkasten im Reiter Dashboard zeigt oben rechts in einem Ring den Anteil der Tabelle am belegten Speicherplatz (Daten und Indizes); der Bogen wächst mit dem Anteil. Der Tooltip nennt den Platz und zum Vergleich den Anteil an allen Datenzeilen – der Speicherplatz ist der aussagekräftigere Wert, weil Zeilen je Tabelle sehr unterschiedlich groß sind
+- **Ersparnis in der Regelkarte passt zu „Prognosen je Regel“ (Punkt 291):** Eine gespeicherte Regel zeigte in ihrer Karte „Ersparnis im Prognosezeitraum 0,00 MB“, während die Tabelle z. B. 21,5 GB auswies. Die Karte verglich mit dem heutigen Regelwerk, in dem die Regel selbst schon steckt; die Tabelle vergleicht mit „ohne Regeln“. Jetzt zeigt die Karte bei gespeicherten Regeln die Ersparnis wie die Tabelle und, sobald in der Maske etwas geändert ist, „davon durch die Änderung …“ (mit der Aufteilung Kurzzeit/Attribute/Langzeit). Neue Regeln heißen „zusätzliche Ersparnis“ (gegenüber den heutigen Regeln). Der Tooltip erklärt den Vergleich
+- **Zuwachs-Chart in der Event-Regelkarte (Punkt 292):** Regeln vom Typ event haben direkt unter der Überschrift der Karte den aufklappbaren Bereich „Zeilen pro Tag (Zuwachs)“ wie die Entitäten-Karte. Er zeigt die neuen Event-Zeilen pro Tag aller Event-Typen, auf die die Muster passen (bei `script_*` die Summe aller passenden Typen; gleiche Prüfung wie die Regel selbst), dazu wie in der Kachel Events auf Knopfdruck die Einzelverläufe (Top 5, Top 10, alle). Bei einem genauen Namen trägt die Linie den Namen des Event-Typs. Darüber: Zahl und Namen der passenden Typen und der Schnitt der letzten 7 Tage. Lädt erst beim Aufklappen und folgt Änderungen der Muster. `GET /api/zuwachs/events` nimmt dafür `?muster=…` (kommagetrennt)
+- **Gemessene Zeilengrößen (Punkt 293):** Prognose, Löschmenge sofort, Prognose-Verlauf und Empfehlungen rechnen nicht mehr mit festen Größen je Zeile vom 10.10.2026, sondern mit den Werten der letzten Analyse aus `struktur.db` (Platz der Tabelle samt Indizes ÷ Zeilen): States, 5-Min, Langzeit, Events (events + event_data je Event-Zeile) und der Attribut-Faktor (Platz samt Index ÷ JSON-Länge). Fehlt eine Messung oder ist sie unplausibel (unter 10.000 Zeilen oder außerhalb fester Grenzen), gilt für diesen Wert weiter der Festwert. Der Reiter Dashboard nennt unter „Wo der Platz liegt“, womit gerechnet wird. Im Testsystem: States 175 B statt 181 B, Events 150 B statt 145 B, Attribute ×1,23 statt ×1,15 – die Prognose sinkt um 2,7 %, die Löschmenge sofort steigt um 6,5 %. Die Prognosezahlen ändern sich dadurch nach jeder Analyse leicht mit
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b26 (Beta)
+- **Reiter „Dashboard“ (Punkt 288):** ganz links, graue Oberkante, öffnet sich beim Laden der Seite (bisher Entitäten); zeigt den Aufbau der Recorder-Datenbank mit den Zahlen der letzten Analyse: die Beziehungen der Tabellen als Diagramm (Zustandsverlauf, Event-Bus, Statistik, mit Zeilen je Tabelle und den Verbindungen ohne Fremdschlüssel), „Wo der Platz liegt“ (Daten und Indizes je Tabelle, Tooltip mit den einzelnen Indizes, Veränderung gegenüber dem Stand davor) und „Was in welcher Tabelle steht“ (je Tabelle Begriff, Inhalt, Zeitraum, Zeilen und Platz)
+- Die Analyse erfasst dafür als Schritt 7 einen Tagesstand in `struktur.db` (Platz per `dbstat`, ca. 10–20 s; Zeilen der großen Tabellen aus den Tageszahlen der Analyse, die kleinen per Zählung). Die Datei wird fortgeschrieben, Stände älter als die Speicherdauer der Zuwachsdaten (`zuwachs_monate`) entfallen. Fehlt die Datei beim Start, läuft einmal sofort eine Analyse. Neue Schnittstelle `GET /api/struktur`
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b25 (Beta)
+- **Zuwachs-Chart der Kachel „Datenzeilen gesamt“ (Punkt 283):** Ein Klick auf die Kachel Istzustand / Datenzeilen gesamt öffnet „Neue Zeilen pro Tag“ über alle Entitäten (States, 5-Min-Statistik, Langzeit, Attribute, Events) im Stil des Entitäten-Charts. Die Y-Achse hat jetzt Schritte bis in die Milliarden und kürzt ab einer Million als „2 Mio.“ (vorher blieb bei Summen nur eine abgeschnittene Marke)
+- **Events in der Zuwachs-Statistik (Punkt 284):** `zuwachs.db` führt die Event-Zeilen pro Tag als fünfte Quelle „events“ je Event-Typ (Kennung `ev:<Typ>`); sie zählen nur in der Summe über alle Entitäten. Eine ältere Datei bekommt die Spalte bei der nächsten Analyse nachgerüstet, die Daten bleiben. Events reichen nur so weit zurück, wie die Events-Tabelle der Datenbank Zeilen hält
+- **Einheitliche Spaltenfolge (Punkt 285):** Summe | States | 5-Min | Attribute | Langzeit | Events – im Tab Löschen, im Löschprotokoll (Läufe, Monatssumme, Einzellauf), in den Prognosen je Regel (Ersparnis) und im Kachelraster oben (Attribute vor Langzeit und Events). Gilt ab jetzt statt der Folge aus 0.5.6b6 (Punkt 243)
+- **Event-Chart je Typ (Punkt 286):** Die Kachel Istzustand / Events öffnet „Events – Zuwachs pro Tag“: die Summe aller Event-Typen und auf Knopfdruck die Einzelverläufe der Top 5, Top 10 oder aller Event-Typen (Rangfolge nach den Zeilen im gewählten Zeitraum), mit Legende zum Ein- und Ausblenden und Tooltip. Neue Schnittstelle `GET /api/zuwachs/events`. Jede der drei Kacheln öffnet genau ein Popup
+- **Speicherdauer der Zuwachsdaten (Punkt 287):** Neue App-Option `zuwachs_monate` („Speicherung Zuwachsdaten (Monate)“, 1 bis 240, Vorgabe 24). Ältere Tageswerte entfernt die nächste Analyse und kürzt die Abdeckung der Charts; entfernte Tage werden nicht wieder aus dem Analyse-Cache geholt. Beide Zuwachs-Dialoge nennen die Einstellung, dazu ein FAQ-Eintrag in der Hilfe
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b24 (Beta)
+- **Dauer und Backup-Pause in einer Spalte (Punkt 282):** Im Löschprotokoll entfällt die Spalte „Backup-Pause (davon)“. Hat ein Lauf auf ein HA-Backup gewartet, steht seine Dauer als gelber Chip; der Tooltip nennt die Pause (Länge, Zahl der Pausen) und erklärt sie. Läufe ohne Pause zeigen die Dauer wie bisher. Sortierung nach der Gesamtdauer; der CSV-Export behält beide Werte als „Dauer (s)“ und „davon Backup-Pause (s)“. Hilfetexte angepasst
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b23 (Beta)
+- **Banner Regelwerk-Check aufgeräumt:** Chips und Haken erscheinen nur noch, wenn sie Werte haben; ohne jeden Eintrag verschwindet das ganze Banner. Der Text „alle Vorschläge übernommen: Regeln … → …“ und der Chip „keine Befunde“ entfallen. Reihenfolge: rot, magenta (Tote Muster), gelb, grau; rot und magenta fett, auch in der Spalte „Empfehlung“. Tote Muster zählen nicht mehr als Hinweis (grau), sondern für sich; neuer Filterwert „Tote Muster“. Der Knopf „Tote Muster (n) …“ zählt alle Regeln, auch passive
+- **Aktivität im Dialog:** Der blaue Knopf jedes Dialogs zeigt nach dem Klick einen drehenden Ring, bis die Aktion fertig ist; ein zweiter Klick wird ignoriert
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b22 (Beta)
+- **Tote Muster in Regeln (Punkt 281):** Der Regelwerk-Check prüft Muster mit genauer Entity-ID (entity, E:, glob und schutz ohne Platzhalter) jetzt live gegen Registry und HA-Zustände; bisher galt nur „fehlt in der Analyse“, umbenannte oder gelöschte Entitäten mit Altdaten wurden nicht erkannt. Fallback bei nicht erreichbarem HA: letzte Analyse (verwaiste zählen als tot). Deaktivierte Entitäten gelten als lebendig
+- **Knopf „Tote Muster …“ im Regelwerk-Check:** Liste über alle Regeln (auch passive) mit Befund (in der Registry gelöscht / nirgends bekannt) und den Daten, die noch in der DB liegen; Auswahl per Haken, Entfernen mit Rückfrage und Sicherung der Regeln. Regeln ohne Muster entfallen. Neue Schnittstellen `GET /api/regeln/tote`, `POST /api/regeln/tote/entfernen`
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b21 (Beta)
+- **Zuwachs-Chart ohne Statistik (Punkt 280):** Entitäten ohne `state_class` (und ohne Statistikzeilen) haben in Home Assistant keine 5-Min- und keine Langzeit-Statistik. Das Chart „Zeilen pro Tag (Zuwachs)“ zeigte dafür bisher 0 und wirkte wie ein Fehler. Jetzt entfallen diese beiden Linien, die Legendenknöpfe sind ausgegraut („Keine Statistik: Die Entität hat keine state_class“), und über dem Chart steht ein Hinweis
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b20 (Beta)
+- **Wartesignal beim Laden (Punkt 278):** Bis die ersten Tabellen geladen sind, zeigt die Seite in der Mitte das Piktogramm mit einem dezent pulsierenden Glimmen in seiner Form und „please wait…“ – die Seite wirkt nicht mehr defekt. Blendet von selbst aus, ist nicht im Weg und läuft bei „Bewegung reduzieren“ ohne Animation
+- **Neue Spalten trotz gemerkter Spaltenauswahl (Punkt 279):** Wer in einer Tabelle schon Spalten abgewählt hatte, sah neue Spalten nie (so fehlte „Überhang“ in den Läufen). Eine neue Spalte erscheint jetzt einmal von selbst; danach gilt wieder die eigene Auswahl
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b19 (Beta)
+- **Löschprotokoll: neue Spalte „Überhang“ (Punkt 277):** zeigt, was ein Lauf geplant, aber nicht gelöscht hat (Zeilen und Attributzeilen). Roter Chip: Aufträge, die wegen der Obergrenze gar nicht begonnen wurden; gelber Chip: nur teilweise abgearbeitete Aufträge. Der Tooltip nennt den Grund (z. B. „Obergrenze Statistik/Events 2.000.000 = 222.187 gelöscht + 1.777.813 States abgetrennt“) und wie viel nach dem Lauf insgesamt noch fällig ist. Die Spalte steht als rote Gruppe zwischen Langzeit und Aufrufe und ersetzt „Rest danach“
+- **Einzellauf:** Kasten „Überhang“ mit den Gründen, nicht begonnene Aufträge stehen jetzt in der Liste, Spalten „geplant“ und „Überhang“ je Auftrag (die Plan-Zahl je Auftrag trägt das Protokoll erst ab dieser Version, die Gründe werden auch für ältere Läufe angezeigt)
+- Kopfzeile des Einzellaufs ohne „purge_keep_days“ und „Grenze lokale Mitternacht“
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b18 (Beta)
+- **Tabellen mit Zeilenauswahl und Seitenwechsel (Punkt 276):** Regeln, Löschen, Prognosen je Regel, Läufe und Gelöscht je Entität und Monat haben vor „CSV“ bzw. über der Tabelle die Auswahl „Zeilen“ (Regeln, Löschen, Prognosen: 25, 50, 100, 250; Läufe und Monatssumme wie bisher) und unter der Tabelle den Seitenwechsler ‹ › wie im Tab Entitäten
+- **Neue Stufe „automatisch“:** zeigt so viele Zeilen, wie in die Tabellenbox passen – ohne senkrechte Leiste, der Kopf bleibt stehen; rechnet bei Fenstergröße und Reiterwechsel neu. Regeln und Prognosen reichen bis zum unteren Fensterrand
+- **Reiter Regeln:** der Textblock „Ohne eigene Kurzzeit …“ und der Rang-Hinweis unter der Tabelle entfallen; das Banner „Attribut-Standard“ steht zwischen Chips und Knöpfen und scrollt weg, die Knopfleiste bleibt oben stehen
+- **Abstände:** Reiter → Chips → Knopfleiste auf allen Reitern gleich groß (ca. 12 px); die Kopfleiste ist dafür in Reiter plus Chips und die Knopfleisten geteilt
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b17 (Beta)
+- **Zuwachs-Statistik (neue Datei `zuwachs.db`):** Nach jeder Analyse schreibt die App je Entität und abgeschlossenem Kalendertag vier Zahlen fort: neue Zeilen in States, 5-Min-Statistik, Langzeit und Attributen. Anders als der Cache wird die Datei nie neu aufgebaut, die Tageswerte bleiben also auch nach Purge und Löschläufen erhalten (ein erfasster Tag wird nie kleiner). Abruf: `GET /api/zuwachs?entity=sensor.x&von=2026-09-01&bis=2026-10-01` (ohne `entity` die Summe aller Entitäten; `null` = Tag außerhalb der Abdeckung der Quelle, `0` = keine neuen Zeilen)
+- Beim ersten Lauf wird übernommen, was die Recorder-Datenbank noch hat (ohne den angeschnittenen ältesten Tag); was die App vorher schon gelöscht hat, ist zu niedrig erfasst. Attribute lassen sich nicht rückwirkend ermitteln und werden erst ab dem übernächsten Tag nach dem ersten Lauf erfasst. Chart „Zeilen pro Tag (Zuwachs)“ im Dialog einer Entität (aufklappbar; 30 Tage, 90 Tage, 1 Jahr, alles; Linien per Klick auf die Legende ein-/ausblenden). Aufbewahrung unbegrenzt (ca. 30–50 MB pro Jahr bei 3.000 Entitäten)
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b16 (Beta)
+- **Status-Chips auf den Reitern mit Entitäten (Punkte 270 bis 272):** unter der Tab-Leiste (Entitäten, Empfehlungen, Regeln, Löschen, Löschprotokolle, Prognosen je Regel) stehen jetzt Chips: **Lösch-Standard** (Regel HA:standard: „Lösch-Standard: 90 Tage · Langzeit 1 Jahr“ bzw. orange „global 7.300 Tage“ bei passiver Regel), **Attribute** („wie Kurzzeit“ oder „Standard 30 Tage“), **Schutz** (Regeln, Entitäten, ob die Attribute mitgeschützt sind) und – nur bei Auffälligem – **Veraltet** (Analyse oder Attribut-Analyse älter als 26 Stunden), **Integration** (fehlt, zu alt) und **Sperre** („Löschen aus“, „Automatik aus“). Ein Klick öffnet bzw. zeigt, was dahintersteht. Der Kasten „Attribut-Standard“ im Reiter Regeln aktualisiert sich nach dem Speichern und nennt die Wirkung
+- **Integration (Punkt 272):** schickt ab dieser Version ihre Versionsnummer mit jeder Anfrage an die App; die App zeigt im Chip, wenn sie zu alt für das Löschen der Attribute ist (Betas der Integration müssen von Hand nach HA kopiert werden)
+- **Tabelle Entitäten (Punkte 273, 274):** Klick auf den Chip der Herkunft (Gerät, UI, YAML …) wählt die Herkunftsart im Spaltenkopf und filtert; Klick auf den Regel-Chip bzw. „Std.“ in Kurzzeit, Attribute und Langzeit filtert nach dieser Regel bzw. nach „nur Standard“ (Umschalt+Klick öffnet die Regel wie bisher)
+- **Warnung vor dem Löschlauf (Punkt 268):** „Die App läuft im HA-Standard“ erscheint nur noch, wenn der Lauf HA:standard anfasst (alle aktiven Regeln oder diese Regel), nicht bei einem Lauf für eine einzelne andere Regel
+- **Attribute in der Regelmaske (Punkt 269):** die leere Option heißt auch bei den Attributen „– nicht gesetzt –“
+
+## 0.5.6b15 (Beta)
+- **„gezählt“ bei Attribut-Läufen genau (Punkt 267):** die Spalte „gezählt“ im Löschprotokoll und der Banner zählen bei Attribut-Aufträgen nur noch die Attributzeilen, die nach dem Abtrennen wirklich wegfallen – also ohne die, die ein neuerer State derselben Entität, der neueste State oder eine andere Entität noch benutzt. „gezählt“ entspricht damit genau dem, was danach unter „gelöscht“ steht (bisher stand dort bis zu doppelt so viel)
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b14 (Beta)
+- **Löschprotokoll und Banner bei Attribut-Läufen (Punkt 266):** „gezählt“ und „gelöscht“ rechnen bei Attribut-Aufträgen jetzt beide in Attributzeilen (bisher stand bei „gezählt“ die Zahl der abgetrennten States, bei „gelöscht“ die der Attributzeilen); der Banner und der Fortschritt zählen die entfernten Attributzeilen gegen „geplant“ und „gezählt“. „gelöscht“ kann kleiner als „gezählt“ sein, wenn neuere States dieselbe Attributzeile noch benutzen (Tooltip der Spalte)
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b13 (Beta)
+- **Plan nach einem Attribut-Lauf (Punkt 260):** nach einem Lauf nimmt die App die erledigten Attributzeilen selbst aus der Attribut-Analyse (`attribute.db`), sodass Plan, Kasten und Löschmenge sofort stimmen – bisher zeigte der Plan bis zur nächsten Attribut-Analyse die alten Zahlen; neben „Analyse“ steht im Tab Löschen ein Chip mit dem Stand der Attribut-Analyse, und „Plan neu laden“ meldet „berechne …“ und „✓ neu berechnet“
+- **Recorder beschäftigt (Punkt 261):** dauert ein Auftrag mindestens 60 s bei wenig Arbeit, steht im Löschprotokoll „Recorder war beschäftigt (vermutlich Repack oder Backup)“ (und im App-Log) – etwa wenn eine HA-Automation nach dem Lauf ein `VACUUM` startet
+- **Events-Prognose (Punkt 255):** der Tageszuwachs der Events wird durch die Zahl der Tage geteilt, für die es Daten geben kann (bei einer 7-Tage-Regel 6, höchstens 7), statt fest durch 7 – die Prognose lag dort etwa 14 % zu niedrig; die States rechnen unverändert fest durch 7 (Punkt 192)
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b12 (Beta)
+- **Attribute in der Oberfläche (Punkte 258, 262):** der Dialog „Eigene Vorhaltezeiten“ für einzelne Entitäten hat jetzt einen Block „Attribute“ (Regel `E:<Entität>` mit Attribut-Wert); die Live-Vorschau der Regelmaske hält einen reinen Attribut-Wert nicht mehr für „kein Wert“; der Block heißt „Attribute“, der Hinweis darunter „leer = wie Kurzzeit“ (bzw. die Dauer des Attribut-Standards)
+- **Rückfrage und Kasten im Tab Löschen (Punkt 259):** Attributzeilen werden als gelöscht beschrieben („die States bleiben erhalten, verlieren aber ihre Attribute“) und zählen in der Zeilensumme mit
+- **Oberfläche (Punkte 263 bis 265):** Popups 15 % breiter, Titeltext doppelt so groß; die Auswahlfelder der Wertblöcke (Kurzzeit, Attribute, Langzeit) stehen nebeneinander auf einer Höhe; ID, Name und Typ in der Regelmaske stehen bündig
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b11 (Beta)
+- **Anzeige beim Abtrennen der Attribute (Punkt 257):** während eines Laufs mit Attribut-Aufträgen stand der Fortschritt auf „0 von … Zeilen gelöscht“, obwohl die Attribute abgetrennt wurden – die abgetrennten States zählen jetzt im Fortschritt mit („… Zeilen gelöscht bzw. States von ihren Attributen abgetrennt“), und das App-Log nennt „States abgetrennt“ samt entfernter Attributzeilen statt „gelöscht“
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b10 (Beta)
+- **Löschplan und Protokoll (Punkt 256):** Attribut-Aufträge (Attribute von den States trennen) zählen nicht mehr in „geplant“, Überhang und „Läufe nötig“ – sie trennen ab und löschen nicht, deshalb stand bisher dauerhaft die Zahl der Attributzeilen als Differenz zwischen „geplant“ und „gelöscht“. Der Plan führt sie getrennt (`attr_getrennt`); im Tab Löschen nennen Kasten und Rückfrage „Attribute … werden von den States getrennt (die States bleiben)“, auch wenn sonst nichts gelöscht wird
+- **Integration zu alt (Punkt 256):** kennt die Integration die neue Tabelle nicht, bricht der Lauf die Attribut-Aufträge nach dem ersten Fehler ab und schreibt einen Sammelhinweis („– N weitere Attribut-Aufträge übersprungen“) statt hunderter Einträge; die übrigen Aufträge laufen weiter
+- Die Integration ändert sich nur in der Versionsnummer (der Dienst für die Attribute kam mit 0.5.6b9)
+
+## 0.5.6b9 (Beta)
+- **Attribut-Standard und Attribut-Wert je Regel (Punkt 254):** Attribute haben wieder eine eigene Frist. Im Reiter Regeln gibt es unter der Tabelle den Kasten „Attribut-Standard“ (Voreinstellung „wie Kurzzeit“, z. B. 30 Tage einstellbar); jede Regel kann einen eigenen Attribut-Wert setzen (leer = Standard, nie länger als die Kurzzeit). Nach der Frist trennt der Löschlauf die Attribute von den States (die States bleiben bis zu ihrer Kurzzeit) und entfernt die danach unbenutzten Attributzeilen. Schutz-Regeln haben die Option „Attribute mitschützen“ (Voreinstellung an, wie bisher)
+- **Neue Empfehlung „Attribute“ (Punkt 254):** Sammelregel nur mit Attribut-Wert 14 Tage für Entitäten mit großem Attribut-Zuwachs (ab 100 MB im Prognosezeitraum je Entität); die Kurzzeit bleibt. Ersetzt den bisherigen Grund „große Attribute“ bei den Kurzzeit-Vorschlägen
+- **Regelwerk-Check und Empfehlungen** rechnen die Attribute mit (Gewinn und Überstimmung, wirksame Tage, Ersparnis und Löschmenge der Attribute getrennt ausgewiesen); Spalte „Attribute“ in den Tabellen Entitäten und Regeln, Teil „A“ im Löschplan, Namenssuffix „– A 14T“ bei reinen Attribut-Regeln
+- **Integration:** neue Tabelle `states_attribute` im Dienst `rs_db_hygiene.purge` (setzt `states.attributes_id` alter States auf NULL, löscht unbenutzte `state_attributes`-Zeilen, bereinigt den Cache des Recorders). **Die Integration muss mit aktualisiert werden** (HACS, danach HA-Neustart); ohne sie meldet der Löschlauf bei Attribut-Aufträgen „Integration zu alt“ und lässt die übrigen Aufträge laufen
+
+## 0.5.6b8 (Beta)
+- **„Ansehen“ bei mehreren Entitäten (Punkt 251):** in Empfehlungen mit mehr als einer Entität (z. B. Langzeit nirgends verwendeter Entitäten, Sammelregeln) zeigt „Ansehen“ jetzt nur die betroffenen Entitäten; Chip „Empfehlung: …“ mit ✕ über der Tabelle
+- **Langzeit-Empfehlung (Punkt 252):** der Vorschlagswert für die Langzeit nirgends verwendeter Entitäten ist 1 Jahr statt 90 Tage
+- **Ersparnis in MB und getrennt (Punkt 253):** die Vorschau „Neue Regel“ zeigt die Ersparnis ab unter 1 GB in MB und getrennt nach Kurzzeit und Langzeit; ebenso die Ersparnis im Kasten „Wer schreibt am meisten?“
+
+## 0.5.6b7 (Beta)
+- **Langzeit begrenzen (Punkt 249):** die Regel HA-Standard hat jetzt auch eine einstellbare Langzeit (Dauer oder unbegrenzt) und wird damit zum „Lumpensammler“ für alle Entitäten ohne eigene Langzeit-Regel. Zähler behalten ihre Langzeit immer. Neue Empfehlung der Art „Langzeit“: Sammelregel mit 90 Tagen Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit); Spalte „Wirkt auf“ in den Empfehlungen
+- **Ersparnis mit Langzeit (Punkt 248):** die Vorschau „Neue Regel“ und die Empfehlungen rechnen die Langzeit jetzt in die Ersparnis ein (bisher nur in „sofort löschbar“)
+- **Tabelle Empfehlungen (Punkt 249):** Spalte „Zuwachs“ entfernt (bei Langzeit-Vorschlägen irreführend), Spaltenköpfe wie im Reiter Regeln, Summe bei „Treffer“ entfällt; Tooltips von Zeilen, Speicher und Ersparnis nennen die Langzeit; Hilfe um die FAQ „Wie begrenze ich die Langzeitstatistik?“ ergänzt
+- **Tooltips (Punkt 250):** nach einem Klick, einer Taste oder dem Mausrad erscheint nicht mehr der Browser-Tooltip, bis der Zeiger das Element verlässt
+
+## 0.5.6b6 (Beta)
+- **Löschtabellen einheitlich (Punkt 243):** Spaltenfolge in allen Löschtabellen Summe | States | 5-Min | Attribute | Events | Langzeit (Plan, Läufe, Lauf-Details, Monatssumme, Entitäten; bei Prognosen je Regel Summe | States | Attribute | Events | Langzeit). Die Summe enthält jetzt immer die Attribute; im Plan keine „≤“-Kennzeichnung mehr, in den Lauf-Details entfällt „Rest“. Läufe aus früheren Versionen bleiben unverändert (Summe ohne Attribute)
+- **Vorhaltedauer im Löschprotokoll (Punkt 242):** die Spalte „keep_days“ heißt „Vorhaltedauer“ und zeigt „K 7T/L 1J“ (K = States, 5-Min, Attribute, Events; L = Langzeit; Einheit wie in der Regel gewählt, „alle“ bei vollständigem Löschen); ältere Läufe zeigen Tage
+- **„integration“ statt „herkunft“ (Punkt 246):** der Regeltyp heißt in der Anzeige „integration“ (Typ-Spalte, Filter, Regelmaske, Rang-Texte, Empfehlungen, Regelwerk-Check); der interne Schlüssel „herkunft“ bleibt, keine Migration
+- **Integration (Punkt 244):** der Sensor „DB-Größe“ übernimmt neue Werte höchstens alle 30 Minuten
+
+## 0.5.6b5 (Beta)
+- **Hilfe überarbeitet (Punkt 247):** Reiter „Hilfe“ auf den aktuellen Stand gebracht, u. a. FAQ „In welcher Reihenfolge lege ich Regeln an?“ (6 Schritte), neues Kapitel „Regelwerk-Check“, Sprungziele jetzt unter der klebenden Leiste sichtbar; Erwähnungen von purge_keep_days und configuration.yaml verlinken auf „Home Assistant vorbereiten“; Versionsangaben aus dem Hilfetext entfernt
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b4 (Beta)
+- **Korrektur Löschprotokolle:** die Tabelle „Läufe“ war seit 0.5.6b3 auf ihre Mindesthöhe geschrumpft und zeigte keine Zeilen; die Höhenbegrenzung aus Punkt 240 gilt jetzt nur für die letzte Tabelle eines Reiters
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b3 (Beta)
+- **Regelnamen (Punkt 241):** beim Speichern bekommt der Name das Suffix der Vorhaltedauer „– 30T/2J“ (Kurzzeit/Langzeit, ∞ = unbegrenzt, Event-Regeln „– 7T“); ein altes Suffix wird ersetzt. Gilt für alle Regeln, auch Schutz und HA-Standard („HA-Standard – 90T/∞“), und für alle Namen aus Empfehlungen und Regelwerk-Check
+- **Tab Löschen (Punkt 229):** Umfang-Auswahl und „Plan neu laden“ stehen direkt neben „Jetzt ausführen“, der Umfang-Text daneben entfällt
+- **5-Min-Statistik (Punkt 230):** wird im Löschlauf immer mit demselben keep_days wie die States der Entität gelöscht (auch bei Obergrenze); die Spalte Vorhaltung zeigt nur noch K und L
+- **Löschprotokolle (Punkt 228):** nach einem neuen Lauf stehen Sortierung und Filter der Tabellen wieder im Ausgangszustand – auch nach dem Nachtlauf
+- **Empfehlungen:** Regel für verwaiste Entitäten erscheint immer, solange keine aktive verwaist-Regel existiert (Punkt 239); Tabellenkopf bleibt beim Scrollen sichtbar, nach dem Speichern springt die Seite nicht mehr nach oben (Punkt 240)
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b2 (Beta)
+- **Erweitern statt neu (Punkt 232):** passt ein Vorschlag in eine bestehende Regel gleichen Typs, bietet der Reiter Empfehlungen „In Rxx aufnehmen …“ an (⚠, wenn die Zielregel die Langzeit kürzt); bei der Massenauswahl fragt die App, ob aufgenommen oder neu angelegt wird
+- **Sammelregel (Punkte 233/234):** ist eine Klassen- oder Integrationsregel nicht sicher (zu viele der Entitäten werden verwendet, oder sie verlängert die Kurzzeit anderer), schlagen die Empfehlungen eine Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration vor
+- **Integrationsregeln:** Kurzzeit wie bei den Einzelvorschlägen statt fest 30 Tage, Verwendungsprüfung wie bei Klassen, schon ab 3 Einzelvorschlägen
+- **Wenig schreibende unbenutzte Entitäten (Punkt 236):** ab 100 Zeilen je Tag zählen sie für Klassen-, Integrations- und Sammelregeln mit; eigene Karten weiter erst ab 500
+- **Diagnosewerte (Punkt 237):** Gruppen auch aus der HA-Kategorie „Diagnose“ (nur unbenutzte, Muster trifft nur solche), deutsche Endungen wie `_signalstarke` oder `_paket_id`
+- **Regelwerk-Check (Punkt 238):** beim Zusammenlegen keine doppelte Notiz mehr
+- Die Integration ändert sich nur in der Versionsnummer
+
+## 0.5.6b1 (Beta)
+- **Regelwerk-Check im Reiter Regeln (Punkt 232):** prüft das bestehende Regelwerk – Gegenstück zum Reiter Empfehlungen, der nur neue Regeln vorschlägt. Kasten über der Tabelle mit Zählern und „Regeln vorher → nachher“, neue Spalte „Empfehlung“ mit einem Chip je Befund
+  - rot: Regel unwirksam (setzt nirgends einen Wert) oder teilweise unwirksam (ein anderer Regeltyp hat Vorrang und setzt einen anderen Wert)
+  - gelb: Muster doppelt, Regeln gleichen Typs mit gleichen Werten zusammenlegen, lange ID-Listen als Platzhalter, Event-Liste als `*`
+  - grau: Muster ohne Entität, überflüssige Regel, meist überstimmt
+- **Dialog je Befund:** Begründung, Vorschläge zur Wahl (bei „teilweise unwirksam“ ohne Vorauswahl: Ausnahme-Regel oder Werte angleichen), Liste „Änderungen am Regelwerk“ (gelöschte, neue, geänderte Regeln), Wirkung – „wirkungsneutral“ oder die betroffenen Entitäten mit Werten vorher und nachher. Der Knopf heißt wie die Aktion, z. B. „Regel R28 löschen“. Vor jeder Übernahme wird das Regelwerk gesichert; „Bewusst so“ blendet einen Befund aus
+- Die Integration ändert sich nur in der Versionsnummer
+
 ## 0.5.5
 Zusammenfassung der Testversionen 0.5.5b1 bis 0.5.5b14 (Einzelheiten darunter). Nach dem Update startet einmal eine neue Analyse (neuer Aufbau des Analyse-Speichers).
 - **Neue Regeltypen:** `herkunft` (alles einer Integration, z. B. `unifi`) und `vielschreiber` (ab einer Schwelle in Zeilen je Tag, mit Hysterese – wer dazugehört, bleibt bis unter 80 % der Schwelle)

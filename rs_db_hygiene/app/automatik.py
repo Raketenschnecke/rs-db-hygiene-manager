@@ -94,7 +94,7 @@ def status(p, job, letzter_fehler, analyse_info, db_bytes, prognose_bytes, optio
         "zustand": zustand, "sperren": sperren, "fehler": letzter_fehler, "laeuft": bool(job), "job": (job or {}).get("art"),
         "fortschritt": round(100 * f.get("geloescht", 0) / ziel, 1) if job and ziel else (0 if job else None),
         "plan": {"zeilen": su.get("zeilen", 0), "states": su.get("zeilen_states", 0), "kurz": zb.get("kurz", 0), "lts": zb.get("lts", 0),
-                 "events": zb.get("events", 0), "attributzeilen": su.get("attr_zeilen", 0), "entitaeten": su.get("entitaeten", 0),
+                 "events": zb.get("events", 0), "attributzeilen": (su.get("attr_zeilen", 0) or 0) + (su.get("attr_getrennt", 0) or 0), "entitaeten": su.get("entitaeten", 0),
                  "auftraege": su.get("aufrufe", 0) + su.get("auftraege_b", 0)} if p else None,
         "letzter_lauf": {"start": ll.get("start"), "ende": ll.get("ende"), "status": ll.get("status"), "geloescht": ll.get("geloescht"),
                          "attributzeilen": ll.get("attr_geloescht"), "dauer_s": round(ll["ende"] - ll["start"]) if ll.get("ende") else None,

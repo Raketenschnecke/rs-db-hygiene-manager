@@ -11,6 +11,7 @@ import os
 import sqlite3
 
 import regeln as rg
+import struktur
 
 # Messwerte vom 10.10.2026 (dbstat bzw. Tabellengröße / Zeilen), siehe README
 B_STATE = 181          # states-Zeile inkl. Indizes
@@ -23,12 +24,70 @@ KURZ_PRO_TAG = 288     # 5-Min-Statistik
 LTS_PRO_TAG = 24       # Stundenstatistik
 MIN_KEEP_DAYS = 0      # Punkt 100/121: Kurzzeit „keine“ = alles vor heute 0:00 (ab 0.4.12; bis 0.4.11 Untergrenze 1 Tag wie loeschen.MIN_KEEP_DAYS)
 
+# Punkt 293: Die Festwerte oben sind nur noch der Rückfall. Liegt ein Stand in struktur.db vor (Analyse, Schritt 7), rechnen
+# Prognose, Löschmenge und Empfehlungen mit den dort gemessenen Größen je Zeile (Tabelle samt Indizes ÷ Zeilen).
+# messwerte_setzen() setzt die Modulwerte; optimierung.py und main.py lesen sie als probelauf.B_… und folgen damit.
+VORGABE = {"B_STATE": B_STATE, "B_KURZ": B_KURZ, "B_LTS": B_LTS, "B_EVENT": B_EVENT, "B_ATTR_FAKTOR": B_ATTR_FAKTOR}
+GRENZEN = {"B_STATE": (40, 2000), "B_KURZ": (20, 1000), "B_LTS": (20, 1000), "B_EVENT": (30, 5000), "B_ATTR_FAKTOR": (1.0, 3.0)}
+MIN_ZEILEN = 10000     # darunter ist eine Messung zu unsicher – dann gilt der Festwert
+MESSUNG = {"quelle": "fest", "zeit": None, "werte": dict(VORGABE), "fest": []}
+_MESS_MTIME = [None]
+
+
+def zeilengroessen(stand):
+    """Größen je Zeile aus einem Stand von struktur.db: {name: wert}, nur plausible Messwerte (siehe GRENZEN, MIN_ZEILEN)."""
+    b, z, d = stand.get("bytes") or {}, stand.get("zeilen") or {}, stand.get("details") or {}
+    platz = lambda t: (b[t]["daten"] + b[t]["indizes"]) if t in b else None
+    def je_zeile(bytes_, zeilen):
+        return bytes_ / zeilen if bytes_ and zeilen and zeilen >= MIN_ZEILEN else None
+    roh = {"B_STATE": je_zeile(platz("states"), z.get("states")),
+           "B_KURZ": je_zeile(platz("statistics_short_term"), z.get("statistics_short_term")),
+           "B_LTS": je_zeile(platz("statistics"), z.get("statistics")),
+           # wie der Festwert: events und event_data samt Indizes je Event-Zeile
+           "B_EVENT": je_zeile((platz("events") or 0) + (platz("event_data") or 0) or None, z.get("events"))}
+    # Attribute: Platz samt Index ÷ Nutzdaten (mittlere JSON-Länge × Zeilen) – Faktor auf die Bytes der Attribut-Analyse
+    al = (d.get("attr_laenge") or [None])[0]
+    nutz = al * z["state_attributes"] if al and z.get("state_attributes", 0) >= MIN_ZEILEN else None
+    roh["B_ATTR_FAKTOR"] = platz("state_attributes") / nutz if nutz and platz("state_attributes") else None
+    return {k: (round(v) if k != "B_ATTR_FAKTOR" else round(v, 3)) for k, v in roh.items()
+            if v is not None and GRENZEN[k][0] <= v <= GRENZEN[k][1]}
+
+
+def messwerte_setzen(struktur_pfad):
+    """Punkt 293: Modulwerte B_… aus dem letzten Stand in struktur.db setzen (nur bei geänderter Datei neu gelesen).
+    Fehlende oder unplausible Werte bleiben beim Festwert; MESSUNG beschreibt, was gilt. Liefert True bei einer Änderung."""
+    mtime = os.path.getmtime(struktur_pfad) if os.path.exists(struktur_pfad) else 0
+    if mtime == _MESS_MTIME[0]:
+        return False
+    _MESS_MTIME[0] = mtime
+    gemessen, zeit = {}, None
+    if mtime:
+        try:
+            stand = struktur.lies(struktur_pfad)["stand"] or {}
+            gemessen, zeit = zeilengroessen(stand), stand.get("zeit")
+        except Exception:  # noqa: BLE001 – ohne Messung gelten die Festwerte
+            gemessen = {}
+    werte = {**VORGABE, **gemessen}
+    globals().update(werte)
+    MESSUNG.update(quelle="gemessen" if gemessen else "fest", zeit=zeit, werte=werte, fest=[k for k in VORGABE if k not in gemessen])
+    return True
+
 
 def _histogramm(con, sql):
     h = {}
     for k, tag, n in con.execute(sql):
         h.setdefault(k, []).append((tag, n))
     return h
+
+
+def ev_teiler(ev, heute):
+    """Punkt 255: Durch wie viele Tage der Event-Zuwachs im Fenster [heute-8, heute-1) zu teilen ist. Events kennen je Typ nur Tage mit
+    Treffern; der älteste noch vorhandene Tag (über alle Typen) begrenzt das Fenster – bei einer 7-Tage-Regel ist heute-8 immer schon
+    gelöscht, es zählen dann 6 Tage statt fest 7. Mindestens 1, höchstens 7 (States: Punkt 192, fest ÷ 7, unverändert)."""
+    if not ev:
+        return 7
+    start = min((t for h in ev.values() for t, _n in h), default=heute - 8)
+    return max(1, min(7, heute - 1 - max(heute - 8, start)))
 
 
 def _aelter(h, schluessel, grenze_tag):
@@ -214,15 +273,12 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             if art == "kurzzeit":
                 r["states"] += loesch["states"]
                 r["kurz"] += loesch["kurz"]
-                r["attr_zeilen"] += loesch["attr_zeilen"] or 0     # Attribute folgen der Kurzzeit
                 d = (basis["states"] - prog["states"]) + (basis["kurz"] - prog["kurz"])
                 r["ersparnis_states"] += d
-                # ab 0.3.4 kein eigener Attribut-Wert: Attribut-Löschmenge und -Ersparnis gehören zur Kurzzeit-Regel
-                r["attr_bytes"] += loesch["attr_bytes"] or 0
-                da = basis["attribute"] - prog["attribute"]
-                r["ersparnis_attr"] += da
-                d += da
             elif art == "attribute":
+                # Punkt 254 (0.5.6b9): Attribute haben wieder einen eigenen Wert – Löschmenge und Ersparnis gehören der Regel,
+                # die ihn setzt (der Attribut-Standard hat keine Regel-ID und erscheint nur in den Summen)
+                r["attr_zeilen"] += loesch["attr_zeilen"] or 0
                 r["attr_bytes"] += loesch["attr_bytes"] or 0
                 d = basis["attribute"] - prog["attribute"]
                 r["ersparnis_attr"] += d
@@ -240,7 +296,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                                  for art in rg.WERTE},
                        "loeschbar": loesch, "prognose_bytes": sum(prog.values()), "prognose_teile": prog,
                        # Punkt 63: Block „Löschmenge sofort“ als flache Felder (Server-Filter, Sortierung, Summen)
-                       "loesch_summe": loesch["states"] + loesch["kurz"] + loesch["lts"], "loesch_states": loesch["states"],
+                       "loesch_summe": loesch["states"] + loesch["kurz"] + loesch["lts"] + (loesch["attr_zeilen"] or 0), "loesch_states": loesch["states"],   # Punkt 243: inkl. Attribute
                        "loesch_kurz": loesch["kurz"], "loesch_lts": loesch["lts"], "loesch_attr_zeilen": loesch["attr_zeilen"],
                        # Punkt 197 (0.5.5b9): Platz der Löschmenge sofort in Bytes – States, 5-Min, Langzeit und Attribute
                        "loesch_mb": (loesch["states"] * B_STATE + loesch["kurz"] * B_KURZ + loesch["lts"] * B_LTS
@@ -252,11 +308,12 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
     events_liste, ev_prog, ev_basis = [], None, None
     if ev is not None:
         ev_prog = ev_basis = 0
+        teiler = ev_teiler(ev, heute)      # Punkt 255
         for typ, h in ev.items():
             er = rg.event_regel(regel_daten, typ, pkd, mit_vorgemerkten)    # ab 0.3.1 über Regeln vom Typ event
             k = er["tage"]           # Punkt 102: wirksam (höchstens purge_keep_days), nicht der Prognosezeitraum
             kp = min(k, ziel)
-            pro_tag = sum(n for t_, n in h if heute - 8 <= t_ < heute - 1) / 7      # 7 volle Tage
+            pro_tag = sum(n for t_, n in h if heute - 8 <= t_ < heute - 1) / teiler      # Punkt 255: Tage mit möglichen Daten (höchstens 7)
             loesch = _aelter(ev, typ, heute - max(k, MIN_KEEP_DAYS))
             p, b = pro_tag * B_EVENT * kp, pro_tag * B_EVENT * zb
             ev_prog += p
@@ -304,7 +361,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
     return {
         "stand": {"analyse_zeit": float(info["analyse_zeit"]), "attribut_analyse": float(attr_stand) if attr_stand else None,
                   "db_bytes": int(info["db_bytes"]), "purge_keep_days": pkd, "ziel_tage": ziel,
-                  "mit_vorgemerkten": mit_vorgemerkten},
+                  "mit_vorgemerkten": mit_vorgemerkten, "zeilengroessen": dict(MESSUNG)},   # Punkt 293
         "summe": {**summe, "events_bytes": ev_p, "events_basis_bytes": ev_b, "prognose_bytes": prognose, "basis_bytes": basis_summe},
         "regeln": regeln_liste,
         "events": events_liste,
@@ -333,6 +390,8 @@ def _basis(e):
     anf = [t for t in (b["st_first_ts"], b["kurz_first_ts"], b["lts_first_ts"]) if t is not None]
     end = [t for t in (b["st_last_ts"], b["kurz_last_ts"], b["lts_last_ts"]) if t is not None]
     b["first_ts"], b["last_ts"] = (min(anf) if anf else None), (max(end) if end else None)
+    kz = [t for t in (b["st_first_ts"], b["kurz_first_ts"]) if t is not None]   # Punkt 309: erster Kurzzeit-Datensatz (States, 5-Min); Langzeit: lts_first_ts
+    b["kz_first_ts"] = min(kz) if kz else None
     return b
 
 
@@ -361,7 +420,8 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     ziel = int(ziel_tage or pkd)
     monate = max(1, ceil(ziel / MONAT - 1e-9))
     tage = [0] + [min(round(m * MONAT), ziel) for m in range(1, monate + 1)]
-    ohne = {"standard": dict(rg.STANDARD), "regeln": []}
+    # Punkt 254: „ohne“ und „ha“ bilden HA nach: Attribute folgen den States (kein Attribut-Standard)
+    ohne = {"standard": {**rg.STANDARD, "attribute": "wie_kurzzeit"}, "regeln": []}
     varianten = {"ohne": (ohne, False), "ha": ({**ohne, "regeln": [{**rg.HA_STANDARD, "aktiv": True}]}, False),
                  "aktiv": (regel_daten, mit_passiven), "alle": (regel_daten, True)}
     ha_regel = next((r for r in regel_daten["regeln"] if r["typ"] == "ha_standard"), rg.HA_STANDARD)
@@ -405,10 +465,11 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
                 zufluss(k, KURZ_PRO_TAG * B_KURZ)
                 zufluss(lz, LTS_PRO_TAG * B_LTS)
         if ev is not None:
+            teiler = ev_teiler(ev, heute)      # Punkt 255
             for typ, h in ev.items():
                 k = rg.event_regel(daten, typ, pkd, passiv)["tage"]
                 bestand_add(h, B_EVENT, max(k, MIN_KEEP_DAYS))
-                zufluss(k, sum(n for t, n in h if heute - 8 <= t < heute - 1) / 7 * B_EVENT)
+                zufluss(k, sum(n for t, n in h if heute - 8 <= t < heute - 1) / teiler * B_EVENT)
         else:
             zufluss(pkd, int(info.get("events_pro_tag", 0)) * B_EVENT)
         bestand = best
@@ -420,5 +481,6 @@ def verlauf(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_passiven=Fal
     rest = int(info["db_bytes"]) - bestand
     return {"stand": {"analyse_zeit": float(info["analyse_zeit"]), "db_bytes": int(info["db_bytes"]), "purge_keep_days": pkd,
                       "ziel_tage": ziel, "mit_passiven": mit_passiven,
-                      "ha_kurzzeit": ha_regel["kurzzeit"], "ha_aktiv": bool(ha_regel.get("aktiv")), "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand},
+                      "ha_kurzzeit": ha_regel["kurzzeit"], "ha_langzeit": ha_regel.get("langzeit") or "unbegrenzt", "ha_aktiv": bool(ha_regel.get("aktiv")), "mit_attribute": mit_attr, "rest_bytes": rest, "daten_bytes": bestand,
+                      "zeilengroessen": dict(MESSUNG)},   # Punkt 293
             "tage": tage, "werte": {k: [round(rest + v) for v in r] for k, r in werte.items()}}

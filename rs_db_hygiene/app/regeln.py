@@ -1,8 +1,12 @@
 """Regelmodell: Vorhaltezeiten pro Entität.
 
-Ab 0.3.4 (Sammelliste 61): Es gibt keinen eigenen Wert „Attribute“ mehr. Attribute folgen immer der Kurzzeit und werden
-mit den Kurzzeit-States gelöscht (HA räumt dabei nicht mehr benutzte Attributzeilen ab). Ein gesetzter Attribut-Wert
-in der Regeldatei wird beim Laden verworfen (Hinweis im App-Protokoll); der Schlüssel bleibt intern als „wie_kurzzeit“.
+Attribute (Punkt 254, ab 0.5.6b9): Der Wert „Attribute“ ist wieder eigenständig. Es gibt einen Attribut-Standard
+(Schlüssel attribut_standard der Regeldatei, Voreinstellung „wie_kurzzeit“ = Attribute folgen den States wie bisher, z. B. 30d
+spart Platz); jede Regel kann ihn überschreiben (Dauer oder „wie_kurzzeit“). Attribute werden nach dieser Frist von den States getrennt (states.attributes_id = NULL, nur über die
+Integration), die States selbst bleiben bis zu ihrer Kurzzeit. Wirksam ist nie mehr als die Kurzzeit der Entität.
+Schutz-Regeln haben dafür die Option „Attribute mitschützen“ (attribute_schutz, Voreinstellung an = wie bisher):
+an = Attribute bleiben so lange wie die States, aus = es gilt der Attribut-Standard bzw. eine andere Regel.
+(Ab 0.3.4 bis 0.5.6b8 folgten die Attribute immer der Kurzzeit; Sammelliste 61.)
 
   kurzzeit   Rohdaten (states) und 5-Min-Statistik     Standard "global" (= purge_keep_days)
   attribute  Attribute der Rohdaten                     Standard "wie_kurzzeit"
@@ -69,7 +73,8 @@ WERTE = ("kurzzeit", "attribute", "langzeit")
 EINHEIT_TAGE = {"d": 1, "w": 7, "m": 30, "j": 365}
 EINHEIT_NAME = {"d": "Tage", "w": "Wochen", "m": "Monate", "j": "Jahre"}
 SONDERWERTE = {"kurzzeit": {"global", "keine"}, "attribute": {"wie_kurzzeit", "keine"}, "langzeit": {"unbegrenzt", "keine"}}
-STANDARD = {"kurzzeit": "global", "attribute": "wie_kurzzeit", "langzeit": "unbegrenzt"}
+ATTR_STANDARD = "wie_kurzzeit"      # Punkt 254: Voreinstellung des Attribut-Standards (Attribute folgen der Kurzzeit; 30 d o. ä. einstellbar)
+STANDARD = {"kurzzeit": "global", "attribute": ATTR_STANDARD, "langzeit": "unbegrenzt"}
 TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "herkunft": 4, "vielschreiber": 5, "verwaist": 6, "event": 7,
             "ha_standard": 8}
 # Punkte 193/196: wirken wie glob/klasse nur auf nicht verwaiste Entitäten und nie auf Zähler
@@ -79,28 +84,70 @@ _SCHWELLE = re.compile(r"^(?:>=|≥)?\s*(\d{1,9})$")
 # Schwelle und die Entitäten, die bei der vorigen Analyse dazugehörten (gesetzt von halte_vielschreiber)
 HYSTERESE = 0.8
 HALTEN = {}
-SCHUTZ_WERTE = {"kurzzeit": "global", "attribute": None, "langzeit": "unbegrenzt"}   # Punkt 111: fest
+SCHUTZ_WERTE = {"kurzzeit": "global", "langzeit": "unbegrenzt"}   # Punkt 111: fest; Attribute je nach attribute_schutz (Punkt 254)
 # Punkt 127 (0.5.3): Regel „HA-Standard“ – Werte, Name und Notiz fest, nur aktiv/passiv änderbar
 HA_STANDARD_ID = "HA:standard"
 HA_STANDARD_TAGE = 10           # Voreinstellung des Recorders (purge_keep_days)
 HA_STANDARD = {"id": HA_STANDARD_ID, "typ": "ha_standard", "muster": ["*"],
-               "name": f"HA-Standard: alles {HA_STANDARD_TAGE} Tage, Langzeit unbegrenzt",
+               "name": f"HA-Standard – {HA_STANDARD_TAGE}T/∞",   # Punkt 241
                "notiz": (f"Bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (purge_keep_days {HA_STANDARD_TAGE}): "
                          f"States, 5-Min-Statistik, Attribute und Events nach {HA_STANDARD_TAGE} Tagen, Langzeitstatistik nie. "
                          "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur passiv schaltbar."),
                "kurzzeit": f"{HA_STANDARD_TAGE}d", "attribute": None, "langzeit": "unbegrenzt"}
 
 
-def ha_standard(kurzzeit, aktiv):
+def ha_standard(kurzzeit, aktiv, langzeit="unbegrenzt"):
     """Punkt 190: Regel HA-Standard mit einstellbarer Kurzzeit (Dauer, gilt auch für Events). Bei 10 Tagen wie HA_STANDARD;
-    sonst Auffangregel nach diesem Vorbild – Name und Notiz nennen den eingestellten Wert. Muster, Typ und Langzeit bleiben fest."""
-    if kurzzeit == HA_STANDARD["kurzzeit"]:
+    sonst Auffangregel nach diesem Vorbild – Name und Notiz nennen den eingestellten Wert. Muster und Typ bleiben fest.
+    Punkt 249: auch die Langzeit ist einstellbar (Dauer oder unbegrenzt) – dann fängt die Regel alles ein, was keine
+    andere Regel für die Langzeit erfasst („Lumpensammler“)."""
+    if kurzzeit == HA_STANDARD["kurzzeit"] and langzeit == "unbegrenzt":
         return {**HA_STANDARD, "aktiv": aktiv}
-    t = anzeige(kurzzeit)
-    return {**HA_STANDARD, "aktiv": aktiv, "kurzzeit": kurzzeit, "name": f"HA-Standard: alles {t}, Langzeit unbegrenzt",
+    t, lt = anzeige(kurzzeit), anzeige(langzeit)
+    basis = {**HA_STANDARD, "kurzzeit": kurzzeit, "langzeit": langzeit}
+    lang = "Langzeitstatistik nie" if langzeit == "unbegrenzt" else f"Langzeitstatistik nach {lt}"
+    return {**HA_STANDARD, "aktiv": aktiv, "kurzzeit": kurzzeit, "langzeit": langzeit, "name": name_mit_suffix("HA-Standard", basis),
             "notiz": (f"Auffangregel nach dem Vorbild von Home Assistant (Grundeinstellung purge_keep_days {HA_STANDARD_TAGE}), Kurzzeit auf {t} gestellt: "
-                      f"States, 5-Min-Statistik, Attribute und Events nach {t}, Langzeitstatistik nie. "
-                      "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur Kurzzeit einstellbar und passiv schaltbar.")}
+                      f"States, 5-Min-Statistik, Attribute und Events nach {t}, {lang}. "
+                      "Gilt für alles ohne eigene Regel (niedrigster Rang). Nicht löschbar, nur Kurzzeit und Langzeit einstellbar und passiv schaltbar.")}
+
+
+# Punkt 241: Suffix der Vorhaltedauer im Regelnamen „– 30T/2J“ (Kurzzeit/Langzeit; unbegrenzt bzw. ohne eigene Langzeit ∞,
+# Event-Regeln nur die Vorhaltezeit). Beim Speichern einer Regel ersetzt es ein vorhandenes Suffix (alt „– 30 Tage / 1 Jahr“,
+# „7d/unbegrenzt“ oder neu), ein Zusatz in Klammern dahinter („(vor R07)“) bleibt erhalten.
+_EINH_KURZ = {"d": "T", "w": "W", "m": "M", "j": "J"}
+_DAUER = r"(?:(?:A\s*)?\d+\s*(?:Tage?|Wochen?|Monate?|Jahre?|[TWMJdwmj])|unbegrenzt|global|keine|∞)"   # Punkt 254: „A 14T“ = Attribut-Wert
+_SUFFIX = re.compile(rf"(?:\s+[–-]\s+{_DAUER}(?:\s*/\s*{_DAUER})*|\s+{_DAUER}\s*/\s*{_DAUER})(\s*\([^()]*\))?\s*$")
+
+
+def wert_kurz(w, leer="∞"):
+    if w is None or w == "":
+        return leer
+    if w == "unbegrenzt":
+        return "∞"
+    if w == "keine":
+        return "0T"
+    m = re.match(r"^(\d+)([dwmj])$", str(w))
+    return f"{m.group(1)}{_EINH_KURZ[m.group(2)]}" if m else str(w)
+
+
+def suffix(r):
+    # Punkt 254: Regel nur mit Attribut-Wert (ohne Kurz- und Langzeit) → „A 14T“ statt „global/∞“
+    a = r.get("attribute")
+    if r.get("typ") != "event" and not r.get("kurzzeit") and not r.get("langzeit") and a and a != "wie_kurzzeit":
+        return f"A {wert_kurz(a)}"
+    k = wert_kurz(r.get("kurzzeit"), "global")
+    return k if r.get("typ") == "event" else f"{k}/{wert_kurz(r.get('langzeit'))}"
+
+
+def name_mit_suffix(name, r):
+    name = (name or "").strip()
+    m = _SUFFIX.search(name)
+    if m:
+        name = (name[:m.start()] + (m.group(1) or "")).strip()
+    return f"{name} – {suffix(r)}" if name else suffix(r)
+
+
 VERWAIST_ARTEN = {"alle", "geloescht", "ohne_spur", "deaktiviert"}
 # Status aus der Analyse → Art-Wort der Regel; „alle“ umfasst nur die echten Verwaisten, nicht die Deaktivierten (Punkt 186)
 VERWAIST_STATUS = {"verwaist_geloescht": "geloescht", "verwaist": "ohne_spur"}
@@ -150,10 +197,14 @@ def anzeige(wert):
 def normalisiere(daten):
     """Prüft und normalisiert eine Regeldatei; wirft RegelFehler."""
     std = dict(STANDARD)
-    for art in WERTE:
+    for art in ("kurzzeit", "langzeit"):
         w = pruefe_wert(art, (daten.get("standard") or {}).get(art, STANDARD[art]))
         std[art] = w or STANDARD[art]
-    std["attribute"] = "wie_kurzzeit"      # Punkt 61: Attribute folgen immer der Kurzzeit
+    # Punkt 254: Attribut-Standard als eigener Schlüssel (fehlt er, 30 Tage); „keine“ gibt es hier nicht
+    at = pruefe_wert("attribute", daten.get("attribut_standard") or ATTR_STANDARD)
+    if at == "keine":
+        raise RegelFehler("Attribut-Standard: „keine“ ist nicht erlaubt (Dauer oder wie_kurzzeit)")
+    std["attribute"] = at
     regeln, ids = [], set()
     for i, r in enumerate(daten.get("regeln") or []):
         rid = str(r.get("id") or f"R{i + 1:02d}")
@@ -167,10 +218,13 @@ def normalisiere(daten):
             kz = pruefe_wert("kurzzeit", r.get("kurzzeit") or HA_STANDARD["kurzzeit"])
             if not _DAUER.match(kz):
                 raise RegelFehler(f"{rid}: Kurzzeit braucht eine Dauer (n d/w/m/j), nicht „{kz}“")
-            regeln.append(ha_standard(kz, r.get("aktiv", True) is not False))
+            lz = pruefe_wert("langzeit", r.get("langzeit") or "unbegrenzt")      # Punkt 249
+            if lz != "unbegrenzt" and not _DAUER.match(lz):
+                raise RegelFehler(f"{rid}: Langzeit braucht eine Dauer (n d/w/m/j) oder unbegrenzt, nicht „{lz}“")
+            regeln.append(ha_standard(kz, r.get("aktiv", True) is not False, lz))
             continue
         if typ not in TYP_RANG:
-            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft, vielschreiber, verwaist oder event sein")
+            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft (Anzeige: integration), vielschreiber, verwaist oder event sein")
         roh = r.get("muster") or []
         if isinstance(roh, str):
             roh = re.split(r"[\n,]", roh)
@@ -185,20 +239,18 @@ def normalisiere(daten):
                 raise RegelFehler(f"{rid}: vielschreiber braucht genau eine Schwelle in Zeilen je Tag (Zahl ≥ 1), z. B. 500")
             muster = [_SCHWELLE.match(zahlen[0]).group(1)] + [m for m in muster if m not in zahlen]
         if typ == "herkunft" and any(not _EVENT_MUSTER.match(m) for m in muster):   # gleiche Zeichen wie Event-Typen
-            raise RegelFehler(f"{rid}: herkunft-Muster sind Integrationen wie unifi oder mobile_app (Kleinbuchstaben, Ziffern, _ . * ?)")
+            raise RegelFehler(f"{rid}: Muster vom Typ herkunft (Anzeige: integration) sind Integrationen wie unifi oder mobile_app (Kleinbuchstaben, Ziffern, _ . * ?)")
         neu = {"id": rid, "name": str(r.get("name") or rid), "typ": typ, "muster": muster,
                "aktiv": r.get("aktiv", True) is not False, "notiz": str(r.get("notiz") or "")}
         for art in WERTE:
             neu[art] = pruefe_wert(art, r.get(art))
-        if typ == "schutz":                   # Punkt 111: Werte fest, unabhängig von der Eingabe
+        if typ == "schutz":                   # Punkt 111: Werte fest; Punkt 254: Attribute mitschützen (Voreinstellung an)
+            schutz_attr = r.get("attribute_schutz", True) is not False
             neu.update(SCHUTZ_WERTE)
-        if neu["attribute"] is not None:      # Punkt 61: eigener Attribut-Wert entfällt
-            if neu["attribute"] != "wie_kurzzeit":
-                _LOG.warning("Regel %s: Attribut-Wert %s verworfen – Attribute folgen ab 0.3.4 immer der Kurzzeit", rid, neu["attribute"])
-            neu["attribute"] = None
-            if not neu["kurzzeit"] and not neu["langzeit"]:
-                _LOG.warning("Regel %s setzte nur Attribute und wurde entfernt", rid)
-                continue
+            neu["attribute"] = "wie_kurzzeit" if schutz_attr else None
+            neu["attribute_schutz"] = schutz_attr
+        if neu["attribute"] == "keine":       # Punkt 254: Attribute ganz ohne Frist gibt es nicht (Mindestfrist 1 Tag)
+            raise RegelFehler(f"{rid}: Attribute „keine“ ist nicht erlaubt (Dauer, wie_kurzzeit oder leer = Attribut-Standard)")
         if neu["kurzzeit"] == "keine" and typ != "verwaist":
             raise RegelFehler(f"{rid}: Kurzzeit „keine“ ist nur beim Regeltyp verwaist erlaubt")
         if typ == "verwaist":
@@ -232,7 +284,7 @@ def normalisiere(daten):
     if HA_STANDARD_ID not in {r["id"] for r in regeln}:
         regeln.append({**HA_STANDARD, "aktiv": False})
     # "events" bleibt leer stehen, damit der Startwert nach dem Löschen der Regel nicht wiederkommt
-    return {"standard": std, "regeln": regeln, "events": {}}
+    return {"standard": std, "attribut_standard": at, "regeln": regeln, "events": {}}
 
 
 def event_regel(daten, typ, purge_keep_days, mit_passiven=False):
@@ -289,7 +341,8 @@ def speichere(pfad, daten):
 # Dateiname regeln_<JJJJMMTT>_<hhmmss>_<grund>[<n>].json – n nur, wenn zwei Sicherungen in dieselbe Sekunde fallen
 SICHERUNGEN_BEHALTEN = 10
 _SICHERUNG = re.compile(r"^regeln_\d{8}_\d{6}_([a-z]+?)(\d*)\.json$")
-GRUENDE = {"zuruecksetzen": "vor Zurücksetzen", "wiederherstellen": "vor Wiederherstellen", "import": "vor Import"}
+GRUENDE = {"zuruecksetzen": "vor Zurücksetzen", "wiederherstellen": "vor Wiederherstellen", "import": "vor Import",
+           "regelcheck": "vor Regelwerk-Check"}   # Punkt 232
 
 
 def kennzahlen(daten, vorlage=None):
@@ -468,6 +521,8 @@ class Aufloeser:
             if zaehler and r["typ"] not in ("entity", "verwaist", "schutz", "ha_standard"):
                 geschuetzt.append(r["id"])
                 continue
+            if zaehler and r["typ"] == "ha_standard":     # Punkt 249: Zähler behalten ihre Langzeit immer (Energiestatistik), auch bei Standard-Langzeit mit Dauer
+                setzt = [a for a in setzt if a != "langzeit"]
             if r["typ"] == "schutz" and not ergebnis.get("schutz"):
                 ergebnis["schutz"] = r["id"]      # Punkt 111: geschützt (Schloss in der GUI, Ausschluss im Löschplan)
             for a in setzt:

@@ -16,6 +16,9 @@ import sqlite3
 import time
 import urllib.request
 
+import struktur
+import zuwachs
+
 _LOG = logging.getLogger("analyse")
 TAG = 86400
 # Version des Cache-Aufbaus; ältere Caches werden beim Start neu analysiert (2 = mit Herkunft, ab 0.1.4; 3 = Events je Typ, ab 0.3.0;
@@ -228,7 +231,7 @@ def _ersetze_datei(neu, ziel):
 
 # Punkt 109 (0.4.9): Fortschritt für den Herzschlag im App-Log (main._herzschlag)
 FORTSCHRITT = {}
-ANALYSE_SCHRITTE = ("states_meta", "states_tage", "states_24h", "statistics", "statistics_short_term", "events")
+ANALYSE_SCHRITTE = ("states_meta", "states_tage", "states_24h", "statistics", "statistics_short_term", "events", "struktur")
 
 
 def _schritt_fertig(name, nr, dauer):
@@ -237,11 +240,15 @@ def _schritt_fertig(name, nr, dauer):
         FORTSCHRITT.update(nr=nr + 1, schritt=ANALYSE_SCHRITTE[nr])
 
 
-def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None):
+def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None,
+            zuwachs_pfad=None, zuwachs_monate=None, struktur_pfad=None):
     """Vollanalyse von states, statistics und statistics_short_term (ohne Attribute).
 
     herkunft: Ergebnis von herkunft.ermittle() – {entity_id: {art, text, info, device_id}}.
     reg_details: Ergebnis von lies_registry_details() (ab 0.5.5b5): Status deaktiviert und Klasse ohne Zustand.
+    zuwachs_pfad: wenn gesetzt, schreibt zuwachs.fortschreiben() danach die Tageswerte in diese Datei fort (nie neu aufgebaut).
+    zuwachs_monate: Speicherdauer dieser Tageswerte in Monaten (None = Vorgabe von zuwachs.py).
+    struktur_pfad: wenn gesetzt, schreibt struktur.erfasse() den Tagesstand der Tabellen dorthin (Punkt 288, gleiche Speicherdauer).
     Dauer bei 22 GB / 73 Mio. States ca. 1–2 min.
     """
     herkunft = herkunft or {}
@@ -299,6 +306,20 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
         "JOIN event_types t ON e.event_type_id = t.event_type_id GROUP BY 1, 2").fetchall()
     schritte["events"] = time.time() - t
     _schritt_fertig("events", 6, schritte["events"])
+
+    # Punkt 288: Tagesstand der Tabellen für den Reiter Dashboard; die großen Zeilenzahlen kommen aus den Tageszahlen oben
+    t = time.time()
+    if struktur_pfad:
+        try:
+            struktur.erfasse(ha, struktur_pfad,
+                             zeilen={"states": sum(r[2] for r in st_tage), "statistics": sum(r[2] for r in lts_tage),
+                                     "statistics_short_term": sum(r[2] for r in kurz_tage), "events": sum(r[2] for r in ev_tage)},
+                             extra={"kurz_ids": len({r[0] for r in kurz_tage}), "lts_ids": len({r[0] for r in lts_tage})},
+                             monate=zuwachs_monate)
+        except Exception:  # noqa: BLE001 – Zusatzanzeige, die Analyse soll trotzdem fertig werden
+            _LOG.exception("Struktur der Datenbank konnte nicht erfasst werden")
+    schritte["struktur"] = time.time() - t
+    _schritt_fertig("struktur", 7, schritte["struktur"])
     ha.close()
 
     # Aggregation pro Entität
@@ -378,6 +399,12 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
     c.close()
     _ersetze_datei(neu, cache_pfad)
     _LOG.info("Analyse fertig in %.1f s: %s", dauer, werte["schritte"])
+    if zuwachs_pfad:
+        try:
+            zuwachs.fortschreiben(zuwachs_pfad, cache_pfad, db_pfad, meta, heute,
+                                  zuwachs.ZUWACHS_MONATE if zuwachs_monate is None else zuwachs_monate)
+        except Exception:  # noqa: BLE001 – Zusatzstatistik, die Analyse ist bereits fertig
+            _LOG.exception("Zuwachs-Statistik konnte nicht fortgeschrieben werden")
     return werte
 
 

@@ -1,5 +1,5 @@
 name: RS DB Hygiene Manager
-version: "0.5.5"
+version: "0.5.6"
 slug: rs_db_hygiene
 description: >-
   Vorhaltezeiten pro Entität (Kurzzeit samt Attributen, Langzeit) und je Event-Typ für die Recorder-Datenbank.
@@ -24,12 +24,14 @@ map:
   - homeassistant_config:ro
 options:
   db_pfad: /homeassistant/home-assistant_v2.db
-  analyse_uhrzeit: "02:15"
+  analyse_uhrzeit: "00:05"
   purge_keep_days: 0
   loeschen_freigegeben: false
   loeschen_max_zeilen: 5000000
   loeschen_max_zeilen_b: 2000000
+  loeschen_max_zeilen_attr: 2000000
   protokoll_tage: 365
+  zuwachs_monate: 24
   automatik_freigegeben: false
 schema:
   db_pfad: str
@@ -44,7 +46,11 @@ schema:
   # Punkt 87: optional (?), sonst lehnt der Supervisor das Speichern alter Konfigurationen ohne diese Option ab;
   # ohne Wert nimmt die App 2.000.000. Grundsatz: neue Optionen immer mit ? einführen.
   loeschen_max_zeilen_b: int(10000,50000000)?
+  # Punkt 295: eigene Obergrenze für abgetrennte States (Attribute kürzer als die States) – zählte bis 0.5.6b28 auf loeschen_max_zeilen_b
+  loeschen_max_zeilen_attr: int(10000,50000000)?
   # Aufbewahrung des Löschprotokolls in Tagen, 0 = unbegrenzt (die Monatssumme je Entität bleibt immer)
   protokoll_tage: int(0,3650)
+  # Punkt 287: Speicherung der Zuwachsdaten (Charts „Zeilen pro Tag“) in Monaten, 1 bis 240; optional (?) wie jede neue Option
+  zuwachs_monate: int(1,240)?
   # Läufe aus HA heraus (Knopf, Dienst, Automation) zulassen – zusätzlich zum Hauptschalter
   automatik_freigegeben: bool
