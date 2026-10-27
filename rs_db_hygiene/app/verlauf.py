@@ -109,13 +109,15 @@ def baue(r, zuwachs_pfad, q):
     if geraet is not None and plat is None:
         raise ValueError("geraet braucht plattform")
     spalten = SPALTEN[daten]
+    bestand = q.get("sicht") == "bestand"      # Punkt 334: zuwachs_pfad ist dann bestand.db, die Werte sind Stände am Ende des Zeitraums statt Summen
 
     con = sqlite3.connect(f"file:{zuwachs_pfad}?mode=ro", uri=True, timeout=60)
     try:
         abd, zw_stand = _abdeckung(con)
+        echt_von = int(dict(con.execute("SELECT schluessel, wert FROM info")).get("echt_von") or 0) if bestand else None
         quellen = [s for s in spalten if s in abd]
         if not quellen:
-            return {"fehler": "Noch keine Zuwachs-Statistik für diese Vorhaltezeit vorhanden", "buckets": []}
+            return {"fehler": ("Noch kein Bestand für diese Vorhaltezeit erfasst" if bestand else "Noch keine Zuwachs-Statistik für diese Vorhaltezeit vorhanden"), "buckets": []}
         # Die Quellen beginnen an verschiedenen Tagen (Stundenstatistik oft Monate früher als States). Gezeigt wird erst ab dem Tag, an dem alle
         # Quellen der Vorhaltezeit da sind – sonst sähe das Wachstum früher kleiner aus, als es war. Die Attribute beginnen später und zählen nicht mit.
         basis = [abd[s] for s in quellen if s != "attr"] or [abd[s] for s in quellen]
@@ -130,16 +132,30 @@ def baue(r, zuwachs_pfad, q):
         if aufl == "tag" and (bis - von).days + 1 > MAX_TAGE:
             raise ValueError("Tagesauflösung nur bis zu %d Tagen" % MAX_TAGE)
 
-        schluessel = (zw_stand, r["stand"]["analyse_zeit"], von, bis, aufl, mass, daten, grp, plat, geraet, q.get("sel"))
+        schluessel = (bestand, zw_stand, r["stand"]["analyse_zeit"], von, bis, aufl, mass, daten, grp, plat, geraet, q.get("sel"))
         if schluessel in _CACHE:
             return _CACHE[schluessel]
 
         # Woche: Tageszahl des Montags (der 1.1.1970 war ein Donnerstag → Montag = Tag − (Tag + 3) % 7); ganze Wochen abfragen
         bk = {"jahr": "strftime('%Y', tag * 86400, 'unixepoch')", "monat": "strftime('%Y-%m', tag * 86400, 'unixepoch')", "woche": "(tag - (tag + 3) % 7)", "tag": "tag"}[aufl]
         ab, bisq = (_montag(von), _montag(bis) + datetime.timedelta(days=6)) if aufl == "woche" else (von, bis)
-        zeilen = con.execute(
-            f"SELECT entity_id, {bk}, SUM(states), SUM(kurz), SUM(lts), SUM(attr), SUM(events) FROM tage "
-            "WHERE tag BETWEEN ? AND ? GROUP BY entity_id, 2", (_tageszahl(ab), _tageszahl(bisq))).fetchall()
+        if bestand:
+            # Stand: je Zeitraum der letzte erfasste Tag darin (Zeilen dieses Tages, nicht summiert). Zeitraum ohne Messung bleibt leer.
+            tage_da = [t for (t,) in con.execute("SELECT DISTINCT tag FROM tage WHERE tag BETWEEN ? AND ?", (_tageszahl(von), _tageszahl(bis)))]
+            zeilen, gewaehlt = [], {}
+            for key, d0, d1 in _zeiteimer(von, bis, aufl):
+                kand = [t for t in tage_da if _tageszahl(max(d0, von)) <= t <= _tageszahl(min(d1, bis))]
+                if not kand:
+                    continue
+                t = max(kand)
+                gewaehlt[key] = t
+                bz = key if aufl in ("jahr", "monat") else _tageszahl(d0)
+                zeilen += [(e, bz, a, b, c, d, f) for e, a, b, c, d, f in con.execute(
+                    "SELECT entity_id, states, kurz, lts, attr, events FROM tage WHERE tag = ?", (t,))]
+        else:
+            zeilen = con.execute(
+                f"SELECT entity_id, {bk}, SUM(states), SUM(kurz), SUM(lts), SUM(attr), SUM(events) FROM tage "
+                "WHERE tag BETWEEN ? AND ? GROUP BY entity_id, 2", (_tageszahl(ab), _tageszahl(bisq))).fetchall()
     finally:
         con.close()
 
@@ -158,6 +174,7 @@ def baue(r, zuwachs_pfad, q):
     ebene = ebene_von(plat, geraet)
     eimer = _zeiteimer(von, bis, aufl)
     sel = q.get("sel") if q.get("sel") in {k for k, _a, _b in eimer} else None
+    ziel_key = (sel or max(gewaehlt, key=lambda k: gewaehlt[k])) if bestand and gewaehlt else None   # Bestand: Aufschlüsselung = Stand dieses Zeitraums (sonst der letzte)
 
     # je Zeile: Kategorie-Schlüssel auf der aktuellen Ebene (None = gehört nicht zur Auswahl), Name des Elternknotens für die Farbe
     def kategorie(eid):
@@ -172,7 +189,7 @@ def baue(r, zuwachs_pfad, q):
             return d, p
         return (eid, p) if d == geraet else (None, None)
 
-    serien_summe, bucket_wert, bucket_summe, liste_summe = {}, {}, {}, {}
+    serien_summe, bucket_wert, bucket_summe, liste_summe, serien_ende = {}, {}, {}, {}, {}
     kat_eltern = {}
     for z in zeilen:
         key, eltern = kategorie(z[0])
@@ -192,7 +209,12 @@ def baue(r, zuwachs_pfad, q):
             bucket_wert[b][sk] = bucket_wert[b].get(sk, 0) + v
             serien_summe[sk] = serien_summe.get(sk, 0) + v
         bucket_summe[b] = bucket_summe.get(b, 0) + gesamt
-        if sel is None or b == sel:
+        if bestand:
+            if b == ziel_key:
+                liste_summe[key] = liste_summe.get(key, 0) + gesamt
+                for sk, v in reihe.items():
+                    serien_ende[sk] = serien_ende.get(sk, 0) + v
+        elif sel is None or b == sel:
             liste_summe[key] = liste_summe.get(key, 0) + gesamt
 
     # Serien: die größten MAX_SERIEN einzeln, der Rest „übrige“
@@ -213,10 +235,12 @@ def baue(r, zuwachs_pfad, q):
             return "(ohne Gerät)" if k == verursacher.OHNE else (namen.get(k) or k[:8])
         return k
 
-    serien = [{"key": k, "name": name(k), "summe": round(serien_summe[k]),
+    # Bestand: die Legende zeigt den Stand des gewählten (sonst letzten) Zeitraums; die Summe über alle Zeiträume dient nur der Reihenfolge
+    ende = serien_ende if bestand else serien_summe
+    serien = [{"key": k, "name": name(k), "summe": round(ende.get(k, 0)),
                "slot": (slots.get(kat_eltern.get(k) if ebene != "plattform" else k) or 0) if grp == "kategorie" else 0} for k in einzeln]
     if rest:
-        serien.append({"key": REST, "name": f"übrige ({len(rest)})", "summe": round(sum(serien_summe[k] for k in rest)), "slot": 0})
+        serien.append({"key": REST, "name": f"übrige ({len(rest)})", "summe": round(sum(ende.get(k, 0) for k in rest)), "slot": 0})
 
     # „voll“ = der Zeitraum liegt ganz in der Abdeckung (die Attribute beginnen später und zählen dafür nicht mit); der laufende Monat und der
     # älteste, vom Recorder angeschnittene Monat sind es nicht und werden blasser gezeichnet
@@ -227,12 +251,18 @@ def baue(r, zuwachs_pfad, q):
         w = {k: round(werte[k]) for k in einzeln if werte.get(k)}
         if rest and any(werte.get(k) for k in rest):
             w[REST] = round(sum(werte.get(k, 0) for k in rest))
+        if bestand:      # voll = gemessen (blass = zurückgerechnet aus den Zuwachs-Tageswerten); ein Zeitraum ohne Messung hat keine Werte
+            geschaetzt = key in gewaehlt and gewaehlt[key] < echt_von
+            buckets.append({"key": key, "von": d0.isoformat(), "bis": d1.isoformat(), "voll": key in gewaehlt and not geschaetzt, "geschaetzt": geschaetzt,
+                            "stand": _datum(gewaehlt[key]).isoformat() if key in gewaehlt else None,
+                            "summe": round(bucket_summe.get(key, 0)), "werte": w})
+            continue
         buckets.append({"key": key, "von": d0.isoformat(), "bis": d1.isoformat(), "voll": d0 >= cov_von and d1 <= cov_bis,
                         "summe": round(bucket_summe.get(key, 0)), "werte": w})
 
     # Auffällige Tage: deutlich über dem Median der vollen Tage im Bild
     median = None
-    if aufl == "tag":
+    if aufl == "tag" and not bestand:
         vorhanden = [b["summe"] for b in buckets if b["voll"] and b["summe"] > 0]
         if len(vorhanden) >= MIN_TAGE_AUFFAELLIG:
             median = statistics.median(vorhanden)
@@ -264,7 +294,8 @@ def baue(r, zuwachs_pfad, q):
     if geraet is not None:
         pfad["geraet"] = "(ohne Gerät)" if geraet == verursacher.OHNE else (namen.get(geraet) or geraet[:8])
 
-    antwort = {"stand": r["stand"]["analyse_zeit"], "zuwachs_stand": zw_stand, "aufl": aufl, "von": von.isoformat(), "bis": bis.isoformat(),
+    antwort = {"sicht": "bestand" if bestand else "zuwachs", "echt_von": _datum(echt_von).isoformat() if echt_von else None,
+               "stand": r["stand"]["analyse_zeit"], "zuwachs_stand": zw_stand, "aufl": aufl, "von": von.isoformat(), "bis": bis.isoformat(),
                "mass": mass, "daten": daten, "grp": grp, "ebene": ebene, "pfad": pfad, "sel": sel,
                "buckets": buckets, "serien": serien, "median": median,
                "aufschluesselung": {"summe": round(sum(liste_summe.values())), "knoten": knoten, "knoten_gesamt": insgesamt},

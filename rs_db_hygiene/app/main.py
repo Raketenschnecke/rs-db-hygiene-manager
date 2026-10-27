@@ -17,6 +17,7 @@ from aiohttp import web
 
 import analyse
 import automatik
+import bestand
 import herkunft
 import loeschen
 import optimierung
@@ -41,6 +42,7 @@ OPTIONEN_PFAD = os.path.join(DATA, "options.json")
 CACHE = os.path.join(DATA, "cache.db")
 ATTR = os.path.join(DATA, "attribute.db")
 ZUWACHS = os.path.join(DATA, "zuwachs.db")      # Tageswerte neuer Zeilen je Entität, wird nur fortgeschrieben (zuwachs.py)
+BESTAND = os.path.join(DATA, "bestand.db")        # Punkt 334: Bestand je Entität und Tag (bestand.py)
 STRUKTUR = os.path.join(DATA, "struktur.db")    # Punkt 288: Tagesstand der Tabellen für den Reiter Dashboard (struktur.py)
 REGELN = os.path.join(DATA, "regeln.json")
 HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
@@ -159,7 +161,7 @@ def _analyse_sync():
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate(), STRUKTUR)
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate(), STRUKTUR, BESTAND)
 
 
 def _cache_version():
@@ -177,7 +179,12 @@ def _cache_version():
 
 def _attribut_sync():
     db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
-    return analyse.attribut_analyse(db, ATTR)
+    erg = analyse.attribut_analyse(db, ATTR)
+    try:   # Punkt 334: die Attributzeilen im heutigen Bestand mit dem frischen Stand nachziehen
+        bestand.attribute_nachtragen(BESTAND, CACHE, ATTR, analyse.lokaler_tag(time.time()))
+    except Exception:  # noqa: BLE001 – Zusatzstatistik
+        _LOG.exception("Bestand: Attribute konnten nicht nachgetragen werden")
+    return erg
 
 
 def _beide_sync():
@@ -295,9 +302,13 @@ async def nur_ingress(request, handler):
             if request.can_read_body and request.content_type != "application/json":
                 return web.Response(status=415, text="Nur application/json erlaubt")
     try:
-        return await handler(request)
+        antwort = await handler(request)
     except rg.RegelFehler as e:
-        return web.json_response({"fehler": str(e)}, status=400)
+        antwort = web.json_response({"fehler": str(e)}, status=400)
+    # Punkt 332: die Seite fragt der Browser bei jedem Laden nach (304 ohne Änderung, sonst sofort die neue Fassung nach einem
+    # Update, ohne Strg+F5); API-Antworten sind Live-Daten und werden nie zwischengespeichert
+    antwort.headers.setdefault("Cache-Control", "no-cache" if request.path == "/" else "no-store")
+    return antwort
 
 
 def _parameter(request):
@@ -515,7 +526,10 @@ async def verlauf_lesen(request):
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
     try:
-        return web.json_response(await asyncio.to_thread(verlauf.baue, r, ZUWACHS, request.query))
+        bestand_sicht = request.query.get("sicht") == "bestand"      # Punkt 334: Bestand statt Zuwachs
+        if bestand_sicht and not os.path.exists(BESTAND):
+            return web.json_response({"fehler": "Noch kein Bestand erfasst – er entsteht mit der nächsten Analyse"}, status=404)
+        return web.json_response(await asyncio.to_thread(verlauf.baue, r, BESTAND if bestand_sicht else ZUWACHS, request.query))
     except ValueError as e:
         return web.json_response({"fehler": f"Ungültige Angabe: {e}"}, status=400)
 

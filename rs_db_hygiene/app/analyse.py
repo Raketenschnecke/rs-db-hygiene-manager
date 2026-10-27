@@ -16,6 +16,7 @@ import sqlite3
 import time
 import urllib.request
 
+import bestand
 import struktur
 import zuwachs
 
@@ -241,7 +242,7 @@ def _schritt_fertig(name, nr, dauer):
 
 
 def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days, herkunft=None, reg_details=None,
-            zuwachs_pfad=None, zuwachs_monate=None, struktur_pfad=None):
+            zuwachs_pfad=None, zuwachs_monate=None, struktur_pfad=None, bestand_pfad=None):
     """Vollanalyse von states, statistics und statistics_short_term (ohne Attribute).
 
     herkunft: Ergebnis von herkunft.ermittle() – {entity_id: {art, text, info, device_id}}.
@@ -249,6 +250,7 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
     zuwachs_pfad: wenn gesetzt, schreibt zuwachs.fortschreiben() danach die Tageswerte in diese Datei fort (nie neu aufgebaut).
     zuwachs_monate: Speicherdauer dieser Tageswerte in Monaten (None = Vorgabe von zuwachs.py).
     struktur_pfad: wenn gesetzt, schreibt struktur.erfasse() den Tagesstand der Tabellen dorthin (Punkt 288, gleiche Speicherdauer).
+    bestand_pfad: wenn gesetzt, hält bestand.erfasse() den Bestand je Entität dort fest (Punkt 334, gleiche Speicherdauer wie der Zuwachs).
     Dauer bei 22 GB / 73 Mio. States ca. 1–2 min.
     """
     herkunft = herkunft or {}
@@ -405,6 +407,12 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
                                   zuwachs.ZUWACHS_MONATE if zuwachs_monate is None else zuwachs_monate)
         except Exception:  # noqa: BLE001 – Zusatzstatistik, die Analyse ist bereits fertig
             _LOG.exception("Zuwachs-Statistik konnte nicht fortgeschrieben werden")
+    if bestand_pfad:
+        try:
+            bestand.erfasse(bestand_pfad, cache_pfad, os.path.join(os.path.dirname(cache_pfad), "attribute.db"), zuwachs_pfad, heute,
+                            zuwachs.ZUWACHS_MONATE if zuwachs_monate is None else zuwachs_monate)
+        except Exception:  # noqa: BLE001 – Zusatzstatistik, die Analyse ist bereits fertig
+            _LOG.exception("Bestand konnte nicht erfasst werden")
     return werte
 
 

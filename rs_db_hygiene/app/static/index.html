@@ -5706,13 +5706,14 @@ function dashKarten(s) {
   return K.map(([n, term, zw, text, fuss]) => `<div class="d-karte" style="--c:${D_ZWEIG[zw]}"><h3>${esc(n)}</h3><span class="term">${esc(term)}</span>${[].concat(text).map(t => t.startsWith("<ul") ? t : `<p>${t}</p>`).join("")}<span class="meta">${fuss}</span></div>`).join("");
 }
 
-// Punkt 307: Unterreiter im Reiter Dashboard; jeder füllt die Höhe exakt (kein Scrollbalken). Welcher offen ist, merkt sich der Browser.
+// Punkt 307: Unterreiter im Reiter Dashboard; jeder füllt die Höhe exakt (kein Scrollbalken). Punkt 333: nach dem Neuladen der Seite immer „Datenmenge“ (nichts mehr im Browser gemerkt)
 const DASH_SUB = [["donut", "Datenmenge", "dpDonut", "Wer die Datenmenge treibt: Integration → Gerät → Entität als Donut"],
-  ["zeit", "Entwicklung", "dpZeit", "Wann wie viel dazukam: Jahr → Monat → Woche → Tag, gestapelt nach Integration, Gerät, Entität oder Tabelle"],
+  ["zeit", "Zuwachs", "dpZeit", "Wann wie viel dazukam: Jahr → Monat → Woche → Tag, gestapelt nach Integration, Gerät, Entität oder Tabelle"],
+  ["bestand", "Bestand", "dpZeit", "Wie viel zu welchem Zeitpunkt in der Datenbank lag (Stand am Ende von Jahr, Monat, Woche oder Tag), gestapelt nach Integration, Gerät, Entität oder Tabelle – ab dem Start der Erfassung gemessen, davor zurückgerechnet"],
   ["bez", "Beziehungen", "dpBez", "Wie die Tabellen der Recorder-Datenbank zusammenhängen"],
   ["platz", "Wo der Platz liegt", "dpPlatz", "Größe je Tabelle, getrennt nach Nutzdaten und Indizes"],
   ["tab", "Was in welcher Tabelle steht", "dpTab", "Zeilenzahlen und Zeiträume je Tabelle"]];
-let dashSub = (() => { const v = speicher.lies("dbh_dash_sub", "donut"); return DASH_SUB.some(s => s[0] === v) ? v : "donut"; })();
+let dashSub = "donut";
 
 // Schrift eines Panes in 0,5-px-Schritten verkleinern (Grundschrift 13 px), bis nichts mehr über Höhe oder Breite hinausragt
 function dashPasseText(el) {
@@ -5730,10 +5731,11 @@ function dashPasseDonut() {
 }
 function dashPasse() { dashPasseDonut(); Zeit.passe(); ["dpPlatz", "dpTab"].forEach(i => dashPasseText($("#" + i))); }
 function dashZeige(sub) {
-  dashSub = sub; speicher.schreib("dbh_dash_sub", sub);
-  DASH_SUB.forEach(([k, , id]) => $("#" + id).hidden = k !== sub);
+  dashSub = sub;
+  const paneId = (DASH_SUB.find(x => x[0] === sub) || [])[2];      // Punkt 334: „Zuwachs“ und „Bestand“ teilen sich das Pane dpZeit
+  DASH_SUB.forEach(([, , id]) => $("#" + id).hidden = id !== paneId);
   $("#dashSub").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sub === sub)));
-  if (sub === "zeit") Zeit.laden();
+  if (sub === "zeit" || sub === "bestand") Zeit.sicht(sub === "bestand" ? "bestand" : "zuwachs");
   dashPasse();
 }
 {
@@ -5961,7 +5963,10 @@ const Donut = (() => {
       const txt = t.ring === 1 && t.aussen ? fmtP(t.k.wert / neu.F.wert) : beschrifte(t), dick = t.ra - t.ri;
       s.lbl.textContent = kurz(txt, t.ring === 1 && t.aussen ? 6 : Math.max(8, Math.floor(dick / 6.4)));
       s.lbl.style.fontWeight = t.ring === 1 ? 600 : 400;
-      s.path.innerHTML = `<title>${esc(t.k.name)}${t.k.detail ? ": " + esc(kurz(t.k.detail, 400)) : ""} – ${wertTxt(t.k)} (${fmtP(t.k.wert / wurzel.wert)} gesamt, ${fmtP(t.k.wert / neu.F.wert)} von ${esc(neu.F.name)}), ${platz(t.k)}${zoombar(t.k) ? " · Klick: hineinzoomen" : ""}</title>`;
+      // Punkt 336: title-Attribut statt SVG-<title> → eigene Tooltip-Anzeige statt Browser-Tooltip (wie im Zeitverlauf)
+      s.path.replaceChildren();
+      s.path.setAttribute("title", [`# ${t.k.name}: ${wertTxt(t.k)}`, t.k.detail ? kurz(t.k.detail, 400) : "",
+        `Anteil: ${fmtP(t.k.wert / wurzel.wert)} gesamt, ${fmtP(t.k.wert / neu.F.wert)} von ${neu.F.name} · ${platz(t.k)}`, zoombar(t.k) ? "Klick: hineinzoomen" : ""].filter(Boolean).join("\n"));
       s.path.onclick = zoombar(t.k) ? () => zoomZu(t.k) : null;
       s.path.onmouseenter = () => hover(t.k, t); s.path.onmouseleave = () => hover(null);
     });
@@ -6098,6 +6103,8 @@ const Zeit = (() => {
   let vz = waehle("dbh_zeit_vz", Object.keys(VZ), "alle"), mass = waehle("dbh_zeit_mass", Object.keys(MASS), "zeilen"), grp = waehle("dbh_zeit_grp", Object.keys(GRP), "kategorie");
   let ansichten = [{ aufl: null, von: null, bis: null, label: "Gesamtzeitraum" }];   // gezoomte Zeiträume; die letzte ist die aktuelle
   let plat = null, geraet = null, sel = null, D = null, nr = 0;
+  let sicht = "zuwachs";   // Punkt 334: dieselbe Ansicht zeigt den Zuwachs (Summe je Zeitraum) oder den Bestand (Stand am Ende des Zeitraums)
+  const bestandSicht = () => sicht === "bestand";
 
   const fmtZ = n => n >= 1e6 ? (n / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " Mio" : Math.round(n).toLocaleString("de-DE");
   const fmtB = b => b >= 1e9 ? (b / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " GB" : (b / 1e6).toLocaleString("de-DE", { maximumFractionDigits: b < 1e7 ? 1 : 0 }) + " MB";
@@ -6149,7 +6156,7 @@ const Zeit = (() => {
     const tage = D.aufl === "tag", L = 74, R = 8, T = 20, B = tage ? 44 : 26, n = D.buckets.length, bw = (W - L - R) / n, luecke = Math.min(4, bw * 0.2);
     const top = nice(Math.max(...D.buckets.map(b => b.summe), 1)), ph = H - T - B;
     const y = v => T + ph * (1 - v / top);
-    const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Zuwachs im Zeitverlauf" });
+    const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": bestandSicht() ? "Bestand im Zeitverlauf" : "Zuwachs im Zeitverlauf" });
     for (let i = 0; i <= 4; i++) {
       const v = top * i / 4;
       svg.append(el("line", { class: "dz-g", x1: L, x2: W - R, y1: y(v), y2: y(v) }));
@@ -6165,7 +6172,8 @@ const Zeit = (() => {
         const h = ph * v / top; unten -= h;
         g.append(el("rect", { class: "dz-b" + (b.voll ? "" : " dz-teil"), x, y: unten, width: w, height: h, fill: serienFarbe(s) }));
       });
-      const zeilen = [`${zeitLabel(b, D.aufl, true)}: ${fmtW(b.summe)}${b.voll ? "" : " (nicht vollständig erfasst)"}`]
+      const zusatz = bestandSicht() ? (b.stand ? ` · Stand ${dt(b.stand).toLocaleDateString("de-DE")}${b.geschaetzt ? ", zurückgerechnet (geschätzt)" : ", gemessen"}` : " · keine Messung") : (b.voll ? "" : " · nicht vollständig erfasst");
+      const zeilen = [`# ${zeitLabel(b, D.aufl, true)}: ${fmtW(b.summe)}${zusatz}`]
         .concat(D.serien.filter(s => b.werte[s.key]).reverse().map(s =>   // oberstes Segment zuerst, wie der Balkenstapel von oben gelesen
  `${s.name}: ${fmtW(b.werte[s.key])} (${fmtP(100 * b.werte[s.key] / b.summe)})`));
       if (b.auffaellig) zeilen.push(`! ▲ auffällig: mehr als das ${String(2.5).replace(".", ",")}-Fache des Tagesmedians (${fmtW(D.median)})`);
@@ -6281,7 +6289,8 @@ const Zeit = (() => {
     const a = D.aufschluesselung, wo = sel ? zeitLabel(D.buckets.find(b => b.key === sel) || { key: sel, von: sel }, D.aufl, true) : ansichten[ansichten.length - 1].label;
     const kopf = document.createElement("div"); kopf.className = "dz-kopfz";
     const ebeneName = { plattform: "Integrationen", geraet: "Geräte", entitaet: "Entitäten" }[D.ebene];
-    kopf.textContent = `${ebeneName} in „${wo}“: ${fmtW(a.summe)}${a.knoten_gesamt > a.knoten.length ? ` · die größten ${a.knoten.length} von ${zahl(a.knoten_gesamt)}` : ""}${D.ebene !== "entitaet" ? " · Klick auf einen Eintrag filtert die Balken" : ""}`;
+    const stB = bestandSicht() && (D.buckets.find(b => b.key === sel) || [...D.buckets].reverse().find(b => b.stand));   // Bestand: Stand des gewählten bzw. letzten Zeitraums
+    kopf.textContent = `${ebeneName} ${stB ? `– Stand ${dt(stB.stand).toLocaleDateString("de-DE")}${stB.geschaetzt ? " (geschätzt)" : ""}` : `in „${wo}“`}: ${fmtW(a.summe)}${a.knoten_gesamt > a.knoten.length ? ` · die größten ${a.knoten.length} von ${zahl(a.knoten_gesamt)}` : ""}${D.ebene !== "entitaet" ? " · Klick auf einen Eintrag filtert die Balken" : ""}`;
     L.appendChild(kopf);
     // Bei „nach DB-Tabelle“ sind die Balken nach Tabellen gefärbt, die Liste zeigt aber Integrationen/Geräte/Entitäten: Die Farben der Tabellen stehen
     // deshalb als Legende darüber (für den gewählten Tag bzw. den ganzen Zeitraum), die Listenmarken sind neutral
@@ -6292,7 +6301,7 @@ const Zeit = (() => {
         e.innerHTML = `<i class="dd-sw" style="background:${serienFarbe(s)}"></i>${esc(s.name)}: ${fmtW(wert(s))} · ${fmtP(100 * wert(s) / ges)}`; leg.appendChild(e); });
       L.appendChild(leg);
     }
-    if (!a.knoten.length) { const p = document.createElement("p"); p.className = "sub"; p.textContent = "Keine Zuwächse in diesem Zeitraum."; L.appendChild(p); return; }
+    if (!a.knoten.length) { const p = document.createElement("p"); p.className = "sub"; p.textContent = bestandSicht() ? "Kein Bestand in diesem Zeitraum." : "Keine Zuwächse in diesem Zeitraum."; L.appendChild(p); return; }
     a.knoten.forEach(k => {
       const r = document.createElement("div"); r.className = "dd-row" + (k.tiefer ? " dd-zoom" : "");
       const sw = grp === "tabelle" ? `<span class="dd-sw neutral"></span>` : `<span class="dd-sw" style="background:${farben.get(k.key) || GRAU}"></span>`;
@@ -6319,6 +6328,7 @@ const Zeit = (() => {
     const mein = ++nr, ziel = $("#dzChart"), v = ansichten[ansichten.length - 1];
     const p = par();
     p.set("daten", vz); p.set("mass", mass); p.set("grp", grp);
+    if (bestandSicht()) p.set("sicht", "bestand");
     if (v.von) { p.set("von", v.von); p.set("bis", v.bis); }
     if (v.aufl) p.set("aufl", v.aufl);
     if (plat != null) p.set("plattform", plat);
@@ -6339,16 +6349,28 @@ const Zeit = (() => {
     if (D.fruehester < D.erster) deckung.push(`Die Stundenstatistik reicht bis ${tag(D.fruehester)} zurück (unter „Vorhaltezeit: Langzeit“)`);
     if (attr && vz !== "lang") deckung.push(`Attribute erst ab ${tag(attr.von)}`);
     $("#dzHinweis").textContent = (deckung.length ? deckung.join("; ") + ". " : "")
-      + "Blasse Balken: Zeitraum nicht ganz erfasst (laufender oder vom Recorder angeschnittener Monat)."
+      + (bestandSicht() ? `Blasse Balken: aus den Zuwachs-Tageswerten mit der heutigen Vorhaltezeit zurückgerechnet (geschätzt); gemessen wird ab ${D.echt_von ? tag(D.echt_von) : "dem ersten Lauf"}. Der Stand eines Zeitraums ist der letzte erfasste Tag darin.`
+        : "Blasse Balken: Zeitraum nicht ganz erfasst (laufender oder vom Recorder angeschnittener Monat).")
       + (D.median != null ? ` ▲ = Tag über dem 2,5-Fachen des Tagesmedians (${fmtW(D.median)}).` : "");
   }
   // Übernahme in den Reiter Analyse: dieselbe Teilmenge (Vorhaltezeit, Integration, Gerät); ein dort gesetzter Erstauftreten-Filter entfällt,
   // sonst wäre es eine andere Teilmenge. Zeitraum und Darstellung der Balken gibt es in der Analyse nicht.
   function inAnalyse() {
-    A.vz = vz; A.mass = "zuwachs"; A.plattform = plat; A.geraet = plat != null ? geraet : null;
+    A.vz = vz; A.mass = bestandSicht() ? "bestand" : "zuwachs"; A.plattform = plat; A.geraet = plat != null ? geraet : null;
     A.von = A.bis = null; A.unbekannt = false; A.preset = A.datumText = null;
     speicher.schreib("dbh_ana_daten", A.vz); speicher.schreib("dbh_ana_mass", A.mass);
     document.querySelector('#tabs button[data-tab="ana"]').click();
+  }
+  let INFO_ZUWACHS = "";   // wird in start() gesetzt
+  const INFO_BESTAND = "Bestand = so viele Zeilen (oder der dafür geschätzte Platz) lagen am Ende des Jahres, Monats, der Woche bzw. des Tages in der Datenbank – anders als beim Zuwachs wird nicht summiert, sondern der Stand des letzten erfassten Tages im Zeitraum gezeigt. "
+    + "Gemessen wird nach jeder Analyse je Entität (Reiter Bestand ab dem ersten Lauf mit dieser Version). Die Zeit davor ist aus den Tageswerten der Zuwachs-Statistik zurückgerechnet und blass dargestellt: Es gilt die heutige Vorhaltezeit je Entität, frühere Vorhaltezeiten und Löschläufe sind nirgends gespeichert. "
+    + "Attribute werden nur gemessen, nie zurückgerechnet. Ältere Tage sind verdichtet (die letzten 90 Tage täglich, davor je Sonntag und Monatsletztem). Die Liste unten zeigt den Stand des gewählten Zeitraums (ohne Auswahl: des letzten). Bedienung sonst wie beim Zuwachs: Klick auf einen Balken zoomt, Klick auf die Liste filtert.";
+  function setzeSicht(neu) {
+    if (neu === sicht && D) return laden();
+    sicht = neu; ansichten = [{ aufl: null, von: null, bis: null, label: "Gesamtzeitraum" }]; sel = null; D = null;   // die Abdeckung beider Sichten ist verschieden
+    const h = document.querySelector("#dzAbschnitt h2"); if (h) h.textContent = bestandSicht() ? "Bestand im Zeitverlauf" : "Zuwachs im Zeitverlauf";
+    $("#dzInfo").title = bestandSicht() ? INFO_BESTAND : INFO_ZUWACHS;
+    laden();
   }
   function start() {
     $("#dzAnalyse").onclick = inAnalyse;
@@ -6360,10 +6382,11 @@ const Zeit = (() => {
       + "die Pfade oben gehen zurück. „Darstellung: nach DB-Tabelle“ trennt stattdessen nach States, 5-Min-Statistik, Stundenstatistik, Attributen und Events. "
       + "Events gehören keiner Entität und stehen nur bei „Alle“ (ohne Filter auf eine Integration). Der Platz ist aus gemessenen Zeilengrößen geschätzt. "
       + "Die Tageswerte gehen nur so weit zurück, wie die Zuwachs-Statistik sie aufbewahrt.";
+    INFO_ZUWACHS = $("#dzInfo").title;
   }
   new ResizeObserver(() => zeichne()).observe($("#dzChart"));   // Texte unter dem Diagramm ändern dessen Höhe erst nach dem Zeichnen
   start();
-  return { laden, passe: zeichne };
+  return { laden, passe: zeichne, sicht: setzeSicht };
 })();
 
 // ================================================ Punkt 305: Reiter Analyse
@@ -6757,7 +6780,10 @@ const TIP = { el: $("#tip"), ziel: null, text: "", timer: 0, x: 0, y: 0, weg: []
 // Thema: bis 40 Zeichen vor „: “ (Doppelpunkt ohne folgendes Leerzeichen erlaubt, z. B. EV:alle), Klammern ausgeglichen –
 // sonst wäre „Zeilen in der Tabelle events (Logbuch“ ein Thema
 const tipThemaAus = z => { const m = /^((?:[^:\n]|:(?!\s)){1,40}?):\s(.*)$/.exec(z); return m && m[1].split("(").length === m[1].split(")").length ? m : null; };
-const tipZeile = z => { const m = tipThemaAus(z), b = m && /^! /.test(m[1]) ? `<b class="tip-warn">` : "<b>";   // Punkt 300: „! Thema:“ als Warnung
+// Punkt 335: „# Titel: Wert · Zusatz“ – alles vor dem ersten „ · “ fett (Überschrift mit Gesamtwert), der Zusatz normal
+const tipZeile = z => { if (z.startsWith("# ")) { const i = z.indexOf(" · ", Math.max(0, z.indexOf(": ")));   // erst nach dem Doppelpunkt (Tageslabels enthalten selbst „ · KW nn“)
+    return i < 0 ? `<b>${esc(z.slice(2))}</b>` : `<b>${esc(z.slice(2, i))}</b>${esc(z.slice(i))}`; }
+  const m = tipThemaAus(z), b = m && /^! /.test(m[1]) ? `<b class="tip-warn">` : "<b>";   // Punkt 300: „! Thema:“ als Warnung
   return m ? (m[2].trim() ? `${b}${esc(m[1])}:</b> ${esc(m[2])}` : `${b}${esc(m[1])}</b>`) : esc(z); };
 // Punkt 218 (0.5.5b12): alle Tooltips nach dem Schema „Thema: Inhalt“, ohne jeden Text einzeln umzuschreiben.
 // 1. schon strukturiert → bleibt; 2. kurze Überschrift + Inhalt in Zeile 2 („Gerät ⏎ Name …“) → „Gerät: Name …“;
