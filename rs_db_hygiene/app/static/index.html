@@ -6471,8 +6471,8 @@ function anaSortWert(k, e, mass, sicht) {
   switch (k) {
     case "name": return (e.name || e.entity_id || "").toLowerCase();
     case "n2": return knoten ? e.entitaeten : (e.status || "");
-    case "haupt": return mass === "zuwachs" ? e.zuwachs : e.bestand;
-    case "zweit": return mass === "zuwachs" ? e.bestand : e.zuwachs;
+    case "zuw": return e.zuwachs;
+    case "best": return e.bestand;
     case "anteil": return mass === "zuwachs" ? e.zuwachs : e.bestand;   // der Anteil selbst ist auf 2 Stellen gerundet – gleiche Anteile sonst in Namensreihenfolge
     case "plz": return e.zuwachs_bytes;
     case "plb": return e.bestand_bytes;
@@ -6496,29 +6496,25 @@ function anaSortiert(d) {
 }
 function anaTabelle(d) {
   const zk = d.ebene === "entitaet", zuw = d.mass === "zuwachs", kk = d.daten === "kurz", lg = d.daten === "lang";
-  const zweitName = zuw ? "Bestand" : "Zuwachs je Tag";
   // Spaltenköpfe wie in den anderen Tabellen: Gruppenzeile in Gruppenfarbe, darunter Titel (fett) und Zusatz/Einheit in Klammern (klein, grau)
   const zN = kk ? "Zuwachs (States + 5-Min je Tag)" : lg ? "Zuwachs (Stundenzeilen je Tag)" : "Zuwachs (Zeilen je Tag)";
   const bN = kk ? "Bestand (States + 5-Min)" : lg ? "Bestand (Stundenzeilen)" : "Bestand (Zeilen)";
-  const m1 = zuw ? zN : bN, m2 = zuw ? bN : zN;
   const erstT = kk ? "Erstauftreten (States, 5-Min)" : "Erstauftreten (Langzeitstatistik)";
-  const sp = zk ? [["Entität", "name", 0], ["Status", "n2", 0], [m1, "haupt", 1], ["Anteil (%)", "anteil", 1], [m2, "zweit", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Kurzzeit (Vorhaltezeit)", "last", 3], ["Attribute (Vorhaltezeit)", "attr", 3], ["Langzeit (Vorhaltezeit)", "lang", 3]]
-    : [[d.ebene === "plattform" ? "Integration" : "Gerät", "name", 0], ["Entitäten", "n2", 0], [m1, "haupt", 1], ["Anteil (%)", "anteil", 1], [m2, "zweit", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Geschützt (Entitäten)", "last", 3]];
+  const sp = zk ? [["Entität", "name", 0], ["Status", "n2", 0], [zN, "zuw", 1], [bN, "best", 1], ["Anteil (%)", "anteil", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Kurzzeit (Vorhaltezeit)", "last", 3], ["Attribute (Vorhaltezeit)", "attr", 3], ["Langzeit (Vorhaltezeit)", "lang", 3]]
+    : [[d.ebene === "plattform" ? "Integration" : "Gerät", "name", 0], ["Entitäten", "n2", 0], [zN, "zuw", 1], [bN, "best", 1], ["Anteil (%)", "anteil", 1], ["Zuwachs (Platz je Tag)", "plz", 2], ["Bestand (Platz)", "plb", 2], [erstT, "erst", 3], ["Geschützt (Entitäten)", "last", 3]];
   const GRUPPEN = ["Verursacher", "Menge", "Platz (geschätzt)", "Alter und Schutz"];
   const zT = kk ? "Ø der letzten 7 vollen Kalendertage an States-Zeilen plus 288 Zeilen 5-Min-Statistik je Tag (bei aktiven Entitäten mit Statistik)" : lg ? "Stundenstatistik: 24 Zeilen je Tag bei aktiven Entitäten mit Statistik – für alle gleich" : "Ø der letzten 7 vollen Kalendertage, geteilt durch die tatsächlich vorhandenen Tage (wie die Spalte im Tab Entitäten)";
   const bT = kk ? "Zeilen in states plus statistics_short_term" : lg ? "Zeilen in statistics (Stundenstatistik)" : "Zeilen in der Tabelle states";
   const tips = { anteil: "So viel der angezeigten Ebene (Zuwachs je Tag bzw. Bestand) macht diese Zeile aus: bei den Integrationen alle Entitäten, bei den Geräten die gewählte Integration, bei den Entitäten das gewählte Gerät – jeweils im aktuellen Erstauftreten-Filter. Die Zeilen ergeben zusammen 100 %. Der Anteil an allem steht im Kopf und im Donut im Reiter Dashboard.", plz: "Geschätzter Platz, den die Zeilen aller Tabellen (States, Attribute, 5-Min- und Stundenstatistik) je Tag neu belegen – mit den gemessenen Zeilengrößen", plb: "Geschätzter Platz des heutigen Bestands in allen Tabellen",
-    haupt: zuw ? zT : bT,
-    zweit: zuw ? bT : zT,
+    zuw: zT,
+    best: bT,
     erst: kk ? "Erste noch vorhandene Zeile in States oder 5-Min-Statistik (das frühere von beiden) – durch die Vorhaltezeit begrenzt, sagt wenig über das Alter" : "Erste Langzeitstatistik (Stundenstatistik) der Entität; ohne Langzeitstatistik unbekannt – dieser Wert ist auch der Filter „Erstauftreten“", attr: "Wirksame Vorhaltezeit der Attribute und ihre Regel (nach dieser Frist werden die Attribute von den States getrennt)", lang: "Wirksame Vorhaltezeit der Langzeit (Stundenstatistik) und ihre Regel",
     last: zk ? "Wirksame Vorhaltezeit der Kurzzeit (States, 5-Min) und ihre Regel" : "Anzahl geschützter Entitäten (Schutz vor dem Löschen)" };
     const zelleAnteil = a => `<td class="anteil"><div class="ana-anteil"><span class="ana-bar"><i style="width:${Math.min(100, Math.max(a, 0.3))}%"></i></span><b>${a.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</b></div></td>`;
-  const zweit = k => zuw ? k.bestand : k.zuwachs;
-  const haupt = k => zuw ? k.zuwachs : k.bestand;
   const erstTxt = (k, a = "erst", b = "juengst", u = "unbekannt") => k[a] ? (anaTs(k[a]) + (k[b] && anaTs(k[b]) !== anaTs(k[a]) ? ` – ${anaTs(k[b])}` : "")) + (k[u] ? ` <span class="fein">+ ${zahl(k[u])} unbekannt</span>` : "") : `<span class="fein">unbekannt</span>`;
   const zeilen = anaSortiert(d).map(k => zk
-    ? `<tr data-e="${esc(k.entity_id)}" title="Klick: diese Entität im Tab Entitäten öffnen"><td><code>${esc(k.entity_id)}</code>${k.geschuetzt ? " 🔒" : ""} <span class="ana-oeffne" aria-hidden="true">↗</span></td><td>${esc(STATUS_TEXT[k.status] || k.status)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${(kk ? k.kurz_first_ts : k.lts_first_ts) ? anaTs(kk ? k.kurz_first_ts : k.lts_first_ts) : `<span class="fein">unbekannt</span>`}</td><td>${esc(k.kurzzeit)}${k.regel ? ` <span class="fein">${esc(k.regel)}</span>` : ""}</td><td>${esc(k.attribute)}${k.regel_a ? ` <span class="fein">${esc(k.regel_a)}</span>` : ""}</td><td>${esc(k.langzeit)}${k.regel_l ? ` <span class="fein">${esc(k.regel_l)}</span>` : ""}</td></tr>`
-    : `<tr data-k="${esc(k.schluessel)}" title="Klick: ${d.ebene === "plattform" ? "Geräte dieser Integration" : "Entitäten dieses Geräts"} anzeigen"><td>${esc(k.name)} <span class="ana-ab" aria-hidden="true">↓</span></td><td>${zahl(k.entitaeten)}</td><td>${zahl(haupt(k))}</td>${zelleAnteil(k.anteil)}<td>${zahl(zweit(k))}</td><td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${kk ? erstTxt(k, "erst_k", "juengst_k", "unbekannt_k") : erstTxt(k)}</td><td>${zahl(k.geschuetzt)} <span class="fein">von ${zahl(k.entitaeten)}</span></td></tr>`).join("");
+    ? `<tr data-e="${esc(k.entity_id)}" title="Klick: diese Entität im Tab Entitäten öffnen"><td><code>${esc(k.entity_id)}</code>${k.geschuetzt ? " 🔒" : ""} <span class="ana-oeffne" aria-hidden="true">↗</span></td><td>${esc(STATUS_TEXT[k.status] || k.status)}</td><td>${zahl(k.zuwachs)}</td><td>${zahl(k.bestand)}</td>${zelleAnteil(k.anteil)}<td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${(kk ? k.kurz_first_ts : k.lts_first_ts) ? anaTs(kk ? k.kurz_first_ts : k.lts_first_ts) : `<span class="fein">unbekannt</span>`}</td><td>${esc(k.kurzzeit)}${k.regel ? ` <span class="fein">${esc(k.regel)}</span>` : ""}</td><td>${esc(k.attribute)}${k.regel_a ? ` <span class="fein">${esc(k.regel_a)}</span>` : ""}</td><td>${esc(k.langzeit)}${k.regel_l ? ` <span class="fein">${esc(k.regel_l)}</span>` : ""}</td></tr>`
+    : `<tr data-k="${esc(k.schluessel)}" title="Klick: ${d.ebene === "plattform" ? "Geräte dieser Integration" : "Entitäten dieses Geräts"} anzeigen"><td>${esc(k.name)} <span class="ana-ab" aria-hidden="true">↓</span></td><td>${zahl(k.entitaeten)}</td><td>${zahl(k.zuwachs)}</td><td>${zahl(k.bestand)}</td>${zelleAnteil(k.anteil)}<td>${anaB(k.zuwachs_bytes)}</td><td>${anaB(k.bestand_bytes)}</td><td>${kk ? erstTxt(k, "erst_k", "juengst_k", "unbekannt_k") : erstTxt(k)}</td><td>${zahl(k.geschuetzt)} <span class="fein">von ${zahl(k.entitaeten)}</span></td></tr>`).join("");
   const gcls = (i, g) => `gr gr-ana${i > 0 && sp[i - 1][2] !== g ? " gstart" : ""}`;
   const gruppenzeile = GRUPPEN.map((g, gi) => { const n = sp.filter(s => s[2] === gi).length, i0 = sp.findIndex(s => s[2] === gi); return `<th class="gruppe gr gr-ana${i0 > 0 ? " gstart" : ""}" colspan="${n}">${esc(g)}</th>`; }).join("");
   const kopf = sp.map(([h, k, g], i) => `<th class="${k === "name" ? "" : "n "}${gcls(i, g)}"${k ? ` data-sort="${k}"` : ""} title="${esc(h.replace(/ (.*)$/, "") + (tips[k] ? ": " + tips[k] : "") + (k ? SORT_TIP : ""))}">${kopfZweizeilig(h).replace("<span class=\"pfeil\"></span>", `<span class="pfeil">${k ? pfeilText(A.sort, k) : ""}</span>`)}${griff(k)}</th>`).join("");
@@ -6526,7 +6522,7 @@ function anaTabelle(d) {
     (d.knoten_gesamt > d.knoten.length ? `<div class="ana-mehr">Gezeigt werden die ${zahl(d.knoten.length)} größten von ${zahl(d.knoten_gesamt)} Entitäten; alle über „In Entitäten öffnen“.</div>` : "");
 }
 // Spaltenbreiten (Punkt 306): Griff am Spaltenkopf ziehen, Doppelklick = Standardbreite, je Ebene im Browser gemerkt, Knopf „Spaltenbreiten zurücksetzen“
-const ANA_BREITE_STD = { name: 260, n2: 100, haupt: 150, anteil: 170, zweit: 130, plz: 140, plb: 120, erst: 210, last: 130, attr: 130, lang: 130 };
+const ANA_BREITE_STD = { name: 260, n2: 100, zuw: 150, best: 130, anteil: 170, plz: 140, plb: 120, erst: 210, last: 130, attr: 130, lang: 130 };
 A.breiten = (() => { try { return JSON.parse(speicher.lies("dbh_breiten_ana", "{}")) || {}; } catch { return {}; } })();
 const anaBreite = (eb, k) => A.breiten[eb]?.[k] || (k === "name" && eb === "entitaet" ? 480 : ANA_BREITE_STD[k] || 120);
 function anaBreitenSetzen() {

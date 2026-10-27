@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b8 (Beta)
+- **Analyse-Tabelle (Punkt 338):** Die Spalten Zuwachs und Bestand haben jetzt eine feste Reihenfolge (Zuwachs, Bestand, Anteil) und tauschen beim Wechsel der Sicht nicht mehr den Platz. Die Sicht bestimmt nur noch, worauf sich der Anteil bezieht.
+- **Code-Scanning (Punkt 337):** Sicherung lesen prüft zusätzlich, dass die Datei im Sicherungsordner liegt; die GitHub-Workflows bekommen `permissions: contents: read`.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b7 (Beta)
 - **Bestand im Zeitverlauf (Punkt 334):** Neuer Unterreiter Cockpit › Bestand (zwischen Zuwachs und Beziehungen); „Entwicklung“ heißt jetzt „Zuwachs“. Dieselbe Ansicht wie beim Zuwachs (Jahr → Monat → Woche → Tag, nach Integration, Gerät, Entität oder Tabelle, Zeilen oder Platz), aber als Stand am Ende des Zeitraums. Neue Datei `bestand.db`: Nach jeder Analyse wird der Bestand je Entität festgehalten (Attribute nach der Attribut-Analyse); beim ersten Lauf werden die Tage davor aus den Zuwachs-Tageswerten mit der heutigen Vorhaltezeit zurückgerechnet (blass, geschätzt; States, 5-Min und Events ab 30 Tage nach Beginn der Zuwachs-Daten, Stundenstatistik ganz, Attribute nur gemessen). Die letzten 90 Tage täglich, ältere je Sonntag und Monatsletztem; Speicherdauer wie beim Zuwachs.
 - **Cache-Header (Punkt 332):** Die Seite wird bei jedem Laden beim Server nachgefragt (`no-cache`, 304 ohne Änderung), API-Antworten nie zwischengespeichert (`no-store`). Nach einem Update ist die neue Seite sofort da, ohne Strg+F5.
