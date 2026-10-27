@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b6 (Beta)
+- **Veraltet-Warnung synchron (Punkt 331):** Die nächtliche Analyse führt beide Analysen aus, deshalb gilt auch die Attribut-Analyse ab 26 Stunden als veraltet (vorher 7 Tage). Im Tooltip von „Analyse starten“ tragen dann beide Zeilen das „!“, mit einem gemeinsamen Hinweis „Beide Analysen sind älter als 26 h“.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b5 (Beta)
 - **HA-Standard und Attribut-Standard als Chips (Punkt 330):** Die Regel HA:standard steht nicht mehr in der Regelliste, das Banner „Attribut-Standard“ im Reiter Regeln entfällt. Beide Standards sind Chips über den Reitern („HA-Standard: 10 Tage · Langzeit unbegrenzt“, „Attribut-Standard: wie Kurzzeit“), größer, mit Rand und ✎; ein Klick öffnet die Einstellungen. Die Trefferzahl von HA-Standard steht im Tooltip des Chips und im Dialog, die Wirkung des Attribut-Standards im Dialog. Der Chip „Schutz“ entfällt.
 - Die Regeldaten ändern sich nicht (HA:standard bleibt eine Regel im Datenbestand), die Integration ändert sich nicht

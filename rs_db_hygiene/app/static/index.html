@@ -1957,19 +1957,19 @@ $("#banner").addEventListener("click", ev => {
 });
 // Punkt 90 (0.4.5): ein Stand für beide Analysen – Zeitpunkt der zuletzt gelaufenen, Laufzeit = Summe beider.
 // Punkt 125 (0.5.2): kein Stand-Text mehr neben dem Knopf. Veraltet (Analyse älter als 26 h oder Attribut-Analyse älter
-// als 7 Tage) = Markierung am Knopf; der Stand steht im Knopf-Tooltip und in der Rückfrage.
+// als 26 h – die nächtliche Analyse führt beide aus, Punkt 331) = Markierung am Knopf; der Stand steht im Knopf-Tooltip und in der Rückfrage.
 function standDaten(s, jetzt = Date.now() / 1000) {
   const a = s.analyse || {}, at = s.attribute || {};
   const ta = +a.analyse_zeit || 0, tt = +at.analyse_zeit || 0;
   if (!ta) return null;
   const da = +a.analyse_dauer_s || 0, dt = tt ? +at.analyse_dauer_s || 0 : 0;
-  const anaAlt = jetzt - ta > 26 * 3600, attrAlt = !tt || jetzt - tt > 7 * 86400;
+  const anaAlt = jetzt - ta > 26 * 3600, attrAlt = !tt || jetzt - tt > 26 * 3600;
   return { letzte: Math.max(ta, tt), dauer: da + dt, alt: anaAlt || attrAlt, tip: [
     // Punkt 300 (0.5.6b30): die Zeile, die das ! am Knopf auslöst, beginnt mit „! “ (Tooltip: fett in der Warnfarbe)
     `${anaAlt ? "! " : ""}Analyse: ${zeit(ta)} (${alterText(ta)}) · Dauer ${dauerText(da)}`,
     tt ? `${attrAlt ? "! " : ""}Attribut-Analyse: ${zeit(tt)} (${alterText(tt)}) · Dauer ${dauerText(dt)}` : "! Attribut-Analyse: noch nicht gelaufen – Attribute geschätzt",
-    anaAlt ? "Die Analyse ist älter als 26 h – ist die nächtliche Analyse ausgefallen?" : "",
-    attrAlt ? "Die Attribut-Analyse ist älter als 7 Tage – Attribut-Zahlen sind möglicherweise veraltet. „Analyse starten“ führt beide Analysen aus." : "",
+    anaAlt && attrAlt ? "Beide Analysen sind älter als 26 h – ist die nächtliche Analyse ausgefallen? „Analyse starten“ führt beide aus." : anaAlt ? "Die Analyse ist älter als 26 h – ist die nächtliche Analyse ausgefallen?" : "",
+    attrAlt && !anaAlt ? "Die Attribut-Analyse ist älter als 26 h – Attribut-Zahlen sind möglicherweise veraltet. „Analyse starten“ führt beide Analysen aus." : "",
   ].filter(Boolean).join("\n") };
 }
 let standTip = "";
