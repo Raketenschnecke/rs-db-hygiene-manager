@@ -12,6 +12,8 @@ Parameter f_<spalte> aus der Abfrage:
   Labels f_labels                          enthält bzw. * und ? in der Liste „A, B“ (Labels an Entität und Gerät, ab 0.4.10)
   Klasse f_device_class                    genau (z. B. power) | __ohne (keine device_class), ab 0.5.4 (Punkt 167)
   Integration f_plattform                  genau (z. B. mqtt) | __ohne (ohne Registry-Eintrag), ab 0.5.7b9 (Punkt 339)
+  Label  f_label                           genau ein Label (Entität oder Gerät) | __ohne (Punkt 345); f_labels bleibt der Textfilter
+  Hinweis f_hinweis                       __alle | __ohne | schutz | lz_kurz | attr_lang | kz_pkd | ueberstimmt | zaehler | sonst (Punkt 344)
 Ungültige Eingaben werden ignoriert und als Fehler je Spalte zurückgegeben.
 """
 import datetime
@@ -139,7 +141,57 @@ def klasse_filter(ausdruck):
     return gleich_filter("" if a == "__ohne" else a)
 
 
+# Punkt 344: Hinweise und Schutz einer Entität als feste Kategorien – die Texte enthalten Zahlen und Regelnamen, daher nach ihrem Anfang
+HINWEIS_ARTEN = {"schutz": "geschützt (🔒)", "lz_kurz": "Langzeit kürzer als Kurzzeit", "attr_lang": "Attribute länger als Kurzzeit",
+                 "kz_pkd": "Kurzzeit wirkt erst bei höherem purge_keep_days", "ueberstimmt": "Entitätsregel überstimmt",
+                 "zaehler": "Zähler-Schutz greift nicht", "sonst": "sonstiger Hinweis"}
+
+
+def hinweis_arten(e):
+    """Menge der Kategorien aus HINWEIS_ARTEN, die an der Entität hängen."""
+    arten = set()
+    if e.get("schutz"):
+        arten.add("schutz")
+    if e.get("geschuetzt"):
+        arten.add("zaehler")
+    for h in e.get("hinweise") or []:
+        if h.startswith("Langzeit kürzer als Kurzzeit"):
+            arten.add("lz_kurz")
+        elif h.startswith("Attribute ") and "länger als Kurzzeit" in h:
+            arten.add("attr_lang")
+        elif h.startswith("Kurzzeit ") and "purge_keep_days" in h:
+            arten.add("kz_pkd")
+        elif "überstimmt durch" in h:
+            arten.add("ueberstimmt")
+        else:
+            arten.add("sonst")
+    return arten
+
+
+def hinweis_filter(ausdruck):
+    a = ausdruck.strip()
+    if a == "__alle":
+        return lambda arten: bool(arten)
+    if a == "__ohne":
+        return lambda arten: not arten
+    if a in HINWEIS_ARTEN:
+        return lambda arten: a in arten
+    raise FilterFehler("__alle, __ohne oder eine Hinweisart (" + ", ".join(HINWEIS_ARTEN) + ") erwartet")
+
+
+def label_filter(ausdruck):
+    """Punkt 345: genau ein Label (Name wie in HA) oder __ohne = ohne Label; Entität und Gerät zählen."""
+    a = ausdruck.strip()
+    if a == "__ohne":
+        return lambda namen: not namen
+    return lambda namen: a in namen
+
+
 def _wert_der_spalte(e, spalte):
+    if spalte == "label":
+        return {x["name"] for x in e.get("labels_info") or []}
+    if spalte == "hinweis":
+        return hinweis_arten(e)
     if spalte == "herkunft":
         return f"{e.get('herkunft') or ''} {e.get('herkunft_info') or ''}"
     if spalte == "loeschbar":
@@ -168,6 +220,10 @@ def baue(parameter):
                 f = klasse_filter(roh)
             elif spalte == "status":
                 f = status_filter(roh)
+            elif spalte == "hinweis":
+                f = hinweis_filter(roh)
+            elif spalte == "label":
+                f = label_filter(roh)
             elif spalte in ZAHL_SPALTEN:
                 f = zahl_filter(roh)
             elif spalte in DATUM_SPALTEN:
@@ -204,6 +260,7 @@ def optionen(entitaeten):
     # Punkt 167: vorkommende Klassen (device_class) für die Auswahl im Spaltenfilter
     out["device_class"] = sorted({e.get("device_class") for e in entitaeten if e.get("device_class")})
     out["plattform"] = sorted({e.get("plattform") for e in entitaeten if e.get("plattform")})   # Punkt 339
+    out["label"] = sorted({x["name"] for e in entitaeten for x in e.get("labels_info") or []}, key=str.casefold)   # Punkt 345
     return out
 
 

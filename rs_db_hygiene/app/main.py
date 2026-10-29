@@ -961,6 +961,29 @@ async def regeln_tote_entfernen(request):
     return web.json_response({**json.loads(antwort.text), "bericht": bericht})
 
 
+async def regeln_entitaeten_entfernen(request):
+    """Punkt 343: ausgewählte Entitäten aus einer Regel nehmen (Entitätentabelle › „Aus Regel entfernen“).
+    Ohne `regel` nur die Übersicht: welche Regeln nennen Entitäten der Auswahl mit fester ID. Mit `regel` wird entfernt –
+    mit Sicherung der Regeln wie bei den toten Einträgen; an HA und der Datenbank ändert sich nichts."""
+    body = await request.json()
+    ids = [str(i) for i in body.get("ids") or []]
+    regel_id = body.get("regel")
+    if not regel_id:
+        return web.json_response({"regeln": tote.treffer_in_regeln(rg.lade(REGELN, VORLAGE), ids), "version": Z.mtime(REGELN)})
+    gesperrt = _ersetzen_gesperrt(body)
+    if gesperrt is not None:
+        return gesperrt
+    neu, bericht = tote.entferne_ids(rg.lade(REGELN, VORLAGE), ids, str(regel_id))
+    if not bericht["muster"]:
+        return web.json_response({"fehler": "Nichts zu entfernen – die Entitäten stehen nicht (mehr) mit fester ID in dieser Regel"}, status=409)
+    try:
+        antwort = _ersetze_regeln(neu, "entitaeten_entfernt")
+    except rg.RegelFehler as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    _LOG.info("Entitäten aus Regel %s entfernt: %d Einträge, Regel ganz entfernt: %s", regel_id, bericht["muster"], bericht["regel_entfernt"])
+    return web.json_response({**json.loads(antwort.text), "bericht": bericht})
+
+
 async def regelcheck_lesen(_request):
     t0 = time.time()
     _r, _b, daten = await _regelcheck_daten()
@@ -1425,6 +1448,7 @@ def erstelle_app():
         web.post("/api/regelcheck/uebernehmen", regelcheck_uebernehmen),
         web.get("/api/regeln/tote", regeln_tote),
         web.post("/api/regeln/tote/entfernen", regeln_tote_entfernen),
+        web.post("/api/regeln/entitaeten_entfernen", regeln_entitaeten_entfernen),
         web.post("/api/muster/verdichten", muster_verdichten),
         web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),

@@ -119,3 +119,36 @@ def entferne(regel_daten, tot, auswahl=None):
         else:
             bericht["regeln_entfernt"].append(r["id"])
     return {**regel_daten, "regeln": neu}, bericht
+
+
+def treffer_in_regeln(regel_daten, ids):
+    """Regeln, die Entitäten aus `ids` mit genau ihrer ID nennen: [{regel, name, typ, aktiv, ids, muster_gesamt, ganz}].
+
+    Nur feste IDs zählen (Typ entity, glob und schutz ohne Platzhalter); Entitäten, die eine Regel über Platzhalter,
+    Klasse oder Integration treffen, lassen sich nicht einzeln herausnehmen und bleiben hier außen vor."""
+    ids = set(ids)
+    out = []
+    for r in regel_daten["regeln"]:
+        fest = [m for m in feste_ids(r) if m in ids]
+        if fest:
+            out.append({"regel": r["id"], "name": r["name"], "typ": r["typ"], "aktiv": r["aktiv"], "ids": fest,
+                        "muster_gesamt": len(r["muster"]), "ganz": len(fest) == len(r["muster"])})
+    return out
+
+
+def entferne_ids(regel_daten, ids, regel_id):
+    """Regeldaten ohne die festen Einträge `ids` in der Regel `regel_id` plus Bericht {muster, regel_entfernt}.
+    Bleibt der Regel kein Muster, entfällt sie ganz (wie bei den toten Einträgen)."""
+    ids, neu, bericht = set(ids), [], {"muster": 0, "regel_entfernt": False}
+    for r in regel_daten["regeln"]:
+        weg = {m for m in feste_ids(r) if m in ids} if r["id"] == regel_id else set()
+        if not weg:
+            neu.append(r)
+            continue
+        rest = [m for m in r["muster"] if m not in weg]
+        bericht["muster"] = len(r["muster"]) - len(rest)
+        if rest:
+            neu.append({**r, "muster": rest})
+        else:
+            bericht["regel_entfernt"] = True
+    return {**regel_daten, "regeln": neu}, bericht

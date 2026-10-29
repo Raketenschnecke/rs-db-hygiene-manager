@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b10 (Beta)
+- **Aus Regel entfernen (Punkt 343):** Tabelle Entitäten, Mehrfachauswahl: neuer Knopf „Aus Regel entfernen …“ (hinter „Regel aus Auswahl anlegen“). Der Dialog nennt die Regeln, die die gewählten Entitäten mit fester ID führen (Typ entity, glob, schutz), mit Trefferzahl; nach Rückfrage und mit Sicherung der Regeln werden die Einträge aus der gewählten Regel genommen. Bleibt einer Regel kein Muster, entfällt sie. Neuer Endpunkt `POST /api/regeln/entitaeten_entfernen`.
+- **Hinweis-Filter (Punkt 344):** Die Spalte Entität hat über dem Textfeld eine Auswahl nach Hinweisen und Schutz (mit Hinweis oder Schutz, ohne Hinweis, geschützt, Langzeit kürzer als Kurzzeit, Attribute länger als Kurzzeit, Kurzzeit wirkt erst bei höherem purge_keep_days, Entitätsregel überstimmt, Zähler-Schutz greift nicht). Das Kästchen „nur mit Hinweis/Schutz“ entfällt.
+- **Label-Auswahl (Punkt 345):** Die Spalte Labels hat eine Auswahl der vorkommenden Labels (genau, Entität oder Gerät) und „ohne Label“; ein Klick auf ein Label in der Tabelle setzt diese Auswahl statt der Textsuche.
+- **Datumsfilter Events (Punkt 346):** Events, Spalte „ältestes (Event)“ mit Datumsfilter und Kalender (wie im Tab Entitäten).
+- **Seite bleibt stehen (Punkt 347):** Jeder Reiter hält die Seite mindestens so hoch, dass der Reiterstreifen oben stehen bleibt; ein Filter mit wenigen Treffern schiebt die Seite nicht mehr zurück nach oben.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b9 (Beta)
 - **Spalte Integration (Punkt 339):** Die Tabelle Entitäten hat zwischen „Gerät / Herkunft“ und „Klasse“ die Spalte „Integration“ (Plattform laut Entity-Registry) mit Auswahlfilter (auch „ohne Integration“), Sortierung und der Anzahl verschiedener Integrationen in der Summenzeile. Im CSV-Export steht sie als letzte Spalte.
 - **Spaltenreihenfolge (Punkte 340, 342):** Entitäten, Istzustand: erster KZe, erster LZe, letzter, Zuwachs, States … – Events, Istzustand: ältestes, Zuwachs, Bestand.

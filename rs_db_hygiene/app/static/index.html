@@ -578,6 +578,9 @@ input[type=checkbox].wahl { width: 16px; height: 16px; margin: 0; cursor: pointe
 #lUmfang { display: inline-flex; gap: 8px; align-items: center; margin-left: 10px; vertical-align: middle; }   /* Punkt 229 */
 #lKasten { position: sticky; top: calc(var(--kleb-h) - var(--lk-ueber, 0px)); z-index: 4; }
 #tab-loeschen .tabelle { max-height: calc(100vh - var(--kleb-h) - var(--lk-sicht, 0px) - 56px); }
+/* Punkt 347: jeder Reiter hält die Seite mindestens so hoch, dass der Reiterstreifen oben stehen bleibt – sonst springt die Seite bei einem Filter mit
+   wenigen Treffern zurück nach oben und der Kopf mit den Kacheln erscheint wieder (#tab-loeschen und #tab-dash haben unten eigene Höhen) */
+section[id^="tab-"] { min-height: calc(100vh - var(--kleb-oben-h, 101px) - 24px); }   /* gemessen: Reiterstreifen bis Reiterinhalt = Höhe von .kleb-oben, nicht --kleb-h (das enthält die Leiste im Reiter) */
 /* die Seite muss weit genug scrollen können, damit der Kasten oben „einrastet“ */
 #tab-loeschen { min-height: calc(100vh + var(--lk-ueber, 0px) - var(--kleb-h) - 24px); }   /* 24 px = Polster unten von main */
 button.gefahr { background: var(--bad); border-color: var(--bad); color: #fff; }
@@ -838,7 +841,6 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
     <div class="leiste" data-leiste="ent" hidden>
       <select id="fDomain"><option value="">alle Domains</option></select>
       <select id="fRegel"><option value="">mit und ohne Regel</option><option value="mit">mit Regel</option><option value="ohne">ohne Regel</option></select>
-      <label><input type="checkbox" id="fHinweis"> nur mit Hinweis/Schutz</label>
       <button id="filterReset" title="alle Spalten- und Leistenfilter zurücksetzen">Filter zurücksetzen</button>
       <span style="flex:1"></span>
       <button id="breitenReset" title="alle Spaltenbreiten auf Standard; einzelne Spalte: Doppelklick auf den Griff">Spaltenbreiten zurücksetzen</button>
@@ -1586,6 +1588,19 @@ function jsFilter(typ, ausdruck) {
     const x = zahlWert(m[2]), op = m[1] || "=";
     return v => v != null && ({ "<": v / teil < x, "<=": v / teil <= x, ">": v / teil > x, ">=": v / teil >= x, "=": v / teil === x })[op];
   }
+  if (typ === "datum") {   // Punkt 346: wie der Server (spaltenfilter.datum_filter) – Zeitstempel in Sekunden, tagesgenau in lokaler Zeit
+    const tag = (t, m, j) => new Date(+(j.length === 2 ? "20" + j : j), m - 1, +t).getTime() / 1000;
+    let m = /^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})\s*-\s*(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/.exec(a);
+    if (m) {
+      const [x, y] = [tag(m[1], m[2], m[3]), tag(m[4], m[5], m[6])], von = Math.min(x, y), bis = Math.max(x, y) + 86400;
+      return v => v != null && v >= von && v < bis;
+    }
+    m = /^(<=|>=|<|>|=)?\s*(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/.exec(a);
+    if (!m) throw new Error("Datum erwartet, z. B. <1.9.2026, >=8.10.2026, 1.9.2026-30.9.2026");
+    const beginn = tag(m[2], m[3], m[4]), ende = beginn + 86400;
+    const op = m[1] || "=";
+    return v => v != null && ({ "<": v < beginn, "<=": v < ende, ">": v >= ende, ">=": v >= beginn, "=": v >= beginn && v < ende })[op];
+  }
   if (typ === "auswahl") return v => v === a;
   return null;
 }
@@ -1685,6 +1700,11 @@ class LokaleTabelle {
       this.t = setTimeout(() => this.zeige(), e.tagName === "SELECT" ? 0 : 300);
     });
     this.el.addEventListener("click", ev => {
+      const kal = ev.target.closest("[data-kalender-tf]");   // Punkt 346
+      if (kal) {
+        const k = kal.dataset.kalenderTf;
+        return oeffneKalender(this.spalte(k).titel, this.f[k], v => { this.f[k] = v; this.pg = 0; this.baueKopf(); this.zeige(); });
+      }
       if (this.z.klickIstZiehen(ev)) return;
       const th = ev.target.closest("thead th[data-sort]"); if (!th) return;
       const k = th.dataset.sort, sp = this.spalte(k);
@@ -1786,6 +1806,7 @@ class LokaleTabelle {
       if (s.typ === "auswahl") return `<th><select data-tf="${s.k}" aria-label="Filter ${esc(s.titel)}"><option value="">alle</option>${(s.optionen ? s.optionen(this.zeilen) : [])
         .map(([w, t]) => `<option value="${esc(w)}" ${w === alt ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></th>`;
       if (s.typ === "keine") return "<th></th>";
+      if (s.typ === "datum") return `<th><div class="datumfeld"><input data-tf="${s.k}" value="${esc(alt)}" placeholder="<1.9.2026" title="${esc(FILTERHILFE.datum)}" aria-label="Filter ${esc(s.titel)}"><button data-kalender-tf="${s.k}" title="Kalender öffnen" aria-label="Kalender für ${esc(s.titel)}">📅</button></div></th>`;
       return `<th><input data-tf="${s.k}" value="${esc(alt)}" placeholder="${s.typ === "text" ? "Text, *" : s.typ === "gb" ? ">0,5" : ">0"}"
         title="${s.typ === "text" ? "enthält …; * und ? als Platzhalter" : s.typ === "gb" ? "in GB, z. B. >0,5, <=2, 1-3" : "z. B. >1000, <=10, 100-500, 0"}" ${s.n ? 'style="text-align:right"' : ""}></th>`;
     });
@@ -2692,6 +2713,11 @@ const FILTERHILFE = {
 };
 const HERKUNFT_ART = { geraet: "Gerät", integration: "UI", ui_helfer: "Helfer", yaml: "YAML", ohne_uid: "ohne ID",
                        nicht_gefunden: "fehlt", verwaist: "gelöscht" };
+// Punkt 344: Hinweisarten wie spaltenfilter.HINWEIS_ARTEN
+const HINWEIS_OPT = [["__alle", "mit Hinweis oder Schutz"], ["__ohne", "ohne Hinweis"], ["schutz", "🔒 geschützt"], ["lz_kurz", "Langzeit kürzer als Kurzzeit"],
+  ["attr_lang", "Attribute länger als Kurzzeit"], ["kz_pkd", "Kurzzeit wirkt erst bei höherem purge_keep_days"], ["ueberstimmt", "Entitätsregel überstimmt"],
+  ["zaehler", "Zähler-Schutz greift nicht"], ["sonst", "sonstiger Hinweis"]];
+const HINWEIS_HILFE = "Hinweise (!) und Schutz (🔒) der Entität: nach Art filtern, z. B. „Entitätsregel überstimmt“";
 const HERKUNFT_LANG = { geraet: "Gerät", integration: "Integration (UI)", ui_helfer: "UI-Helfer", yaml: "YAML-Datei",
                         ohne_uid: "ohne unique_id", nicht_gefunden: "Definition nicht gefunden", verwaist: "verwaist / gelöscht" };
 
@@ -2773,6 +2799,13 @@ function baueKopf() {
     if (typ === "status") return `<th><select data-f="status" title="${esc(STATUS_HILFE)}" aria-label="Filter ${STATUS_TITEL} (Zustand)"><option value="">alle</option>
       ${[["aktiv", "aktiv"], ["deaktiviert", "deaktiviert"], ["verwaist", "verwaist (alle)"], ["verwaist_geloescht", "verwaist (gelöscht)"]].map(([w, l]) => `<option value="${w}" ${S.f.status === w ? "selected" : ""}>${l}</option>`).join("")}</select></th>`;
     if (typ === "wert" || typ === "klasse") return `<th><select data-f="${k}" aria-label="Filter ${esc(t)}"><option value="">alle</option></select></th>`;
+    // Punkt 344: Hinweise (!) und Schutz (🔒) der Entität als Auswahl über dem Textfeld
+    // Punkt 345: Label als Auswahl (Werte kommen mit der Antwort) über dem Textfeld
+    if (k === "labels") return `<th><div class="herkunftfeld"><select data-f="label" aria-label="Filter Label (genau)"><option value="">alle Labels</option></select>
+      <input data-f="${k}" value="${alt}" placeholder="${esc(ph)}" title="${esc(FILTERHILFE[typ])}" aria-label="Filter ${esc(t)}"></div></th>`;
+    if (k === "entity_id") return `<th><div class="herkunftfeld"><select data-f="hinweis" title="${esc(HINWEIS_HILFE)}" aria-label="Filter Hinweis und Schutz">
+      <option value="">alle Hinweise</option>${HINWEIS_OPT.map(([w, l]) => `<option value="${w}" ${S.f.hinweis === w ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+      <input data-f="${k}" value="${alt}" placeholder="${esc(ph)}" title="${esc(FILTERHILFE[typ])}" aria-label="Filter ${esc(t)}"></div></th>`;
     if (typ === "herkunft") return `<th><div class="herkunftfeld"><select data-f="herkunft_art" aria-label="Filter Art der Herkunft">
       <option value="">alle Arten</option>${Object.entries(HERKUNFT_LANG).map(([a, l]) => `<option value="${a}" ${S.f.herkunft_art === a ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
       <input data-f="herkunft" value="${esc(S.f.herkunft || "")}" placeholder="${esc(ph)}" title="${esc(FILTERHILFE.herkunft)}" aria-label="Filter Herkunft"></div></th>`;
@@ -2869,6 +2902,13 @@ function fuelleWertOptionen(opt) {
       (opt.device_class || []).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
     sel.value = [...sel.options].some(o => o.value === alt) ? alt : "";
   }
+  const selL = $(`#tEntKopf select[data-f="label"]`);   // Punkt 345
+  if (selL) {
+    const alt = S.f.label || "";
+    selL.innerHTML = `<option value="">alle Labels</option><option value="__ohne">ohne Label</option>` +
+      (opt.label || []).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
+    selL.value = [...selL.options].some(o => o.value === alt) ? alt : "";
+  }
   const selP = $(`#tEntKopf select[data-f="plattform"]`);   // Punkt 339
   if (selP) {
     const alt = S.f.plattform || "";
@@ -2877,7 +2917,7 @@ function fuelleWertOptionen(opt) {
     selP.value = [...selP.options].some(o => o.value === alt) ? alt : "";
   }
 }
-const filterTyp = f => f === "herkunft_art" || f === "device_class" || f === "plattform" ? "auswahl" : (SPALTE[f] || [])[3];
+const filterTyp = f => f === "herkunft_art" || f === "device_class" || f === "plattform" || f === "hinweis" || f === "label" ? "auswahl" : (SPALTE[f] || [])[3];
 function zeigeFilterStatus(fehler) {
   $("#tEntKopf").querySelectorAll("[data-f]").forEach(el => {
     const f = el.dataset.f, typ = filterTyp(f);
@@ -2913,7 +2953,7 @@ $("#tEntKopf").addEventListener("mousedown", ev => { if (ev.shiftKey && ev.targe
 $("#filterReset").onclick = () => {
   S.sortierung = [...SORT_STD_ENT]; speicher.schreib("dbh_sort_ent", JSON.stringify(S.sortierung)); zeigeSortierung();
   S.f = {}; S.geraetName = ""; $("#tEntKopf").querySelectorAll("[data-f]").forEach(el => el.value = "");
-  $("#fDomain").value = ""; $("#fRegel").value = ""; $("#fHinweis").checked = false;
+  $("#fDomain").value = ""; $("#fRegel").value = "";
   S.offset = 0; ladeEntitaeten();
 };
 
@@ -3014,7 +3054,7 @@ function zeigeZeilen(zeilen) {
 }
 // Filter ausgeblendeter Spalten wirken nicht (Punkt 23)
 const unsichtbareFilter = () => Object.keys(S.f).filter(k => S.f[k] && k !== "device_id" && k !== "plattform" && k !== "liste" &&
-  !S.sichtbar.has(k === "herkunft_art" ? "herkunft" : k));
+  !S.sichtbar.has(k === "herkunft_art" ? "herkunft" : k === "hinweis" ? "entity_id" : k === "label" ? "labels" : k));
 function zeigeTreffer(r) {
   const bis = S.limit ? Math.min(S.offset + S.limit, r.gesamt) : r.gesamt;
   const gefiltert = r.gesamt !== r.alle, aus = unsichtbareFilter();
@@ -3037,7 +3077,7 @@ $("#trefferzeile").addEventListener("click", ev => {
 });
 async function ladeEntitaeten() {
   const p = par();
-  Object.entries({ domain: $("#fDomain").value, regel: $("#fRegel").value, hinweis: $("#fHinweis").checked ? "1" : "",
+  Object.entries({ domain: $("#fDomain").value, regel: $("#fRegel").value,
     sort: S.sortierung.map(s => (s.desc ? "-" : "") + s.k).join(","), offset: S.offset, limit: S.limit }).forEach(([k, v]) => v !== "" && p.set(k, v));
   const aus = new Set(unsichtbareFilter());
   Object.entries(S.f).forEach(([k, v]) => v && !aus.has(k) && p.set("f_" + k, v));
@@ -3088,7 +3128,7 @@ $("#tEntRumpf").addEventListener("click", ev => {
   const ha = ev.target.closest("[data-herkunft-art]");   // Punkt 273: Chip der Herkunft wie ein Label – Art im Spaltenkopf wählen und filtern
   if (ha) { S.geraetName = ""; setzeFilter("device_id", "", false); return setzeFilter("herkunft_art", ha.dataset.herkunftArt, true); }
   const lb = ev.target.closest("[data-label]");   // Punkt 115
-  if (lb) return setzeFilter("labels", lb.dataset.label, true);
+  if (lb) { setzeFilter("labels", "", false); return setzeFilter("label", lb.dataset.label, true); }   // Punkt 345: genau dieses Label statt Textsuche
   const rc = ev.target.closest("[data-regel]");   // Punkt 143; Punkt 274: in den Spalten der Vorhaltezeiten filtert der Chip, Umschalt+Klick öffnet die Regel
   if (rc && rc.dataset.wart && !ev.shiftKey) return setzeFilter(rc.dataset.wart, "regel:" + rc.dataset.regel, true);
   if (rc) return oeffneRegel(rc.dataset.regel);
@@ -3097,7 +3137,7 @@ $("#tEntRumpf").addEventListener("click", ev => {
   const tr = ev.target.closest("tr[data-eid]");
   if (tr) oeffneEntitaet(S.zeilen[tr.dataset.eid]);
 });
-["#fDomain", "#fRegel", "#fHinweis"].forEach(s => $(s).addEventListener("change", () => { S.offset = 0; ladeEntitaeten(); }));
+["#fDomain", "#fRegel"].forEach(s => $(s).addEventListener("change", () => { S.offset = 0; ladeEntitaeten(); }));
 $("#fLimit").addEventListener("change", () => {
   S.limit = +$("#fLimit").value; speicher.schreib("dbh_limit", String(S.limit)); S.offset = 0; ladeEntitaeten();
 });
@@ -3675,7 +3715,7 @@ T.events = new LokaleTabelle({
         ...[...new Set(l.map(r => r.wert))].sort((a, b) => dauerTage(a) - dauerTage(b)).map(w => ["wert:" + w, w === "global" ? "global" : wertAnzeige(w)])],
       passt: (r, a) => a.startsWith("regel:") ? (r.regel || "–") === a.slice(6) : a.startsWith("wert:") ? r.wert === a.slice(5) : true,
       summe: (g, a) => [zahl(g.filter(r => r.regel).length), zahl(a.filter(r => r.regel).length), "Event-Typen mit eigener Regel – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
-    { k: "erster_tag", titel: "ältestes (Event)", typ: "keine", sortierbar: 1, breite: 100, wert: r => r.erster_tag, zelle: r => datum(r.erster_tag * 86400), csv: r => datum(r.erster_tag * 86400) },
+    { k: "erster_tag", titel: "ältestes (Event)", typ: "datum", breite: 130, wert: r => r.erster_tag == null ? null : r.erster_tag * 86400,zelle: r => datum(r.erster_tag * 86400), csv: r => datum(r.erster_tag * 86400) },
     { k: "pro_tag", titel: "Zuwachs (Events pro Tag, Ø 7 d)", typ: "zahl", n: 1, breite: 155, wert: r => r.pro_tag, zelle: r => zahl(r.pro_tag), csv: r => r.pro_tag, summe: anzahlSumme(r => r.pro_tag),
       hilfe: "Mittel der letzten 7 vollen Tage; 0 bei Typen, die der Recorder ausschließt (z. B. call_service per exclude)" },
     { k: "zeilen", titel: "Bestand (Events)", typ: "zahl", n: 1, breite: 120, wert: r => r.zeilen, zelle: r => zahl(r.zeilen), csv: r => r.zeilen, summe: anzahlSumme(r => r.zeilen) },
@@ -3721,7 +3761,7 @@ function zeigeAuswahlEnt() {
   if (!auf) return;
   if (!n) { leiste.innerHTML = weg; return; }
   leiste.innerHTML = `<b>${mzahl(n, "Entität", "Entitäten")} ausgewählt</b>${anderswo ? `, davon ${zahl(anderswo)} auf anderen Seiten` : ""}${weg ? ` · ${weg}` : ""}
-    <button data-masse-ent="regel">Regel aus Auswahl anlegen</button><button data-masse-ent="schutz" title="Diese Entitäten nie kürzen (Regeltyp schutz)">🔒 Schutz aus Auswahl anlegen</button><button data-masse-ent="csv">Auswahl als CSV</button>
+    <button data-masse-ent="regel">Regel aus Auswahl anlegen</button><button data-masse-ent="ausregel" title="Die ausgewählten Entitäten aus einer festen Entitätenliste (Regel) nehmen">Aus Regel entfernen …</button><button data-masse-ent="schutz" title="Diese Entitäten nie kürzen (Regeltyp schutz)">🔒 Schutz aus Auswahl anlegen</button><button data-masse-ent="csv">Auswahl als CSV</button>
     ${S.entGesamt > seite.length && n < S.entGesamt ? `<button data-masse-ent="alle">alle ${zahl(S.entGesamt)} gefilterten auswählen</button>` : ""}
     ${anderswo ? `<button data-masse-ent="weg">Auswahl aufheben</button>` : ""}`;
 }
@@ -3763,6 +3803,7 @@ $("#massenEnt").addEventListener("click", async ev => {
     return bearbeiteRegel(-1, { typ: "schutz", muster: ids, name: `Schutz ${ids.length === 1 ? ids[0] : zahl(ids.length) + " Entitäten"}`, kurzzeit: "global", langzeit: "unbegrenzt" });
   if (b.dataset.masseEnt === "regel")
     return bearbeiteRegel(-1, { typ: "entity", muster: ids, name: ids.length === 1 ? ids[0] : `Auswahl ${zahl(ids.length)} Entitäten` });
+  if (b.dataset.masseEnt === "ausregel") return ausRegelDialog(ids);
   if (b.dataset.masseEnt === "csv") {
     try {
       const antwort = await fetch("api/export.csv?" + par(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
@@ -3771,6 +3812,39 @@ $("#massenEnt").addEventListener("click", async ev => {
     } catch (e) { meldung("CSV", e.message); }
   }
 });
+// Punkt 343: Auswahl aus einer festen Entitätenliste (Regel) nehmen – z. B. 6 AirQ-Entitäten aus einer Regel mit ~300 Einträgen
+async function ausRegelDialog(ids) {
+  let t;
+  try { t = await api("regeln/entitaeten_entfernen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ids }) }); }
+  catch (e) { return meldung("Aus Regel entfernen", e.message); }
+  if (!t.regeln.length)
+    return meldung("Aus Regel entfernen", "Keine Regel nennt diese Entitäten mit ihrer festen ID. Treffer über Platzhalter, Klasse oder Integration lassen sich nicht einzeln herausnehmen – dafür die Regel selbst ändern.");
+  const zeilen = t.regeln.map((r, i) => `<tr><td><input type="radio" name="ausRegel" value="${esc(r.regel)}" ${i === 0 ? "checked" : ""} aria-label="${esc(r.regel)}"></td>
+    <td class="mono">${esc(r.regel)}</td><td>${esc(r.name)}${r.aktiv ? "" : ' <span class="sub">(passiv)</span>'}</td><td class="sub">${esc(r.typ)}</td>
+    <td class="n">${zahl(r.ids.length)} von ${zahl(r.muster_gesamt)}${r.ganz ? ' <span class="chip">Regel entfällt</span>' : ""}</td></tr>`).join("");
+  dialog("Aus Regel entfernen", `
+    <p class="sub">${mzahl(ids.length, "ausgewählte Entität", "ausgewählte Entitäten")}. Diese Regeln nennen davon Entitäten mit fester ID – gewählt wird, aus welcher Regel sie herausgenommen werden.
+      Danach gilt für die Entitäten die nächste passende Regel bzw. der Standard. Entfernt wird nur der Eintrag in der Regel; vorher sichert die App die Regeln (Regeln verwalten … › Sicherungen).</p>
+    <div style="max-height:45vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th></th><th align="left">Regel</th><th align="left">Name</th><th align="left">Typ</th><th align="right">Treffer</th></tr></thead><tbody>${zeilen}</tbody></table></div>
+    <div id="dlgFehler" class="fehler"></div>`, [
+    ["Abbrechen", () => $("#dlg").close()],
+    ["Aus Regel entfernen", async () => {
+      const regel = $("#dlgInhalt").querySelector("input[name=ausRegel]:checked")?.value, r0 = t.regeln.find(r => r.regel === regel);
+      if (!r0) { $("#dlgFehler").textContent = "Keine Regel gewählt."; return; }
+      if (!await frage("Aus Regel entfernen", `${mzahl(r0.ids.length, "Eintrag", "Einträge")} aus ${r0.regel} „${r0.name}“ entfernen.` +
+        (r0.ganz ? `\n\nDabei bleibt ohne Muster und entfällt ganz: ${r0.regel}.` : "") +
+        "\n\nEs ändert sich nur die Regeldatei der App (mit Sicherung). An HA und den Daten wird nichts gelöscht.", "Entfernen")) return;
+      try {
+        const r = await api("regeln/entitaeten_entfernen", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: S.version, ids, regel }) });
+        S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
+        [...S.auswahl].forEach(id => S.regeln.regeln.some(x => x.id === id) || S.auswahl.delete(id));
+        $("#dlg").close(); T.regeln.daten(tabRegeln()); ladeAlles(false); ladeRegelCheck();
+        meldung("Entfernt", `${mzahl(r.bericht.muster, "Eintrag", "Einträge")} aus ${regel} entfernt.` + (r.bericht.regel_entfernt ? " Die Regel hatte kein Muster mehr und entfällt." : ""));
+      } catch (e) { $("#dlgFehler").textContent = e.message; }
+    }, true]]);
+  $("#dlg").classList.add("breit");
+}
 function zeigeAuswahlEv() {
   const sichtbar = (T.events?.angezeigt || []).map(r => r.event_type), gewaehlt = sichtbar.filter(x => S.auswahlEv.has(x)).length;
   const alle = $("#wahlAlleEv");
@@ -6696,7 +6770,7 @@ $("#anaInhalt").addEventListener("click", async ev => {
 function anaFilterLeeren() {
   S.sortierung = [...SORT_STD_ENT]; speicher.schreib("dbh_sort_ent", JSON.stringify(S.sortierung)); zeigeSortierung();
   S.f = {}; S.geraetName = ""; $("#tEntKopf").querySelectorAll("[data-f]").forEach(el => el.value = "");
-  $("#fDomain").value = ""; $("#fRegel").value = ""; $("#fHinweis").checked = false;
+  $("#fDomain").value = ""; $("#fRegel").value = "";
   S.offset = 0;
 }
 // ids: Liste von Entity-IDs (Entität oder Gerät), sonst nur die Integration; name: Anzeige im Filter-Chip
