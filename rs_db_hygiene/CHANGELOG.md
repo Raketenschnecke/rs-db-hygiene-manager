@@ -4,6 +4,12 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b9 (Beta)
+- **Spalte Integration (Punkt 339):** Die Tabelle Entitäten hat zwischen „Gerät / Herkunft“ und „Klasse“ die Spalte „Integration“ (Plattform laut Entity-Registry) mit Auswahlfilter (auch „ohne Integration“), Sortierung und der Anzahl verschiedener Integrationen in der Summenzeile. Im CSV-Export steht sie als letzte Spalte.
+- **Spaltenreihenfolge (Punkte 340, 342):** Entitäten, Istzustand: erster KZe, erster LZe, letzter, Zuwachs, States … – Events, Istzustand: ältestes, Zuwachs, Bestand.
+- **Attribute (Zeilen) (Punkt 341):** Die Spalte „Bestand (Attribute · MB)“ zeigt jetzt die Anzahl Zeilen und heißt „Attribute (Zeilen)“; der Platz in MB steht im Tooltip der Summe. Eine gespeicherte Spaltenauswahl wird einmalig umgestellt.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b8 (Beta)
 - **Analyse-Tabelle (Punkt 338):** Die Spalten Zuwachs und Bestand haben jetzt eine feste Reihenfolge (Zuwachs, Bestand, Anteil) und tauschen beim Wechsel der Sicht nicht mehr den Platz. Die Sicht bestimmt nur noch, worauf sich der Anteil bezieht.
 - **Code-Scanning (Punkt 337):** Sicherung lesen prüft zusätzlich, dass die Datei im Sicherungsordner liegt; die GitHub-Workflows bekommen `permissions: contents: read`.

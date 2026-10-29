@@ -11,6 +11,7 @@ Parameter f_<spalte> aus der Abfrage:
            f_plattform (Integration genau, ab 0.5.5b11 für „Ansehen“ der Empfehlungen, Punkt 205)
   Labels f_labels                          enthält bzw. * und ? in der Liste „A, B“ (Labels an Entität und Gerät, ab 0.4.10)
   Klasse f_device_class                    genau (z. B. power) | __ohne (keine device_class), ab 0.5.4 (Punkt 167)
+  Integration f_plattform                  genau (z. B. mqtt) | __ohne (ohne Registry-Eintrag), ab 0.5.7b9 (Punkt 339)
 Ungültige Eingaben werden ignoriert und als Fehler je Spalte zurückgegeben.
 """
 import datetime
@@ -20,7 +21,7 @@ import time
 
 ZAHL_SPALTEN = ("rows", "rows_24h", "lts_rows", "kurz_rows", "loeschbar", "attr_avg", "attr_anteil",
                 "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-                "attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb")
+                "attr_zeilen", "attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb")
 # Attribut-Größen werden in MB gefiltert (Eingabe z. B. >50 oder 0,5-2), gespeichert sind Bytes
 MB_SPALTEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb")   # loesch_mb: Punkt 197
 DATUM_SPALTEN = ("first_ts", "last_ts", "kz_first_ts", "lts_first_ts")
@@ -161,9 +162,9 @@ def baue(parameter):
         try:
             if spalte in ("entity_id", "herkunft", "labels"):
                 f = text_filter(roh)
-            elif spalte in ("herkunft_art", "device_id", "plattform"):
+            elif spalte in ("herkunft_art", "device_id"):
                 f = gleich_filter(roh)
-            elif spalte == "device_class":
+            elif spalte in ("device_class", "plattform"):   # Punkt 339: Integration wie Klasse, __ohne = ohne Integration
                 f = klasse_filter(roh)
             elif spalte == "status":
                 f = status_filter(roh)
@@ -202,6 +203,7 @@ def optionen(entitaeten):
         out[art] = {"regeln": sorted(regeln, key=lambda r: (r.startswith("E:"), r)), "werte": sorted(werte, key=_sortwert)}
     # Punkt 167: vorkommende Klassen (device_class) für die Auswahl im Spaltenfilter
     out["device_class"] = sorted({e.get("device_class") for e in entitaeten if e.get("device_class")})
+    out["plattform"] = sorted({e.get("plattform") for e in entitaeten if e.get("plattform")})   # Punkt 339
     return out
 
 
