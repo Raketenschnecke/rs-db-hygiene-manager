@@ -251,7 +251,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             return je_regel.setdefault(rid, {"regel": rid, "name": regel_namen.get(rid, rid), "entitaeten": set(),
                                              "kurzzeit": 0, "attribute": 0, "langzeit": 0,
                                              "states": 0, "kurz": 0, "attr_bytes": 0, "lts": 0, "ersparnis_bytes": 0, "events": 0, "attr_zeilen": 0, "ersparnis_events": 0,
-                                             "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0,
+                                             "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0, "pz_states": 0, "pz_kurz": 0,
                                              "ueberstimmt": set(), "verwaist": set()})
 
         # Überstimmte Regeln (Punkt 29) und überstimmte Entitätsregeln als Hinweis (Punkt 28)
@@ -275,6 +275,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 r["kurz"] += loesch["kurz"]
                 d = (basis["states"] - prog["states"]) + (basis["kurz"] - prog["kurz"])
                 r["ersparnis_states"] += d
+                r["pz_states"] += prog_z["states"]; r["pz_kurz"] += prog_z["kurz"]   # Prognose in Zeilen für „5-Min je State“
             elif art == "attribute":
                 # Punkt 254 (0.5.6b9): Attribute haben wieder einen eigenen Wert – Löschmenge und Ersparnis gehören der Regel,
                 # die ihn setzt (der Attribut-Standard hat keine Regel-ID und erscheint nur in den Summen)
@@ -295,6 +296,8 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                                                        for u in erg[art]["ueberstimmt"]]}
                                  for art in rg.WERTE},
                        "loeschbar": loesch, "prognose_bytes": sum(prog.values()), "prognose_teile": prog,
+                       # Prognose › Vorhaltung: Zeilen je Tabelle und die im Prognosezeitraum wirksame Kurzzeit (Tage)
+                       "prognose_zeilen_teile": prog_z, "prognose_tage": kp,
                        # Punkt 63: Block „Löschmenge sofort“ als flache Felder (Server-Filter, Sortierung, Summen)
                        "loesch_summe": loesch["states"] + loesch["kurz"] + loesch["lts"] + (loesch["attr_zeilen"] or 0), "loesch_states": loesch["states"],   # Punkt 243: inkl. Attribute
                        "loesch_kurz": loesch["kurz"], "loesch_lts": loesch["lts"], "loesch_attr_zeilen": loesch["attr_zeilen"],
@@ -326,7 +329,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 rr = je_regel.setdefault(er["regel"], {"regel": er["regel"], "name": regel_namen.get(er["regel"], er["regel"]),
                                                        "entitaeten": set(), "kurzzeit": 0, "attribute": 0, "langzeit": 0,
                                                        "states": 0, "kurz": 0, "attr_bytes": 0, "lts": 0, "ersparnis_bytes": 0, "events": 0, "attr_zeilen": 0, "ersparnis_events": 0,
-                                                       "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0,
+                                                       "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0, "pz_states": 0, "pz_kurz": 0,
                                                        "ueberstimmt": set(), "verwaist": set()})
                 rr["entitaeten"].add(typ)
                 rr["kurzzeit"] += 1

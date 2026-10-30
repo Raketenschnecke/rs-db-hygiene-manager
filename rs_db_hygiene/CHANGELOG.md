@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b14 (Beta)
+- **Prognose in Unterreitern (Punkt 354):** Der Reiter Prognose hat die Unterreiter „Tabelle“ (die bisherige Regeltabelle) und „Analyse“; sie bleiben beim Scrollen unter den Reitern stehen.
+- **Analyse: Kurzzeit nach Vorhaltedauer (Punkt 355):** Zoombarer Donut der Kurzzeit-Prognose nach Vorhaltedauer, Regel, Integration und Entität (Ebenen umschaltbar), Maß Platz oder Zeilen. Der Außenring teilt jedes Segment nach Tabelle auf (States, 5-Min, Attribute; Schraffur in der Farbe des Segments). „5-Min je State“ zeigt das Missverhältnis, „weitere Entitäten“ lassen sich aufklappen, „… in Entitäten öffnen“ zeigt das gezoomte Segment im Tab Entitäten. Die Ansicht füllt die Fensterhöhe ohne Seiten-Scrollbalken.
+- **Prognose-Tabelle (Punkt 356):** Neue Gruppe „Zeilen (Prognose)“ mit States-Zeilen, 5-Min-Zeilen und „5-Min je State“ je Regel.
+- **Beschriftung (Punkt 357):** Spaltenüberschriften heißen „5-Min“ statt „5-Min-Statistik“; „Stand der Analyse“ entfällt in der Leiste des Reiters Analyse.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b13 (Beta)
 - **Summenzeile in der Analyse (Punkt 350):** Die Tabelle unter Analyse hat unter den Spaltentiteln eine Summenzeile (Entitäten, Zuwachs, Bestand, Anteil, Platz, Geschützt) über die gezeigten Zeilen.
 - **Rang-Filter (Punkt 351):** Regeln, Spalte Rang: Auswahl nach Stufe (z. B. 2 – entity).

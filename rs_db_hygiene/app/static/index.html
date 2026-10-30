@@ -670,8 +670,28 @@ button.dd-sg[aria-pressed="true"] { background: var(--accent-weak); color: var(-
 #ddPfad button { border-radius: 999px; padding: 2px 12px; }
 #ddPfad button[aria-current="true"] { font-weight: 600; cursor: default; border-color: var(--text); }
 .dd-tr { color: var(--muted); }
-#ddChart svg { width: 100%; height: auto; display: block; }
-#ddLegende { flex: 1 1 380px; min-width: 300px; max-height: 780px; overflow: auto; padding-right: 4px; }
+#ddChart svg, #vhChart svg { width: 100%; height: auto; display: block; }
+#ddLegende, #vhLegende { flex: 1 1 380px; min-width: 300px; max-height: 780px; overflow: auto; padding-right: 4px; }
+#vhPfad { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; min-height: 34px; margin-bottom: 6px; }
+#vhPfad button { border-radius: 999px; padding: 2px 12px; }
+#vhPfad button[aria-current="true"] { font-weight: 600; cursor: default; border-color: var(--text); }
+#vhChart text { fill: var(--text); font-family: system-ui, sans-serif; }
+#vhChart .dd-lbl { font-size: 10px; pointer-events: none; fill: #fff; paint-order: stroke; stroke: #0000008c; stroke-width: 2.6px; stroke-linejoin: round; }
+#vhChart .dd-mt { fill: var(--muted); }
+#vhOeffne { margin-left: auto; }
+/* Prognose › Analyse füllt die Höhe bis zum Fensterrand ohne Seiten-Scrollbalken (wie das Cockpit); die Legende scrollt nur bei sehr vielen Zeilen in sich */
+#vhAbschnitt:not([hidden]) { height: calc(100vh - var(--kleb-oben-h, 101px) - var(--psub-h, 0px) - 16px); min-height: 460px; display: flex; flex-direction: column; margin-bottom: 0; }
+#vhAbschnitt .dd-kopf, #vhAbschnitt .dd-steuer { flex: none; }
+#vhAbschnitt .dd-haupt { flex: 1 1 0; min-height: 0; flex-wrap: nowrap; gap: 20px; }
+#vhAbschnitt .dd-links { display: flex; flex-direction: column; }
+#vhLegende { max-height: 100%; }
+.dd-warn { color: var(--warn, #c98500); }
+/* Prognose: Unterreiter bleiben beim Scrollen unter den Reitern stehen; die Knopfleiste der Tabelle klebt darunter */
+.psub { position: sticky; top: calc(var(--kleb-oben-h, 0px) + var(--banner-h, 0px)); z-index: 5; background: var(--bg); padding: 12px 0 20px; margin-bottom: 0; }
+#tab-probe .tabelle { max-height: calc(100vh - var(--kleb-h) - var(--psub-h, 0px) - 12px - var(--unten, 56px)); }   /* die Unterreiter kleben zusätzlich über der Tabelle */
+#tab-probe .tabelle.fuellend { min-height: calc(100vh - var(--kleb-h) - var(--psub-h, 0px) - 12px - var(--unten, 56px)); }
+#ppRegeln .leiste[data-leiste] { top: calc(var(--kleb-oben-h, 0px) + var(--banner-h, 0px) + var(--psub-h, 0px)); }
+#vhAbschnitt h2 { margin-top: 6px; }
 .dd-box { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px; margin-bottom: 10px; padding: 8px 12px; }
 .dd-box h3 { margin: 0; font: 600 1.08em var(--mono); display: flex; justify-content: space-between; gap: 8px; }
 .dd-box h3 small { color: var(--muted); font: .92em system-ui, sans-serif; font-weight: 400; text-align: right; }
@@ -685,6 +705,7 @@ button.dd-sg[aria-pressed="true"] { background: var(--accent-weak); color: var(-
 path.dd-seg { stroke: var(--bg); stroke-width: 1.5; cursor: default; transition: opacity .12s; }
 path.dd-seg.dd-zoomb { cursor: pointer; }
 path.dd-seg.dim { opacity: .28; }
+path.dd-muster { stroke: none; pointer-events: none; }
 #ddChart text { fill: var(--text); font-family: system-ui, sans-serif; }
 #ddChart .dd-lbl { font-size: 10px; pointer-events: none; fill: #fff; paint-order: stroke; stroke: #0000008c; stroke-width: 2.6px; stroke-linejoin: round; }
 #ddChart .dd-mt { fill: var(--muted); }
@@ -1220,6 +1241,20 @@ actions:
     <div class="tabelle"><table id="tRegeln" class="baustein"></table></div>
   </section>
   <section id="tab-probe" hidden>
+    <div class="dsub-bar psub" id="probeLeiste"><div class="gr" id="probeSub" role="tablist" aria-label="Prognose-Ansicht"></div></div>
+    <section class="dd" id="vhAbschnitt" hidden>
+      <div class="dd-kopf"><h2>Prognosen für Kurzzeit nach Vorhaltedauer</h2><span class="dd-info" id="vhInfo" tabindex="0" role="note">ⓘ</span></div>
+      <div class="dd-steuer">
+        <div class="gr"><span title="Was die Segmente zeigen: den geschätzten Platz im Prognosezeitraum oder die Zeilen einer Tabelle">Maß:</span><span id="vhMass"></span></div>
+        <div class="gr"><span>Ebenen:</span><span id="vhEbenen"></span></div>
+        <button id="vhOeffne" class="ana-oeffne" style="--ana: var(--zf-ana); --ana-fg: var(--zf-ana-fg)" hidden>↗ in Entitäten öffnen</button>
+      </div>
+      <div class="dd-haupt">
+        <div class="dd-links"><nav id="vhPfad" aria-label="Auswahl"></nav><div id="vhChart"><p class="sub">Lädt …</p></div></div>
+        <div id="vhLegende"></div>
+      </div>
+    </section>
+    <div id="ppRegeln">
     <div class="leiste" data-leiste="probe" hidden>
       <button data-reset-filter="probe">Filter zurücksetzen</button>
       <button class="hilfeknopf" data-hilfe="prognosen" aria-label="Erläuterung: Prognose">ⓘ Was zeigt dieser Tab?</button>
@@ -1230,6 +1265,7 @@ actions:
     </div>
     <div class="trefferzeile" id="trefferProbe"></div>
     <div class="tabelle"><table id="tProbe" class="baustein"></table></div>
+    </div>
   </section>
   <section id="tab-loeschen" hidden>
     <div class="loeschkasten" id="lKasten">lade …</div>
@@ -2226,7 +2262,7 @@ async function ladeKacheln() {
     S.probe = r;
     zeigeGlobal();
     $("#raster").innerHTML = rasterHtml(r.summe, r.stand);
-    T.probe.daten(r.regeln);
+    T.probe.daten(r.regeln); Vorh.neu();
     S.events = r.events || []; T.events.daten(S.events); zeigeEvHinweis();
     if (S.regeln) T.regeln.daten(tabRegeln());   // Spalte „Treffer“ aktualisieren
   } catch (e) {
@@ -2667,7 +2703,7 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["loesch_mb", "Speicher frei (MB)", 1, "zahl", ">1 (MB)", 125,
     "Speicher, den ein scharfer Lauf sofort frei macht (nach einem Repack): States, 5-Min-Statistik, Langzeit und Attribute, jeweils inkl. Index (Filter in MB). Attribute nur mit Attribut-Analyse."],
   ["loesch_states", "States", 1, "zahl", ">0", 100, "Zeilen in states außerhalb der Kurzzeit"],
-  ["loesch_kurz", "5-Min-Statistik", 1, "zahl", ">0", 150, "Zeilen in statistics_short_term außerhalb der Kurzzeit"],
+  ["loesch_kurz", "5-Min", 1, "zahl", ">0", 150, "Zeilen in statistics_short_term außerhalb der Kurzzeit"],
   ["loesch_lts", "Langzeit", 1, "zahl", ">0", 100, "Stundenstatistik außerhalb der Langzeit-Vorhaltezeit"],
   ["loesch_attr_zeilen", "Attribute", 1, "zahl", ">0", 150,
     "Attributzeilen, die mit den States wegfallen (zuletzt vor der Kurzzeit-Grenze benutzt) – in der Summe enthalten; aus der Attribut-Analyse"],
@@ -3256,7 +3292,8 @@ T.probe = new LokaleTabelle({
   // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
   // Punkt 224 (0.5.5b14): Block „Löschmenge sofort“ entfällt – die steht in Kacheln, Tab Entitäten und Tab Löschen
   gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
-    ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]]],
+    ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]],
+    ["Zeilen (Prognose)", "prog", ["pz_states", "pz_kurz", "pz_faktor"]]],
   fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
   zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)}: Klick öffnet die Regelmaske"` : "",
@@ -3279,6 +3316,14 @@ T.probe = new LokaleTabelle({
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_lts, zelle: r => gb(r.ersparnis_lts), csv: r => r.ersparnis_lts, summe: gbSumme(r => r.ersparnis_lts) },
     { k: "ersparnis_events", titel: "Events (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Events (über Event-Regeln)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_events || 0, zelle: r => gb(r.ersparnis_events || 0), csv: r => r.ersparnis_events || 0, summe: gbSumme(r => r.ersparnis_events || 0) },
+    { k: "pz_states", titel: "States (Zeilen)", hilfe: "Prognostizierte States-Zeilen der Entitäten, deren Kurzzeit aus dieser Regel stammt (im Prognosezeitraum, ohne Attribute)",
+      typ: "zahl", n: 1, breite: 120, wert: r => r.pz_states || 0, zelle: r => zahl(Math.round(r.pz_states || 0)), csv: r => Math.round(r.pz_states || 0), summe: anzahlSumme(r => Math.round(r.pz_states || 0)) },
+    { k: "pz_kurz", titel: "5-Min (Zeilen)", hilfe: "Prognostizierte 5-Min-Zeilen der Entitäten, deren Kurzzeit aus dieser Regel stammt (288 je Tag und Entität mit Statistik)",
+      typ: "zahl", n: 1, breite: 120, wert: r => r.pz_kurz || 0, zelle: r => zahl(Math.round(r.pz_kurz || 0)), csv: r => Math.round(r.pz_kurz || 0), summe: anzahlSumme(r => Math.round(r.pz_kurz || 0)) },
+    { k: "pz_faktor", titel: "5-Min je State", hilfe: "Wie viele 5-Min-Zeilen auf eine States-Zeile kommen (Prognose). Hoch = die Entitäten dieser Regel ändern sich selten, bekommen aber trotzdem 288 Statistikzeilen am Tag; „nur 5-Min“ = keine States",
+      typ: "zahl", n: 1, breite: 120, wert: r => r.pz_states ? r.pz_kurz / r.pz_states : (r.pz_kurz ? 1e12 : 0),
+      zelle: r => r.pz_states ? "×" + (r.pz_kurz / r.pz_states).toLocaleString("de-DE", { maximumFractionDigits: r.pz_kurz / r.pz_states < 1 ? 2 : r.pz_kurz / r.pz_states < 10 ? 1 : 0 }) : (r.pz_kurz ? "nur 5-Min" : "–"),
+      csv: r => r.pz_states ? +(r.pz_kurz / r.pz_states).toFixed(2) : "" },
   ],
 });
 T.lts = new LokaleTabelle({
@@ -5220,7 +5265,7 @@ T.loesch = new LokaleTabelle({
     // Punkt 243 (0.5.6b6): Spaltenfolge Summe | States | 5-Min | Attribute | …, Summe inkl. Attribute; Punkt 285: im Tab Löschen steht Langzeit vor Events
     blockSpalte("summe", "Summe", "Summe aus States, 5-Min-Statistik, Attributen, Langzeit und Events – Schätzung aus der Analyse (Tagesbasis); vor jedem Paket wird genau nachgezählt. Die Attribute sind eine Obergrenze (bei „teilweise“ höchstens so viele).", 140),
     blockSpalte("states", "States", "Zeilen in states (recorder.purge_entities)"),
-    blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term (Integration RS DB Hygiene)", 145),
+    blockSpalte("kurz", "5-Min", "Zeilen in statistics_short_term (Integration RS DB Hygiene)", 145),
     blockSpalte("attr_zeilen", "Attribute", "Attributzeilen, die wegfallen – mit den States oder (Punkt 254) früher, wenn der Attribut-Wert kürzer als die Kurzzeit ist: dann werden sie von den States getrennt und die States bleiben. In der Summe enthalten; aus der Attribut-Analyse, bei „teilweise“ höchstens so viele", 150),
     blockSpalte("lts", "Langzeit", "Stundenstatistik (Integration RS DB Hygiene)"),
     blockSpalte("events", "Events", "Events dieses Typs (Integration RS DB Hygiene)"),
@@ -5272,7 +5317,7 @@ T.laeufe = new LokaleTabelle({
     // Punkt 243/285: Summe | States | 5-Min | Attribute | Langzeit | Events; die Summe zählt ab dieser Version die Attribute mit (ältere Läufe unverändert)
     { k: "geloescht", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 130, wert: r => laufSumme(r), zelle: r => zahl(laufSumme(r)), csv: r => laufSumme(r), summe: anzahlSumme(r => laufSumme(r)),
       hilfe: "Gelöscht insgesamt: States + 5-Min-Statistik + Attribute + Langzeit + Events. Läufe aus früheren Versionen zeigen die Summe ohne Attribute." },
-    ...[["states", "States"], ["kurz", "5-Min-Statistik"]].map(([k, t]) => laufSpalte(k, t)),
+    ...[["states", "States"], ["kurz", "5-Min"]].map(([k, t]) => laufSpalte(k, t)),
     { k: "lauf_attr", titel: "Attribute", typ: "zahl", n: 1, breite: 115, hilfe: "im Lauf gemessen: Attributzeilen, die HA mit den States gelöscht hat (ab 0.4.0) – in der Summe enthalten (Läufe aus früheren Versionen: nicht)",
       wert: r => r.attr_geloescht ?? null, zelle: r => r.attr_geloescht == null ? "–" : zahl(r.attr_geloescht), csv: r => r.attr_geloescht ?? "", summe: anzahlSumme(r => r.attr_geloescht || 0) },
     ...[["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => laufSpalte(k, t)),
@@ -5420,7 +5465,7 @@ $("#tLaeufe").addEventListener("click", ev => {
       blockSpalte("geplant", "geplant", "Plan dieser Entität (Zeilen bzw. Attributzeilen) laut Analyse – 5-Min-Statistik, Langzeit, Events und Attribute erst ab 0.5.6b19, States erst ab 0.5.6b38 im Protokoll", 100),
       blockSpalte("ueberhang", "Überhang", "geplant minus erledigt (gelöschte Zeilen bzw. entfernte Attributzeilen) – was im nächsten Lauf folgt; bei Aufträgen ohne Plan „–“", 100),
       blockSpalte("summe", "Summe (Zeilen)", mitAttr(r) ?"Summe aus States, 5-Min-Statistik, Attributen, Langzeit und Events" : "Summe aus States, 5-Min-Statistik, Langzeit und Events (dieser Lauf stammt aus einer früheren Version – ohne Attribute)", 130),
-      blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min-Statistik", "Zeilen in statistics_short_term", 145),
+      blockSpalte("states", "States", "Zeilen in states"), blockSpalte("kurz", "5-Min", "Zeilen in statistics_short_term", 145),
       blockSpalte("attr_zeilen", "Attribute", "im Lauf gemessen – Attributzeilen, die HA mit den States gelöscht hat", 150),
       blockSpalte("lts", "Langzeit", "Stundenstatistik"), blockSpalte("events", "Events", "Events dieses Typs"),
       { k: "ergebnis", titel: "Ergebnis", typ: "text", breite: 140, wert: x => x.ergebnis, zelle: x => esc(x.ergebnis), csv: x => x.ergebnis },
@@ -5542,7 +5587,7 @@ T.summe = new LokaleTabelle({
       optionen: l => [...new Set(l.map(r => r.monat))].sort().reverse().map(m => [m, m.split("-").reverse().join(".")]) },
     { k: "zeilen", titel: "Summe (Zeilen)", typ: "zahl", n: 1, breite: 140, hilfe: "Je Entität bzw. Event-Typ; States + 5-Min-Statistik + Attribute + Langzeit + Events (Attribute ab 0.4.0 gemessen). Bei Paketen mit genau einer Entität die tatsächlich gelöschte Zahl, bei größeren Paketen vorher − nachher je Entität – das kann wenige Zeilen unter der Lauf-Summe liegen, weil während des Laufs weitere Zeilen über die Altersgrenze rutschen und mitgelöscht werden.", wert: r => monatSumme(r), zelle: r => zahl(monatSumme(r)), csv: r => monatSumme(r), summe: anzahlSumme(r => monatSumme(r)) },
     // je Tabelle (ab 0.3.0); Einträge aus 0.2.x kennen nur States
-    ...[["states", "States"], ["kurz", "5-Min-Statistik"]].map(([k, t]) => monatSpalte(k, t)),
+    ...[["states", "States"], ["kurz", "5-Min"]].map(([k, t]) => monatSpalte(k, t)),
     { k: "attr_zeilen", titel: "Attribute", typ: "zahl", n: 1, breite: 115, hilfe: "gemessen ab 0.4.0 – in der Summe enthalten",
       wert: r => r.attr_zeilen || 0, zelle: r => zahl(r.attr_zeilen || 0), csv: r => r.attr_zeilen || 0, summe: anzahlSumme(r => r.attr_zeilen || 0) },
     ...[["lts", "Langzeit"], ["events", "Events"]].map(([k, t]) => monatSpalte(k, t)),
@@ -5878,6 +5923,271 @@ async function ladeDash() {
   dashPasse();
 }
 
+// ================================================ Prognose › Vorhaltung
+// Donut der Kurzzeit-Prognose (States, 5-Min, Attribute) nach wirksamer Vorhaltedauer → Regel → Integration → Entität, mit Zoom wie im Cockpit.
+// Daten: GET api/prognose/vorhaltung (Probelauf mit dem Prognosezeitraum und dem Haken „passive Regeln“ der Kopfleiste).
+const PROBE_SUB = [["regeln", "Tabelle", "ppRegeln", "Regeln mit Treffern, Löschmenge und Ersparnis"],
+  ["vorh", "Analyse", "vhAbschnitt", "Wohin die Kurzzeit-Prognose geht: nach Vorhaltedauer, Regel, Integration und Entität – zeigt, welche Regel wie viel Platz bindet"]];
+function probeZeige(sub) {
+  PROBE_SUB.forEach(([k, , id]) => $("#" + id).hidden = k !== sub);
+  $("#probeSub").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sub === sub)));
+  if (sub === "vorh") { Vorh.laden(false); requestAnimationFrame(() => Vorh.passe()); }
+}
+const Vorh = (() => {
+  const MASS = { platz: ["Platz", 7], zeilen: ["Zeilen", 4] };
+  const EBENEN = { dri: ["Dauer › Regel › Integration", ["dauer", "regel", "int"]], ri: ["Regel › Integration", ["regel", "int"]], di: ["Dauer › Integration", ["dauer", "int"]] };
+  const MIN_SEG = 0.012, TOP_ENT = 40;
+  const waehle = (schl, erlaubt, std) => { const v = speicher.lies(schl, std); return erlaubt.includes(v) ? v : std; };
+  let mass = waehle("dbh_vh_mass", Object.keys(MASS), "platz"), ebenen = waehle("dbh_vh_ebenen", Object.keys(EBENEN), "dri");
+  const aussen = true;   // Außenring (Aufteilung nach Tabelle) ist immer an
+  let D = null, wurzel = null, pfad = [], fokusKette = [], aktuell = null, geladenFuer = null;
+
+  const fmtZ = n => n >= 1e6 ? (n / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " Mio" : Math.round(n).toLocaleString("de-DE");
+  const fmtB = b => b >= 1e9 ? (b / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " GB" : (b / 1e6).toLocaleString("de-DE", { maximumFractionDigits: b < 1e7 ? 1 : 0 }) + " MB";
+  const fmtP = p => (p * 100).toLocaleString("de-DE", { minimumFractionDigits: p < 0.1 ? 1 : 0, maximumFractionDigits: 1 }) + " %";
+  const fmtW = (n, m) => m === "platz" ? fmtB(n) : fmtZ(n) + " Zeilen";
+  const faktor = k => k.m[1] ? "×" + (k.m[2] / k.m[1]).toLocaleString("de-DE", { maximumFractionDigits: k.m[2] / k.m[1] < 1 ? 2 : k.m[2] / k.m[1] < 10 ? 1 : 0 }) : (k.m[2] ? "nur 5-Min" : "–");   // 5-Min-Zeilen je State
+  const zmass = m => m[1] + m[2] + m[3];   // Zeilen: States + 5-Min + Attribute
+  const wert = k => mass === "platz" ? k.m[0] : zmass(k.m);
+  const kurz = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+  const hash = s => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+  const TON = [0, -26, 24, -12, 38, -38, 12];
+  const ton = (c, id) => { const p = TON[hash(id) % TON.length]; return p === 0 ? c : `color-mix(in srgb, ${c} ${100 - Math.abs(p)}%, ${p > 0 ? "white" : "black"})`; };
+  const tageTxt = t => t === 0 ? "keine Kurzzeit (heute 0:00)" : t === 1 ? "1 Tag" : t.toLocaleString("de-DE") + " Tage";
+  // Eintrag einer Entität: [id, Integration, Tage, Regel, States, 5-Min, Attribute, Platz]
+  const emess = e => [e[7], e[4], e[5], e[6], Math.max(0, e[5] - e[4]), e[8], e[9], e[10]];   // Platz, States, 5-Min, Attribute (Zeilen), Überhang, dann Platz je Tabelle (States, 5-Min, Attribute)
+  const NM = [0, 1, 2, 3, 4, 5, 6, 7];
+
+  function baue() {
+    const sum = l => NM.map(i => l.reduce((a, e) => a + emess(e)[i], 0));
+    const grenze = D.ziel_tage;
+    const KEY = { dauer: e => e[2], regel: e => e[3] || "-", int: e => e[1] };
+    const NAME = { dauer: k => tageTxt(k) + (k >= grenze ? " ⚠" : ""), regel: k => k === "-" ? "(keine Regel)" : (D.regeln[k] || k), int: k => k === "-" ? "(ohne Integration)" : k };
+    const stufen = EBENEN[ebenen][1];
+    const meist = k => k.m.slice();
+    wurzel = { id: "root", art: "root", name: "Alle Entitäten", m: NM.map(() => 0), n: D.entitaeten.length, kinder: [], farbe: "var(--dd-grau)" };
+    wurzel.m = sum(D.entitaeten);
+    const tage = [...new Set(D.entitaeten.map(e => e[2]))].sort((a, b) => a - b);
+    function fuelle(knoten, liste, rest) {
+      if (!rest.length) {
+        const sorted = [...liste].sort((a, b) => { const x = emess(a), y = emess(b); return mass === "platz" ? y[0] - x[0] : zmass(y) - zmass(x); });
+        const top = sorted.slice(0, TOP_ENT), uebrig = sorted.slice(TOP_ENT);
+        const blatt = (e, eltern) => ({ id: eltern.id + "/e:" + e[0], art: "ent", name: e[0], m: emess(e), ids: [e[0]], n: 1, kinder: [], farbe: ton(knoten.farbe, e[0]), up: eltern,
+          detail: `${tageTxt(e[2])} · Regel ${D.regeln[e[3]] || e[3] || "–"}` });
+        top.forEach(e => knoten.kinder.push(blatt(e, knoten)));
+        if (uebrig.length) {   // „weitere Entitäten“ lassen sich aufklappen: alle übrigen Entitäten, nach dem gewählten Maß sortiert
+          const rest_ = { id: knoten.id + "/rest", art: "rest", name: `weitere Entitäten (${uebrig.length})`, m: sum(uebrig), ids: uebrig.map(e => e[0]), n: uebrig.length, kinder: [], farbe: "var(--dd-grau)", up: knoten };
+          rest_.kinder = uebrig.map(e => blatt(e, rest_)); knoten.kinder.push(rest_);
+        }
+        return;
+      }
+      const art = rest[0], gr = new Map();
+      let rang = null;
+      liste.forEach(e => { const k = KEY[art](e); if (!gr.has(k)) gr.set(k, []); gr.get(k).push(e); });
+      if (knoten === wurzel && art !== "dauer") rang = new Map([...gr].map(([k, l]) => [k, sum(l)]).sort((a, b) => (mass === "platz" ? b[1][0] - a[1][0] : zmass(b[1]) - zmass(a[1]))).map(([k], i) => [k, i]));
+      gr.forEach((l, k) => {
+        const id = knoten.id + "/" + art + ":" + k;
+        const farbe = art === "dauer" ? (tage.indexOf(k) < 8 ? `var(--dd-s${tage.indexOf(k) + 1})` : "var(--dd-grau)")
+          : knoten === wurzel ? (rang.get(k) < 8 ? `var(--dd-s${rang.get(k) + 1})` : "var(--dd-grau)") : ton(knoten.farbe, id);   // oberste Ebene ohne Dauer: Palette nach Größe
+        const nk = { id, art, name: NAME[art](k), m: sum(l), ids: l.map(e => e[0]), n: l.length, kinder: [], farbe, up: knoten };
+        fuelle(nk, l, rest.slice(1)); knoten.kinder.push(nk);
+      });
+      knoten.kinder.sort((a, b) => wert(b) - wert(a));
+    }
+    fuelle(wurzel, D.entitaeten, stufen);
+  }
+  const GRUPPENNAME = { dauer: "weitere Dauern", regel: "weitere Regeln", int: "weitere Integrationen", ent: "weitere Entitäten", rest: "weitere Entitäten" };
+  function sichtbar(knoten, kreis) {
+    const k = (knoten.kinder || []).filter(c => wert(c) > 0);
+    const gross = k.filter(c => wert(c) / kreis >= MIN_SEG), klein = k.filter(c => wert(c) / kreis < MIN_SEG);
+    gross.forEach(c => { c.up = knoten; });
+    if (klein.length === 1) { klein[0].up = knoten; gross.push(klein[0]); }
+    else if (klein.length > 1) {
+      const g = { id: "g:" + knoten.id, art: "gruppe", name: `${GRUPPENNAME[klein[0].art]} (${klein.length})`, m: NM.map(i => klein.reduce((a, c) => a + c.m[i], 0)),
+        n: klein.reduce((a, c) => a + c.n, 0), ids: klein.flatMap(c => c.ids), kinder: klein, farbe: "var(--dd-grau)", up: knoten, detail: klein.map(c => c.name).join(", ") };
+      klein.forEach(c => { c.up = g; }); gross.push(g);
+    }
+    return gross;
+  }
+  const zoombar = k => k.kinder && k.kinder.length > 0;
+  function kette(k) { const l = []; for (let x = k; x && x.id !== "root"; x = x.up) l.unshift(x); return l; }
+  function loesePfad(ids) {
+    let cur = wurzel; const ahn = [wert(wurzel)], erg = [];
+    ids = ids.filter((id, i) => !id.startsWith("g:") || i === ids.length - 1);
+    for (const id of ids) {
+      let f = null;
+      for (const kreis of [...ahn].reverse()) {
+        const liste = sichtbar(cur, kreis); f = liste.find(c => c.id === id);
+        if (!f) { const g = liste.find(c => c.art === "gruppe" && c.kinder.some(k => k.id === id)); if (g) { erg.push(g); cur = g; ahn.push(wert(g)); f = g.kinder.find(k => k.id === id); } }
+        if (f) break;
+      }
+      if (!f) break;
+      erg.push(f); cur = f; ahn.push(wert(f));
+    }
+    return erg;
+  }
+  const fokus = () => fokusKette.length ? fokusKette[fokusKette.length - 1] : wurzel;
+
+  const SVGNS = "http://www.w3.org/2000/svg", C = 300, RI = 105, GAP = 0.004, RA_AUSSEN = 208, RA_VOLL = 265, RB0 = 214, RB1 = 265;
+  const ra = () => aussen ? RA_AUSSEN : RA_VOLL;
+  // Außenring: Aufteilung des Segments nach Tabelle – Grundfarbe des inneren Segments, nur durch ein dezentes Muster unterschieden (States Schrägstriche, 5-Min Punkte, Attribute Raster)
+  const TEILE = [["States", "vhP0"], ["5-Min", "vhP1"], ["Attribute", "vhP2"]];
+  const MUSTER = `<defs>
+    <pattern id="vhP0" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.6" height="6" fill="#000" fill-opacity=".2"/></pattern>
+    <pattern id="vhP1" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="1.2" fill="#000" fill-opacity=".24"/></pattern>
+    <pattern id="vhP2" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 .5H7M.5 0V7" stroke="#000" stroke-opacity=".17" stroke-width="1" fill="none"/></pattern></defs>`;
+  const teile = k => mass === "platz" ? [k.m[5], k.m[6], k.m[7]] : [k.m[1], k.m[2], k.m[3]];
+  const pol = (r, a) => [C + r * Math.sin(a), C - r * Math.cos(a)];
+  function bogen(a0, a1, ri, ra) {
+    if (a1 - a0 < 1e-4) return "";
+    const g = Math.min(GAP, (a1 - a0) / 4); a0 += g; a1 -= g;
+    const gr = a1 - a0 > Math.PI ? 1 : 0, [x0, y0] = pol(ra, a0), [x1, y1] = pol(ra, a1), [x2, y2] = pol(ri, a1), [x3, y3] = pol(ri, a0);
+    return `M${x0} ${y0}A${ra} ${ra} 0 ${gr} 1 ${x1} ${y1}L${x2} ${y2}A${ri} ${ri} 0 ${gr} 0 ${x3} ${y3}Z`;
+  }
+  const el = (n, a = {}) => { const e = document.createElementNS(SVGNS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  let svg, gSeg, gLbl, gMitte;
+  function geruest() {
+    const chart = $("#vhChart"); chart.replaceChildren();
+    svg = el("svg", { viewBox: "0 0 600 600", role: "img" }); gSeg = el("g"); gLbl = el("g"); gMitte = el("g");
+    const hit = el("circle", { cx: C, cy: C, r: RI - 4, fill: "transparent" });
+    hit.onclick = () => { if (pfad.length) { pfad = pfad.slice(0, -1); render(); } };
+    svg.insertAdjacentHTML("afterbegin", MUSTER);
+    svg.append(gSeg, gLbl, hit, gMitte); chart.appendChild(svg);
+  }
+  const mt = (y, s, size, w, cls) => { const e = el("text", { x: C, y, "text-anchor": "middle" }); e.style.fontSize = size + "px"; e.style.fontWeight = w; if (cls) e.setAttribute("class", cls); e.textContent = s; e.style.pointerEvents = "none"; return e; };
+  const zeigeMitte = (l1, l2, l3, l4) => gMitte.replaceChildren(mt(C - 26, l1, 14, 600), mt(C, l2, 22, 600), mt(C + 20, l3, 12, 400, "dd-mt"), mt(C + 38, l4 || "", 11, 400, "dd-mt"));
+  const tip = (k, F) => [`# ${k.name}: ${fmtW(wert(k), mass)}`, k.detail ? kurz(k.detail, 400) : "", `Platz ${fmtB(k.m[0])} · States ${fmtZ(k.m[1])} · 5-Min ${fmtZ(k.m[2])} Zeilen · 5-Min je State: ${faktor(k)}`,
+    `Anteil: ${fmtP(wert(k) / wert(wurzel))} gesamt, ${fmtP(wert(k) / wert(F))} von ${F.name}`, zoombar(k) ? "Klick: hineinzoomen" : ""].filter(Boolean).join("\n");
+  function hover(k) {
+    const F = aktuell.F;
+    if (!k) { document.querySelectorAll("#vhLegende .dd-hl").forEach(e => e.classList.remove("dd-hl")); svg.querySelectorAll(".dim").forEach(e => e.classList.remove("dim")); standard(); return; }
+    svg.querySelectorAll("path.dd-seg").forEach(p => p.classList.toggle("dim", p.dataset.k !== k.id));
+    document.querySelectorAll("#vhLegende [data-k]").forEach(e => e.classList.toggle("dd-hl", e.dataset.k === k.id));
+    zeigeMitte(kurz(k.name, 28), fmtW(wert(k), mass), `${fmtP(wert(k) / wert(wurzel))} gesamt · 5-Min je State ${faktor(k)}`, `${fmtP(wert(k) / wert(F))} von ${kurz(F.name, 16)}` + (zoombar(k) ? " · Klick: hineinzoomen" : ""));
+  }
+  function standard() {
+    const F = fokus();
+    zeigeMitte(kurz(F.name, 28), fmtW(wert(F), mass), `${F.n.toLocaleString("de-DE")} ${F.n === 1 ? "Entität" : "Entitäten"}`, pfad.length ? "↑ Klick: eine Ebene zurück" : "Segment anklicken zum Hineinzoomen");
+  }
+  function zoomZu(k) { pfad = kette(k).map(x => x.id); render(); }
+  function zeichnePfad() {
+    const nav = $("#vhPfad"); nav.replaceChildren();
+    [wurzel, ...fokusKette].forEach((k, i, a) => {
+      if (i) { const s = document.createElement("span"); s.className = "dd-tr"; s.textContent = "›"; nav.appendChild(s); }
+      const b = document.createElement("button"); b.textContent = kurz(k.name, 26); b.title = k.name;
+      if (i === a.length - 1) b.setAttribute("aria-current", "true"); else b.onclick = () => { pfad = pfad.slice(0, i); render(); };
+      nav.appendChild(b);
+    });
+  }
+  function zeichne(r1, F) {
+    gSeg.replaceChildren(); gLbl.replaceChildren();
+    const summe = r1.reduce((a, c) => a + wert(c), 0) || 1; let w = 0;
+    r1.forEach(c => {
+      const a0 = w * 2 * Math.PI; w += wert(c) / summe; const a1 = w * 2 * Math.PI;
+      const R = ra();
+      const p = el("path", { class: "dd-seg" + (zoombar(c) ? " dd-zoomb" : ""), d: bogen(a0, a1, RI, R), title: tip(c, F) }); p.dataset.k = c.id; p.style.fill = c.farbe;
+      p.onclick = zoombar(c) ? () => zoomZu(c) : null; p.onmouseenter = () => hover(c); p.onmouseleave = () => hover(null);
+      gSeg.appendChild(p);
+      if (aussen) {   // Außenring: dieselbe Spanne, aufgeteilt nach Tabelle (Platz: Bytes, sonst Zeilen)
+        const tl = teile(c), ts = tl.reduce((a, x) => a + x, 0) || 1; let v = a0;
+        tl.forEach((x, i) => {
+          if (!x) return;
+          const b1 = v + (a1 - a0) * x / ts;
+          const q = el("path", { class: "dd-seg dd-aussen" + (zoombar(c) ? " dd-zoomb" : ""), d: bogen(v, b1, RB0, RB1),
+            title: `# ${TEILE[i][0]}: ${mass === "platz" ? fmtB(x) : fmtZ(x) + " Zeilen"}\n${fmtP(x / ts)} von ${c.name}` });
+          q.dataset.k = c.id; q.style.fill = c.farbe;
+          q.onclick = p.onclick; q.onmouseenter = () => hover(c); q.onmouseleave = () => hover(null);
+          gSeg.appendChild(q);
+          const o = el("path", { class: "dd-seg dd-muster", d: q.getAttribute("d") }); o.dataset.k = c.id; o.style.fill = `url(#${TEILE[i][1]})`; gSeg.appendChild(o); v = b1;
+        });
+      }
+      const am = (a0 + a1) / 2, [tx, ty] = pol((RI + R) / 2, am);
+      if ((a1 - a0) * (RI + R) / 2 > 46) {
+        const l = el("text", { class: "dd-lbl", x: tx, y: ty - 6, "text-anchor": "middle", "dominant-baseline": "middle" }); l.textContent = kurz(c.name, 14); gLbl.appendChild(l);
+        const l2 = el("text", { class: "dd-lbl", x: tx, y: ty + 7, "text-anchor": "middle", "dominant-baseline": "middle" }); l2.textContent = fmtP(wert(c) / wert(F)); gLbl.appendChild(l2);
+      }
+    });
+  }
+  function zeichneLegende(r1, F) {
+    const L = $("#vhLegende"); L.replaceChildren();
+    if (aussen) { const k = document.createElement("div"); k.className = "dd-hint"; k.style.marginTop = "0"; k.style.marginBottom = "8px";
+      k.innerHTML = `Außenring (${mass === "platz" ? "Platz" : "Zeilen"} je Tabelle): ` + TEILE.map(([n, id]) => `<svg width="16" height="12" style="vertical-align:-2px"><rect width="16" height="12" rx="2" fill="var(--dd-grau)"/><rect width="16" height="12" rx="2" fill="url(#${id})"/></svg> ${n}`).join(" &nbsp; "); L.appendChild(k); }
+    const box = document.createElement("div"); box.className = "dd-box"; box.style.setProperty("--c", F.farbe);
+    box.innerHTML = `<h3><span>${esc(F.name)}</span><small>${fmtB(F.m[0])} · ${fmtZ(F.m[1])} States · ${fmtZ(F.m[2])} 5-Min (${faktor(F)})<br>${F.n.toLocaleString("de-DE")} Entitäten · ${fmtP(wert(F) / wert(wurzel))} gesamt</small></h3>`;
+    r1.forEach(k => {
+      const r = document.createElement("div"); r.className = "dd-row" + (zoombar(k) ? " dd-zoom" : ""); r.dataset.k = k.id;
+      if (zoombar(k)) { r.tabIndex = 0; r.setAttribute("role", "button"); r.onclick = () => zoomZu(k); r.onkeydown = e => { if (e.key === "Enter") zoomZu(k); }; }
+      r.innerHTML = `<span class="dd-sw" style="background:${k.farbe}"></span><span class="dd-n" title="${esc(k.detail || k.name)}">${esc(k.name)}</span><span class="dd-v">${fmtW(wert(k), mass)} · ${fmtP(wert(k) / wert(wurzel))} · ${fmtP(wert(k) / wert(F))} der Gruppe · ${k.n.toLocaleString("de-DE")} Ent.</span>`;
+      r.onmouseenter = () => hover(k); r.onmouseleave = () => hover(null);
+      box.appendChild(r);
+    });
+    L.appendChild(box);
+  }
+  // Kreis so groß wie der Platz hergibt (Höhe abzüglich Pfad, höchstens 60 % der Breite); die Legende bekommt den Rest
+  function passe() {
+    const p = $("#vhAbschnitt"); if (p.hidden || p.offsetParent === null) return;
+    const haupt = p.querySelector(".dd-haupt"), d = Math.max(200, Math.min(haupt.clientHeight - $("#vhPfad").offsetHeight - 6, haupt.clientWidth * 0.6));
+    p.querySelector(".dd-links").style.width = d + "px"; $("#vhChart").style.height = d + "px";
+  }
+  function render() {
+    if (!D) return;
+    fokusKette = loesePfad(pfad); pfad = fokusKette.map(x => x.id);
+    const F = fokus(), r1 = sichtbar(F, wert(F));
+    aktuell = { F, r1 };
+    zeichnePfad(); zeichne(r1, F); zeichneLegende(r1, F); passe(); standard();
+    const ob = $("#vhOeffne"); ob.hidden = !F.ids || !F.ids.length; if (!ob.hidden) { ob.textContent = `↗ ${kurz(F.name, 30)} in Entitäten öffnen`; ob.title = `In Entitäten öffnen: zeigt die ${F.ids.length.toLocaleString("de-DE")} Entitäten von „${F.name}“ im Tab Entitäten`; }
+    svg.setAttribute("aria-label", `Donut: ${MASS[mass][0]}, ${F.name}`);
+  }
+  function schalter(ziel, werte, get, set, schl) {
+    const box = $(ziel); box.replaceChildren(); const keys = Object.keys(werte);
+    keys.forEach(k => {
+      const b = document.createElement("button"); b.className = "dd-sg"; b.textContent = werte[k][0]; b.setAttribute("aria-pressed", String(k === get()));
+      b.onclick = () => { set(k); speicher.schreib(schl, k); box.querySelectorAll("button").forEach((c, i) => c.setAttribute("aria-pressed", String(keys[i] === k))); if (D) { baue(); render(); } };
+      box.appendChild(b); box.appendChild(document.createTextNode(" "));
+    });
+  }
+  async function laden(erzwingen) {
+    if ($("#vhAbschnitt").hidden && !erzwingen) { geladenFuer = null; return; }
+    let neu;
+    try { neu = await api("prognose/vorhaltung?" + par()); }
+    catch (e) { $("#vhChart").innerHTML = `<p class="d-sub">${esc(e.message)}</p>`; $("#vhLegende").replaceChildren(); $("#vhPfad").replaceChildren(); D = null; svg = null; return; }
+    const kennung = par().toString();
+    if (!erzwingen && D && svg && D.stand === neu.stand && geladenFuer === kennung) return;
+    geladenFuer = kennung;
+    if (!svg || !svg.isConnected) geruest();
+    D = neu; baue(); render();
+  }
+  schalter("#vhMass", MASS, () => mass, v => { mass = v; }, "dbh_vh_mass");
+  schalter("#vhEbenen", EBENEN, () => ebenen, v => { ebenen = v; }, "dbh_vh_ebenen");
+  // „In Entitäten öffnen“: alle Entitäten des gezoomten Segments als ID-Liste im Tab Entitäten (Filter vorher geleert, wie in der Analyse)
+  $("#vhOeffne").onclick = async () => {
+    const F = fokus(); if (!F.ids || !F.ids.length) return;
+    try {
+      const { schluessel } = await postJson("idliste", { ids: F.ids });
+      document.querySelector('#tabs button[data-tab="ent"]').click();
+      S.listeName = `Prognose: ${F.name}`;
+      anaFilterLeeren();
+      setzeFilter("liste", schluessel, true);
+    } catch (e) { meldung("Prognose", e.message); }
+  };
+  $("#vhInfo").title = "Zeigt, wohin die Kurzzeit-Prognose (States, 5-Min-Statistik, Attribute) geht – gruppiert nach der wirksamen Vorhaltedauer der Entität, "
+    + "der Regel, die sie setzt, der Integration und der Entität. „⚠“ = die Dauer reicht bis zum Ende des Prognosezeitraums (z. B. „global“ = purge_keep_days, hier auf den Zeitraum gekappt): "
+    + "diese Entitäten wachsen über den ganzen Zeitraum, ohne dass je etwas gelöscht wird. Verwaiste und deaktivierte Entitäten fehlen, Langzeitstatistik und Events gehören nicht dazu. "
+    + "\n\nZeilen: Größe der Segmente = States + 5-Min + Attribute in Zeilen. Die 5-Min-Statistik schreibt je Entität mit Statistik feste 288 Zeilen am Tag, auch wenn sich der Wert kaum ändert – „5-Min je State“ zeigt, wo das mehr Zeilen kostet als die States selbst."
+    + "\n\nKlick auf ein Segment: oder eine Legendenzeile zoomt hinein.\nKlick in die Mitte: oder auf den Pfad oben geht eine Ebene zurück.";
+  new ResizeObserver(passe).observe($("#tab-probe"));
+  return { laden, neu: () => laden(false), passe };
+})();
+{
+  const box = $("#probeSub");
+  PROBE_SUB.forEach(([k, t, , tip]) => {
+    const b = document.createElement("button"); b.className = "dd-sg"; b.dataset.sub = k; b.textContent = t; b.title = tip;
+    b.onclick = () => probeZeige(k); box.appendChild(b);
+  });
+  probeZeige("regeln");
+  new ResizeObserver(() => $("#tab-probe").style.setProperty("--psub-h", $("#probeLeiste").offsetHeight + "px")).observe($("#probeLeiste"));
+}
+
 // ================================================ Punkt 306: Donut im Reiter Dashboard
 // Zoombarer Donut Integration → Gerät → Entität (Klick zoomt hinein, Mitte/Pfad zurück). Daten: GET api/verursacher/baum (Analyse-Cache),
 // je Vorhaltezeit (Alle/Kurzzeit/Langzeit) und Sicht (Zuwachs je Tag/Bestand). Alles in einer Funktion, damit keine Namen der App überschrieben werden.
@@ -5942,7 +6252,7 @@ const Donut = (() => {
     if (klein.length === 1) { klein[0].up = knoten; gross.push(klein[0]); }
     else if (klein.length > 1) {
       const g = { id: "g:" + knoten.id, art: "gruppe", name: `${GRUPPENNAME[klein[0].art]} (${klein.length})`, wert: klein.reduce((a, c) => a + c.wert, 0), zb: klein.reduce((a, c) => a + c.zb, 0),
-        bb: klein.reduce((a, c) => a + c.bb, 0), n: klein.reduce((a, c) => a + c.n, 0), kinder: klein, farbe: "var(--dd-grau)", up: knoten, detail: klein.map(c => c.name).join(", ") };
+        bb: klein.reduce((a, c) => a + c.bb, 0), n: klein.reduce((a, c) => a + c.n, 0), ids: klein.flatMap(c => c.ids), kinder: klein, farbe: "var(--dd-grau)", up: knoten, detail: klein.map(c => c.name).join(", ") };
       klein.forEach(c => { c.up = g; });
       gross.push(g);
     }
@@ -6673,7 +6983,7 @@ async function ladeAna() {
         <option value="datum">Datum …</option><option value="unbekannt">ohne Statistik (unbekannt)</option></select></label>
       ${d.statistik_ab ? `<span class="sub" title="Die Langzeitstatistik reicht in dieser Datenbank so weit zurück; davor gibt es kein Erstauftreten">Statistik seit ${anaTs(d.statistik_ab)}</span>` : ""}
       ${chips.map(c => `<span class="ana-chip">${esc(c)}<button data-koh-weg aria-label="Filter aufheben" title="Filter aufheben">✕</button></span>`).join("")}
-      <span style="flex:1"></span><button id="anaBreitenReset" title="alle Spaltenbreiten der Tabelle auf Standard; einzelne Spalte: Doppelklick auf den Griff">Spaltenbreiten zurücksetzen</button><span class="sub">Stand der Analyse ${zeit(d.stand)}</span>
+      <span style="flex:1"></span><button id="anaBreitenReset" title="alle Spaltenbreiten der Tabelle auf Standard; einzelne Spalte: Doppelklick auf den Griff">Spaltenbreiten zurücksetzen</button>
     </div>
     <div class="ana-kopf">
       <span><b>${zahl(g.entitaeten)}</b> Entitäten</span>
@@ -6825,6 +7135,7 @@ $("#tabs").addEventListener("click", ev => {
   zeigeChips();   // Punkte 271/272
   zeigeAuswahl(); zeigeAuswahlEnt(); zeigeAuswahlEv(); zeigeAuswahlOpt();
   if (b.dataset.tab === "lts") ladeLts();
+  if (b.dataset.tab === "probe") Vorh.neu();
   if (b.dataset.tab === "dash") ladeDash();   // Punkt 288
   if (b.dataset.tab === "ana") ladeAna();   // Punkt 305
   if (b.dataset.tab === "opt") ladeOpt();   // Punkt 176

@@ -517,6 +517,15 @@ async def verursacher_baum(request):
     return web.json_response(await asyncio.to_thread(verursacher.baum, r, request.query))
 
 
+async def prognose_vorhaltung(request):
+    """Reiter Prognose › Vorhaltung: Kurzzeit-Prognose je Entität mit wirksamer Vorhaltedauer und Regel (Donut mit Drilldown)."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response(await asyncio.to_thread(verursacher.vorhaltung, r))
+
+
 async def verlauf_lesen(request):
     """Punkt 308: Reiter Dashboard › Zeitverlauf – Zuwachs im Jahr/Monat/Tag-Verlauf, aufgeteilt nach Kategorie oder Tabelle."""
     if not os.path.exists(ZUWACHS):
@@ -1433,6 +1442,7 @@ def erstelle_app():
         web.get("/api/pareto", pareto),
         web.get("/api/verursacher", verursacher_lesen),
         web.get("/api/verursacher/baum", verursacher_baum),
+        web.get("/api/prognose/vorhaltung", prognose_vorhaltung),
         web.get("/api/verlauf", verlauf_lesen),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),

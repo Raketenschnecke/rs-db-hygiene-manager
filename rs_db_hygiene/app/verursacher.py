@@ -295,3 +295,22 @@ def baum(r, q):
             geraete.append(x)
         aus.append({"key": ik, "name": ik, **rund(i), "geraete": geraete})
     return {"stand": r["stand"]["analyse_zeit"], "daten": daten, "gesamt": rund(gesamt), "slots": _farben(r), "integrationen": aus, "top": TOP_ENTITAETEN}
+
+
+def vorhaltung(r):
+    """Antwort für /api/prognose/vorhaltung: Kurzzeit-Prognose je Entität samt wirksamer Vorhaltedauer und der Regel, die sie setzt – für den
+    Donut Vorhaltedauer → Regel → Integration → Entität im Reiter Prognose. Je Entität [id, Integration, Tage, Regel, States, 5-Min, Attribute (Zeilen),
+    Platz (Bytes)]; Verwaiste und Deaktivierte schreiben nicht mehr und fehlen. Der Prognosezeitraum (`ziel_tage`) kappt die Dauer."""
+    namen = {x["regel"]: x["name"] for x in r["regeln"]}
+    ents = []
+    for e in r["entitaeten"]:
+        if e.get("aktion") != "regeln":
+            continue
+        t, z = e["prognose_teile"], e["prognose_zeilen_teile"]
+        platz = t["states"] + t["attribute"] + t["kurz"]
+        if not platz and not z["states"] and not z["kurz"]:
+            continue
+        ents.append([e["entity_id"], e.get("plattform") or OHNE, e["prognose_tage"], e["werte"]["kurzzeit"]["regel"] or "",
+                     round(z["states"]), round(z["kurz"]), round(z["attribute"]), round(platz), round(t["states"]), round(t["kurz"]), round(t["attribute"])])
+    return {"stand": r["stand"]["analyse_zeit"], "ziel_tage": r["stand"]["ziel_tage"], "purge_keep_days": r["stand"]["purge_keep_days"],
+            "regeln": namen, "entitaeten": ents}
