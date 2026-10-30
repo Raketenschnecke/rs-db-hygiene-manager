@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b11 (Beta)
+- **Regelwerk-Check, Vorrang (Punkt 348):** Bei „Regel Rx: bei n Entitäten unwirksam – Ry hat Vorrang“ gibt es eine vierte Lösung: „Ry: n Entitäten herausnehmen“ entfernt aus Ry die Muster, die diese Entitäten treffen, sodass Rx dort greift (statt jede Entität einzeln zu löschen). Trifft ein Platzhalter weitere Entitäten, weist die Variante darauf hin; die Liste zeigt jede Änderung.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b10 (Beta)
 - **Aus Regel entfernen (Punkt 343):** Tabelle Entitäten, Mehrfachauswahl: neuer Knopf „Aus Regel entfernen …“ (hinter „Regel aus Auswahl anlegen“). Der Dialog nennt die Regeln, die die gewählten Entitäten mit fester ID führen (Typ entity, glob, schutz), mit Trefferzahl; nach Rückfrage und mit Sicherung der Regeln werden die Einträge aus der gewählten Regel genommen. Bleibt einer Regel kein Muster, entfällt sie. Neuer Endpunkt `POST /api/regeln/entitaeten_entfernen`.
 - **Hinweis-Filter (Punkt 344):** Die Spalte Entität hat über dem Textfeld eine Auswahl nach Hinweisen und Schutz (mit Hinweis oder Schutz, ohne Hinweis, geschützt, Langzeit kürzer als Kurzzeit, Attribute länger als Kurzzeit, Kurzzeit wirkt erst bei höherem purge_keep_days, Entitätsregel überstimmt, Zähler-Schutz greift nicht). Das Kästchen „nur mit Hinweis/Schutz“ entfällt.

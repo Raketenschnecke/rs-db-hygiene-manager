@@ -236,6 +236,21 @@ def _vorrang_varianten(ru, rs, eids, arten, ctx):
                         f"ändert {rs['id']} für alle Entitäten, die sie bestimmt."))
     out.append(variante(f"{ru['id']} übernimmt {namen} von {rs['id']}", {"setzen": [{**ru, **{a: rs[a] for a in arten}}]}, ctx,
                         f"dann gibt es keinen Unterschied mehr; ändert {ru['id']} für alle Entitäten, die sie bestimmt."))
+    # d) die Entitäten aus rs herausnehmen: die Muster von rs entfernen, die diese Entitäten treffen – dann greift ru dort
+    nach_eid = {e["entity_id"]: e for e in ctx["ents"]}
+    weg = []
+    for m in rs["muster"]:
+        einzeln = {**rs, "muster": [m]}
+        if any(rg.Aufloeser._trifft(einzeln, eid, eid.split(".", 1)[0], nach_eid[eid].get("device_class") or "",
+                                    nach_eid[eid].get("status") or "aktiv", nach_eid[eid].get("rows_24h"),
+                                    nach_eid[eid].get("plattform") or "") for eid in eids if eid in nach_eid):
+            weg.append(m)
+    if weg:
+        breit = any(_platzhalter(m) for m in weg)
+        out.append(variante(f"{rs['id']}: {len(eids)} Entitäten herausnehmen – {len(weg)} Muster aus {rs['id']} entfernen",
+                            _ohne_muster(rs, weg), ctx,
+                            f"{ru['id']} greift dann bei diesen Entitäten. Entfernt: {', '.join(weg[:6])}{' …' if len(weg) > 6 else ''}."
+                            + (f" Ein Platzhalter trifft womöglich weitere Entitäten – die Liste zeigt jede Änderung." if breit else "")))
     return out
 
 
