@@ -1579,12 +1579,12 @@ function jsFilter(typ, ausdruck) {
     }
     return v => String(v ?? "").toLowerCase().includes(t);
   }
-  if (typ === "zahl" || typ === "gb") {
-    const teil = typ === "gb" ? 1e9 : 1;
+  if (typ === "zahl" || typ === "gb" || typ === "min") {
+    const teil = typ === "gb" ? 1e9 : typ === "min" ? 60 : 1;
     let m = /^(\d[\d.]*(?:,\d+)?)\s*-\s*(\d[\d.]*(?:,\d+)?)$/.exec(a);
     if (m) { const [lo, hi] = [zahlWert(m[1]), zahlWert(m[2])].sort((x, y) => x - y); return v => v != null && v / teil >= lo && v / teil <= hi; }
     m = /^(<=|>=|<|>|=)?\s*(\d[\d.]*(?:,\d+)?)$/.exec(a);
-    if (!m) throw new Error(typ === "gb" ? "Zahl in GB erwartet, z. B. >0,5 oder 1-3" : "Zahl erwartet, z. B. >1000, <=10, 100-500");
+    if (!m) throw new Error(typ === "gb" ? "Zahl in GB erwartet, z. B. >0,5 oder 1-3" : typ === "min" ? "Minuten erwartet, z. B. >5, <=10, 1-3" : "Zahl erwartet, z. B. >1000, <=10, 100-500");
     const x = zahlWert(m[2]), op = m[1] || "=";
     return v => v != null && ({ "<": v / teil < x, "<=": v / teil <= x, ">": v / teil > x, ">=": v / teil >= x, "=": v / teil === x })[op];
   }
@@ -1708,7 +1708,7 @@ class LokaleTabelle {
       if (this.z.klickIstZiehen(ev)) return;
       const th = ev.target.closest("thead th[data-sort]"); if (!th) return;
       const k = th.dataset.sort, sp = this.spalte(k);
-      this.sortierung = sortKlick(this.sortierung, k, ev.shiftKey, sp.typ === "zahl" || sp.typ === "gb");
+      this.sortierung = sortKlick(this.sortierung, k, ev.shiftKey, sp.typ === "zahl" || sp.typ === "gb" || sp.typ === "min");
       this.merkeSort(); this.pg = 0; this.zeige();
     });
     // Umschalt+Klick soll keinen Text markieren
@@ -1807,8 +1807,8 @@ class LokaleTabelle {
         .map(([w, t]) => `<option value="${esc(w)}" ${w === alt ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></th>`;
       if (s.typ === "keine") return "<th></th>";
       if (s.typ === "datum") return `<th><div class="datumfeld"><input data-tf="${s.k}" value="${esc(alt)}" placeholder="<1.9.2026" title="${esc(FILTERHILFE.datum)}" aria-label="Filter ${esc(s.titel)}"><button data-kalender-tf="${s.k}" title="Kalender öffnen" aria-label="Kalender für ${esc(s.titel)}">📅</button></div></th>`;
-      return `<th><input data-tf="${s.k}" value="${esc(alt)}" placeholder="${s.typ === "text" ? "Text, *" : s.typ === "gb" ? ">0,5" : ">0"}"
-        title="${s.typ === "text" ? "enthält …; * und ? als Platzhalter" : s.typ === "gb" ? "in GB, z. B. >0,5, <=2, 1-3" : "z. B. >1000, <=10, 100-500, 0"}" ${s.n ? 'style="text-align:right"' : ""}></th>`;
+      return `<th><input data-tf="${s.k}" value="${esc(alt)}" placeholder="${s.typ === "text" ? "Text, *" : s.typ === "gb" ? ">0,5" : s.typ === "min" ? ">5" : ">0"}"
+        title="${s.typ === "text" ? "enthält …; * und ? als Platzhalter" : s.typ === "gb" ? "in GB, z. B. >0,5, <=2, 1-3" : s.typ === "min" ? "in Minuten, z. B. >5, <=10, 1-3" : "z. B. >1000, <=10, 100-500, 0"}" ${s.n ? 'style="text-align:right"' : ""}></th>`;
     });
     // Punkt 136 auch hier: Auswahlfelder oben, Textfelder unten
     const ebene = h => h.startsWith("<th><select") ? " fz-auswahl" : h === "<th></th>" ? "" : " fz-text";
@@ -5255,9 +5255,9 @@ T.laeufe = new LokaleTabelle({
   fix: ["start"],
   leer: "noch kein Löschlauf",
   spalten: [
-    { k: "start", titel: "Start", typ: "keine", sortierbar: 1, fest: 1, n: 1, breite: 140, wert: r => r.start, zelle: r => zeit(r.start), csv: r => zeit(r.start) },
+    { k: "start", titel: "Start", typ: "datum", fest: 1, n: 1, breite: 140, wert: r => r.start, zelle: r => zeit(r.start), csv: r => zeit(r.start) },
     // Backup-Pause (Punkt 116) steckt ab 0.5.6b24 in der Dauer: gelber Chip mit Tooltip, wenn der Lauf auf ein HA-Backup gewartet hat
-    { k: "dauer", titel: "Dauer", typ: "keine", sortierbar: 1, n: 1, breite: 100, wert: r => r.ende ? r.ende - r.start : null,
+    { k: "dauer", titel: "Dauer", typ: "min", n: 1, breite: 100, wert: r => r.ende ? r.ende - r.start : null,
       hilfe: "Gesamtdauer des Laufs. Gelb markiert: Der Lauf hat auf ein HA-Backup gewartet (das Backup sperrt die Datenbank) – die Pause ist in der Dauer enthalten, der Tooltip nennt sie. Erst ab 0.4.10 gemessen.",
       zelle: r => !r.ende ? "–" : r.backup_warte_s ? `<span class="chip warn" style="margin:0" title="${esc(dauerTip(r))}">${esc(dauerText(r.ende - r.start))}</span>` : dauerText(r.ende - r.start),
       csvTeile: [["Dauer (s)", r => r.ende ? Math.round(r.ende - r.start) : ""], ["davon Backup-Pause (s)", r => r.backup_warte_s == null ? "" : Math.round(r.backup_warte_s)]],

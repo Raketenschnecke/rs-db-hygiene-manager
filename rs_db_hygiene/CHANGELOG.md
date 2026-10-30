@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b12 (Beta)
+- **Filter in Löschprotokolle › Läufe (Punkt 349):** Die Spalten Start und Dauer haben ein Filterfeld: Start als Datumsfilter mit Kalender (z. B. `<1.10.2026`, `1.10.2026-30.10.2026`, tagesgenau), Dauer als Zahlenfilter in Minuten (z. B. `>5`, `1-3`).
+- Die Integration ändert sich nicht
+
 ## 0.5.7b11 (Beta)
 - **Regelwerk-Check, Vorrang (Punkt 348):** Bei „Regel Rx: bei n Entitäten unwirksam – Ry hat Vorrang“ gibt es eine vierte Lösung: „Ry: n Entitäten herausnehmen“ entfernt aus Ry die Muster, die diese Entitäten treffen, sodass Rx dort greift (statt jede Entität einzeln zu löschen). Trifft ein Platzhalter weitere Entitäten, weist die Variante darauf hin; die Liste zeigt jede Änderung.
 - Die Integration ändert sich nicht
