@@ -12,7 +12,7 @@
   --kleb-h: 120px; --zeile-hell: #ffffff; --zeile-dunkel: #f2f4f7;
   --reiter: #e3e7ee; --reiter-hover: #d5dbe5; --reiter-rand: #c9d0db;
   --zf-ist: #d98880; --zf-loesch: #d4a72c; --zf-prog: #4fa36a;
-  /* Punkt 305: Analyse im Rot der Marke (Icon #5c0000), abgesetzt von Istzustand/Löschmenge/Prognose; -fg = Text und Linien */
+  /* Punkt 305: Analyse im Rot der Marke (Icon #5c0000), abgesetzt von Bestand/Löschmenge/Prognose; -fg = Text und Linien */
   --zf-ana: #5c0000; --zf-ana-fg: #5c0000;
   /* Punkt 132 (0.5.3): Spaltengruppen im Tab Entitäten – zwei Blautöne, dazu Rot/Gelb wie die Kachelzeilen */
   --zf-stamm: #5fa0d6; --zf-vorh: #6f7fd6;
@@ -28,10 +28,10 @@
           --ok: #3fb950; --bad: #ff6b6b; --tot: #f06bc4; --chip: #242b35; --zeile-hell: #1f252d; --zeile-dunkel: #161b21;
           --reiter: #232a34; --reiter-hover: #2d3643; --reiter-rand: #3a4452;
           --zf-ist: #b5615c; --zf-loesch: #b8912a; --zf-prog: #3d8a55;
-          --zf-ana: #9b1c1c; --zf-ana-fg: #e6e9ee;   /* dunkel: Weinrot nur für Flächen (OKLab ≥ 15 zu Istzustand und Fehlerrot), Text in Textfarbe – helle Rottöne lägen zu nah an --bad */
+          --zf-ana: #9b1c1c; --zf-ana-fg: #e6e9ee;   /* dunkel: Weinrot nur für Flächen (OKLab ≥ 15 zu Bestand und Fehlerrot), Text in Textfarbe – helle Rottöne lägen zu nah an --bad */
           --zf-stamm: #3f80b0; --zf-vorh: #5561b0; }
 }
-/* Punkt 289: eigenes Farbschema, das sich von den Signalfarben der App abhebt (Istzustand rot, Löschmenge gelb,
+/* Punkt 289: eigenes Farbschema, das sich von den Signalfarben der App abhebt (Bestand rot, Löschmenge gelb,
    Prognose grün, Vorhaltezeiten blau, Tote Muster magenta): Zustandsverlauf Nachtblau, Event-Bus Purpur, Statistik Bronze,
    Verwaltung grau. Hell dunkler als die Signalfarben, dunkel heller – geprüft mit OKLab-Abstand (normal ≥ 13,6 zu allen
    Signalfarben, untereinander ≥ 13,6; Petrol verworfen, zu nah am Grün). Logische Verbindungen und Veränderungen in Textfarbe statt Rot/Gelb/Grün. */
@@ -106,7 +106,7 @@ h1 { margin: 0; line-height: 0; flex: none; }
 .kopf-fehler { margin: 0 20px; }   /* nur bei einem Fehler gefüllt; leer ohne Höhe und ohne Abstand */
 .kopf-fehler:not(:empty) { margin-bottom: 10px; }
 /* Punkt 125 (0.5.2): doppelt so breit wie hoch, zweizeilig „Analyse / starten“; mindestens 40 px hoch, damit zwei Zeilen lesbar bleiben */
-/* Punkt 156 (0.5.3): im Stil der Kacheln (Oberkante in voller Farbe, Fläche getönt), aber kräftiger im Rot der Kachelzeile „Istzustand“;
+/* Punkt 156 (0.5.3): im Stil der Kacheln (Oberkante in voller Farbe, Fläche getönt), aber kräftiger im Rot der Kachelzeile „Bestand“;
    40 px breiter als bisher; rechts bündig mit den Kacheln (beide am rechten Seitenrand, 20 px)
    Punkt 165 (0.5.4b3): oben und unten bündig mit dem Logo (vorher bis zur Unterkante des „g“ der Überschrift, per Skript gemessen) */
 #btnAnalyse { --knopf-h: max(var(--kopf-h), 40px); width: calc(2 * var(--knopf-h) + 40px); height: var(--logo-h); padding: 0 4px; flex: none; position: relative;
@@ -124,7 +124,7 @@ h1 { margin: 0; line-height: 0; flex: none; }
 /* Punkt 216 (0.5.5b12): eigene Tooltip-Anzeige – „Thema:“ fett, Inhalt normal; Popover liegt auch über Dialogen */
 #tip { position: fixed; inset: auto; margin: 0; max-width: min(460px, 92vw); padding: 7px 10px; border-radius: 6px;
   /* hebt sich ab: Fläche etwas heller als die Panels (im hellen Design leicht getönt), Rahmen und Schein neutral –
-     die Farben Rot/Gelb/Grün/Blau tragen in der App Bedeutung (Istzustand, Löschmenge, Prognose …) */
+     die Farben Rot/Gelb/Grün/Blau tragen in der App Bedeutung (Bestand, Löschmenge, Prognose …) */
   border: 1px solid color-mix(in srgb, var(--text) 45%, var(--panel)); background: color-mix(in srgb, var(--panel) 88%, var(--text));
   box-shadow: 0 6px 20px rgba(0,0,0,.4), 0 0 14px 1px color-mix(in srgb, var(--text) 28%, transparent);
   color: var(--text); font-size: 12px; line-height: 1.4; pointer-events: none; overflow-wrap: anywhere; }
@@ -149,7 +149,7 @@ body.offline [data-hoch], body.offline .massen button { opacity: .45; pointer-ev
 .kennung.beta { background: color-mix(in srgb, var(--zf-loesch) 25%, var(--panel)); color: var(--text); border-color: var(--zf-loesch); }
 #banner { padding-bottom: 4px; }
 main { padding: 0 20px 24px; }
-/* Punkt 86: Kachelraster – Zeilen Istzustand / Löschmenge sofort / Prognose, Spalten je Tabelle.
+/* Punkt 86: Kachelraster – Zeilen Bestand / Löschmenge sofort / Prognose, Spalten je Tabelle.
    Nie waagerecht scrollen: Spalten schrumpfen bis 0, lange Texte werden gekürzt (voller Text im Tooltip). */
 .raster { display: grid; grid-template-columns: minmax(70px, max-content) repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .raster .rkopf { min-width: 0; display: flex; align-items: flex-end; gap: 2px; font-size: 12px; font-weight: 600; color: var(--muted);
@@ -307,7 +307,7 @@ input[type=number] { width: 72px; }
 .hilfe-rang { font-weight: 700; font-size: 15px; padding: 6px 10px; background: var(--accent-weak); color: var(--accent); border-radius: 8px; display: inline-block; }
 /* bis 0.5.3b3: „Löschen“ und „Löschprotokoll“ mit roter Linie; seit Punkt 157/158 Farbe je Inhalt (siehe .tabs button.rf-…) */
 /* Punkt 157 (0.5.3, Variante C): Oberkante der Reiter in der Farbe ihres Inhalts wie Kacheln und Spaltengruppen –
-   Istzustand rot, Vorhaltezeiten blau, Prognose grün, Löschmenge gelb; aktiv volle Farbe und farbige Schrift; Hilfe bleibt neutral */
+   Bestand rot, Vorhaltezeiten blau, Prognose grün, Löschmenge gelb; aktiv volle Farbe und farbige Schrift; Hilfe bleibt neutral */
 .tabs button.rf-ist { --rf: var(--zf-ist); } .tabs button.rf-vorh { --rf: var(--zf-vorh); }
 .tabs button.rf-prog { --rf: var(--zf-prog); } .tabs button.rf-loesch { --rf: var(--zf-loesch); }
 .tabs button.rf-ana { --rf: var(--zf-ana); }
@@ -801,7 +801,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
 <div id="banner" role="status" hidden></div>
 <div class="lauf" id="lauf" role="status" aria-live="polite" hidden></div>
 <main>
-  <div class="raster" id="raster" aria-label="Kennzahlen: Istzustand, Löschmenge sofort und Prognose je Tabelle"></div>
+  <div class="raster" id="raster" aria-label="Kennzahlen: Bestand, Löschmenge sofort und Prognose je Tabelle"></div>
   <div class="leiste">
     <span><label id="lblZiel">Prognosezeitraum <input type="number" id="ziel" min="0.5" max="20" step="0.5" value="1"> Jahr(e)</label><button
       class="hilfeknopf" data-hilfe="ziel" aria-label="Erläuterung: Prognosezeitraum">ⓘ</button></span>
@@ -811,7 +811,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
   <div class="klebend" id="klebend">
    <div class="kleb-oben" id="klebOben">
     <nav class="tabs" id="tabs">
-      <!-- Punkt 158 (0.5.3): Reihenfolge Istzustand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
+      <!-- Punkt 158 (0.5.3): Reihenfolge Bestand → Regeln/Löschen → Prognose; Regeln gelb wie Löschen -->
       <!-- Punkt 288: Dashboard ganz links und Startreiter beim Laden der Seite (bis dahin Entitäten) -->
       <button data-tab="dash" class="an rf-dash" title="Aufbau der Recorder-Datenbank: Tabellen, Beziehungen, Platz – Stand der letzten Analyse">Cockpit</button>
       <!-- Punkt 305: Analyse zwischen Dashboard und Entitäten (Überblick vor der Arbeitstabelle) -->
@@ -891,7 +891,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
         <p>Neu hier? Zuerst Home Assistant und die App einrichten: <a class="hverweis" href="#h-faq-erstinbetrieb">FAQ: Erstinbetriebnahme</a>. In der App-GUI:</p>
         <ol>
           <li><b>Analyse starten</b> (Knopf oben rechts): liest die Kennzahlen ein (ca. 1 min) und danach die Attribute (ca. 2–10 min).</li>
-          <li><b>Kachelraster ansehen:</b> <i>Istzustand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird). Ein Klick auf die Kachel Daten gesamt / Prognose öffnet den Verlauf „Zuwachs-Prognose der DB“: die bisherige Größe und die Prognosen für aktive Regeln, alle Regeln und ohne Regeln. Daten gesamt / Istzustand öffnet den Zuwachs pro Tag über alle Entitäten.</li>
+          <li><b>Kachelraster ansehen:</b> <i>Bestand</i> (was liegt heute in der DB), <i>Löschmenge sofort</i> (was die aktiven Regeln jetzt löschen würden), <i>Prognose</i> (wie groß die DB im Dauerbetrieb wird). Ein Klick auf die Kachel Daten gesamt / Prognose öffnet den Verlauf „Zuwachs-Prognose der DB“: die bisherige Größe und die Prognosen für aktive Regeln, alle Regeln und ohne Regeln. Daten gesamt / Bestand öffnet den Zuwachs pro Tag über alle Entitäten.</li>
           <li><b>Tab Entitäten:</b> für den ersten Überblick nach „Zuwachs“ (Zeilen je Tag) sortieren. Ganz oben stehen die größten Schreiber; dort lohnen sich Regeln.</li>
           <li><b>Tab Empfehlungen:</b> Die App schlägt Regeln vor; „Übernehmen …“ legt sie passiv an. Hinweise zum Vorgehen: <a class="hverweis" href="#h-faq-reihenfolge">In welcher Reihenfolge lege ich Regeln an?</a></li>
           <li><b>Tab Regeln:</b> Wirkung der einzelnen Regeln analysieren (ggf. zunächst <b>passiv</b> lassen). Mit dem Häkchen „passive Regeln mitrechnen“ siehst du die Wirkung, ohne dass sich etwas ändert. Beim Optimieren hilft der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a>.</li>
@@ -994,7 +994,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
         <table>
           <thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
           <tbody>
-            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Istzustand, Löschmenge sofort), jede Gruppe in eigener Farbe – Istzustand und Löschmenge sofort wie die Kachelzeilen oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
+            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Aktuell, Löschmenge sofort), jede Gruppe in eigener Farbe – Aktuell rot wie die Kachelzeile Bestand, Löschmenge sofort gelb wie die gleichnamige Kachelzeile oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt; nur Anzeige, keine Löschung über den RS DB Hygiene Manager (Löschen nur aus Home Assistant möglich)</td></tr>
             <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern. Die Langzeit rühren die Empfehlungen nur in einer eigenen Art an: Die Empfehlung <b>Langzeit</b> ist eine Sammelregel mit 1 Jahr Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit). Die Spalte „Wirkt auf“ zeigt, ob ein Vorschlag die Kurzzeit, die Langzeit oder beide setzt; „Treffer“ lassen sich nicht summieren, weil dieselbe Entität in mehreren Vorschlägen stehen kann.</td></tr>
@@ -2064,7 +2064,7 @@ async function pruefe() {
 // ================================================ Kacheln mit Erläuterung
 const HILFE = {
   // Punkt 86: Erläuterungen zum Kachelraster – je Zeile (Zeitbezug) und je Spalte (Tabelle)
-  r_ist: ["Istzustand",
+  r_ist: ["Bestand",
     "Was heute in der Datenbank liegt (Stand der letzten Analyse, Attribute: Stand der Attribut-Analyse).",
     "Je Spalte die Zeilen einer Tabelle: States und 5-Min-Statistik (Kurzzeit), Langzeit (Stundenstatistik, 1 h), Events, Attributzeilen und verwaiste Entitäten. Statistik ohne Entität ist nicht enthalten (eigener Tab).",
     "Nach einem Löschlauf startet automatisch eine Analyse; danach stimmen die Zahlen wieder."],
@@ -2077,7 +2077,7 @@ const HILFE = {
     "Hochgerechnet aus der Schreibrate (Mittel der letzten 7 vollen Tage). Langzeit: Bestand plus Zuwachs über den Zeitraum, außer eine Regel kürzt sie. Unter der DB-Größe steht dieselbe Prognose ohne Regeln.",
     "Prognosezeitraum variieren, um die Wirkung zu sehen."],
   c_db: ["DB-Größe",
-    "Istzustand: Größe der Datei home-assistant_v2.db. Löschmenge sofort: Platz der Zeilen, die ein Lauf jetzt löschen würde. Prognose: erwartete Größe im Dauerbetrieb, darunter ohne Regeln.",
+    "Bestand: Größe der Datei home-assistant_v2.db. Löschmenge sofort: Platz der Zeilen, die ein Lauf jetzt löschen würde. Prognose: erwartete Größe im Dauerbetrieb, darunter ohne Regeln.",
     "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile misst jede Analyse (Reiter Cockpit, „Wo der Platz liegt“); ohne Messung gelten Festwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
     "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren)."],
   c_zeilen: ["Daten gesamt",
@@ -2101,7 +2101,7 @@ const HILFE = {
     "Attribute haben einen eigenen Wert (Regel oder Attribut-Standard, höchstens die Kurzzeit): Nach dieser Frist werden sie von den States getrennt, sonst fallen sie mit deren States weg. Genau nur nach einer Attribut-Analyse; ohne sie steht hier „fehlt“.",
     "Attribut-Analyse nach größeren Regeländerungen neu starten. Werte aus Attributen, die lange gebraucht werden, in eigene Entitäten (z. B. Template-Sensoren) überführen."],
   c_verwaist: ["Verwaist",
-    "Istzustand: Entitäten mit Daten in der DB, die weder in der Registry noch als aktueller Zustand existieren, darunter ihre Zeilen. Löschmenge sofort: Zeilen nach Regeln vom Typ „verwaist“. Prognose: Langzeit-Zeilen, die dauerhaft bleiben.",
+    "Bestand: Anzahl der Entitäten mit Daten in der DB, die weder in der Registry noch als aktueller Zustand existieren, darunter ihre Zeilen. Löschmenge sofort: Zeilen nach Regeln vom Typ „verwaist“. Prognose: Langzeit-Zeilen, die dauerhaft bleiben.",
     "Meist umbenannte oder entfernte Geräte. Ihre States verschwinden nach purge_keep_days, die Langzeitstatistik bleibt für immer. Ist eine Entität beim Löschlauf wieder vorhanden (z. B. Blitz- oder Waldbrand-Meldungen), überspringt der Lauf sie.",
     "Im Tab Entitäten beim Zustand der Entität (Auswahlfilter der Spalte „Entitäts-Status“) „verwaist“ wählen; sonst eine Regel vom Typ „verwaist“ anlegen (Vorlage 30 Tage)."],
   ziel: ["Prognosezeitraum",
@@ -2138,7 +2138,7 @@ document.addEventListener("click", ev => {   // ⓘ an Raster-Köpfen und Bedien
 
 // ================================================ Kachelraster (Punkt 86): 3 Zeilen × 7 Spalten
 // [Schlüssel, Name, Kurzname für schmale Fenster, CSS-Klasse der Zeilenfarbe]
-const RZEILEN = [["ist", "Istzustand", "Ist", "r-ist"], ["loesch", "Löschmenge sofort", "Löschen", "r-loesch"], ["prog", "Prognose", "Progn.", "r-prog"]];
+const RZEILEN = [["ist", "Bestand", "Best.", "r-ist"], ["loesch", "Löschmenge sofort", "Löschen", "r-loesch"], ["prog", "Prognose", "Progn.", "r-prog"]];
 // [Schlüssel, Name, Kurzname]
 const RSPALTEN = [["zeilen", "Daten gesamt", "Daten"], ["kurz", "States, 5-Min", "St./5M"],
   ["attr", "Attribute", "Attr."], ["lts", "Langzeit", "LZ"], ["events", "Events", "Ev."], ["verwaist", "Verwaist", "Verw."]];   // Punkt 285: Folge wie in den Löschtabellen
@@ -2191,10 +2191,10 @@ function rasterWerte(s, st) {
   return { ist, loesch, prog };
 }
 
-// Punkt 218: Kachel-Tooltip kontextbezogen – erklärt die Spaltenhilfe alle drei Zeilen („Istzustand: … Löschmenge sofort: …
+// Punkt 218: Kachel-Tooltip kontextbezogen – erklärt die Spaltenhilfe alle drei Zeilen („Bestand: … Löschmenge sofort: …
 // Prognose: …“), zeigt eine Kachel nur den Teil ihrer Zeile
 function zeilenTeil(text, zname) {
-  const teile = (text || "").split(/(?:^|\s)(Istzustand|Löschmenge sofort|Prognose):\s/);
+  const teile = (text || "").split(/(?:^|\s)(Bestand|Löschmenge sofort|Prognose):\s/);
   if (teile.length < 5) return text;     // nicht nach Zeilen gegliedert → ganz
   for (let i = 1; i < teile.length; i += 2) if (teile[i] === zname) return `${zname}: ${teile[i + 1].trim()}`;
   return text;
@@ -2212,7 +2212,7 @@ function rasterHtml(s, st) {
       const c = werte[z][k];
       const lang = c.fehlt || (c.gb ? gb(c.w) : c.b ? pb(c.w) : zahl(c.w == null ? null : Math.round(c.w))), kurz = c.fehlt || (c.gb ? kgb(c.w) : c.b ? pb(c.w) : kzahl(c.w));
       const tip = `${zname} · ${kname}${z === "prog" ? ` (${zr})` : ""}\n${lang}${c.u ? " – " + c.u : ""}\n\n${zeilenTeil(hilfeTexte("c_" + k)[0], zname)}`;
-      const vl = (k === "zeilen" && z !== "loesch") || (z === "ist" && k === "events") ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf; Punkt 283: Istzustand/Datenzeilen den Zuwachs pro Tag
+      const vl = (k === "zeilen" && z !== "loesch") || (z === "ist" && k === "events") ? ` tabindex="0" role="button"` : "";   // Punkt 179: Klick öffnet den Prognose-Verlauf; Punkt 283: Bestand/Datenzeilen den Zuwachs pro Tag
       h += `<div class="kachel ${klasse}${c.fehlt ? " fehlt" : ""}" title="${esc(tip + (vl ? (k === "events" ? "\n\nKlick: Zuwachs pro Tag, Summe und je Event-Typ" : z === "ist" ? "\n\nKlick: Zuwachs pro Tag (alle Entitäten)" : "\n\nKlick: Prognose-Verlauf der DB je Monat") : ""))}" data-zelle="${z}.${k}"${vl}>
         <div class="z"><span class="lang">${esc(lang)}</span><span class="kurz">${esc(kurz)}</span></div>${c.u ? `<div class="u">${esc(c.u)}</div>` : ""}</div>`;   // Punkt 316/317: Speicherbedarf groß, darunter die Zeilen
     }
@@ -2246,7 +2246,7 @@ const VL_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", 
 const VL_MASS = { W: 1000, H: 380, L: 62, R: 16, O: 14, U: 34 };
 const MONAT = 365 / 12;      // Tage je Monat wie probelauf.MONAT
 const KACHEL_KLICK = '#raster .kachel[data-zelle="ist.zeilen"], #raster .kachel[data-zelle="prog.zeilen"], #raster .kachel[data-zelle="ist.events"]';
-// jede Kachel öffnet genau ein Popup: Daten gesamt/Prognose den Prognose-Verlauf, Daten gesamt/Istzustand und Istzustand/Events ihren Zuwachs pro Tag
+// jede Kachel öffnet genau ein Popup: Daten gesamt/Prognose den Prognose-Verlauf, Daten gesamt/Bestand und Bestand/Events ihren Zuwachs pro Tag
 const kachelOeffnen = el => ({ "ist.zeilen": zeigeZuwachsGesamt, "ist.events": zeigeEventZuwachs }[el.dataset.zelle] || zeigeVerlauf)();
 document.addEventListener("click", ev => {
   const k = ev.target.closest(KACHEL_KLICK);
@@ -2536,7 +2536,7 @@ function werteZeichnen(box, eid, r) {
   svgEl.addEventListener("mouseleave", () => { tip.hidden = true; kreuz.setAttribute("visibility", "hidden"); });
 }
 
-// Punkt 283: Kachel Istzustand / Datenzeilen gesamt – neue Zeilen pro Tag über alle Entitäten (derselbe Chart wie je Entität)
+// Punkt 283: Kachel Bestand / Datenzeilen gesamt – neue Zeilen pro Tag über alle Entitäten (derselbe Chart wie je Entität)
 function zeigeZuwachsGesamt() {
   dialog("Daten gesamt – Zuwachs pro Tag (Zeilen)", `
     <p class="sub">Neue Zeilen pro Tag über <b>alle Entitäten</b>: States, 5-Min-Statistik, Langzeit, Attribute und Events.
@@ -2546,7 +2546,7 @@ function zeigeZuwachsGesamt() {
   zuwachsLaden($("#zwGesamt"), null, false);
 }
 
-// Punkt 286: Kachel Istzustand / Events – neue Event-Zeilen pro Tag; die Summe aller Event-Typen, auf Knopfdruck dazu die Einzelverläufe
+// Punkt 286: Kachel Bestand / Events – neue Event-Zeilen pro Tag; die Summe aller Event-Typen, auf Knopfdruck dazu die Einzelverläufe
 // der Top 5, Top 10 oder aller Event-Typen (Rangfolge nach den Zeilen im gewählten Zeitraum)
 const EV_MASS = { W: 1000, H: 300, L: 60, R: 30, O: 10, U: 28 };
 const EV_AUS = new Set();       // per Klick auf die Legende ausgeblendete Linien
@@ -2681,11 +2681,11 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
     "Anteil der Attribute am Speicher dieser Entität (Attribute ÷ (Attribute + States))."],
 ];
 // Punkt 130 (0.5.3): Reihenfolge der Spalten und ihre Gruppen – über den Spaltenköpfen steht je Gruppe eine Klammer
-// Punkt 132 (0.5.3): je Gruppe eine Farbe (Klasse gr-<id>); „Aktuell“ heißt wie die Kachelzeile „Istzustand“ und ist rot wie sie
+// Punkt 132 (0.5.3): je Gruppe eine Farbe (Klasse gr-<id>); „Aktuell“ ist rot wie die Kachelzeile „Bestand“
 const SPALTENGRUPPEN = [
   ["Stammdaten", "stamm", ["entity_id", "herkunft", "plattform", "device_class", "labels", "status"]],
   ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]],
-  ["Istzustand", "ist", ["kz_first_ts", "lts_first_ts", "last_ts", "rows_24h", "rows", "kurz_rows", "lts_rows", "attr_anteil", "attr_zeilen", "attr_zuwachs_tag", "attr_avg"]],
+  ["Aktuell", "ist", ["kz_first_ts", "lts_first_ts", "last_ts", "rows_24h", "rows", "kurz_rows", "lts_rows", "attr_anteil", "attr_zeilen", "attr_zuwachs_tag", "attr_avg"]],
   ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"]],
 ];
 const SPALTEN = SPALTENGRUPPEN.flatMap(([, , ks]) => ks.map(k => SPALTEN_ROH.find(s => s[0] === k)));
@@ -3191,7 +3191,7 @@ T.regeln = new LokaleTabelle({
   id: "#tRegeln", treffer: "#trefferRegeln", schluessel: "dbh_breiten_regeln", einheit: "Regeln", sortStd: { k: "rang" },
   csvAnker: "regeln", seiten: [25, 50, 100, 250], seiteStd: 25,   // Punkt 276
   // Punkt 145 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "typ", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]], ["Istzustand", "ist", ["treffer"]],
+  gruppen: [["Stammdaten", "stamm", ["wahl", "aktiv", "rang", "id", "name", "muster"]], ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]], ["Treffer", "ist", ["treffer"]],
     ["Regelwerk-Check", "loesch", ["empfehlung"]]],   // Punkt 232: Farbe wie der Reiter Empfehlungen
   fix: ["wahl", "aktiv", "rang", "id"],
   leer: "keine Regeln",
@@ -3204,7 +3204,10 @@ T.regeln = new LokaleTabelle({
       csv: r => r.aktiv ? "aktiv" : "passiv", optionen: () => [["aktiv", "aktiv"], ["passiv", "passiv"]],
       summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nangezeigt: aktiv ${zahl(g.filter(r => r.aktiv).length)} · passiv ${zahl(g.filter(r => !r.aktiv).length)}\nalle: aktiv ${zahl(a.filter(r => r.aktiv).length)} · passiv ${zahl(a.filter(r => !r.aktiv).length)}`] },
     // Punkt 199: Rang „Stufe.Position“ – Sortierung nach Rang zeigt die tatsächliche Vorrangfolge; ▲ tauscht mit der vorigen Regel derselben Stufe
-    { k: "rang", titel: "Rang", typ: "keine", sortierbar: 1, breite: 90, mitte: 1, wert: r => regelRang(r.id)?.sort ?? regelIndex(r),
+    { k: "rang", titel: "Rang", typ: "auswahl", breite: 90, mitte: 1, wert: r => regelRang(r.id)?.sort ?? regelIndex(r),
+      // Filter auf die Stufe (Zahl vor dem Punkt): nur die Stufen, die in der Regelliste vorkommen
+      optionen: l => [...new Set(l.map(r => regelRang(r.id)?.stufe).filter(s => s != null))].sort((a, b) => a - b).map(s => [String(s), `${s} – ${RANG_NAME[s] ?? "?"}`]),
+      passt: (r, w) => String(regelRang(r.id)?.stufe) === w,
       hilfe: "Stufe.Position: Stufe nach Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), Position innerhalb der Stufe. Kleinere Zahl = höherer Rang. Je Wert gewinnt unter den passenden aktiven Regeln die mit dem höchsten Rang.",
       zelle: r => {
         const g = regelRang(r.id) || {}, chip = rangChip(r.id);
@@ -3212,30 +3215,24 @@ T.regeln = new LokaleTabelle({
         const i = regelIndex(r), vor = vorigeGleicheStufe(i), frei = T.regeln.istUrzustand();
         return `${chip} <button data-hoch="${i}" ${vor >= 0 && frei ? "" : "disabled"} title="${frei ? (vor >= 0 ? "eine Position nach oben (innerhalb der Stufe)" : "schon die erste Regel dieser Stufe") : "nur ohne Filter und bei Sortierung nach Rang"}">▲</button>`;
       },
-      csv: r => regelRang(r.id)?.text ?? "" },
+      csv: r => regelRang(r.id)?.text ?? "",
+      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)
+je Stufe: ${[...new Set(g.map(r => regelRang(r.id)?.stufe))].sort((x, y) => x - y).map(st => `${st} ${RANG_NAME[st] ?? "?"} ${zahl(g.filter(r => regelRang(r.id)?.stufe === st).length)}`).join(" · ")}`] },
     { k: "id", titel: "ID", typ: "text", fest: 1, breite: 110, wert: r => r.id, zelle: r => `<span class="mono">${esc(r.id)}</span>`, csv: r => r.id, summe: (g, a) => [zahl(g.length), zahl(a.length), "Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)"] },
     { k: "name", titel: "Name", typ: "text", breite: 220, wert: r => r.name, csv: r => r.name,
       zelle: r => {
         const p = (S.probe?.regeln || []).find(x => x.regel === r.id) || {};
         const ueber = Object.entries(S.ueberschneidungen || {}).filter(([, ids]) => ids.includes(r.id));
-        return esc(r.name) +
+        return (r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒</span> ` : "") + esc(r.name) +
           (r.typ === "entity" && p.verwaist ? `<span class="chip warn" title="${zahl(p.verwaist)} der Entitäten sind verwaist – die Regel gilt dort nur noch für Altdaten. Behalten oder entfernen entscheidest du.">Entität verwaist</span>` : "") +
           // Punkt 225 (0.5.5b14): „andere Regel hat Vorrang“ statt „überstimmt“
           (p.ueberstimmt ? `<span class="chip" title="${esc(`Andere Regel hat Vorrang: bei ${mzahl(p.ueberstimmt, "Entität", "Entitäten")} für mindestens einen Wert\nDetails: Klick auf die Entität im Tab Entitäten`)}">${zahl(p.ueberstimmt)}× andere Regel hat Vorrang</span>` : "") +
           (ueber.length ? `<span class="chip warn" title="${esc(ueber.map(([eid, ids]) => `${eid}: ${ids.join(" › ")}`).join("\n"))}">Überschneidung</span>` : "");
       } },
-    { k: "typ", titel: "Typ", typ: "auswahl", breite: 90, wert: r => typName(r.typ), csv: r => typName(r.typ),
-      // Punkt 111: Schloss bei Schutz; Punkt 106: Warnung bei Platzhaltern in einer entity-Regel
-      zelle: r => r.typ === "schutz" ? `<span title="Schutz: Kurzzeit global, Langzeit unbegrenzt – höchster Rang">🔒 schutz</span>`
-        : r.typ === "ha_standard" ? `<span title="HA-Standard: bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab – nicht löschbar, Kurzzeit und Langzeit einstellbar (Auffangregel), passiv schaltbar">${HA_ICON} HA-Standard</span>`   // Punkt 127
-        : r.typ === "entity" && platzhalter(r.muster) ? `entity <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : esc(typName(r.typ)),
-      hilfe: "entity: genaue Entität · glob: Muster wie sensor.*_power · klasse: domain|device_class · integration: Integration (Plattform) wie unifi · vielschreiber: ab n Zeilen je Tag · verwaist: nur verwaiste Entitäten · event: Vorhaltezeit je Event-Typ · ha_standard: Löschverhalten von HA in der Grundeinstellung (10 Tage), niedrigster Rang",
-      optionen: () => TYPEN_TABELLE.map(t => [typName(t), typName(t)]),
-      summe: (g, a) => [zahl(g.length), zahl(a.length), `Anzahl Regeln – oben gefiltert, in Klammern alle (nur bei gesetztem Filter)\nje Typ: ${TYPEN_TABELLE.map(t => `${typName(t)} ${zahl(g.filter(r => r.typ === t).length)}`).join(" · ")}`] },
     { k: "muster", titel: "Muster", typ: "text", breite: 260, wert: r => r.muster.join(" "), tip: r => r.muster.join("\n"),
       zelle: r => r.typ === "vielschreiber"   // Punkt 193: Schwelle lesbar, Einschränkung dahinter
         ? `<span class="mono">≥ ${esc(zahl(+r.muster[0]))} Zeilen/Tag</span>${r.muster.length > 1 ? ` <span class="sub mono">${esc(r.muster.slice(1, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}` : ""}`
-        : `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}`,
+        : `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}${r.typ === "entity" && platzhalter(r.muster) ? ` <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : ""}`,
       csv: r => r.muster.join(", "), summe: anzahlSumme(r => r.muster.length) },
     wertSpalte("kurzzeit"), wertSpalte("attribute"), wertSpalte("langzeit"),
     { k: "treffer", titel: "Treffer (Entitäten)", typ: "zahl", n: 1, breite: 110, wert: r => trefferVon(r),
@@ -3287,7 +3284,7 @@ T.probe = new LokaleTabelle({
 T.lts = new LokaleTabelle({
   id: "#tLts", treffer: "#trefferLts", schluessel: "dbh_breiten_lts", einheit: "Statistiken", sortStd: { k: "rows", desc: true },
   // Punkt 147 (0.5.3): Look & Feel wie Tab Entitäten
-  gruppen: [["Stammdaten", "stamm", ["statistic_id", "source", "in_registry"]], ["Istzustand", "ist", ["rows"]]],
+  gruppen: [["Stammdaten", "stamm", ["statistic_id", "source", "in_registry"]], ["Bestand", "ist", ["rows"]]],
   fix: ["statistic_id"],
   leer: "keine Langzeitstatistik ohne Entität",
   spalten: [
@@ -3337,7 +3334,7 @@ async function erweitereRegeln(vorschlaege) {
 }
 T.opt = new LokaleTabelle({
   id: "#tOpt", treffer: "#trefferOpt", schluessel: "dbh_breiten_opt", einheit: "Vorschläge", sortStd: { k: "ersparnis", desc: true }, csvAnker: "opt", seiten: [25, 50, 100, 200, 0], seiteStd: 25,   // Punkt 314; 0 = alle
-  gruppen: [["Vorschlag", "stamm", ["wahl", "art", "wirkt", "titel", "typ", "muster"]], ["Vorhaltezeit (Vorschlag)", "vorh", ["kurzzeit", "langzeit"]], ["Istzustand", "ist", ["anzahl"]],
+  gruppen: [["Vorschlag", "stamm", ["wahl", "art", "wirkt", "titel", "typ", "muster"]], ["Vorhaltezeit (Vorschlag)", "vorh", ["kurzzeit", "langzeit"]], ["Treffer", "ist", ["anzahl"]],
     ["Löschmenge sofort", "loesch", ["loesch_zeilen", "loesch_mb"]], ["Prognose", "prog", ["ersparnis"]]],
   fix: ["wahl", "art", "wirkt", "titel"],
   leer: "keine Vorschläge – entweder ist alles geregelt, oder es fehlt noch eine Analyse",
@@ -3689,7 +3686,7 @@ T.events = new LokaleTabelle({
   // Punkt 144 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
   // Punkt 226 (0.5.5b14): Regel, Vorhaltezeit und wirksame Tage als eine Spalte „Vorhaltezeit“; Punkt 227: ohne Gruppe Prognose
   gruppen: [["Stammdaten", "stamm", ["wahl", "event_type"]], ["Vorhaltezeiten", "vorh", ["vorhaltung"]],
-    ["Istzustand", "ist", ["erster_tag", "pro_tag", "zeilen"]], ["Löschmenge sofort", "loesch", ["loeschbar"]]],
+    ["Aktuell", "ist", ["erster_tag", "pro_tag", "zeilen"]], ["Löschmenge sofort", "loesch", ["loeschbar"]]],
   fix: ["wahl", "event_type"],
   leer: "keine Events (Analyse ab 0.3.0 nötig)",
   spalten: [
@@ -4090,10 +4087,10 @@ async function verwalteRegeln() {
   });
 }
 $("#btnVerwalten").onclick = verwalteRegeln;
-// Punkt 55: Schnellfilter „nur Event-Regeln“ (Spaltenfilter Typ) und neue Event-Regel aus dem Reiter Events
+// Punkt 55: Schnellfilter „nur Event-Regeln“ (Spaltenfilter Rang, Stufe 8) und neue Event-Regel aus dem Reiter Events
 $("#nurEvent").onclick = () => {
-  const an = T.regeln.f.typ !== "event";
-  T.regeln.f.typ = an ? "event" : ""; T.regeln.baueKopf(); T.regeln.zeige();
+  const an = T.regeln.f.rang !== "8";
+  T.regeln.f.rang = an ? "8" : ""; T.regeln.baueKopf(); T.regeln.zeige();
   $("#nurEvent").classList.toggle("primaer", an);
 };
 $("#evNeueRegel").onclick = () => bearbeiteRegel(-1, { id: "EV:", typ: "event", muster: [], name: "Events ", kurzzeit: "7d" });
@@ -5197,7 +5194,7 @@ T.loesch = new LokaleTabelle({
   // Punkt 148 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Stammdaten", "stamm", ["entity_id", "regel", "status"]], ["Vorhaltezeiten", "vorh", ["lauf"]],
     ["Löschmenge dieser Lauf", "loesch", ["summe", "states", "kurz", "attr_zeilen", "lts", "events"]],
-    // Punkt 221 (0.5.5b13): Überhang als eigene Gruppe im Rot des Istzustands – optisch getrennt von der Löschmenge dieses Laufs
+    // Punkt 221 (0.5.5b13): Überhang als eigene Gruppe im Rot des Bestands – optisch getrennt von der Löschmenge dieses Laufs
     ["Überhang", "ist", ["ueberhang"]]],
   fix: ["entity_id"],
   leer: "nichts zu löschen",
@@ -5250,7 +5247,7 @@ T.laeufe = new LokaleTabelle({
   // Punkt 149 (0.5.3): Look & Feel wie Tab Entitäten
   gruppen: [["Lauf", "stamm", ["start", "dauer", "umfang", "ausgeloest", "status"]], ["Plan", "vorh", ["geplant_zeilen", "gezaehlt"]],
     ["Gelöscht", "loesch", ["geloescht", "lauf_states", "lauf_kurz", "lauf_attr", "lauf_lts", "lauf_events"]],
-    // Punkt 277: wie in der Löschtabelle als eigene Gruppe im Rot des Istzustands
+    // Punkt 277: wie in der Löschtabelle als eigene Gruppe im Rot des Bestands
     ["Überhang", "ist", ["ueberhang"]]],
   fix: ["start"],
   leer: "noch kein Löschlauf",
@@ -6606,7 +6603,16 @@ function anaTabelle(d) {
   const gcls = (i, g) => `gr gr-ana${i > 0 && sp[i - 1][2] !== g ? " gstart" : ""}`;
   const gruppenzeile = GRUPPEN.map((g, gi) => { const n = sp.filter(s => s[2] === gi).length, i0 = sp.findIndex(s => s[2] === gi); return `<th class="gruppe gr gr-ana${i0 > 0 ? " gstart" : ""}" colspan="${n}">${esc(g)}</th>`; }).join("");
   const kopf = sp.map(([h, k, g], i) => `<th class="${k === "name" ? "" : "n "}${gcls(i, g)}"${k ? ` data-sort="${k}"` : ""} title="${esc(h.replace(/ (.*)$/, "") + (tips[k] ? ": " + tips[k] : "") + (k ? SORT_TIP : ""))}">${kopfZweizeilig(h).replace("<span class=\"pfeil\"></span>", `<span class="pfeil">${k ? pfeilText(A.sort, k) : ""}</span>`)}${griff(k)}</th>`).join("");
-  return `<div class="tabelle"><table class="ana-t gruppiert fest"><colgroup>${sp.map(([, k]) => `<col data-k="${k}">`).join("")}</colgroup><thead><tr class="gruppenzeile">${gruppenzeile}</tr><tr class="titelzeile">${kopf}</tr></thead><tbody>${zeilen || `<tr><td colspan="${sp.length}">Keine Entitäten in dieser Auswahl.</td></tr>`}</tbody></table></div>` +
+  // Summenzeile unter den Titeln (wie in den anderen Tabellen): Summe über die gezeigten Zeilen; bei gekürzter Entitätenliste nur über die gezeigten
+  const kn = d.knoten, sum = f => kn.reduce((x, k) => x + (+f(k) || 0), 0), gekuerzt = d.knoten_gesamt > kn.length;
+  const summen = { name: `<b>Summe</b>`, zuw: zahl(sum(k => k.zuwachs)), best: zahl(sum(k => k.bestand)),
+    anteil: sum(k => k.anteil).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %", plz: anaB(sum(k => k.zuwachs_bytes)), plb: anaB(sum(k => k.bestand_bytes)) };
+  if (!zk) { summen.n2 = zahl(sum(k => k.entitaeten)); summen.last = zahl(sum(k => k.geschuetzt)); }
+  for (const k of ["zuw", "best", "plz", "plb", "n2", "last"]) if (summen[k] !== undefined && k !== "name") summen[k] = `<b>${summen[k]}</b>`;
+  summen.anteil = `<b>${summen.anteil}</b>`;
+  const sTip = gekuerzt ? `Summe der gezeigten ${zahl(kn.length)} von ${zahl(d.knoten_gesamt)} Entitäten` : "Summe aller gezeigten Zeilen";
+  const summenzeile = sp.map(([, k, g], i) => `<th class="${k === "name" ? "" : "n "}${gcls(i, g)}"${summen[k] ? ` title="${esc(sTip)}"` : ""}>${summen[k] || ""}</th>`).join("");
+  return `<div class="tabelle"><table class="ana-t gruppiert fest"><colgroup>${sp.map(([, k]) => `<col data-k="${k}">`).join("")}</colgroup><thead><tr class="gruppenzeile">${gruppenzeile}</tr><tr class="titelzeile">${kopf}</tr><tr class="summenzeile">${summenzeile}</tr></thead><tbody>${zeilen || `<tr><td colspan="${sp.length}">Keine Entitäten in dieser Auswahl.</td></tr>`}</tbody></table></div>` +
     (d.knoten_gesamt > d.knoten.length ? `<div class="ana-mehr">Gezeigt werden die ${zahl(d.knoten.length)} größten von ${zahl(d.knoten_gesamt)} Entitäten; alle über „In Entitäten öffnen“.</div>` : "");
 }
 // Spaltenbreiten (Punkt 306): Griff am Spaltenkopf ziehen, Doppelklick = Standardbreite, je Ebene im Browser gemerkt, Knopf „Spaltenbreiten zurücksetzen“

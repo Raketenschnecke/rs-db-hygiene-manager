@@ -4,6 +4,13 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b13 (Beta)
+- **Summenzeile in der Analyse (Punkt 350):** Die Tabelle unter Analyse hat unter den Spaltentiteln eine Summenzeile (Entitäten, Zuwachs, Bestand, Anteil, Platz, Geschützt) über die gezeigten Zeilen.
+- **Rang-Filter (Punkt 351):** Regeln, Spalte Rang: Auswahl nach Stufe (z. B. 2 – entity).
+- **Spalte Typ entfällt (Punkt 352):** Der Rang-Filter ersetzt sie. Die Platzhalter-Warnung steht in der Spalte Muster, das Schloss bei Schutz-Regeln vor dem Namen; „nur Event-Regeln“ filtert auf Stufe 8.
+- **Bestand statt Istzustand (Punkt 353):** Die Kachelzeile heißt „Bestand“. Die Spaltengruppen heißen in Entitäten und Events „Aktuell“, in Regeln und Empfehlungen „Treffer“, in Statistik ohne Entität „Bestand“.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b12 (Beta)
 - **Filter in Löschprotokolle › Läufe (Punkt 349):** Die Spalten Start und Dauer haben ein Filterfeld: Start als Datumsfilter mit Kalender (z. B. `<1.10.2026`, `1.10.2026-30.10.2026`, tagesgenau), Dauer als Zahlenfilter in Minuten (z. B. `>5`, `1-3`).
 - Die Integration ändert sich nicht

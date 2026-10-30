@@ -175,7 +175,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             zuwachs_attr = attr_zuwachs.get(mid, 0) if mit_attr else e["rows_24h"] * B_ATTR_FALLBACK
             zuwachs_attr_z = attr_zuwachs_z.get(mid, 0) if mit_attr else 0
         lts_jetzt = e["lts_rows"] if lid else 0
-        # Punkt 86: Zeilen je Tabelle im Bestand (Kachelraster, Zeile „Istzustand“)
+        # Punkt 86: Zeilen je Tabelle im Bestand (Kachelraster, Zeile „Bestand“)
         add(summe, "bestand_states", e["rows"] or 0)
         add(summe, "bestand_kurz", (e["kurz_rows"] or 0) if lid else 0)
         add(summe, "bestand_lts", lts_jetzt or 0)
