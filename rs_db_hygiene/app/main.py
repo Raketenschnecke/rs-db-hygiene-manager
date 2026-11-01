@@ -17,6 +17,7 @@ from aiohttp import web
 
 import analyse
 import automatik
+import bestand
 import herkunft
 import loeschen
 import optimierung
@@ -41,6 +42,7 @@ OPTIONEN_PFAD = os.path.join(DATA, "options.json")
 CACHE = os.path.join(DATA, "cache.db")
 ATTR = os.path.join(DATA, "attribute.db")
 ZUWACHS = os.path.join(DATA, "zuwachs.db")      # Tageswerte neuer Zeilen je Entität, wird nur fortgeschrieben (zuwachs.py)
+BESTAND = os.path.join(DATA, "bestand.db")        # Punkt 334: Bestand je Entität und Tag (bestand.py)
 STRUKTUR = os.path.join(DATA, "struktur.db")    # Punkt 288: Tagesstand der Tabellen für den Reiter Dashboard (struktur.py)
 REGELN = os.path.join(DATA, "regeln.json")
 HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
@@ -159,7 +161,7 @@ def _analyse_sync():
     except Exception:  # noqa: BLE001 – Herkunft ist Zusatzinformation, die Analyse soll trotzdem laufen
         _LOG.exception("Herkunft konnte nicht ermittelt werden")
         hku = {}
-    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate(), STRUKTUR)
+    return analyse.analyse(db, CACHE, zustaende, reg, gel, pkd, hku, reg_d, ZUWACHS, _zuwachs_monate(), STRUKTUR, BESTAND)
 
 
 def _cache_version():
@@ -177,7 +179,12 @@ def _cache_version():
 
 def _attribut_sync():
     db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
-    return analyse.attribut_analyse(db, ATTR)
+    erg = analyse.attribut_analyse(db, ATTR)
+    try:   # Punkt 334: die Attributzeilen im heutigen Bestand mit dem frischen Stand nachziehen
+        bestand.attribute_nachtragen(BESTAND, CACHE, ATTR, analyse.lokaler_tag(time.time()))
+    except Exception:  # noqa: BLE001 – Zusatzstatistik
+        _LOG.exception("Bestand: Attribute konnten nicht nachgetragen werden")
+    return erg
 
 
 def _beide_sync():
@@ -265,8 +272,12 @@ async def nachtlauf():
 
 # ---------------------------------------------------------------- HTTP
 
-# Nur für Tests außerhalb des Add-ons: zusätzlich erlaubte Client-IPs (kommagetrennt)
-ERLAUBT = {INGRESS_IP, "127.0.0.1"} | {ip.strip() for ip in os.environ.get("DBH_ERLAUBT", "").split(",") if ip.strip()}
+# Nur für Tests außerhalb des Add-ons: zusätzlich erlaubte Client-IPs (kommagetrennt).
+# Punkt 322: Im Add-on (SUPERVISOR_TOKEN gesetzt) wirkt DBH_ERLAUBT nie – die Ingress-Sperre lässt sich dort nicht aufheben.
+IM_ADDON = bool(os.environ.get("SUPERVISOR_TOKEN"))
+ERLAUBT = {INGRESS_IP, "127.0.0.1"} | ({ip.strip() for ip in os.environ.get("DBH_ERLAUBT", "").split(",") if ip.strip()} if not IM_ADDON else set())
+if IM_ADDON and os.environ.get("DBH_ERLAUBT"):
+    _LOG.warning("DBH_ERLAUBT wird im Add-on ignoriert.")
 
 
 # Punkt 164 (0.5.4): Name und Version dieser App (vom Supervisor; ohne Supervisor aus DBH_APP_NAME/DBH_APP_VERSION) –
@@ -283,10 +294,21 @@ async def nur_ingress(request, handler):
             return web.Response(status=403, text="Schlüssel fehlt oder falsch")
     elif request.remote not in ERLAUBT:
         return web.Response(status=403, text="Nur über Home-Assistant-Ingress erreichbar")
+    else:
+        # Punkt 320: Schutz gegen Anfragen fremder Webseiten (CSRF) – zusätzlich zu Ingress
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            if request.headers.get("Sec-Fetch-Site") == "cross-site":
+                return web.Response(status=403, text="Anfrage von fremder Seite abgelehnt")
+            if request.can_read_body and request.content_type != "application/json":
+                return web.Response(status=415, text="Nur application/json erlaubt")
     try:
-        return await handler(request)
+        antwort = await handler(request)
     except rg.RegelFehler as e:
-        return web.json_response({"fehler": str(e)}, status=400)
+        antwort = web.json_response({"fehler": str(e)}, status=400)
+    # Punkt 332: die Seite fragt der Browser bei jedem Laden nach (304 ohne Änderung, sonst sofort die neue Fassung nach einem
+    # Update, ohne Strg+F5); API-Antworten sind Live-Daten und werden nie zwischengespeichert
+    antwort.headers.setdefault("Cache-Control", "no-cache" if request.path == "/" else "no-store")
+    return antwort
 
 
 def _parameter(request):
@@ -424,7 +446,7 @@ async def werte_lesen(request):
         return web.json_response(await asyncio.to_thread(werte.lies, db, q["entity"], tage))
     except Exception as e:  # noqa: BLE001 – HA-DB nicht lesbar (z. B. im Testcontainer ohne Datenbank)
         _LOG.exception("Werte nicht lesbar")
-        return web.json_response({"fehler": f"Werte nicht lesbar: {e}"}, status=500)
+        return web.json_response({"fehler": "Werte nicht lesbar (Einzelheiten im Protokoll der App)"}, status=500)
 
 
 async def klassen(_request):
@@ -495,6 +517,15 @@ async def verursacher_baum(request):
     return web.json_response(await asyncio.to_thread(verursacher.baum, r, request.query))
 
 
+async def prognose_vorhaltung(request):
+    """Reiter Prognose › Vorhaltung: Kurzzeit-Prognose je Entität mit wirksamer Vorhaltedauer und Regel (Donut mit Drilldown)."""
+    ziel, vm = _parameter(request)
+    r = await asyncio.to_thread(Z.probelauf, ziel, vm)
+    if not r:
+        return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
+    return web.json_response(await asyncio.to_thread(verursacher.vorhaltung, r))
+
+
 async def verlauf_lesen(request):
     """Punkt 308: Reiter Dashboard › Zeitverlauf – Zuwachs im Jahr/Monat/Tag-Verlauf, aufgeteilt nach Kategorie oder Tabelle."""
     if not os.path.exists(ZUWACHS):
@@ -504,21 +535,25 @@ async def verlauf_lesen(request):
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
     try:
-        return web.json_response(await asyncio.to_thread(verlauf.baue, r, ZUWACHS, request.query))
+        bestand_sicht = request.query.get("sicht") == "bestand"      # Punkt 334: Bestand statt Zuwachs
+        if bestand_sicht and not os.path.exists(BESTAND):
+            return web.json_response({"fehler": "Noch kein Bestand erfasst – er entsteht mit der nächsten Analyse"}, status=404)
+        return web.json_response(await asyncio.to_thread(verlauf.baue, r, BESTAND if bestand_sicht else ZUWACHS, request.query))
     except ValueError as e:
         return web.json_response({"fehler": f"Ungültige Angabe: {e}"}, status=400)
 
 
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "kz_first_ts", "lts_first_ts", "lts_rows", "kurz_rows",
-              "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class",
+              "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class", "plattform",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-              "attr_bytes", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb"}
+              "attr_bytes", "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb", "faktor_bestand"}
 ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
 
 
 def summen(liste):
     """Summe bzw. Anzahl je Spalte (Punkt 12)."""
     s = {"entitaeten": len(liste), "geraete": len({e["device_id"] for e in liste if e.get("device_id")}),
+         "plattformen": len({e["plattform"] for e in liste if e.get("plattform")}),   # Punkt 339
          "aktiv": 0, "deaktiviert": 0, "verwaist": 0, "rows": 0, "rows_24h": 0, "lts_rows": 0, "kurz_rows": 0, "loeschbar": 0,
          "loesch_summe": 0, "loesch_states": 0, "loesch_kurz": 0, "loesch_lts": 0, "loesch_attr_zeilen": None, "loesch_mb": 0,
          "first_ts": None, "last_ts": None, "kz_first_ts": None, "lts_first_ts": None,
@@ -647,7 +682,7 @@ def sortierung(q):
 def _sortwert(k):
     if k == "loeschbar":
         return lambda e: e["loeschbar"]["states"]
-    if k in ("labels", "device_class"):      # Punkte 115/167: ohne Label bzw. Klasse hinten (aufsteigend)
+    if k in ("labels", "device_class", "plattform"):      # Punkte 115/167/339: ohne Label, Klasse bzw. Integration hinten (aufsteigend)
         return lambda e: (not e.get(k), (e.get(k) or "").lower())
     if k in ("entity_id", "status", "herkunft"):
         return lambda e: (e.get(k) or "").lower()
@@ -674,13 +709,24 @@ async def entitaeten(request):
                               "zeilen": seite})
 
 
+class _SichererCsvWriter:
+    """Punkt 321: Textzellen, die mit = + - @ (oder Tab/CR) beginnen, bekommen ein ' vorangestellt – Tabellenkalkulationen
+    führen sie sonst als Formel aus. Zahlen bleiben unverändert."""
+
+    def __init__(self, buf):
+        self._w = csv.writer(buf, delimiter=";")
+
+    def writerow(self, zeile):
+        self._w.writerow([("'" + z) if isinstance(z, str) and z[:1] in ("=", "+", "-", "@", "\t", "\r") else z for z in zeile])
+
+
 async def export_csv(request):
     ziel, vm = _parameter(request)
     r = await asyncio.to_thread(Z.probelauf, ziel, vm)
     if not r:
         raise web.HTTPNotFound()
     buf = io.StringIO()
-    w = csv.writer(buf, delimiter=";")
+    w = _SichererCsvWriter(buf)
     w.writerow(["entity_id", "herkunft_art", "herkunft", "herkunft_info", "labels", "status", "rows", "rows_24h", "state_class", "device_class", "lts_rows", "kurz_rows",
                 "kurzzeit", "kurzzeit_regel", "langzeit", "langzeit_regel",
                 "loeschmenge_sofort_states", "loeschmenge_sofort_kurz", "loeschmenge_sofort_lts",
@@ -688,7 +734,7 @@ async def export_csv(request):
                 "loeschmenge_sofort_attr_bytes", "attr_anteil_prozent", "hinweise",
                 # Punkte 118/120 (0.4.11): erster/letzter über alle Datenarten, dahinter je Datenart
                 *[f"{a}{k}" for a in ("", "states_", "kurz_", "lts_") for k in ("erster", "letzter")],
-                "loeschmenge_sofort_bytes"])   # Punkt 197: am Ende, damit die übrigen Spalten ihren Platz behalten
+                "loeschmenge_sofort_bytes", "integration", "kurz_je_state_bestand"])   # Punkte 197/339/366: am Ende, damit die übrigen Spalten ihren Platz behalten
     ts = lambda t: time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t)) if t else ""  # noqa: E731
     zeilen = _gefiltert(r, request.query)      # hängt auch die Labels an (Punkt 115)
     name = "dbh_probelauf.csv"
@@ -706,7 +752,8 @@ async def export_csv(request):
                       for k in ("attr_bytes", "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil")],
                     " | ".join(e["hinweise"]),
                     *[ts(e.get(k)) for k in ("first_ts", "last_ts", "st_first_ts", "st_last_ts", "kurz_first_ts", "kurz_last_ts",
-                                             "lts_first_ts", "lts_last_ts")], round(e.get("loesch_mb") or 0)])
+                                             "lts_first_ts", "lts_last_ts")], round(e.get("loesch_mb") or 0), e.get("plattform") or "",
+                    "" if e.get("faktor_bestand") is None else round(e["faktor_bestand"], 2)])
     return web.Response(text="﻿" + buf.getvalue(), content_type="text/csv", charset="utf-8",
                         headers={"Content-Disposition": f"attachment; filename={name}"})
 
@@ -921,6 +968,29 @@ async def regeln_tote_entfernen(request):
         return web.json_response({"fehler": str(e)}, status=400)
     _LOG.info("Tote Entitäten aus Regeln entfernt: %d Einträge, Regeln geändert %s, ganz entfernt %s",
               bericht["muster"], bericht["regeln_geaendert"], bericht["regeln_entfernt"])
+    return web.json_response({**json.loads(antwort.text), "bericht": bericht})
+
+
+async def regeln_entitaeten_entfernen(request):
+    """Punkt 343: ausgewählte Entitäten aus einer Regel nehmen (Entitätentabelle › „Aus Regel entfernen“).
+    Ohne `regel` nur die Übersicht: welche Regeln nennen Entitäten der Auswahl mit fester ID. Mit `regel` wird entfernt –
+    mit Sicherung der Regeln wie bei den toten Einträgen; an HA und der Datenbank ändert sich nichts."""
+    body = await request.json()
+    ids = [str(i) for i in body.get("ids") or []]
+    regel_id = body.get("regel")
+    if not regel_id:
+        return web.json_response({"regeln": tote.treffer_in_regeln(rg.lade(REGELN, VORLAGE), ids), "version": Z.mtime(REGELN)})
+    gesperrt = _ersetzen_gesperrt(body)
+    if gesperrt is not None:
+        return gesperrt
+    neu, bericht = tote.entferne_ids(rg.lade(REGELN, VORLAGE), ids, str(regel_id))
+    if not bericht["muster"]:
+        return web.json_response({"fehler": "Nichts zu entfernen – die Entitäten stehen nicht (mehr) mit fester ID in dieser Regel"}, status=409)
+    try:
+        antwort = _ersetze_regeln(neu, "entitaeten_entfernt")
+    except rg.RegelFehler as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    _LOG.info("Entitäten aus Regel %s entfernt: %d Einträge, Regel ganz entfernt: %s", regel_id, bericht["muster"], bericht["regel_entfernt"])
     return web.json_response({**json.loads(antwort.text), "bericht": bericht})
 
 
@@ -1193,7 +1263,7 @@ async def auto_status(request):
     uhr("Plan (Zwischenspeicher)")
     info = _info(CACHE)
     db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
-    db_bytes = os.path.getsize(db) if os.path.exists(db) else None
+    db_bytes = await asyncio.to_thread(analyse.db_belegt_bytes, db) if os.path.exists(db) else None
     laeufe = await asyncio.to_thread(loeschen.protokolle, LAEUFE, 1, Z.lauf.start if Z.lauf else None)
     uhr("Löschprotokoll")
     st = automatik.status(p, Z.job, Z.letzter_fehler, info, db_bytes, (p or {}).get("prognose_bytes"),
@@ -1373,6 +1443,7 @@ def erstelle_app():
         web.get("/api/pareto", pareto),
         web.get("/api/verursacher", verursacher_lesen),
         web.get("/api/verursacher/baum", verursacher_baum),
+        web.get("/api/prognose/vorhaltung", prognose_vorhaltung),
         web.get("/api/verlauf", verlauf_lesen),
         web.get("/api/export.csv", export_csv),
         web.post("/api/export.csv", export_csv),
@@ -1388,6 +1459,7 @@ def erstelle_app():
         web.post("/api/regelcheck/uebernehmen", regelcheck_uebernehmen),
         web.get("/api/regeln/tote", regeln_tote),
         web.post("/api/regeln/tote/entfernen", regeln_tote_entfernen),
+        web.post("/api/regeln/entitaeten_entfernen", regeln_entitaeten_entfernen),
         web.post("/api/muster/verdichten", muster_verdichten),
         web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),

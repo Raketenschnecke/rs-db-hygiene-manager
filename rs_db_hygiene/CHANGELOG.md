@@ -4,6 +4,107 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7
+Zusammenfassung der Testversionen 0.5.7b1 bis 0.5.7b16 (Einzelheiten darunter). Die Integration ändert sich nicht (bleibt 0.5.6). Nach dem Update startet einmal eine neue Analyse.
+- **Prognose:** Unterreiter „Tabelle“ und „Analyse“ (zoombarer Donut der Kurzzeit nach Vorhaltedauer, Regel, Integration, Entität); Tabellenblöcke „Ersparnis (Speicherplatz)“, „Ersparnis (Zeilen)“ und „Bestand nach Regel (Zeilen)“ mit „States : 5-Min“
+- **Kacheln:** States und 5-Min getrennt, Spalte „DB-Größe“ entfällt; die Kacheln „Daten gesamt“ öffnen den Chart „Zuwachs-Prognose der DB“ bzw. den Zuwachs pro Tag; DB-Größe ohne Leerraum
+- **Cockpit:** neuer Unterreiter „Bestand“ (Bestand im Zeitverlauf), „Zuwachs“ statt „Entwicklung“
+- **Entitäten:** Spalten „Integration“, „Attribute (Zeilen)“ und „States : 5-Min (Bestand)“; Hinweis-, Label- und Datumsfilter; „Aus Regel entfernen …“ in der Mehrfachauswahl; „Bestand“ statt „Istzustand“
+- **Regeln und Regelwerk-Check:** Rang-Filter, HA-Standard und Attribut-Standard als Chips, Lösung „Entitäten aus der Regel mit Vorrang herausnehmen“
+- **Analyse und Löschprotokoll:** Summenzeile in der Analyse-Tabelle, Filter für Start und Dauer der Läufe
+- **Härtung:** Maskierung in der Oberfläche, Prüfung schreibender Aufrufe, Testeinstellungen nur außerhalb des Add-ons, Cache-Header, GitHub-Workflows mit minimalen Rechten
+- **Kleinigkeiten:** Tooltips (doppelt, nach Neuzeichnen), Prognose-Popup ohne Scrollbalken, Veraltet-Warnung der Analysen synchron
+
+## 0.5.7b16 (Beta)
+- **Ersparnis in Zeilen (Punkt 366):** In der Prognose-Tabelle zeigen jetzt beide Blöcke dieselbe Sicht: „Ersparnis (Speicherplatz)“ in GB und „Ersparnis (Zeilen)“ als eingesparte States- und 5-Min-Zeilen (Basis ohne Regeln minus Prognose mit Regel). Vorher zeigte der Zeilenblock den Endbestand nach der Regel. Der Endbestand nach der Regel bleibt als eigener Block „Bestand nach Regel (Zeilen)“ mit States, 5-Min und „States : 5-Min“ erhalten.
+- **States : 5-Min im Bestand (Punkt 366):** Die Tabelle Entitäten hat im Block „Aktuell“ die Spalte „States : 5-Min (Bestand)“ – das Verhältnis der heutigen States- und 5-Min-Zeilen, mit Filter, Sortierung, Summe und CSV.
+- **Kacheln States und 5-Min getrennt (Punkt 367):** Im Kachelraster ersetzt die Spalte „States, 5-Min“ zwei Spalten „States“ und „5-Min“ mit je eigenem Speicherbedarf und eigener Zeilenzahl (7 statt 6 Spalten); „Daten gesamt“ rechnet wie vorher.
+
+## 0.5.7b15 (Beta)
+- **DB-Größe ohne Leerraum (Punkt 360):** „Datei heute“, der Start der Prognose und der Sensor „DB-Größe“ zeigen die Dateigröße abzüglich der freien Seiten (wie nach einem Repack). Der Verlauf des Sensors vor dem Update enthält den Leerraum noch.
+- **Verhältnis States : 5-Min (Punkt 365):** Die Spalte „5-Min je State“ heißt „States : 5-Min“ und zeigt das Verhältnis mit der kleineren Seite auf 1 gekürzt („14 : 1“, „1 : 3“) statt „×0,07“.
+- **Spaltenblöcke (Punkt 364):** In der Prognose-Tabelle heißen die Blöcke „Prognose (Speicherplatz)“ und „Prognose (Zeilen)“.
+- **Tooltip nach Neuzeichnen (Punkt 363):** Wird das Element unter dem Zeiger ersetzt (Bereich neu gezeichnet), übernimmt der eigene Tooltip das neue Element und der Browser-Tooltip bleibt aus; ein verwaister eigener Tooltip verschwindet.
+- **Doppelter Tooltip (Punkt 362):** Setzt die Seite den title eines Elements neu, während der Zeiger darauf steht (Knopf „Analyse starten“ bei der Statusabfrage), blendet der Browser seinen Tooltip nicht mehr über den eigenen ein.
+- **Prognose-Popup ohne Scrollbalken (Punkt 361):** Ragt das Popup über das Fenster, zeichnet es das Diagramm entsprechend niedriger (mindestens 200 Einheiten statt 380).
+- **Legende „bisher“ (Punkt 358):** Die rote Legende im Prognose-Chart zeigt „Bestand“, den heutigen Wert und „seit 07.05.2025“.
+- Die Integration ändert sich nicht
+
+## 0.5.7b14 (Beta)
+- **Prognose in Unterreitern (Punkt 354):** Der Reiter Prognose hat die Unterreiter „Tabelle“ (die bisherige Regeltabelle) und „Analyse“; sie bleiben beim Scrollen unter den Reitern stehen.
+- **Analyse: Kurzzeit nach Vorhaltedauer (Punkt 355):** Zoombarer Donut der Kurzzeit-Prognose nach Vorhaltedauer, Regel, Integration und Entität (Ebenen umschaltbar), Maß Platz oder Zeilen. Der Außenring teilt jedes Segment nach Tabelle auf (States, 5-Min, Attribute; Schraffur in der Farbe des Segments). „5-Min je State“ zeigt das Missverhältnis, „weitere Entitäten“ lassen sich aufklappen, „… in Entitäten öffnen“ zeigt das gezoomte Segment im Tab Entitäten. Die Ansicht füllt die Fensterhöhe ohne Seiten-Scrollbalken.
+- **Prognose-Tabelle (Punkt 356):** Neue Gruppe „Zeilen (Prognose)“ mit States-Zeilen, 5-Min-Zeilen und „5-Min je State“ je Regel.
+- **Beschriftung (Punkt 357):** Spaltenüberschriften heißen „5-Min“ statt „5-Min-Statistik“; „Stand der Analyse“ entfällt in der Leiste des Reiters Analyse.
+- Die Integration ändert sich nicht
+
+## 0.5.7b13 (Beta)
+- **Summenzeile in der Analyse (Punkt 350):** Die Tabelle unter Analyse hat unter den Spaltentiteln eine Summenzeile (Entitäten, Zuwachs, Bestand, Anteil, Platz, Geschützt) über die gezeigten Zeilen.
+- **Rang-Filter (Punkt 351):** Regeln, Spalte Rang: Auswahl nach Stufe (z. B. 2 – entity).
+- **Spalte Typ entfällt (Punkt 352):** Der Rang-Filter ersetzt sie. Die Platzhalter-Warnung steht in der Spalte Muster, das Schloss bei Schutz-Regeln vor dem Namen; „nur Event-Regeln“ filtert auf Stufe 8.
+- **Bestand statt Istzustand (Punkt 353):** Die Kachelzeile heißt „Bestand“. Die Spaltengruppen heißen in Entitäten und Events „Aktuell“, in Regeln und Empfehlungen „Treffer“, in Statistik ohne Entität „Bestand“.
+- Die Integration ändert sich nicht
+
+## 0.5.7b12 (Beta)
+- **Filter in Löschprotokolle › Läufe (Punkt 349):** Die Spalten Start und Dauer haben ein Filterfeld: Start als Datumsfilter mit Kalender (z. B. `<1.10.2026`, `1.10.2026-30.10.2026`, tagesgenau), Dauer als Zahlenfilter in Minuten (z. B. `>5`, `1-3`).
+- Die Integration ändert sich nicht
+
+## 0.5.7b11 (Beta)
+- **Regelwerk-Check, Vorrang (Punkt 348):** Bei „Regel Rx: bei n Entitäten unwirksam – Ry hat Vorrang“ gibt es eine vierte Lösung: „Ry: n Entitäten herausnehmen“ entfernt aus Ry die Muster, die diese Entitäten treffen, sodass Rx dort greift (statt jede Entität einzeln zu löschen). Trifft ein Platzhalter weitere Entitäten, weist die Variante darauf hin; die Liste zeigt jede Änderung.
+- Die Integration ändert sich nicht
+
+## 0.5.7b10 (Beta)
+- **Aus Regel entfernen (Punkt 343):** Tabelle Entitäten, Mehrfachauswahl: neuer Knopf „Aus Regel entfernen …“ (hinter „Regel aus Auswahl anlegen“). Der Dialog nennt die Regeln, die die gewählten Entitäten mit fester ID führen (Typ entity, glob, schutz), mit Trefferzahl; nach Rückfrage und mit Sicherung der Regeln werden die Einträge aus der gewählten Regel genommen. Bleibt einer Regel kein Muster, entfällt sie. Neuer Endpunkt `POST /api/regeln/entitaeten_entfernen`.
+- **Hinweis-Filter (Punkt 344):** Die Spalte Entität hat über dem Textfeld eine Auswahl nach Hinweisen und Schutz (mit Hinweis oder Schutz, ohne Hinweis, geschützt, Langzeit kürzer als Kurzzeit, Attribute länger als Kurzzeit, Kurzzeit wirkt erst bei höherem purge_keep_days, Entitätsregel überstimmt, Zähler-Schutz greift nicht). Das Kästchen „nur mit Hinweis/Schutz“ entfällt.
+- **Label-Auswahl (Punkt 345):** Die Spalte Labels hat eine Auswahl der vorkommenden Labels (genau, Entität oder Gerät) und „ohne Label“; ein Klick auf ein Label in der Tabelle setzt diese Auswahl statt der Textsuche.
+- **Datumsfilter Events (Punkt 346):** Events, Spalte „ältestes (Event)“ mit Datumsfilter und Kalender (wie im Tab Entitäten).
+- **Seite bleibt stehen (Punkt 347):** Jeder Reiter hält die Seite mindestens so hoch, dass der Reiterstreifen oben stehen bleibt; ein Filter mit wenigen Treffern schiebt die Seite nicht mehr zurück nach oben.
+- Die Integration ändert sich nicht
+
+## 0.5.7b9 (Beta)
+- **Spalte Integration (Punkt 339):** Die Tabelle Entitäten hat zwischen „Gerät / Herkunft“ und „Klasse“ die Spalte „Integration“ (Plattform laut Entity-Registry) mit Auswahlfilter (auch „ohne Integration“), Sortierung und der Anzahl verschiedener Integrationen in der Summenzeile. Im CSV-Export steht sie als letzte Spalte.
+- **Spaltenreihenfolge (Punkte 340, 342):** Entitäten, Istzustand: erster KZe, erster LZe, letzter, Zuwachs, States … – Events, Istzustand: ältestes, Zuwachs, Bestand.
+- **Attribute (Zeilen) (Punkt 341):** Die Spalte „Bestand (Attribute · MB)“ zeigt jetzt die Anzahl Zeilen und heißt „Attribute (Zeilen)“; der Platz in MB steht im Tooltip der Summe. Eine gespeicherte Spaltenauswahl wird einmalig umgestellt.
+- Die Integration ändert sich nicht
+
+## 0.5.7b8 (Beta)
+- **Analyse-Tabelle (Punkt 338):** Die Spalten Zuwachs und Bestand haben jetzt eine feste Reihenfolge (Zuwachs, Bestand, Anteil) und tauschen beim Wechsel der Sicht nicht mehr den Platz. Die Sicht bestimmt nur noch, worauf sich der Anteil bezieht.
+- **Code-Scanning (Punkt 337):** Sicherung lesen prüft zusätzlich, dass die Datei im Sicherungsordner liegt; die GitHub-Workflows bekommen `permissions: contents: read`.
+- Die Integration ändert sich nicht
+
+## 0.5.7b7 (Beta)
+- **Bestand im Zeitverlauf (Punkt 334):** Neuer Unterreiter Cockpit › Bestand (zwischen Zuwachs und Beziehungen); „Entwicklung“ heißt jetzt „Zuwachs“. Dieselbe Ansicht wie beim Zuwachs (Jahr → Monat → Woche → Tag, nach Integration, Gerät, Entität oder Tabelle, Zeilen oder Platz), aber als Stand am Ende des Zeitraums. Neue Datei `bestand.db`: Nach jeder Analyse wird der Bestand je Entität festgehalten (Attribute nach der Attribut-Analyse); beim ersten Lauf werden die Tage davor aus den Zuwachs-Tageswerten mit der heutigen Vorhaltezeit zurückgerechnet (blass, geschätzt; States, 5-Min und Events ab 30 Tage nach Beginn der Zuwachs-Daten, Stundenstatistik ganz, Attribute nur gemessen). Die letzten 90 Tage täglich, ältere je Sonntag und Monatsletztem; Speicherdauer wie beim Zuwachs.
+- **Cache-Header (Punkt 332):** Die Seite wird bei jedem Laden beim Server nachgefragt (`no-cache`, 304 ohne Änderung), API-Antworten nie zwischengespeichert (`no-store`). Nach einem Update ist die neue Seite sofort da, ohne Strg+F5.
+- **Cockpit (Punkt 333):** Nach dem Neuladen der Seite öffnet immer der Unterreiter „Datenmenge“.
+- **Tooltips (Punkte 335, 336):** Erste Zeile im Tooltip der Balken mit fettem Gesamtwert („Oktober 2026: 780 MB · Stand …“); die Donut-Segmente nutzen die eigene Tooltip-Anzeige statt des Browser-Tooltips.
+- Die Integration ändert sich nicht
+
+## 0.5.7b6 (Beta)
+- **Veraltet-Warnung synchron (Punkt 331):** Die nächtliche Analyse führt beide Analysen aus, deshalb gilt auch die Attribut-Analyse ab 26 Stunden als veraltet (vorher 7 Tage). Im Tooltip von „Analyse starten“ tragen dann beide Zeilen das „!“, mit einem gemeinsamen Hinweis „Beide Analysen sind älter als 26 h“.
+- Die Integration ändert sich nicht
+
+## 0.5.7b5 (Beta)
+- **HA-Standard und Attribut-Standard als Chips (Punkt 330):** Die Regel HA:standard steht nicht mehr in der Regelliste, das Banner „Attribut-Standard“ im Reiter Regeln entfällt. Beide Standards sind Chips über den Reitern („HA-Standard: 10 Tage · Langzeit unbegrenzt“, „Attribut-Standard: wie Kurzzeit“), größer, mit Rand und ✎; ein Klick öffnet die Einstellungen. Die Trefferzahl von HA-Standard steht im Tooltip des Chips und im Dialog, die Wirkung des Attribut-Standards im Dialog. Der Chip „Schutz“ entfällt.
+- Die Regeldaten ändern sich nicht (HA:standard bleibt eine Regel im Datenbestand), die Integration ändert sich nicht
+
+## 0.5.7b4 (Beta)
+- **Kacheln (Punkt 329, ergänzt Punkt 324):** Daten gesamt / Prognose öffnet den Chart „Zuwachs-Prognose der DB“, Daten gesamt / Istzustand das Popup „Daten gesamt – Zuwachs pro Tag (Zeilen)“. Daten gesamt / Löschmenge sofort öffnet nichts.
+- Die Integration ändert sich nicht
+
+## 0.5.7b3 (Beta)
+- **Kacheln (Punkt 324):** Die Spalte „DB-Größe“ entfällt (6 statt 7 Spalten). Die drei Kacheln der Spalte „Daten gesamt“ öffnen den Chart „Zuwachs-Prognose der DB“. Der Zuwachs pro Tag über alle Entitäten ist über das Raster nicht mehr erreichbar; die Kachel Istzustand/Events öffnet weiter ihren Zuwachs pro Tag.
+- **Chart „Zuwachs im Zeitverlauf“ (Punkt 325):** Die Reihenfolge der Einzelkategorien im Tooltip entspricht dem Balkenstapel von oben nach unten (samt Farbmarken).
+- **Entitätenkarte (Punkt 326):** Das Chart öffnet bei jedem Öffnen der Karte auf „Gespeicherte Werte“, 30 Tage, alle Graphen eingeblendet. Chart und Regeldefinitionen stehen in zwei dezent abgesetzten Feldern. „Alternative Gruppenregeln:“ (vorher „Regel für gleichartige“) steht direkt unter „Herkunft“, mit ⓘ-Erläuterung. An „Kurzzeit“, „Attribute“ und „Langzeit“ erläutert je ein ⓘ die Auswahl; „akt. wirksam“ ersetzt „wirksam“; die Hinweise „gilt für States und 5-Min-Statistik“ und „leer = … (Attribut-Standard)“ und der Satz „Leer lassen = wie bisher …“ entfallen; mehr Abstand zwischen Text und Vorhaltezeiten.
+- **Analyse, Reiter (Punkt 327):** Banner (Pfad, Filter) und Tabellenkopf bleiben beim Scrollen unter den Reitern und der Leiste stehen; die Tabelle scrollt in einer Box bis Fensterhöhe. Die Tabelle nutzt getrennte Zellränder, damit keine Zeilen durch den klebenden Kopf scheinen.
+- **Regelmaske und Event-Regeln (Punkt 328):** ⓘ-Erläuterungen an den Vorhaltezeiten, Abstände angepasst, Hinweise unter den Feldern entfallen. Bei Event-Regeln stehen Chart und Regelfelder in zwei Feldern, und unter „Vorhaltezeit (Events)“ zeigt „akt. wirksam“, was für die vom Muster getroffenen Event-Typen gilt. Der Hilfetext zum Muster ist klein und gedämpft.
+- Die Integration ändert sich nicht
+
+## 0.5.7b2 (Beta)
+- **Härtung (Punkte 322/323):** Die Test-Einstellungen `DBH_ERLAUBT` (zusätzlich erlaubte Client-IPs) und die Testdatei `states_test.json` wirken nur noch außerhalb des Add-ons, also ohne `SUPERVISOR_TOKEN`; im Add-on werden sie ignoriert (322). Das Basis-Image in `build.yaml` ist per Digest festgelegt, die GitHub-Actions der CI per Commit (323).
+- Die Integration ändert sich nicht
+
+## 0.5.7b1 (Beta)
+- **Härtung (Punkte 319–321, aus der Risikoanalyse `docs/RISIKOANALYSE.md`):** Die Oberfläche maskiert in Texten aus der Datenbank auch `'` und `` ` `` (319). Schreibende Aufrufe der Oberfläche lehnt die App ab, wenn der Browser sie als „cross-site“ kennzeichnet (403), oder wenn sie einen Body ohne `application/json` mitschicken (415) (320). Der CSV-Export stellt Textzellen, die mit `=`, `+`, `-` oder `@` beginnen, ein `'` voran, damit Tabellenkalkulationen sie nicht als Formel ausführen (321). Zwei weitere Textstellen (Regeltyp, Attribut-Standard) laufen ebenfalls durch `esc()`. Die Meldung „Werte nicht lesbar“ zeigt keine Datenbank-Einzelheiten mehr (stehen im Protokoll der App).
+- Die Integration ändert sich nicht
 ## 0.5.6
 Zusammenfassung der Testversionen 0.5.6b1 bis 0.5.6b39 (Einzelheiten darunter). Nach dem Update startet einmal eine neue Analyse. Die Integration 0.5.6 ist schon veröffentlicht; ihr Update über HACS ist nur nötig, falls sie noch 0.5.5 ist (Attribute gezielt abtrennen, Punkt 295).
 - **Neue Reiter:** Cockpit (Aufbau der Datenbank, Donut, Entwicklung im Zeitverlauf, Beziehungen, Platz, Tabellen) und Analyse (wer treibt die Datenmenge: Integration → Gerät → Entität, Pareto-Kurve, Erstauftreten)

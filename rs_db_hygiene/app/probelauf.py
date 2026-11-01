@@ -175,7 +175,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             zuwachs_attr = attr_zuwachs.get(mid, 0) if mit_attr else e["rows_24h"] * B_ATTR_FALLBACK
             zuwachs_attr_z = attr_zuwachs_z.get(mid, 0) if mit_attr else 0
         lts_jetzt = e["lts_rows"] if lid else 0
-        # Punkt 86: Zeilen je Tabelle im Bestand (Kachelraster, Zeile „Istzustand“)
+        # Punkt 86: Zeilen je Tabelle im Bestand (Kachelraster, Zeile „Bestand“)
         add(summe, "bestand_states", e["rows"] or 0)
         add(summe, "bestand_kurz", (e["kurz_rows"] or 0) if lid else 0)
         add(summe, "bestand_lts", lts_jetzt or 0)
@@ -186,6 +186,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             prog = {"states": 0, "attribute": 0, "kurz": 0, "lts": behalten_lts * B_LTS}
             basis = {"states": 0, "attribute": 0, "kurz": 0, "lts": lts_jetzt * B_LTS}
             prog_z = {"states": 0, "attribute": 0, "kurz": 0, "lts": behalten_lts or 0}
+            basis_z = {"states": 0, "kurz": 0}
             # Punkt 186: Verwaiste und Deaktivierte getrennt zählen (beide schreiben nicht mehr)
             wer = "verwaist" if rg.ist_verwaist(e["status"]) else "deaktiviert"
             add(summe, wer + "_entitaeten", 1)
@@ -207,6 +208,8 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 "kurz": KURZ_PRO_TAG * kp if lid else 0,
                 "lts": ((lts_jetzt + LTS_PRO_TAG * ziel) if lz is None else LTS_PRO_TAG * lz) if lid else 0,
             }
+            # Ersparnis in Zeilen (Prognose › Zeilen): Basis ohne Regeln wie unten, nur States und 5-Min
+            basis_z = {"states": e["rows_24h"] * zb, "kurz": KURZ_PRO_TAG * zb if lid else 0}
             basis = {  # nur HA-Standard (purge_keep_days) über den Prognosezeitraum, ohne Regeln
                 "states": e["rows_24h"] * B_STATE * zb,
                 "attribute": zuwachs_attr * B_ATTR_FAKTOR * zb,
@@ -251,7 +254,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
             return je_regel.setdefault(rid, {"regel": rid, "name": regel_namen.get(rid, rid), "entitaeten": set(),
                                              "kurzzeit": 0, "attribute": 0, "langzeit": 0,
                                              "states": 0, "kurz": 0, "attr_bytes": 0, "lts": 0, "ersparnis_bytes": 0, "events": 0, "attr_zeilen": 0, "ersparnis_events": 0,
-                                             "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0,
+                                             "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0, "ersparnis_z_states": 0, "ersparnis_z_kurz": 0, "pz_states": 0, "pz_kurz": 0,
                                              "ueberstimmt": set(), "verwaist": set()})
 
         # Überstimmte Regeln (Punkt 29) und überstimmte Entitätsregeln als Hinweis (Punkt 28)
@@ -275,6 +278,9 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 r["kurz"] += loesch["kurz"]
                 d = (basis["states"] - prog["states"]) + (basis["kurz"] - prog["kurz"])
                 r["ersparnis_states"] += d
+                r["ersparnis_z_states"] += basis_z["states"] - prog_z["states"]   # Ersparnis in Zeilen, gleiche Sicht wie die GB-Spalten
+                r["ersparnis_z_kurz"] += basis_z["kurz"] - prog_z["kurz"]
+                r["pz_states"] += prog_z["states"]; r["pz_kurz"] += prog_z["kurz"]   # Endbestand in Zeilen für „States : 5-Min“
             elif art == "attribute":
                 # Punkt 254 (0.5.6b9): Attribute haben wieder einen eigenen Wert – Löschmenge und Ersparnis gehören der Regel,
                 # die ihn setzt (der Attribut-Standard hat keine Regel-ID und erscheint nur in den Summen)
@@ -295,6 +301,8 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                                                        for u in erg[art]["ueberstimmt"]]}
                                  for art in rg.WERTE},
                        "loeschbar": loesch, "prognose_bytes": sum(prog.values()), "prognose_teile": prog,
+                       # Prognose › Vorhaltung: Zeilen je Tabelle und die im Prognosezeitraum wirksame Kurzzeit (Tage)
+                       "prognose_zeilen_teile": prog_z, "prognose_tage": kp,
                        # Punkt 63: Block „Löschmenge sofort“ als flache Felder (Server-Filter, Sortierung, Summen)
                        "loesch_summe": loesch["states"] + loesch["kurz"] + loesch["lts"] + (loesch["attr_zeilen"] or 0), "loesch_states": loesch["states"],   # Punkt 243: inkl. Attribute
                        "loesch_kurz": loesch["kurz"], "loesch_lts": loesch["lts"], "loesch_attr_zeilen": loesch["attr_zeilen"],
@@ -326,7 +334,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
                 rr = je_regel.setdefault(er["regel"], {"regel": er["regel"], "name": regel_namen.get(er["regel"], er["regel"]),
                                                        "entitaeten": set(), "kurzzeit": 0, "attribute": 0, "langzeit": 0,
                                                        "states": 0, "kurz": 0, "attr_bytes": 0, "lts": 0, "ersparnis_bytes": 0, "events": 0, "attr_zeilen": 0, "ersparnis_events": 0,
-                                                       "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0,
+                                                       "ersparnis_states": 0, "ersparnis_attr": 0, "ersparnis_lts": 0, "ersparnis_z_states": 0, "ersparnis_z_kurz": 0, "pz_states": 0, "pz_kurz": 0,
                                                        "ueberstimmt": set(), "verwaist": set()})
                 rr["entitaeten"].add(typ)
                 rr["kurzzeit"] += 1
@@ -390,6 +398,9 @@ def _basis(e):
     anf = [t for t in (b["st_first_ts"], b["kurz_first_ts"], b["lts_first_ts"]) if t is not None]
     end = [t for t in (b["st_last_ts"], b["kurz_last_ts"], b["lts_last_ts"]) if t is not None]
     b["first_ts"], b["last_ts"] = (min(anf) if anf else None), (max(end) if end else None)
+    # Punkt 366: Verhältnis 5-Min : States im heutigen Bestand (für Sortierung und Filter der Tabelle Entitäten)
+    kz, st = b["kurz_rows"] or 0, b["rows"] or 0
+    b["faktor_bestand"] = kz / st if st else (1e12 if kz else None)
     kz = [t for t in (b["st_first_ts"], b["kurz_first_ts"]) if t is not None]   # Punkt 309: erster Kurzzeit-Datensatz (States, 5-Min); Langzeit: lts_first_ts
     b["kz_first_ts"] = min(kz) if kz else None
     return b

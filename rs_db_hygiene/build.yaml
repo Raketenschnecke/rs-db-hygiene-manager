@@ -1,2 +1,3 @@
 build_from:
-  amd64: ghcr.io/home-assistant/amd64-base:3.24
+  # Punkt 323: Basis-Image per Digest festgelegt (amd64-base:3.24); zum Aktualisieren neuen Digest eintragen
+  amd64: ghcr.io/home-assistant/amd64-base:3.24@sha256:20d9028d56eaa3dd3013f6e0a7957b4911e4c71e14f85d1f609bba4fe429e84a
