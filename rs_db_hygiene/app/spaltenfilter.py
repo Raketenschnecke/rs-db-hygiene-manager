@@ -23,7 +23,7 @@ import time
 
 ZAHL_SPALTEN = ("rows", "rows_24h", "lts_rows", "kurz_rows", "loeschbar", "attr_avg", "attr_anteil",
                 "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-                "attr_zeilen", "attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb")
+                "attr_zeilen", "attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb", "faktor_bestand")
 # Attribut-Größen werden in MB gefiltert (Eingabe z. B. >50 oder 0,5-2), gespeichert sind Bytes
 MB_SPALTEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch", "loesch_mb")   # loesch_mb: Punkt 197
 DATUM_SPALTEN = ("first_ts", "last_ts", "kz_first_ts", "lts_first_ts")

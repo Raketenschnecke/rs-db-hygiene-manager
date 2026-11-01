@@ -151,7 +151,7 @@ body.offline [data-hoch], body.offline .massen button { opacity: .45; pointer-ev
 main { padding: 0 20px 24px; }
 /* Punkt 86: Kachelraster – Zeilen Bestand / Löschmenge sofort / Prognose, Spalten je Tabelle.
    Nie waagerecht scrollen: Spalten schrumpfen bis 0, lange Texte werden gekürzt (voller Text im Tooltip). */
-.raster { display: grid; grid-template-columns: minmax(70px, max-content) repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.raster { display: grid; grid-template-columns: minmax(70px, max-content) repeat(7, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .raster .rkopf { min-width: 0; display: flex; align-items: flex-end; gap: 2px; font-size: 12px; font-weight: 600; color: var(--muted);
   text-transform: uppercase; letter-spacing: .04em; }
 .raster .rkopf > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -226,7 +226,7 @@ main { padding: 0 20px 24px; }
   .raster .rkopf .hilfeknopf { display: none; }
 }
 @media (max-width: 600px) {
-  .raster { grid-template-columns: minmax(40px, max-content) repeat(6, minmax(0, 1fr)); gap: 3px; }
+  .raster { grid-template-columns: minmax(40px, max-content) repeat(7, minmax(0, 1fr)); gap: 3px; }
   .raster .kachel { padding: 4px 3px; border-radius: 6px; } .raster .kachel .z { font-size: 12px; }
   .raster .zkopf { padding: 2px 4px; font-size: 12px; } .raster .zkopf .hilfeknopf { display: none; }
   .raster .rkopf { font-size: 10px; letter-spacing: 0; }
@@ -2117,11 +2117,15 @@ const HILFE = {
     "Die Datei enthält freie Seiten: Gelöschte Daten machen sie erst nach einem Repack kleiner. WAL und SHM sind nicht mitgezählt. Größen je Zeile misst jede Analyse (Reiter Cockpit, „Wo der Platz liegt“); ohne Messung gelten Festwerte vom 10.10.2026 (z. B. States 181 B, Events 145 B).",
     "Steigt der Wert dauerhaft, Regeln für die größten Schreiber prüfen (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren)."],
   c_zeilen: ["Daten gesamt",
-    "Speicherbedarf: Summe der Spalten States/5-Min, Attribute, Langzeit und Events in dieser Zeile.",
+    "Speicherbedarf: Summe der Spalten States, 5-Min, Attribute, Langzeit und Events in dieser Zeile.",
     "Verwaiste sind in den anderen Spalten schon enthalten und zählen nicht doppelt. Ohne Attribut-Analyse fehlen die Attributzeilen in der Summe.",
     "Die drei Zeilen vergleichen: Wie viel liegt heute, wie viel ist sofort zu viel, wie viel bleibt auf Dauer."],
-  c_kurz: ["States, 5-Min",
-    "Zeilen der Kurzzeit (States, 5-Min, Attribute) ohne die Attribute: Tabellen states und statistics_short_term.",
+  c_states: ["States",
+    "Speicherbedarf der Tabelle states (ohne Attribute); die Zahl der Zeilen steht unter dem Wert und im Tooltip.",
+    "Die Kurzzeit legen Regeln fest; ohne Regel gilt global = purge_keep_days = {pkd} Tage. Die Attribute der States stehen in der Spalte „Attribute“.",
+    "Den größten Schreibern (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren) eine kürzere Kurzzeit geben."],
+  c_kurz: ["5-Min",
+    "Speicherbedarf der 5-Min-Statistik (Tabelle statistics_short_term); die Zahl der Zeilen steht unter dem Wert und im Tooltip.",
     "Die Kurzzeit legen Regeln fest; ohne Regel gilt global = purge_keep_days = {pkd} Tage. Die 5-Min-Statistik löscht die App über die Integration RS DB Hygiene (Stufe B).",
     "Den größten Schreibern (Tab Entitäten, nach „Zuwachs“ (Zeilen je Tag) sortieren) eine kürzere Kurzzeit geben."],
   c_lts: ["Langzeit",
@@ -2172,11 +2176,11 @@ document.addEventListener("click", ev => {   // ⓘ an Raster-Köpfen und Bedien
     [["Schließen", () => $("#dlg").close(), true]]);
 });
 
-// ================================================ Kachelraster (Punkt 86): 3 Zeilen × 7 Spalten
+// ================================================ Kachelraster (Punkt 86): 3 Zeilen × 7 Spalten (States und 5-Min getrennt: Punkt 367)
 // [Schlüssel, Name, Kurzname für schmale Fenster, CSS-Klasse der Zeilenfarbe]
 const RZEILEN = [["ist", "Bestand", "Best.", "r-ist"], ["loesch", "Löschmenge sofort", "Löschen", "r-loesch"], ["prog", "Prognose", "Progn.", "r-prog"]];
 // [Schlüssel, Name, Kurzname]
-const RSPALTEN = [["zeilen", "Daten gesamt", "Daten"], ["kurz", "States, 5-Min", "St./5M"],
+const RSPALTEN = [["zeilen", "Daten gesamt", "Daten"], ["states", "States", "States"], ["kurz", "5-Min", "5-Min"],
   ["attr", "Attribute", "Attr."], ["lts", "Langzeit", "LZ"], ["events", "Events", "Ev."], ["verwaist", "Verwaist", "Verw."]];   // Punkt 285: Folge wie in den Löschtabellen
 // Kurzform für schmale Kacheln: 4.998.362 → „5,0 Mio.“ (die lange Form steht im Tooltip)
 const kzahl = n => n == null ? "–" : Math.abs(n) >= 1e9 ? (n / 1e9).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " Mrd."
@@ -2195,7 +2199,8 @@ function rasterWerte(s, st) {
   const attr = (b, u) => mitAttr ? { w: n(b), b: true, u } : { fehlt: "fehlt", u: "„Analyse starten“ ausführen" };
   const ist = {
     db: { w: st.db_bytes, gb: true, u: "Datei ohne Leerraum" },
-    kurz: { w: n(s.bestand_states) * BS + n(s.bestand_kurz) * BK, b: true, u: `States ${kzahl(n(s.bestand_states))} · 5-Min ${kzahl(n(s.bestand_kurz))}` },
+    states: { w: n(s.bestand_states) * BS, b: true, u: `${kzahl(n(s.bestand_states))} Zeilen` },
+    kurz: { w: n(s.bestand_kurz) * BK, b: true, u: `${kzahl(n(s.bestand_kurz))} Zeilen` },
     lts: { w: n(s.bestand_lts) * BL, b: true, u: `${kzahl(n(s.bestand_lts))} Zeilen` },
     events: { w: n(s.bestand_events) * BE, b: true, u: `${kzahl(n(s.bestand_events))} Zeilen` },
     attr: attr(s.attr_bestand_bytes, `${kzahl(n(s.bestand_attr_zeilen))} Zeilen`),
@@ -2203,7 +2208,8 @@ function rasterWerte(s, st) {
   };
   const loesch = {
     db: { w: n(s.loesch_bytes), gb: true, u: "frei nach Repack" },
-    kurz: { w: n(s.loeschbar_states) * BS + n(s.loeschbar_kurz) * BK, b: true, u: `States ${kzahl(n(s.loeschbar_states))} · 5-Min ${kzahl(n(s.loeschbar_kurz))}` },
+    states: { w: n(s.loeschbar_states) * BS, b: true, u: `${kzahl(n(s.loeschbar_states))} Zeilen` },
+    kurz: { w: n(s.loeschbar_kurz) * BK, b: true, u: `${kzahl(n(s.loeschbar_kurz))} Zeilen` },
     lts: { w: n(s.loeschbar_lts) * BL, b: true, u: `${kzahl(n(s.loeschbar_lts))} Zeilen` },
     events: { w: n(s.loeschbar_events) * BE, b: true, u: `${kzahl(n(s.loeschbar_events))} Zeilen` },
     attr: attr(s.loeschbar_attr_bytes, `${kzahl(n(s.loeschbar_attr_zeilen))} Zeilen`),
@@ -2211,7 +2217,8 @@ function rasterWerte(s, st) {
   };
   const prog = {
     db: { w: s.prognose_bytes, gb: true, u: `ohne Regeln ${gb(s.basis_bytes)}` },
-    kurz: { w: n(s.prognose_states) + n(s.prognose_kurz), b: true, u: `States ${kzahl(n(s.prognose_zeilen_states))} · 5-Min ${kzahl(n(s.prognose_zeilen_kurz))}` },
+    states: { w: n(s.prognose_states), b: true, u: `${kzahl(n(s.prognose_zeilen_states))} Zeilen` },
+    kurz: { w: n(s.prognose_kurz), b: true, u: `${kzahl(n(s.prognose_zeilen_kurz))} Zeilen` },
     lts: { w: n(s.prognose_lts), b: true, u: `${kzahl(n(s.prognose_zeilen_lts))} Zeilen` },
     events: { w: n(s.events_bytes), b: true, u: `${kzahl(n(s.prognose_zeilen_events))} Zeilen` },
     attr: mitAttr ? { w: n(s.prognose_attribute), b: true, u: `${kzahl(n(s.prognose_zeilen_attribute))} Zeilen` }
@@ -2222,7 +2229,7 @@ function rasterWerte(s, st) {
     loesch: n(s.loeschbar_states) + n(s.loeschbar_kurz) + n(s.loeschbar_lts) + n(s.loeschbar_events) + n(s.loeschbar_attr_zeilen),
     prog: n(s.prognose_zeilen_states) + n(s.prognose_zeilen_kurz) + n(s.prognose_zeilen_lts) + n(s.prognose_zeilen_events) + n(s.prognose_zeilen_attribute) };
   for (const [k, z] of Object.entries({ ist, loesch, prog })) {    // Daten gesamt = Summe der Tabellen-Spalten (Verwaiste stecken schon darin)
-    z.zeilen = { w: summeOk(z.kurz.w, z.lts.w, z.events.w, z.attr.w ?? 0), b: true, u: `${kzahl(zsum[k])} Zeilen${mitAttr ? "" : " · ohne Attribute"}` };
+    z.zeilen = { w: summeOk(z.states.w, z.kurz.w, z.lts.w, z.events.w, z.attr.w ?? 0), b: true, u: `${kzahl(zsum[k])} Zeilen${mitAttr ? "" : " · ohne Attribute"}` };
   }
   return { ist, loesch, prog };
 }
@@ -2700,6 +2707,9 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
   ["last_ts", "letzter (States, 5-Min, Langzeit)", 0, "datum", "<8.10.2026", 150,
     "spätester Zeitstempel über States, 5-Min-Statistik und Langzeit. Filter und Sortierung nutzen diesen Wert; die Aufteilung je Datenart steht im Tooltip der Zelle."],
   ["lts_rows", "Langzeit (Zeilen)", 1, "zahl", ">0", 110, "Zeilen in statistics (Stundenstatistik, Langzeit) dieser Entität"],
+  // Punkt 366: Verhältnis im heutigen Bestand (States und 5-Min je Entität); die Prognose nach Regel steht im Tab Prognose
+  ["faktor_bestand", "States : 5-Min (Bestand)", 1, "zahl", ">1", 125,
+    "Verhältnis der Zeilen States zur Anzahl 5-Min im heutigen Bestand (kleinere Seite = 1). „14 : 1“ = 14 States je 5-Min-Zeile, „1 : 3“ = 3 5-Min-Zeilen je State. Filter und Sortierung nutzen 5-Min je State: >1 = mehr 5-Min- als States-Zeilen."],
   ["kurzzeit", WNAME.kurzzeit, 0, "wert", "", 200, "wirksame Kurzzeit und ihre Quelle (Regel oder Std.) – gilt für States und 5-Min-Statistik (die Attribute haben einen eigenen Wert, Spalte Attribute)"],
   ["attribute", WNAME.attribute, 0, "wert", "", 200, "wirksamer Attribut-Wert und seine Quelle (Regel oder Attribut-Standard) – nach dieser Frist werden die Attribute von den States getrennt, höchstens die Kurzzeit"],
   ["langzeit", WNAME.langzeit, 0, "wert", "", 190, "wirksame Langzeit und ihre Quelle (Regel oder Std.) – gilt für die Stundenstatistik"],
@@ -2726,10 +2736,17 @@ const SPALTEN_ROH = [   // Definitionen; Reihenfolge und Gruppen legt SPALTENGRU
 ];
 // Punkt 130 (0.5.3): Reihenfolge der Spalten und ihre Gruppen – über den Spaltenköpfen steht je Gruppe eine Klammer
 // Punkt 132 (0.5.3): je Gruppe eine Farbe (Klasse gr-<id>); „Aktuell“ ist rot wie die Kachelzeile „Bestand“
+// Punkt 366: Verhältnis zweier Zeilenzahlen, die kleinere Seite = 1 („14 : 1“ = 14 States je 5-Min-Zeile, „1 : 3“ = 3 5-Min-Zeilen je State)
+function verhaeltnis(st, kz) {
+  if (!st) return kz ? "nur 5-Min" : "–";
+  if (!kz) return "nur States";
+  const q = kz / st, z = v => v.toLocaleString("de-DE", { maximumFractionDigits: v < 10 ? 1 : 0 });
+  return q < 1 ? z(1 / q) + " : 1" : "1 : " + z(q);
+}
 const SPALTENGRUPPEN = [
   ["Stammdaten", "stamm", ["entity_id", "herkunft", "plattform", "device_class", "labels", "status"]],
   ["Vorhaltezeiten", "vorh", ["kurzzeit", "attribute", "langzeit"]],
-  ["Aktuell", "ist", ["kz_first_ts", "lts_first_ts", "last_ts", "rows_24h", "rows", "kurz_rows", "lts_rows", "attr_anteil", "attr_zeilen", "attr_zuwachs_tag", "attr_avg"]],
+  ["Aktuell", "ist", ["kz_first_ts", "lts_first_ts", "last_ts", "rows_24h", "rows", "kurz_rows", "faktor_bestand", "lts_rows", "attr_anteil", "attr_zeilen", "attr_zuwachs_tag", "attr_avg"]],
   ["Löschmenge sofort", "loesch", ["loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"]],
 ];
 const SPALTEN = SPALTENGRUPPEN.flatMap(([, , ks]) => ks.map(k => SPALTEN_ROH.find(s => s[0] === k)));
@@ -2747,7 +2764,7 @@ const mitKlasse = (html, kl) => {
 // Punkt 132: Spaltenkopf zweizeilig – „Titel (Zusatz)“ → Zeile 1 Titel mit Sortierpfeil, Zeile 2 Zusatz (leer, wenn keiner)
 const kopfZweizeilig = t => { const m = /^(.+?)\s*\(([^()]*)\)$/.exec(t || ""); return `<span class="kz1"><span class="tk">${esc(m ? m[1] : t)}</span><span class="pfeil"></span></span><span class="kz2">${m ? esc(m[2]) : ""}</span>`; };
 const SPALTE =Object.fromEntries(SPALTEN.map(s => [s[0], s]));
-const SORTIERBAR = new Set(["entity_id", "herkunft", "plattform", "device_class", "labels", "status", "rows", "rows_24h", "kurz_rows", "kz_first_ts", "lts_first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
+const SORTIERBAR = new Set(["entity_id", "herkunft", "plattform", "device_class", "labels", "status", "rows", "rows_24h", "kurz_rows", "faktor_bestand", "kz_first_ts", "lts_first_ts", "last_ts", "lts_rows", "loeschbar", "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
                             "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_anteil", "loesch_mb"]);
 const FILTERHILFE = {
   text: "enthält … (Groß/klein egal); * und ? als Platzhalter, z. B. sensor.*_power",
@@ -2770,7 +2787,7 @@ const ATTR_SPALTEN = ["attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_antei
 const ANSICHTEN_ENT = {
   Standard: SPALTEN.map(s => s[0]).filter(k => !ATTR_SPALTEN.includes(k)),
   // Punkt 135 (0.5.3): alles zu States, 5-Min- und Langzeitstatistik, ohne Labels und Attribute
-  "States & Statistik": ["entity_id", "herkunft", "plattform", "device_class", "status", "kurzzeit", "attribute", "langzeit", "kz_first_ts", "lts_first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "lts_rows",
+  "States & Statistik": ["entity_id", "herkunft", "plattform", "device_class", "status", "kurzzeit", "attribute", "langzeit", "kz_first_ts", "lts_first_ts", "last_ts", "rows", "rows_24h", "kurz_rows", "faktor_bestand", "lts_rows",
                          "loesch_summe", "loesch_mb", "loesch_states", "loesch_kurz", "loesch_attr_zeilen", "loesch_lts"],
   Attribute: ["entity_id", "herkunft", "kurzzeit", "rows", "rows_24h", ...ATTR_SPALTEN, "loesch_attr_zeilen", "loesch_mb"],   // Punkt 154: mit Kurzzeit (gilt auch für Attribute) und den Attributzeilen, die mit den States wegfallen
   Alle: SPALTEN.map(s => s[0]),
@@ -2778,6 +2795,7 @@ const ANSICHTEN_ENT = {
 // Punkt 115 (0.4.10): neue Spalten der Standardansicht auch bei gemerkter Spaltenauswahl einmal einblenden
 const NEUE_SPALTEN_ENT = { labels: "dbh_spalte_neu_labels", kurz_rows: "dbh_spalte_neu_kurz_rows", device_class: "dbh_spalte_neu_device_class",   // Punkt 167
   loesch_mb: "dbh_spalte_neu_loesch_mb",   // Punkt 197
+  faktor_bestand: "dbh_spalte_neu_faktor_bestand",   // Punkt 366
   plattform: "dbh_spalte_neu_plattform",   // Punkt 339
   kz_first_ts: "dbh_spalte_neu_kz_first_ts", lts_first_ts: "dbh_spalte_neu_lts_first_ts" };   // Punkt 309: ersetzen „erster“
 const ladeSichtbar = (schluessel, standard) => {
@@ -2913,6 +2931,7 @@ function zeigeSummen(su) {
     lts_first_ts: zelle(datum(g.lts_first_ts), datum(a.lts_first_ts), `frühester Langzeit-Zeitstempel – ${GEF}`),
     last_ts: zelle(datum(g.last_ts), datum(a.last_ts), `spätester Zeitstempel – ${GEF}`),
     rows: zz("rows", `Zeilen in states – ${GEF}`), rows_24h: zz("rows_24h", `neue Zeilen in states je Tag (Ø 7 volle Tage) – ${GEF}`),
+    faktor_bestand: zelle(verhaeltnis(g.rows, g.kurz_rows), verhaeltnis(a.rows, a.kurz_rows), `Verhältnis States : 5-Min über alle Zeilen – ${GEF}`),   // Punkt 366
     kurz_rows: zz("kurz_rows", `Zeilen 5-Min-Statistik – ${GEF}`), lts_rows: zz("lts_rows", `Zeilen Langzeit – ${GEF}`),
     loesch_summe: zz("loesch_summe", `Zeilen sofort löschbar (States + 5-Min + Attribute + Langzeit) – ${GEF}`),
     loesch_states: zz("loesch_states", `States sofort löschbar – ${GEF}`), loesch_kurz: zz("loesch_kurz", `5-Min-Statistik sofort löschbar – ${GEF}`),
@@ -3064,6 +3083,7 @@ const ZELLEN = {
   last_ts: e => `<td title="${esc(zeitTip(e))}">${datum(e.last_ts)}</td>`,
   lts_rows: e => `<td class="n">${e.lts_rows ? zahl(e.lts_rows) : "–"}</td>`,
   kurz_rows: e => `<td class="n">${e.kurz_rows ? zahl(e.kurz_rows) : "–"}</td>`,   // Punkt 135
+  faktor_bestand: e => `<td class="n">${verhaeltnis(e.rows, e.kurz_rows)}</td>`,   // Punkt 366
   kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit, "kurzzeit")}</td>`,
   attribute: e => `<td>${wertZelle((e.werte || {}).attribute, "attribute")}</td>`,
   langzeit: e => `<td>${wertZelle((e.werte || {}).langzeit, "langzeit")}</td>`,
@@ -3300,8 +3320,9 @@ T.probe = new LokaleTabelle({
   // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
   // Punkt 224 (0.5.5b14): Block „Löschmenge sofort“ entfällt – die steht in Kacheln, Tab Entitäten und Tab Löschen
   gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
-    ["Prognose (Speicherplatz)", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]],
-    ["Prognose (Zeilen)", "prog", ["pz_states", "pz_kurz", "pz_faktor"]]],
+    ["Ersparnis (Speicherplatz)", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]],
+    ["Ersparnis (Zeilen)", "prog", ["ersparnis_z_states", "ersparnis_z_kurz"]],
+    ["Bestand nach Regel (Zeilen)", "prog", ["pz_states", "pz_kurz", "pz_faktor"]]],
   fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
   zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)}: Klick öffnet die Regelmaske"` : "",
@@ -3324,13 +3345,16 @@ T.probe = new LokaleTabelle({
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_lts, zelle: r => gb(r.ersparnis_lts), csv: r => r.ersparnis_lts, summe: gbSumme(r => r.ersparnis_lts) },
     { k: "ersparnis_events", titel: "Events (GB)", hilfe: "Anteil der Ersparnis (Dauerbetrieb) aus Events (über Event-Regeln)",
       typ: "gb", n: 1, breite: 120, wert: r => r.ersparnis_events || 0, zelle: r => gb(r.ersparnis_events || 0), csv: r => r.ersparnis_events || 0, summe: gbSumme(r => r.ersparnis_events || 0) },
-    { k: "pz_states", titel: "States (Zeilen)", hilfe: "Prognostizierte States-Zeilen der Entitäten, deren Kurzzeit aus dieser Regel stammt (im Prognosezeitraum, ohne Attribute)",
+    { k: "ersparnis_z_states", titel: "States (Zeilen)", hilfe: "Eingesparte States-Zeilen im Prognosezeitraum (Basis ohne Regeln minus Prognose mit Regel) der Entitäten, deren Kurzzeit aus dieser Regel stammt, ohne Attribute",
+      typ: "zahl", n: 1, breite: 120, wert: r => r.ersparnis_z_states || 0, zelle: r => zahl(Math.round(r.ersparnis_z_states || 0)), csv: r => Math.round(r.ersparnis_z_states || 0), summe: anzahlSumme(r => Math.round(r.ersparnis_z_states || 0)) },
+    { k: "ersparnis_z_kurz", titel: "5-Min (Zeilen)", hilfe: "Eingesparte 5-Min-Zeilen im Prognosezeitraum (Basis ohne Regeln minus Prognose mit Regel) der Entitäten, deren Kurzzeit aus dieser Regel stammt (288 je Tag und Entität mit Statistik)",
+      typ: "zahl", n: 1, breite: 120, wert: r => r.ersparnis_z_kurz || 0, zelle: r => zahl(Math.round(r.ersparnis_z_kurz || 0)), csv: r => Math.round(r.ersparnis_z_kurz || 0), summe: anzahlSumme(r => Math.round(r.ersparnis_z_kurz || 0)) },
+    { k: "pz_states", titel: "States (Zeilen)", hilfe: "Prognostizierte States-Zeilen der Entitäten, deren Kurzzeit aus dieser Regel stammt, mit angewandter Regel (Bestand am Ende des Prognosezeitraums, ohne Attribute)",
       typ: "zahl", n: 1, breite: 120, wert: r => r.pz_states || 0, zelle: r => zahl(Math.round(r.pz_states || 0)), csv: r => Math.round(r.pz_states || 0), summe: anzahlSumme(r => Math.round(r.pz_states || 0)) },
-    { k: "pz_kurz", titel: "5-Min (Zeilen)", hilfe: "Prognostizierte 5-Min-Zeilen der Entitäten, deren Kurzzeit aus dieser Regel stammt (288 je Tag und Entität mit Statistik)",
+    { k: "pz_kurz", titel: "5-Min (Zeilen)", hilfe: "Prognostizierte 5-Min-Zeilen der Entitäten, deren Kurzzeit aus dieser Regel stammt, mit angewandter Regel (288 je Tag und Entität mit Statistik)",
       typ: "zahl", n: 1, breite: 120, wert: r => r.pz_kurz || 0, zelle: r => zahl(Math.round(r.pz_kurz || 0)), csv: r => Math.round(r.pz_kurz || 0), summe: anzahlSumme(r => Math.round(r.pz_kurz || 0)) },
-    { k: "pz_faktor", titel: "States : 5-Min", hilfe: "Verhältnis der Anzahl Zeilen States zur Anzahl 5-Min (kleinere Seite = 1). „14 : 1“ = 14 States je 5-Min-Zeile, „1 : 3“ = 3 5-Min-Zeilen je State",
-      typ: "zahl", n: 1, breite: 120, wert: r => r.pz_states ? r.pz_kurz / r.pz_states : (r.pz_kurz ? 1e12 : 0),
-      zelle: r => {
+    { k: "pz_faktor", titel: "States : 5-Min", hilfe: "Verhältnis der Anzahl Zeilen States zur Anzahl 5-Min nach Anwendung der Regel (kleinere Seite = 1). „14 : 1“ = 14 States je 5-Min-Zeile, „1 : 3“ = 3 5-Min-Zeilen je State",
+      typ: "zahl", n: 1, breite: 120, wert: r => r.pz_states ? r.pz_kurz / r.pz_states : (r.pz_kurz ? 1e12 : 0),      zelle: r => {
         if (!r.pz_states) return r.pz_kurz ? "nur 5-Min" : "–";
         if (!r.pz_kurz) return "nur States";
         const q = r.pz_kurz / r.pz_states, z = v => v.toLocaleString("de-DE", { maximumFractionDigits: v < 10 ? 1 : 0 });

@@ -546,7 +546,7 @@ async def verlauf_lesen(request):
 SORTIERBAR = {"entity_id", "status", "rows", "rows_24h", "first_ts", "last_ts", "kz_first_ts", "lts_first_ts", "lts_rows", "kurz_rows",
               "loeschbar", "prognose_bytes", "herkunft", "labels", "device_class", "plattform",
               "loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen",
-              "attr_bytes", "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb"}
+              "attr_bytes", "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil", "loesch_mb", "faktor_bestand"}
 ATTR_SUMMEN = ("attr_bytes", "attr_zuwachs_tag", "attr_loesch")
 
 
@@ -734,7 +734,7 @@ async def export_csv(request):
                 "loeschmenge_sofort_attr_bytes", "attr_anteil_prozent", "hinweise",
                 # Punkte 118/120 (0.4.11): erster/letzter über alle Datenarten, dahinter je Datenart
                 *[f"{a}{k}" for a in ("", "states_", "kurz_", "lts_") for k in ("erster", "letzter")],
-                "loeschmenge_sofort_bytes", "integration"])   # Punkte 197/339: am Ende, damit die übrigen Spalten ihren Platz behalten
+                "loeschmenge_sofort_bytes", "integration", "kurz_je_state_bestand"])   # Punkte 197/339/366: am Ende, damit die übrigen Spalten ihren Platz behalten
     ts = lambda t: time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t)) if t else ""  # noqa: E731
     zeilen = _gefiltert(r, request.query)      # hängt auch die Labels an (Punkt 115)
     name = "dbh_probelauf.csv"
@@ -752,7 +752,8 @@ async def export_csv(request):
                       for k in ("attr_bytes", "attr_zeilen", "attr_zuwachs_tag", "attr_avg", "attr_loesch", "attr_anteil")],
                     " | ".join(e["hinweise"]),
                     *[ts(e.get(k)) for k in ("first_ts", "last_ts", "st_first_ts", "st_last_ts", "kurz_first_ts", "kurz_last_ts",
-                                             "lts_first_ts", "lts_last_ts")], round(e.get("loesch_mb") or 0), e.get("plattform") or ""])
+                                             "lts_first_ts", "lts_last_ts")], round(e.get("loesch_mb") or 0), e.get("plattform") or "",
+                    "" if e.get("faktor_bestand") is None else round(e["faktor_bestand"], 2)])
     return web.Response(text="﻿" + buf.getvalue(), content_type="text/csv", charset="utf-8",
                         headers={"Content-Disposition": f"attachment; filename={name}"})
 

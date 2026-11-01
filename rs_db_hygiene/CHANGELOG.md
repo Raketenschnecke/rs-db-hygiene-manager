@@ -4,6 +4,11 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b16 (Beta)
+- **Ersparnis in Zeilen (Punkt 366):** In der Prognose-Tabelle zeigen jetzt beide Blöcke dieselbe Sicht: „Ersparnis (Speicherplatz)“ in GB und „Ersparnis (Zeilen)“ als eingesparte States- und 5-Min-Zeilen (Basis ohne Regeln minus Prognose mit Regel). Vorher zeigte der Zeilenblock den Endbestand nach der Regel. Der Endbestand nach der Regel bleibt als eigener Block „Bestand nach Regel (Zeilen)“ mit States, 5-Min und „States : 5-Min“ erhalten.
+- **States : 5-Min im Bestand (Punkt 366):** Die Tabelle Entitäten hat im Block „Aktuell“ die Spalte „States : 5-Min (Bestand)“ – das Verhältnis der heutigen States- und 5-Min-Zeilen, mit Filter, Sortierung, Summe und CSV.
+- **Kacheln States und 5-Min getrennt (Punkt 367):** Im Kachelraster ersetzt die Spalte „States, 5-Min“ zwei Spalten „States“ und „5-Min“ mit je eigenem Speicherbedarf und eigener Zeilenzahl (7 statt 6 Spalten); „Daten gesamt“ rechnet wie vorher.
+
 ## 0.5.7b15 (Beta)
 - **DB-Größe ohne Leerraum (Punkt 360):** „Datei heute“, der Start der Prognose und der Sensor „DB-Größe“ zeigen die Dateigröße abzüglich der freien Seiten (wie nach einem Repack). Der Verlauf des Sensors vor dem Update enthält den Leerraum noch.
 - **Verhältnis States : 5-Min (Punkt 365):** Die Spalte „5-Min je State“ heißt „States : 5-Min“ und zeigt das Verhältnis mit der kleineren Seite auf 1 gekürzt („14 : 1“, „1 : 3“) statt „×0,07“.
