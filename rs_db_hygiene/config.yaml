@@ -1,5 +1,5 @@
 name: RS DB Hygiene Manager
-version: "0.5.7"
+version: "0.5.8"
 slug: rs_db_hygiene
 description: >-
   Vorhaltezeiten pro Entität (Kurzzeit samt Attributen, Langzeit) und je Event-Typ für die Recorder-Datenbank.

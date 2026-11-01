@@ -413,10 +413,9 @@ def liste_sicherungen(ordner, vorlage=None):
 def lies_sicherung(ordner, name):
     if not _SICHERUNG.match(name or ""):
         raise RegelFehler("Unbekannte Sicherung")
-    p = os.path.realpath(os.path.join(ordner, name))
-    if os.path.dirname(p) != os.path.realpath(ordner):   # zweite Sicherung neben dem Namensmuster
-        raise RegelFehler("Unbekannte Sicherung")
-    if not os.path.exists(p):
+    # Der Pfad stammt aus der Verzeichnisliste, nicht aus der Eingabe: der Name wird nur verglichen (Punkt 368, CodeQL py/path-injection)
+    p = next((os.path.join(ordner, n) for n in (os.listdir(ordner) if os.path.isdir(ordner) else ()) if n == name and os.path.isfile(os.path.join(ordner, n))), None)
+    if p is None:
         raise RegelFehler("Sicherung nicht gefunden")
     with open(p, encoding="utf-8") as f:
         return lies_import(json.load(f))

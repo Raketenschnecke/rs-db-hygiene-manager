@@ -4,6 +4,14 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.8
+Zusammenfassung der Testversion 0.5.8b1 (Einzelheiten darunter). Die Integration ändert sich nicht (bleibt 0.5.6).
+- **Code-Scanning:** Sicherung lesen nimmt den Pfad aus der Verzeichnisliste statt aus der Eingabe (zwei offene CodeQL-Meldungen `py/path-injection`); Verhalten unverändert
+
+## 0.5.8b1 (Beta)
+- **Code-Scanning (Punkt 368):** Sicherung lesen (`regeln.lies_sicherung`) nimmt den Pfad aus der Verzeichnisliste und vergleicht nur den Namen mit der Eingabe. Die bisherige Prüfung per `realpath` erkannte CodeQL nicht als Schutz (zwei offene Meldungen `py/path-injection`, `regeln.py`). Verhalten unverändert.
+- Die Integration ändert sich nicht
+
 ## 0.5.7
 Zusammenfassung der Testversionen 0.5.7b1 bis 0.5.7b16 (Einzelheiten darunter). Die Integration ändert sich nicht (bleibt 0.5.6). Nach dem Update startet einmal eine neue Analyse.
 - **Prognose:** Unterreiter „Tabelle“ und „Analyse“ (zoombarer Donut der Kurzzeit nach Vorhaltedauer, Regel, Integration, Entität); Tabellenblöcke „Ersparnis (Speicherplatz)“, „Ersparnis (Zeilen)“ und „Bestand nach Regel (Zeilen)“ mit „States : 5-Min“
