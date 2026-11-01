@@ -98,6 +98,20 @@ def oeffne_ha_db(pfad):
     return con
 
 
+def db_belegt_bytes(pfad):
+    """Punkt 356: Dateigröße ohne freie Seiten (freelist) – so groß wäre die Datei nach einem Repack. Ohne lesbare Kopfdaten die rohe Dateigröße."""
+    groesse = os.path.getsize(pfad)
+    try:
+        con = oeffne_ha_db(pfad)
+        try:
+            seite, frei = con.execute("PRAGMA page_size").fetchone()[0], con.execute("PRAGMA freelist_count").fetchone()[0]
+        finally:
+            con.close()
+        return max(groesse - seite * frei, 0)
+    except sqlite3.Error:
+        return groesse
+
+
 def lies_registry(pfad):
     """Liefert (aktive entity_ids, gelöschte entity_ids) aus core.entity_registry."""
     with open(pfad, encoding="utf-8") as f:
@@ -392,7 +406,7 @@ def analyse(db_pfad, cache_pfad, zustaende, registry, geloescht, purge_keep_days
     dauer = time.time() - start
     werte = {
         "analyse_zeit": jetzt, "analyse_dauer_s": round(dauer, 1), "heute_tag": heute,
-        "db_bytes": os.path.getsize(db_pfad), "purge_keep_days": purge_keep_days,
+        "db_bytes": db_belegt_bytes(db_pfad), "purge_keep_days": purge_keep_days,
         "events_pro_tag": round(events_7d / 7), "entitaeten": len(meta), "cache_version": CACHE_VERSION,
         "schritte": json.dumps({k: round(v, 1) for k, v in schritte.items()}),
     }

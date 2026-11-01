@@ -2194,7 +2194,7 @@ function rasterWerte(s, st) {
   const BS = g.B_STATE || 181, BK = g.B_KURZ || 82, BL = g.B_LTS || 79, BE = g.B_EVENT || 145;
   const attr = (b, u) => mitAttr ? { w: n(b), b: true, u } : { fehlt: "fehlt", u: "„Analyse starten“ ausführen" };
   const ist = {
-    db: { w: st.db_bytes, gb: true, u: "Datei heute" },
+    db: { w: st.db_bytes, gb: true, u: "Datei ohne Leerraum" },
     kurz: { w: n(s.bestand_states) * BS + n(s.bestand_kurz) * BK, b: true, u: `States ${kzahl(n(s.bestand_states))} · 5-Min ${kzahl(n(s.bestand_kurz))}` },
     lts: { w: n(s.bestand_lts) * BL, b: true, u: `${kzahl(n(s.bestand_lts))} Zeilen` },
     events: { w: n(s.bestand_events) * BE, b: true, u: `${kzahl(n(s.bestand_events))} Zeilen` },
@@ -2279,6 +2279,7 @@ const VL_LINIEN = [["ohne", "ohne Regeln", "nichts gekürzt außer purge_keep_da
   ["alle", "eigene Regeln (aktiv + passiv)", "alle Regeln, auch die passiven und HA-Standard mit seiner eingestellten Kurzzeit.", 1]];
 const VL_AUS = new Set();   // per Klick auf die Legende ausgeblendete Linien (Achse skaliert neu)
 const VL_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+const VL_H0 = 380, VL_H_MIN = 200;   // Höhe des Diagramms: Vorgabe und Untergrenze (Punkt 361)
 const VL_MASS = { W: 1000, H: 380, L: 62, R: 16, O: 14, U: 34 };
 const MONAT = 365 / 12;      // Tage je Monat wie probelauf.MONAT
 const KACHEL_KLICK = '#raster .kachel[data-zelle="ist.zeilen"], #raster .kachel[data-zelle="prog.zeilen"], #raster .kachel[data-zelle="ist.events"]';
@@ -2311,6 +2312,13 @@ async function zeigeVerlauf() {
 }
 function verlaufZeichnen(r) {
   $("#dlgInhalt").innerHTML = verlaufHtml(r);
+  // Punkt 361: Popup ohne Scrollbalken – ragt der Inhalt über das Fenster, wird das Diagramm um den Überstand niedriger gezeichnet (Breite bleibt)
+  VL_MASS.H = VL_H0;
+  const ueber = [$("#dlgInhalt"), $("#dlg")].map(e => e.scrollHeight - e.clientHeight).find(u => u > 1);
+  if (ueber) {
+    VL_MASS.H = Math.max(VL_H_MIN, Math.round(VL_H0 - ueber * VL_MASS.W / $("#vlSvg").getBoundingClientRect().width));
+    $("#dlgInhalt").innerHTML = verlaufHtml(r);
+  }
   verlaufHover(r);
   $("#dlgInhalt").querySelectorAll("[data-vl]").forEach(b => b.onclick = () => {
     const k = b.dataset.vl, progAus = [...VL_AUS].filter(j => j !== "hist").length;
@@ -2330,7 +2338,7 @@ function vlAchse(r) {
   const h = VL_AUS.has("hist") ? [] : vlHist(r), t = r.tage, von = h.length ? Math.min(h[0][0], 0) : 0, bis = t[t.length - 1] || 1;
   return { h, von, bis, x: tag => VL_MASS.L + (VL_MASS.W - VL_MASS.L - VL_MASS.R) * (tag - von) / (bis - von) };
 }
-const vlTagDatum = (st, tag) => new Date(st.analyse_zeit * 1000 + tag * 864e5).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+const vlTagDatum = (st, tag, jahr4) => new Date(st.analyse_zeit * 1000 + tag * 864e5).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: jahr4 ? "numeric" : "2-digit" });
 
 function verlaufHtml(r) {
   const st = r.stand, t = r.tage, n = t.length - 1, { W, H, L, R, O, U } = VL_MASS;
@@ -2376,10 +2384,10 @@ Klick: Linie ein-/ausblenden">${esc(name)}<b>${gb(ende)}</b>
   const hg = r.historie || {}, legH = alleH.length
     ? `<button type="button" data-vl="hist" class="${VL_AUS.has("hist") ? "aus" : ""}" style="--c: var(--vl-hist)"
       title="Tagesmittel der Langzeitstatistik von ${esc(hg.entity_id)} (Sensor der Integration), höchstens 2 Jahre zurück.
-Klick: Linie ein-/ausblenden">bisher (seit ${vlTagDatum(st, alleH[0][0])})<b>${gb(alleH[0][1])}</b>
-      <span class="sub">${st.db_bytes >= alleH[0][1] ? "+" : "−"}${gb(Math.abs(st.db_bytes - alleH[0][1]))} bis heute</span></button>` : "";
+Klick: Linie ein-/ausblenden">Bestand<b>${gb(st.db_bytes)}</b>
+      <span class="sub">seit ${vlTagDatum(st, alleH[0][0], true)}</span></button>` : "";
   return `<div class="vl">
-    <p class="sub">Erwartete Dateigröße (nach Verdichten/Repack) je Monat über ${esc(jahreText(zielJahre()))}, Start = Datei heute ${gb(st.db_bytes)}
+    <p class="sub">Erwartete Dateigröße (nach Verdichten/Repack) je Monat über ${esc(jahreText(zielJahre()))}, Start = Datei heute ohne freie Seiten (wie nach einem Repack) ${gb(st.db_bytes)}
       (gestrichelt)${alleH.length ? `; davor in Rot die bisherige Größe laut Sensor ${esc(hg.entity_id)} (durchgezogen, höchstens 2 Jahre)` : ""}.
       Maus über das Diagramm: Werte je Tag bzw. Monat. Klick auf eine Legende blendet die Linie aus oder ein.
       ${alleH.length ? "" : `<br>Kein bisheriger Verlauf: ${esc(hg.grund || "keine Daten")}.`}</p>
@@ -3292,8 +3300,8 @@ T.probe = new LokaleTabelle({
   // Punkt 146 (0.5.3): Look & Feel wie Tab Entitäten; Prognose grün wie die Kachelzeile
   // Punkt 224 (0.5.5b14): Block „Löschmenge sofort“ entfällt – die steht in Kacheln, Tab Entitäten und Tab Löschen
   gruppen: [["Stammdaten", "stamm", ["regel", "name"]], ["Wirkung", "vorh", ["entitaeten", "kurzzeit", "langzeit"]],
-    ["Prognose", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]],
-    ["Zeilen (Prognose)", "prog", ["pz_states", "pz_kurz", "pz_faktor"]]],
+    ["Prognose (Speicherplatz)", "prog", ["ersparnis_bytes", "ersparnis_states", "ersparnis_attr", "ersparnis_lts", "ersparnis_events"]],
+    ["Prognose (Zeilen)", "prog", ["pz_states", "pz_kurz", "pz_faktor"]]],
   fix: ["regel"],
   // Punkt 97: Klick auf die Zeile öffnet die Regel (wenn es sie in der Regelliste gibt)
   zeileAttr: r => regelIdx(r.regel) >= 0 ? `class="klick" data-regel-edit="${esc(r.regel)}" title="Regel ${esc(r.regel)}: Klick öffnet die Regelmaske"` : "",
@@ -3320,9 +3328,14 @@ T.probe = new LokaleTabelle({
       typ: "zahl", n: 1, breite: 120, wert: r => r.pz_states || 0, zelle: r => zahl(Math.round(r.pz_states || 0)), csv: r => Math.round(r.pz_states || 0), summe: anzahlSumme(r => Math.round(r.pz_states || 0)) },
     { k: "pz_kurz", titel: "5-Min (Zeilen)", hilfe: "Prognostizierte 5-Min-Zeilen der Entitäten, deren Kurzzeit aus dieser Regel stammt (288 je Tag und Entität mit Statistik)",
       typ: "zahl", n: 1, breite: 120, wert: r => r.pz_kurz || 0, zelle: r => zahl(Math.round(r.pz_kurz || 0)), csv: r => Math.round(r.pz_kurz || 0), summe: anzahlSumme(r => Math.round(r.pz_kurz || 0)) },
-    { k: "pz_faktor", titel: "5-Min je State", hilfe: "Wie viele 5-Min-Zeilen auf eine States-Zeile kommen (Prognose). Hoch = die Entitäten dieser Regel ändern sich selten, bekommen aber trotzdem 288 Statistikzeilen am Tag; „nur 5-Min“ = keine States",
+    { k: "pz_faktor", titel: "States : 5-Min", hilfe: "Verhältnis der Anzahl Zeilen States zur Anzahl 5-Min (kleinere Seite = 1). „14 : 1“ = 14 States je 5-Min-Zeile, „1 : 3“ = 3 5-Min-Zeilen je State",
       typ: "zahl", n: 1, breite: 120, wert: r => r.pz_states ? r.pz_kurz / r.pz_states : (r.pz_kurz ? 1e12 : 0),
-      zelle: r => r.pz_states ? "×" + (r.pz_kurz / r.pz_states).toLocaleString("de-DE", { maximumFractionDigits: r.pz_kurz / r.pz_states < 1 ? 2 : r.pz_kurz / r.pz_states < 10 ? 1 : 0 }) : (r.pz_kurz ? "nur 5-Min" : "–"),
+      zelle: r => {
+        if (!r.pz_states) return r.pz_kurz ? "nur 5-Min" : "–";
+        if (!r.pz_kurz) return "nur States";
+        const q = r.pz_kurz / r.pz_states, z = v => v.toLocaleString("de-DE", { maximumFractionDigits: v < 10 ? 1 : 0 });
+        return q < 1 ? z(1 / q) + " : 1" : "1 : " + z(q);
+      },
       csv: r => r.pz_states ? +(r.pz_kurz / r.pz_states).toFixed(2) : "" },
   ],
 });
@@ -7266,25 +7279,45 @@ function tipZeigen() {
   TIP.el.style.left = Math.max(8, Math.min(TIP.x + 14, w - r.width - 8)) + "px";
   TIP.el.style.top = (TIP.y + 18 + r.height > h - 8 ? Math.max(8, TIP.y - r.height - 10) : TIP.y + 18) + "px";
 }
-document.addEventListener("mouseover", ev => {
+// Punkt 363: Auswertung als Funktion, damit sie auch ohne mouseover aufgerufen werden kann (Element unter dem Zeiger wurde ersetzt)
+function tipUeber(ziel0, x, y) {
   // innerhalb des aktuellen Ziels bleiben (seine und die umgebenden title sind gerade entfernt), außer ein inneres Element
   // hat einen eigenen title
-  if (TIP.ziel && TIP.ziel.contains(ev.target)) {
-    const innen = ev.target.closest?.("[title]");
+  if (TIP.ziel && TIP.ziel.contains(ziel0)) {
+    const innen = ziel0.closest?.("[title]");
     if (!innen || innen === TIP.ziel || !TIP.ziel.contains(innen)) return;
   }
   tipZurueck();
-  const ziel = ev.target.closest?.("[title]");
+  const ziel = ziel0.closest?.("[title]");
   if (!ziel || !ziel.getAttribute("title")) return;
   // auch die title der umgebenden Elemente wegnehmen (z. B. Label-Chip in einer Zelle mit eigenem title) –
   // sonst zeigt der Browser deren Tooltip zusätzlich
   for (let a = ziel; a && a.hasAttribute; a = a.parentElement)
     if (a.hasAttribute("title")) { TIP.weg.push([a, a.getAttribute("title")]); a.removeAttribute("title"); }
   TIP.ziel = ziel; TIP.text = TIP.weg[0][1];
-  TIP.x = ev.clientX; TIP.y = ev.clientY;
+  TIP.x = x; TIP.y = y;
   TIP.timer = setTimeout(tipZeigen, 450);
-});
-document.addEventListener("mousemove", ev => { if (TIP.ziel && !TIP.el.matches(":popover-open")) { TIP.x = ev.clientX; TIP.y = ev.clientY; } });
+}
+document.addEventListener("mouseover", ev => tipUeber(ev.target, ev.clientX, ev.clientY));
+const ZEIGER = { x: 0, y: 0 };
+// Punkt 362: setzt die Seite den title eines Elements neu, während der Zeiger darauf steht (Statusabfrage am Knopf „Analyse starten“),
+// käme der Browser-Tooltip über den eigenen – der neue Text wird gemerkt, der title wieder entfernt
+// Punkt 363: wurde das Element unter dem Zeiger ersetzt (Bereich neu gezeichnet), gibt es kein mouseover – das neue Element
+// bekäme den Browser-Tooltip, der alte eigene Tooltip bliebe stehen
+new MutationObserver(ms => {
+  for (const m of ms) {
+    if (m.type !== "attributes") continue;
+    const e = m.target, i = TIP.weg.findIndex(([el]) => el === e);
+    if (i < 0 || !e.hasAttribute("title")) continue;
+    TIP.weg[i][1] = e.getAttribute("title"); e.removeAttribute("title");
+    if (e === TIP.ziel) TIP.text = TIP.weg[i][1];
+  }
+  if (TIP.ziel && !TIP.ziel.isConnected) tipZurueck();
+  if (!ms.some(m => m.addedNodes.length)) return;
+  const unter = document.elementFromPoint(ZEIGER.x, ZEIGER.y), t = unter?.closest("[title]");
+  if (t && t.getAttribute("title") && !(TIP.ziel && TIP.ziel.contains(unter))) tipUeber(unter, ZEIGER.x, ZEIGER.y);
+}).observe(document.body, { attributes: true, attributeFilter: ["title"], childList: true, subtree: true });
+document.addEventListener("mousemove", ev => { ZEIGER.x = ev.clientX; ZEIGER.y = ev.clientY; if (TIP.ziel && !TIP.el.matches(":popover-open")) { TIP.x = ev.clientX; TIP.y = ev.clientY; } });
 document.addEventListener("mouseout", ev => { if (TIP.ziel && !TIP.ziel.contains(ev.relatedTarget)) tipZurueck(); });
 ["mousedown", "keydown", "wheel"].forEach(t => document.addEventListener(t, tipVerbergen, true));
 </script>

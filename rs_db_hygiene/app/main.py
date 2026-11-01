@@ -1262,7 +1262,7 @@ async def auto_status(request):
     uhr("Plan (Zwischenspeicher)")
     info = _info(CACHE)
     db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
-    db_bytes = os.path.getsize(db) if os.path.exists(db) else None
+    db_bytes = await asyncio.to_thread(analyse.db_belegt_bytes, db) if os.path.exists(db) else None
     laeufe = await asyncio.to_thread(loeschen.protokolle, LAEUFE, 1, Z.lauf.start if Z.lauf else None)
     uhr("Löschprotokoll")
     st = automatik.status(p, Z.job, Z.letzter_fehler, info, db_bytes, (p or {}).get("prognose_bytes"),

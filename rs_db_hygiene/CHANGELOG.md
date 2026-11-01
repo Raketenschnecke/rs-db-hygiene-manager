@@ -4,6 +4,16 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.7b15 (Beta)
+- **DB-Größe ohne Leerraum (Punkt 360):** „Datei heute“, der Start der Prognose und der Sensor „DB-Größe“ zeigen die Dateigröße abzüglich der freien Seiten (wie nach einem Repack). Der Verlauf des Sensors vor dem Update enthält den Leerraum noch.
+- **Verhältnis States : 5-Min (Punkt 365):** Die Spalte „5-Min je State“ heißt „States : 5-Min“ und zeigt das Verhältnis mit der kleineren Seite auf 1 gekürzt („14 : 1“, „1 : 3“) statt „×0,07“.
+- **Spaltenblöcke (Punkt 364):** In der Prognose-Tabelle heißen die Blöcke „Prognose (Speicherplatz)“ und „Prognose (Zeilen)“.
+- **Tooltip nach Neuzeichnen (Punkt 363):** Wird das Element unter dem Zeiger ersetzt (Bereich neu gezeichnet), übernimmt der eigene Tooltip das neue Element und der Browser-Tooltip bleibt aus; ein verwaister eigener Tooltip verschwindet.
+- **Doppelter Tooltip (Punkt 362):** Setzt die Seite den title eines Elements neu, während der Zeiger darauf steht (Knopf „Analyse starten“ bei der Statusabfrage), blendet der Browser seinen Tooltip nicht mehr über den eigenen ein.
+- **Prognose-Popup ohne Scrollbalken (Punkt 361):** Ragt das Popup über das Fenster, zeichnet es das Diagramm entsprechend niedriger (mindestens 200 Einheiten statt 380).
+- **Legende „bisher“ (Punkt 358):** Die rote Legende im Prognose-Chart zeigt „Bestand“, den heutigen Wert und „seit 07.05.2025“.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b14 (Beta)
 - **Prognose in Unterreitern (Punkt 354):** Der Reiter Prognose hat die Unterreiter „Tabelle“ (die bisherige Regeltabelle) und „Analyse“; sie bleiben beim Scrollen unter den Reitern stehen.
 - **Analyse: Kurzzeit nach Vorhaltedauer (Punkt 355):** Zoombarer Donut der Kurzzeit-Prognose nach Vorhaltedauer, Regel, Integration und Entität (Ebenen umschaltbar), Maß Platz oder Zeilen. Der Außenring teilt jedes Segment nach Tabelle auf (States, 5-Min, Attribute; Schraffur in der Farbe des Segments). „5-Min je State“ zeigt das Missverhältnis, „weitere Entitäten“ lassen sich aufklappen, „… in Entitäten öffnen“ zeigt das gezoomte Segment im Tab Entitäten. Die Ansicht füllt die Fensterhöhe ohne Seiten-Scrollbalken.
