@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.8b1 (Beta)
+- **Code-Scanning (Punkt 368):** Sicherung lesen (`regeln.lies_sicherung`) nimmt den Pfad aus der Verzeichnisliste und vergleicht nur den Namen mit der Eingabe. Die bisherige Prüfung per `realpath` erkannte CodeQL nicht als Schutz (zwei offene Meldungen `py/path-injection`, `regeln.py`). Verhalten unverändert.
+- Die Integration ändert sich nicht
+
 ## 0.5.7b16 (Beta)
 - **Ersparnis in Zeilen (Punkt 366):** In der Prognose-Tabelle zeigen jetzt beide Blöcke dieselbe Sicht: „Ersparnis (Speicherplatz)“ in GB und „Ersparnis (Zeilen)“ als eingesparte States- und 5-Min-Zeilen (Basis ohne Regeln minus Prognose mit Regel). Vorher zeigte der Zeilenblock den Endbestand nach der Regel. Der Endbestand nach der Regel bleibt als eigener Block „Bestand nach Regel (Zeilen)“ mit States, 5-Min und „States : 5-Min“ erhalten.
 - **States : 5-Min im Bestand (Punkt 366):** Die Tabelle Entitäten hat im Block „Aktuell“ die Spalte „States : 5-Min (Bestand)“ – das Verhältnis der heutigen States- und 5-Min-Zeilen, mit Filter, Sortierung, Summe und CSV.
