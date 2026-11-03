@@ -1015,7 +1015,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
         <table>
           <thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
           <tbody>
-            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Aktuell, Löschmenge sofort), jede Gruppe in eigener Farbe – Aktuell rot wie die Kachelzeile Bestand, Löschmenge sofort gelb wie die gleichnamige Kachelzeile oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
+            <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Regel erweitern …“, „Aus Regel entfernen …“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Aktuell, Löschmenge sofort), jede Gruppe in eigener Farbe – Aktuell rot wie die Kachelzeile Bestand, Löschmenge sofort gelb wie die gleichnamige Kachelzeile oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt; nur Anzeige, keine Löschung über den RS DB Hygiene Manager (Löschen nur aus Home Assistant möglich)</td></tr>
             <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern. Die Langzeit rühren die Empfehlungen nur in einer eigenen Art an: Die Empfehlung <b>Langzeit</b> ist eine Sammelregel mit 1 Jahr Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit). Die Spalte „Wirkt auf“ zeigt, ob ein Vorschlag die Kurzzeit, die Langzeit oder beide setzt; „Treffer“ lassen sich nicht summieren, weil dieselbe Entität in mehreren Vorschlägen stehen kann.</td></tr>
@@ -3840,7 +3840,7 @@ function zeigeAuswahlEnt() {
   if (!auf) return;
   if (!n) { leiste.innerHTML = weg; return; }
   leiste.innerHTML = `<b>${mzahl(n, "Entität", "Entitäten")} ausgewählt</b>${anderswo ? `, davon ${zahl(anderswo)} auf anderen Seiten` : ""}${weg ? ` · ${weg}` : ""}
-    <button data-masse-ent="regel">Regel aus Auswahl anlegen</button><button data-masse-ent="ausregel" title="Die ausgewählten Entitäten aus einer festen Entitätenliste (Regel) nehmen">Aus Regel entfernen …</button><button data-masse-ent="schutz" title="Diese Entitäten nie kürzen (Regeltyp schutz)">🔒 Schutz aus Auswahl anlegen</button><button data-masse-ent="csv">Auswahl als CSV</button>
+    <button data-masse-ent="regel">Regel aus Auswahl anlegen</button><button data-masse-ent="erweitern" title="Die ausgewählten Entitäten in eine bestehende Regel mit Entitätenliste aufnehmen">Regel erweitern …</button><button data-masse-ent="ausregel" title="Die ausgewählten Entitäten aus einer festen Entitätenliste (Regel) nehmen">Aus Regel entfernen …</button><button data-masse-ent="schutz" title="Diese Entitäten nie kürzen (Regeltyp schutz)">🔒 Schutz aus Auswahl anlegen</button><button data-masse-ent="csv">Auswahl als CSV</button>
     ${S.entGesamt > seite.length && n < S.entGesamt ? `<button data-masse-ent="alle">alle ${zahl(S.entGesamt)} gefilterten auswählen</button>` : ""}
     ${anderswo ? `<button data-masse-ent="weg">Auswahl aufheben</button>` : ""}`;
 }
@@ -3882,6 +3882,7 @@ $("#massenEnt").addEventListener("click", async ev => {
     return bearbeiteRegel(-1, { typ: "schutz", muster: ids, name: `Schutz ${ids.length === 1 ? ids[0] : zahl(ids.length) + " Entitäten"}`, kurzzeit: "global", langzeit: "unbegrenzt" });
   if (b.dataset.masseEnt === "regel")
     return bearbeiteRegel(-1, { typ: "entity", muster: ids, name: ids.length === 1 ? ids[0] : `Auswahl ${zahl(ids.length)} Entitäten` });
+  if (b.dataset.masseEnt === "erweitern") return regelErweiternDialog(ids);
   if (b.dataset.masseEnt === "ausregel") return ausRegelDialog(ids);
   if (b.dataset.masseEnt === "csv") {
     try {
@@ -3891,6 +3892,51 @@ $("#massenEnt").addEventListener("click", async ev => {
     } catch (e) { meldung("CSV", e.message); }
   }
 });
+// Punkt 369: Auswahl in eine bestehende Regel mit Entitätenliste aufnehmen (Gegenstück zu „Aus Regel entfernen“).
+// Vorgeschlagen werden die Regeln, die in der gefilterten Entitätentabelle vorkommen; „alle Regeln zeigen“ erweitert auf jede Regel mit Entitätenliste.
+async function regelErweiternDialog(ids) {
+  let vorkommen = {};
+  try { vorkommen = (await api("entitaeten?" + S.entFilter + "&nur_ids=1")).regeln || {}; }
+  catch (e) { return meldung("Regel erweitern", e.message); }
+  const geeignet = (S.regeln?.regeln || []).filter(r => ["entity", "glob", "schutz"].includes(r.typ));
+  if (!geeignet.length) return meldung("Regel erweitern", "Es gibt noch keine Regel mit Entitätenliste (Typ entity, glob oder schutz).");
+  const zeigeListe = alle => {
+    const rs = geeignet.filter(r => alle || vorkommen[r.id]).sort((a, b) => (vorkommen[b.id] || 0) - (vorkommen[a.id] || 0));
+    if (!rs.length) return `<tr><td colspan="5" class="leer">Keine Regel der gefilterten Tabelle hat eine Entitätenliste – „alle Regeln zeigen“ wählen.</td></tr>`;
+    return rs.map((r, i) => {
+      const schon = ids.filter(id => r.muster.includes(id)).length;
+      return `<tr><td><input type="radio" name="erwRegel" value="${esc(r.id)}" ${i === 0 ? "checked" : ""} aria-label="${esc(r.id)}"></td>
+        <td class="mono">${esc(r.id)}</td><td>${esc(r.name)}${r.aktiv ? "" : ' <span class="sub">(passiv)</span>'}</td><td class="sub">${esc(r.typ)}</td>
+        <td class="n">${vorkommen[r.id] ? zahl(vorkommen[r.id]) + " in Tabelle" : "–"}${schon ? ` <span class="chip">${zahl(schon)} schon enthalten</span>` : ""}</td></tr>`;
+    }).join("");
+  };
+  dialog("Regel erweitern", `
+    <p class="sub">${mzahl(ids.length, "ausgewählte Entität", "ausgewählte Entitäten")} werden als feste Einträge in eine bestehende Regel aufgenommen und erhalten damit deren Vorhaltezeiten.
+      Vorgeschlagen sind die Regeln, die in der gefilterten Tabelle vorkommen. Gilt für die Entität schon eine Regel weiter oben in der Reihenfolge, bleibt diese maßgeblich.
+      Vorher sichert die App die Regeln (Regeln verwalten … › Sicherungen).</p>
+    <label class="feld" style="flex-direction:row;gap:.5em"><input type="checkbox" id="erwAlle"> alle Regeln mit Entitätenliste zeigen</label>
+    <div style="max-height:45vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th></th><th align="left">Regel</th><th align="left">Name</th><th align="left">Typ</th><th align="right">Treffer</th></tr></thead><tbody id="erwRumpf">${zeigeListe(false)}</tbody></table></div>
+    <div id="dlgFehler" class="fehler"></div>`, [
+    ["Abbrechen", () => $("#dlg").close()],
+    ["Zur Regel hinzufügen", async () => {
+      const regel = $("#dlgInhalt").querySelector("input[name=erwRegel]:checked")?.value, r0 = geeignet.find(r => r.id === regel);
+      if (!r0) { $("#dlgFehler").textContent = "Keine Regel gewählt."; return; }
+      const neu = ids.filter(id => !r0.muster.includes(id)).length;
+      if (!neu) { $("#dlgFehler").textContent = "Alle ausgewählten Entitäten stehen schon in dieser Regel."; return; }
+      if (!await frage("Regel erweitern", `${mzahl(neu, "Entität", "Entitäten")} in ${r0.id} „${r0.name}“ aufnehmen.` +
+        (r0.aktiv ? "" : "\n\nDie Regel ist passiv – sie wirkt erst, wenn sie aktiv geschaltet ist.") +
+        "\n\nEs ändert sich nur die Regeldatei der App (mit Sicherung). An HA und den Daten wird nichts gelöscht.", "Hinzufügen")) return;
+      try {
+        const r = await api("regeln/entitaeten_hinzufuegen", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: S.version, ids, regel }) });
+        S.regeln = r.daten; S.version = r.version; S.ueberschneidungen = r.ueberschneidungen || {};
+        $("#dlg").close(); T.regeln.daten(tabRegeln()); ladeAlles(false); ladeRegelCheck();
+        meldung("Regel erweitert", `${mzahl(r.bericht.muster, "Eintrag", "Einträge")} in ${regel} aufgenommen.` + (r.bericht.schon ? ` ${zahl(r.bericht.schon)} waren schon enthalten.` : ""));
+      } catch (e) { $("#dlgFehler").textContent = e.message; }
+    }, true]]);
+  $("#dlg").classList.add("breit");
+  $("#erwAlle").addEventListener("change", ev => { $("#erwRumpf").innerHTML = zeigeListe(ev.target.checked); });
+}
 // Punkt 343: Auswahl aus einer festen Entitätenliste (Regel) nehmen – z. B. 6 AirQ-Entitäten aus einer Regel mit ~300 Einträgen
 async function ausRegelDialog(ids) {
   let t;

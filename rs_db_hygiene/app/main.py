@@ -697,8 +697,13 @@ async def entitaeten(request):
     fehler = {}
     liste = _gefiltert(r, request.query, fehler)
     if request.query.get("nur_ids") == "1":    # Punkt 91: „alle N gefilterten auswählen“
-        return web.json_response({"gesamt": len(liste), "ids": [e["entity_id"] for e in liste]})
-    off = max(0, int(request.query.get("offset", 0) or 0))
+        # Punkt 369: dazu je Regel, wie viele der gefilterten Entitäten sie trifft – Vorschlagsliste für „Regel erweitern“
+        zaehler = {}
+        for e in liste:
+            for regel in {v["regel"] for v in (e["werte"] or {}).values() if v["regel"]}:
+                zaehler[regel] = zaehler.get(regel, 0) + 1
+        return web.json_response({"gesamt": len(liste), "ids": [e["entity_id"] for e in liste], "regeln": zaehler})
+    off =max(0, int(request.query.get("offset", 0) or 0))
     lim = int(request.query.get("limit", 100) or 0)          # 0 = alle
     seite = liste[off:off + lim] if lim > 0 else liste[off:]
     domains = sorted({e["domain"] for e in r["entitaeten"]})
@@ -991,6 +996,28 @@ async def regeln_entitaeten_entfernen(request):
     except rg.RegelFehler as e:
         return web.json_response({"fehler": str(e)}, status=400)
     _LOG.info("Entitäten aus Regel %s entfernt: %d Einträge, Regel ganz entfernt: %s", regel_id, bericht["muster"], bericht["regel_entfernt"])
+    return web.json_response({**json.loads(antwort.text), "bericht": bericht})
+
+
+async def regeln_entitaeten_hinzufuegen(request):
+    """Punkt 369: ausgewählte Entitäten als feste Einträge in eine bestehende Regel aufnehmen (Entitätentabelle › „Regel erweitern“).
+    Sicherung der Regeln wie bei „Aus Regel entfernen“; an HA und der Datenbank ändert sich nichts."""
+    body = await request.json()
+    ids = [str(i) for i in body.get("ids") or []]
+    gesperrt = _ersetzen_gesperrt(body)
+    if gesperrt is not None:
+        return gesperrt
+    try:
+        neu, bericht = tote.fuege_ids_hinzu(rg.lade(REGELN, VORLAGE), ids, str(body.get("regel") or ""))
+    except ValueError as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    if not bericht["muster"]:
+        return web.json_response({"fehler": "Nichts hinzuzufügen – die Entitäten stehen schon in dieser Regel"}, status=409)
+    try:
+        antwort = _ersetze_regeln(neu, "entitaeten_hinzugefuegt")
+    except rg.RegelFehler as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    _LOG.info("Entitäten in Regel %s aufgenommen: %d neue Einträge, %d schon vorhanden", body.get("regel"), bericht["muster"], bericht["schon"])
     return web.json_response({**json.loads(antwort.text), "bericht": bericht})
 
 
@@ -1460,6 +1487,7 @@ def erstelle_app():
         web.get("/api/regeln/tote", regeln_tote),
         web.post("/api/regeln/tote/entfernen", regeln_tote_entfernen),
         web.post("/api/regeln/entitaeten_entfernen", regeln_entitaeten_entfernen),
+        web.post("/api/regeln/entitaeten_hinzufuegen", regeln_entitaeten_hinzufuegen),
         web.post("/api/muster/verdichten", muster_verdichten),
         web.get("/api/entitaet_liste", entitaet_liste),
         web.get("/api/regeln/verwalten", regeln_verwalten),

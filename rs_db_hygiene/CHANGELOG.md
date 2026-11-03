@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.8b2 (Beta)
+- **Regel erweitern (Punkt 369):** In der Entitätentabelle gibt es bei Mehrfachauswahl den Knopf „Regel erweitern …“. Die Maske schlägt die Regeln vor, die in der gefilterten Tabelle vorkommen (mit Trefferzahl), „alle Regeln mit Entitätenliste zeigen“ erweitert auf jede Regel vom Typ entity, glob oder schutz. Nach der Bestätigung stehen die Entitäten als feste Einträge in der Regel (neuer Endpunkt `regeln/entitaeten_hinzufuegen`, mit Sicherung der Regeln); `entitaeten?nur_ids=1` liefert dazu die Regelzähler
+- Die Integration ändert sich nicht
+
 ## 0.5.8b1 (Beta)
 - **Code-Scanning (Punkt 368):** Sicherung lesen (`regeln.lies_sicherung`) nimmt den Pfad aus der Verzeichnisliste und vergleicht nur den Namen mit der Eingabe. Die bisherige Prüfung per `realpath` erkannte CodeQL nicht als Schutz (zwei offene Meldungen `py/path-injection`, `regeln.py`). Verhalten unverändert.
 - Die Integration ändert sich nicht
