@@ -1,5 +1,12 @@
 # RS DB Hygiene Manager
 
+[![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
+[![Release](https://img.shields.io/github/v/release/Raketenschnecke/rs-db-hygiene-manager)](https://github.com/Raketenschnecke/rs-db-hygiene-manager/releases/latest)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-%E2%89%A5%202026.10.0-18BCF2.svg)](https://www.home-assistant.io/)
+[![Validate](https://img.shields.io/github/actions/workflow/status/Raketenschnecke/rs-db-hygiene-manager/validate.yml?branch=main&label=validate)](https://github.com/Raketenschnecke/rs-db-hygiene-manager/actions/workflows/validate.yml)
+[![hassfest](https://img.shields.io/github/actions/workflow/status/Raketenschnecke/rs-db-hygiene-manager/hassfest.yml?branch=main&label=hassfest)](https://github.com/Raketenschnecke/rs-db-hygiene-manager/actions/workflows/hassfest.yml)
+[![License](https://img.shields.io/github/license/Raketenschnecke/rs-db-hygiene-manager)](LICENSE)
+
 Retention times per entity for the Home Assistant recorder database.
 
 The repository consists of two parts that share one version number:
@@ -7,7 +14,9 @@ The repository consists of two parts that share one version number:
 - **App** `rs_db_hygiene/`: web interface (Ingress) with analysis, rules, dry run and deletion run.
 - **Integration** `custom_components/rs_db_hygiene/`: device “RS DB Hygiene” with sensors, buttons and services. It deletes statistics and events through the recorder queue.
 
-Requirements: Home Assistant OS or Supervised 2026.10 or later, recorder with SQLite.
+> **Important – two installations needed:** HACS can only install the **integration**. The **app** (the actual web interface and analysis) is not available through HACS; it is installed separately through the Home Assistant **App Store** (add-on store) by adding this repository there. The integration alone does nothing useful: it needs the running app. See [Installation](#installation).
+
+Requirements: Home Assistant OS or Supervised 2026.10 or later (the app needs the Supervisor, so Home Assistant Container and Core installations cannot run it), recorder with SQLite.
 
 Note: the app's user interface is currently in German.
 
@@ -32,13 +41,20 @@ Click an image to open it in full size.
 
 ## Installation
 
-1. **App:** Settings → Apps → App Store → ⋮ → Repositories → add `https://github.com/Raketenschnecke/rs-db-hygiene-manager`. Then install and start the app “RS DB Hygiene Manager”.
+Both parts are installed in different places. Install the app first, then the integration.
+
+| Part | Installed via | Purpose |
+|---|---|---|
+| **App** “RS DB Hygiene Manager” | Home Assistant **App Store** (add the repository URL below) – **not** HACS | Web interface, analysis, rules, deletion run |
+| **Integration** “RS DB Hygiene” | **HACS** | Device with sensors, buttons and services for automations |
+
+1. **App (via the App Store, not HACS):** Settings → Apps → App Store → ⋮ → Repositories → add `https://github.com/Raketenschnecke/rs-db-hygiene-manager`. Then install and start the app “RS DB Hygiene Manager”.
 
    Or use this button:
 
    [![Add the app repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FRaketenschnecke%2Frs-db-hygiene-manager)
 
-2. **Integration:** HACS → ⋮ → Custom repositories → the same URL, type “Integration”. Download “RS DB Hygiene” and restart Home Assistant. As soon as the app is running, it announces itself via discovery; confirm the integration under Settings → Devices & services.
+2. **Integration (via HACS):** search for “RS DB Hygiene Manager” in HACS and download it. HACS installs only the integration, not the app. If it does not show up in the search yet, add it manually: HACS → ⋮ → Custom repositories → the same URL, type “Integration”. Restart Home Assistant after the download. As soon as the app is running, it announces itself via discovery; confirm the integration under Settings → Devices & services.
 
    Or use this button:
 
