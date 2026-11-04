@@ -4,9 +4,22 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.6.0
+Zusammenfassung der Testversionen 0.5.8b2 und 0.5.8b3 (Einzelheiten darunter). Die Integration ändert sich: Version 0.6.0.
+- **Integration, Sicherheit (HACS-Review):** Die Dienste `purge`, `purge_states`, `loeschlauf_starten`, `analyse_starten` und `attribut_analyse_starten` werden mit `async_register_admin_service` registriert und sind nur noch für Administratoren aufrufbar (wie die Recorder-Dienste im Core). Aufrufe der App über den Supervisor und aus Automationen laufen unverändert. Nicht-Administratoren erhalten HTTP 401.
+- **Entitäten:** Knopf „Regel erweitern …“ bei Mehrfachauswahl in der Entitätentabelle
+
 ## 0.5.8
 Zusammenfassung der Testversion 0.5.8b1 (Einzelheiten darunter). Die Integration ändert sich nicht (bleibt 0.5.6).
 - **Code-Scanning:** Sicherung lesen nimmt den Pfad aus der Verzeichnisliste statt aus der Eingabe (zwei offene CodeQL-Meldungen `py/path-injection`); Verhalten unverändert
+
+## 0.5.8b3 (Beta)
+- **Löschdienste nur für Administratoren (Punkt 370, HACS-Review):** Die Dienste `purge`, `purge_states`, `loeschlauf_starten`, `analyse_starten` und `attribut_analyse_starten` der Integration werden mit `async_register_admin_service` registriert. Nicht-Administratoren können sie nicht mehr aufrufen (wie die Recorder-Dienste im Core). Aufrufe der App über den Supervisor und aus Automationen laufen unverändert.
+- Die Integration ändert sich (Release als neue Integrationsversion nötig, Neustart von HA zum Laden)
+
+## 0.5.8b2 (Beta)
+- **Regel erweitern (Punkt 369):** In der Entitätentabelle gibt es bei Mehrfachauswahl den Knopf „Regel erweitern …“. Die Maske schlägt die Regeln vor, die in der gefilterten Tabelle vorkommen (mit Trefferzahl), „alle Regeln mit Entitätenliste zeigen“ erweitert auf jede Regel vom Typ entity, glob oder schutz. Nach der Bestätigung stehen die Entitäten als feste Einträge in der Regel (neuer Endpunkt `regeln/entitaeten_hinzufuegen`, mit Sicherung der Regeln); `entitaeten?nur_ids=1` liefert dazu die Regelzähler
+- Die Integration ändert sich nicht
 
 ## 0.5.8b1 (Beta)
 - **Code-Scanning (Punkt 368):** Sicherung lesen (`regeln.lies_sicherung`) nimmt den Pfad aus der Verzeichnisliste und vergleicht nur den Namen mit der Eingabe. Die bisherige Prüfung per `realpath` erkannte CodeQL nicht als Schutz (zwei offene Meldungen `py/path-injection`, `regeln.py`). Verhalten unverändert.

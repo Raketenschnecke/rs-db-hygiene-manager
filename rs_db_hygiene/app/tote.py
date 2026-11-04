@@ -152,3 +152,24 @@ def entferne_ids(regel_daten, ids, regel_id):
         else:
             bericht["regel_entfernt"] = True
     return {**regel_daten, "regeln": neu}, bericht
+
+
+def fuege_ids_hinzu(regel_daten, ids, regel_id):
+    """Regeldaten mit den Entitäten `ids` als feste Einträge in der Regel `regel_id` plus Bericht {muster, schon}.
+    Nur Regeltypen mit Entitätenliste (entity, glob, schutz); was die Regel schon fest nennt, wird nicht doppelt eingetragen."""
+    ids, neu, bericht = list(dict.fromkeys(ids)), [], {"muster": 0, "schon": 0}
+    gefunden = False
+    for r in regel_daten["regeln"]:
+        if r["id"] != regel_id:
+            neu.append(r)
+            continue
+        gefunden = True
+        if r["typ"] not in ("entity", "glob", "schutz"):
+            raise ValueError(f"Regeln vom Typ „{r['typ']}“ haben keine Entitätenliste")
+        vorhanden = set(r["muster"])
+        dazu = [i for i in ids if i not in vorhanden and _ENTITY_ID.match(i)]
+        bericht["muster"], bericht["schon"] = len(dazu), len([i for i in ids if i in vorhanden])
+        neu.append({**r, "muster": r["muster"] + dazu})
+    if not gefunden:
+        raise ValueError("Regel nicht gefunden")
+    return {**regel_daten, "regeln": neu}, bericht
