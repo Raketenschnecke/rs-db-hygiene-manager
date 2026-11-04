@@ -39,6 +39,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.service import async_register_admin_service
 
 from homeassistant.const import Platform
 from homeassistant.loader import async_get_integration
@@ -189,12 +190,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handler(call: ServiceCall) -> ServiceResponse:
         return await _purge(hass, call)
 
-    hass.services.async_register(DOMAIN, SERVICE, handler, schema=SCHEMA, supports_response=SupportsResponse.ONLY)
+    # Löschdienste nur für Administratoren (wie die Recorder-Dienste im Core)
+    async_register_admin_service(hass, DOMAIN, SERVICE, handler, schema=SCHEMA, supports_response=SupportsResponse.ONLY)
     if PurgeEntitiesTask is not None:
         async def handler_states(call: ServiceCall) -> ServiceResponse:
             return await _purge_states(hass, call)
 
-        hass.services.async_register(DOMAIN, SERVICE_STATES, handler_states, schema=SCHEMA_STATES, supports_response=SupportsResponse.OPTIONAL)
+        async_register_admin_service(hass, DOMAIN, SERVICE_STATES, handler_states, schema=SCHEMA_STATES, supports_response=SupportsResponse.OPTIONAL)
     else:
         _LOGGER.warning("RS DB Hygiene: PurgeEntitiesTask fehlt in dieser HA-Version – purge_states nicht verfügbar, "
                         "die App löscht States wie bisher mit ganzen Tagen")
@@ -221,9 +223,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def attribut_analyse(call: ServiceCall) -> None:
         await coordinator.befehl("attribut_analyse")
 
-    hass.services.async_register(DOMAIN, "loeschlauf_starten", starten, schema=SCHEMA_START, supports_response=SupportsResponse.OPTIONAL)
-    hass.services.async_register(DOMAIN, "analyse_starten", analyse)
-    hass.services.async_register(DOMAIN, "attribut_analyse_starten", attribut_analyse)
+    async_register_admin_service(hass, DOMAIN, "loeschlauf_starten", starten, schema=SCHEMA_START, supports_response=SupportsResponse.OPTIONAL)
+    async_register_admin_service(hass, DOMAIN, "analyse_starten", analyse)
+    async_register_admin_service(hass, DOMAIN, "attribut_analyse_starten", attribut_analyse)
     await hass.config_entries.async_forward_entry_setups(entry, PLATTFORMEN)
     return True
 

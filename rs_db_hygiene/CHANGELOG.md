@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.8b3 (Beta)
+- **Löschdienste nur für Administratoren (Punkt 370, HACS-Review):** Die Dienste `purge`, `purge_states`, `loeschlauf_starten`, `analyse_starten` und `attribut_analyse_starten` der Integration werden mit `async_register_admin_service` registriert. Nicht-Administratoren können sie nicht mehr aufrufen (wie die Recorder-Dienste im Core). Aufrufe der App über den Supervisor und aus Automationen laufen unverändert.
+- Die Integration ändert sich (Release als neue Integrationsversion nötig, Neustart von HA zum Laden)
+
 ## 0.5.8b2 (Beta)
 - **Regel erweitern (Punkt 369):** In der Entitätentabelle gibt es bei Mehrfachauswahl den Knopf „Regel erweitern …“. Die Maske schlägt die Regeln vor, die in der gefilterten Tabelle vorkommen (mit Trefferzahl), „alle Regeln mit Entitätenliste zeigen“ erweitert auf jede Regel vom Typ entity, glob oder schutz. Nach der Bestätigung stehen die Entitäten als feste Einträge in der Regel (neuer Endpunkt `regeln/entitaeten_hinzufuegen`, mit Sicherung der Regeln); `entitaeten?nur_ids=1` liefert dazu die Regelzähler
 - Die Integration ändert sich nicht
