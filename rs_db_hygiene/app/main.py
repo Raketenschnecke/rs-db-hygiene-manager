@@ -18,6 +18,7 @@ from aiohttp import web
 import analyse
 import automatik
 import bestand
+import eventsplit
 import herkunft
 import loeschen
 import optimierung
@@ -447,6 +448,22 @@ async def werte_lesen(request):
     except Exception as e:  # noqa: BLE001 – HA-DB nicht lesbar (z. B. im Testcontainer ohne Datenbank)
         _LOG.exception("Werte nicht lesbar")
         return web.json_response({"fehler": "Werte nicht lesbar (Einzelheiten im Protokoll der App)"}, status=500)
+
+
+async def events_aufschluesselung(request):
+    """Drilldown im Reiter Events: ?typ=call_service (Stufe 1: Dienste) und ?typ=call_service&schluessel=mqtt.publish (Stufe 2: Parameter).
+    Ohne ?typ: welche Event-Typen aufschlüsselbar sind (Wert = hat Stufe 2)."""
+    q = request.query
+    if not q.get("typ"):
+        return web.json_response({"typen": eventsplit.unterstuetzt()})
+    db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
+    try:
+        return web.json_response(await asyncio.to_thread(eventsplit.lies, db, q["typ"], q.get("schluessel") or None))
+    except ValueError as e:
+        return web.json_response({"fehler": str(e)}, status=400)
+    except Exception:  # noqa: BLE001 – HA-DB nicht lesbar
+        _LOG.exception("Event-Aufschlüsselung nicht lesbar")
+        return web.json_response({"fehler": "Aufschlüsselung nicht lesbar (Einzelheiten im Protokoll der App)"}, status=500)
 
 
 async def klassen(_request):
@@ -1462,6 +1479,7 @@ def erstelle_app():
         web.get("/api/prognose_verlauf", prognose_verlauf),
         web.get("/api/zuwachs", zuwachs_tage),
         web.get("/api/werte", werte_lesen),
+        web.get("/api/events/aufschluesselung", events_aufschluesselung),
         web.get("/api/zuwachs/events", zuwachs_events),
         web.get("/api/struktur", struktur_lesen),
         web.get("/api/entitaeten", entitaeten),

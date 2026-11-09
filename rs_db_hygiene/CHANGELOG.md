@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.5.8b4 (Beta)
+- **Events aufschlüsseln (Punkt 371):** Im Reiter Events lässt sich ein Event-Typ aufklappen (▸ vor dem Namen; derzeit `call_service`, `automation_triggered`, `script_started`, `logbook_entry`). Die Unterzeile zeigt die Untergruppen – bei `call_service` die Dienste (`domain.service`), bei Automationen und Skripten die Entität – mit Ø pro Tag, gestern, Ø der Tage davor und einer Auffälligkeit („neu“, „× Faktor“). Bei `call_service` zeigt ein Klick auf einen Dienst die Parameter (Entität, Topic oder Beginn der Meldung). So lässt sich ein Sprung der Event-Zahl auf seinen Verursacher zurückführen. Neuer Endpunkt `events/aufschluesselung` (nur lesend; die Abfrage wird erst beim Aufklappen gerechnet). Vorhaltezeiten je Dienst gibt es noch nicht
+- Die Integration ändert sich nicht
+
 ## 0.5.8b3 (Beta)
 - **Löschdienste nur für Administratoren (Punkt 370, HACS-Review):** Die Dienste `purge`, `purge_states`, `loeschlauf_starten`, `analyse_starten` und `attribut_analyse_starten` der Integration werden mit `async_register_admin_service` registriert. Nicht-Administratoren können sie nicht mehr aufrufen (wie die Recorder-Dienste im Core). Aufrufe der App über den Supervisor und aus Automationen laufen unverändert.
 - Die Integration ändert sich (Release als neue Integrationsversion nötig, Neustart von HA zum Laden)
