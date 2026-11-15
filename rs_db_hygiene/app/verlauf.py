@@ -27,6 +27,8 @@ MAX_KNOTEN = 60                   # Zeilen der Aufschlüsselung (Entitäten: meh
 MAX_ENTITAETEN = 300
 AUFFAELLIG_FAKTOR = 2.5           # Tag über dem 2,5-fachen des Tagesmedians
 MIN_TAGE_AUFFAELLIG = 7           # unter so vielen Tagen im Bild gibt es keine Markierung
+AUFFAELLIG_MIN_ANTEIL = 0.01      # Punkt 373: ein einzelner Eintrag gilt nur als auffällig, wenn er mindestens 1 % des Tages ausmacht
+AUFFAELLIG_MAX_TAGE = 5           # Punkt 373: so viele auffällige Tage nennt ein Eintrag der Aufschlüsselung höchstens
 TAG = datetime.date(1970, 1, 1)
 
 _CACHE = {}                       # (Stand der Zuwachsdatei, Stand der Analyse, Parameter) → Antwort
@@ -191,6 +193,8 @@ def baue(r, zuwachs_pfad, q):
 
     serien_summe, bucket_wert, bucket_summe, liste_summe, serien_ende = {}, {}, {}, {}, {}
     kat_eltern = {}
+    je_eintrag = aufl == "tag" and not bestand      # Punkt 373: Tageswerte je Eintrag der Aufschlüsselung (Integration, Gerät, Entität)
+    eintrag_tag = {}
     for z in zeilen:
         key, eltern = kategorie(z[0])
         if key is None:
@@ -201,7 +205,10 @@ def baue(r, zuwachs_pfad, q):
         if not gesamt:
             continue
         kat_eltern[key] = eltern
-        reihe = je if grp == "tabelle" else {key: gesamt}
+        if je_eintrag:
+            et = eintrag_tag.setdefault(key, {})
+            et[b] = et.get(b, 0) + gesamt
+        reihe =je if grp == "tabelle" else {key: gesamt}
         for sk, v in reihe.items():
             if not v:
                 continue
@@ -269,6 +276,29 @@ def baue(r, zuwachs_pfad, q):
             for b in buckets:
                 b["auffaellig"] = bool(b["voll"] and median and b["summe"] > AUFFAELLIG_FAKTOR * median)
 
+    # Punkt 373: auffällige Einträge – derselbe Maßstab je Serie bzw. je Eintrag der Aufschlüsselung (Integration, Gerät, Entität):
+    # Tageswert über dem 2,5-Fachen des eigenen Medians der vollen Tage im Bild (Tage ohne Wert zählen als 0) und mindestens 1 % des Tages
+    volle_tage = [b["key"] for b in buckets if b["voll"]] if median is not None else []
+
+    def auffaellige_tage(je_tag):
+        """je_tag {Tag: Wert} → (eigener Median, {Tag: Wert} der auffälligen Tage)."""
+        m = statistics.median([je_tag.get(t, 0) for t in volle_tage])
+        return m, {t: je_tag[t] for t in volle_tage
+                   if je_tag.get(t, 0) > AUFFAELLIG_FAKTOR * m and je_tag[t] >= AUFFAELLIG_MIN_ANTEIL * (bucket_summe.get(t) or 0)}
+
+    def faktor(wert, m):
+        return round(wert / m, 1) if m else None      # None = an den übrigen Tagen kein Zuwachs
+
+    if volle_tage:
+        je_bucket = {}
+        for sk in einzeln:
+            m, tage = auffaellige_tage({t: bucket_wert.get(t, {}).get(sk, 0) for t in volle_tage})
+            for t, v in tage.items():
+                je_bucket.setdefault(t, {})[sk] = {"median": round(m), "faktor": faktor(v, m)}
+        for b in buckets:
+            if b["key"] in je_bucket:
+                b["auff"] = je_bucket[b["key"]]
+
     # Aufschlüsselung des gezeigten Zeitraums (oder nur des gewählten Zeitraums im Bild)
     gesamt_liste = sum(liste_summe.values()) or 1
     knoten = []
@@ -287,6 +317,16 @@ def baue(r, zuwachs_pfad, q):
     for k in knoten:
         k["anteil"] = round(100 * k["wert"] / gesamt_liste, 1)
     knoten = knoten[:MAX_ENTITAETEN if ebene == "entitaet" else MAX_KNOTEN]
+    if volle_tage:      # Punkt 373: gewählter Tag → nur dessen Auffälligkeit; ganzer Zeitraum → die auffälligen Tage des Eintrags
+        for k in knoten:
+            m, tage = auffaellige_tage(eintrag_tag.get(k["key"], {}))
+            if sel is not None:
+                if sel in tage:
+                    k["auff"] = {"median": round(m), "wert": round(tage[sel]), "faktor": faktor(tage[sel], m)}
+            elif tage:
+                groesster = max(tage, key=lambda t: tage[t])
+                k["auff"] = {"median": round(m), "anzahl": len(tage), "tage": sorted(tage, key=lambda t: -tage[t])[:AUFFAELLIG_MAX_TAGE],
+                             "wert": round(tage[groesster]), "faktor": faktor(tage[groesster], m)}
 
     pfad = {}
     if plat is not None:

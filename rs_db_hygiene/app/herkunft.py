@@ -12,9 +12,13 @@ HA speichert keine Quelldatei. Abgeleitet wird aus
 Test per SSH:  python3 herkunft.py /homeassistant states.json
 """
 import json
+import logging
 import os
 import re
 import time
+
+_LOG = logging.getLogger("herkunft")
+LOG_MAX = 10        # Punkt 372: höchstens so viele Lesefehler je Durchlauf einzeln loggen
 
 ARTEN = {
     "geraet": "Gerät", "integration": "Integration (UI)", "ui_helfer": "UI-Helfer", "yaml": "YAML",
@@ -39,16 +43,59 @@ def _json(pfad):
         return {}
 
 
-def yaml_dateien(config):
+def yaml_dateien(config, fehler=None, tiefe=3):
+    """YAML-Dateien der Konfiguration (Unterordner bis zur Tiefe `tiefe`, Vorgabe 3 wie bisher). fehler (Punkt 372, optional):
+    Liste, in die Lesefehler des Verzeichnisdurchlaufs eingetragen werden; ohne Angabe verhält sich die Funktion wie bisher
+    (Fehler still übergangen). Ausgeschlossene (AUSGESCHLOSSEN, Punktordner) und zu tiefe Ordner werden gar nicht erst betreten,
+    ein unlesbarer Ordner dort ist also kein Lesefehler."""
     out = []
-    for wurzel, ordner, dateien in os.walk(config):
+    for wurzel, ordner, dateien in os.walk(config, onerror=None if fehler is None else fehler.append):
         rel = os.path.relpath(wurzel, config)
-        teile = [] if rel == "." else rel.split(os.sep)
-        if any(t in AUSGESCHLOSSEN or t.startswith(".") for t in teile) or len(teile) > 3:
-            ordner[:] = []
-            continue
+        ebene = 0 if rel == "." else len(rel.split(os.sep))
+        ordner[:] = [o for o in ordner if o not in AUSGESCHLOSSEN and not o.startswith(".") and ebene + 1 <= tiefe]
         out += [os.path.join(wurzel, d) for d in dateien if d.endswith((".yaml", ".yml"))]
     return sorted(out)
+
+
+# Punkt 372: zusätzliche Ordner für die Verwendungsprüfung (optimierung.verwendung) – Ordner → Dateiendungen. Entitäten stehen
+# dort teils fest eingetragen (ESPHome-Plattform homeassistant, Blueprints, Python-Skripte, pyscript, Jinja-Makros). Fehlt ein
+# Ordner, ist das kein Fehler. custom_components bleibt ausgeschlossen. [Fachwissen, nicht geprüft: Ordnernamen der HA-Konfiguration]
+VERWENDUNG_ORDNER = {"esphome": (".yaml", ".yml"), "blueprints": (".yaml", ".yml"), "python_scripts": (".py",),
+                     "pyscript": (".py",), "custom_templates": (".jinja",)}
+VERWENDUNG_TIEFE = 6        # Unterordner-Ebenen unterhalb dieser Ordner
+VERWENDUNG_NIE = ("secrets.yaml", "secrets.yml")     # enthält Zugangsdaten, keine Entitäten – wird nicht gelesen
+
+
+def _melde_fehler(config, fehler, max_log=LOG_MAX):
+    """Punkt 372: Lesefehler eines Verzeichnisdurchlaufs mit Pfad relativ zum Konfigurationsordner loggen (höchstens max_log)."""
+    for x in fehler[:max_log]:
+        name = getattr(x, "filename", None)
+        try:
+            rel = os.path.relpath(name, config).replace(os.sep, "/") if name else "?"
+        except ValueError:
+            rel = "?"
+        _LOG.warning("Verwendung: Ordner nicht lesbar: %s (%s)", rel, getattr(x, "strerror", None) or type(x).__name__)
+    if len(fehler) > max_log:
+        _LOG.warning("Verwendung: weitere %d Lesefehler im Verzeichnisdurchlauf nicht einzeln genannt", len(fehler) - max_log)
+
+
+def verwendungs_dateien(config):
+    """Punkt 372: Dateien, in denen Entitäten fest eingetragen sein können – (sortierte Pfadliste, Anzahl Lesefehler des
+    Verzeichnisdurchlaufs). Das sind die YAML-Dateien von yaml_dateien() (hier bis VERWENDUNG_TIEFE Unterordner-Ebenen statt 3)
+    plus die Ordner aus VERWENDUNG_ORDNER. Lesefehler werden mit relativem Pfad geloggt."""
+    fehler = []
+    out = [p for p in yaml_dateien(config, fehler, tiefe=VERWENDUNG_TIEFE) if os.path.basename(p) not in VERWENDUNG_NIE]
+    for ordner, endungen in VERWENDUNG_ORDNER.items():
+        wurzel = os.path.join(config, ordner)
+        if not os.path.isdir(wurzel):
+            continue       # optionaler Ordner fehlt: kein Fehler
+        for pfad, unter, dateien in os.walk(wurzel, onerror=fehler.append):
+            rel = os.path.relpath(pfad, wurzel)
+            tiefe = 0 if rel == "." else len(rel.split(os.sep))
+            unter[:] = [d for d in unter if not d.startswith(".") and d != "__pycache__"] if tiefe < VERWENDUNG_TIEFE else []
+            out += [os.path.join(pfad, d) for d in dateien if d.endswith(endungen) and d not in VERWENDUNG_NIE]
+    _melde_fehler(config, fehler)
+    return sorted(set(out)), len(fehler)
 
 
 def yaml_index(config):

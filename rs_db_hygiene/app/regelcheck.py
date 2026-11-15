@@ -24,6 +24,7 @@ UEBERSTIMMT_FAKTOR = 3       # „meist überstimmt“: mindestens dreimal so of
 UEBERSTIMMT_MIN = 20         # … und mindestens so viele Entitäten
 ZUSAMMEN_TYPEN = ("schutz", "entity", "glob", "klasse", "herkunft", "event")
 DOPPELT_TYPEN = ("schutz", "glob", "klasse", "herkunft", "event")
+DYNAMISCH = ("vielschreiber", "unbenutzt")   # Punkt 372: Typen, deren Treffermenge sich mit jeder Analyse ändert
 STUFE_RANG = {"rot": 0, "gelb": 1, "grau": 2}
 WERT_NAME = {"kurzzeit": "Kurzzeit", "attribute": "Attribute", "langzeit": "Langzeit"}   # Punkt 254
 BEISPIELE = 30
@@ -62,7 +63,8 @@ def _anwenden(bestand, aenderung):
 
 
 def _vorfilter(r, ents):
-    """Entitäten, die eine Regel treffen kann (optimierung._vorfilter; Vielschreiber mit Hysterese bis 80 %)."""
+    """Entitäten, die eine Regel treffen kann (optimierung._vorfilter; Vielschreiber mit Hysterese bis 80 %; unbenutzt (Punkt 372)
+    mit den Treffern des Kerns – leeres Muster = alle, sonst glob als Einschränkung)."""
     if r["typ"] == "vielschreiber":
         s = int(r["muster"][0]) * rg.HYSTERESE
         return [e for e in ents if (e["rows_24h"] or 0) >= s]
@@ -325,7 +327,8 @@ def befunde(pl, bestand, ignoriert=(), live=None):
                 von.setdefault(u, Counter())[s] += 1
             # Rangkonflikt: Sieger ist ein anderer Typ (nicht Schutz, nicht E:) und setzt einen anderen Wert
             ru = nach_id.get(u)
-            if not ru or ru["typ"] in ("vielschreiber", "ha_standard", "schutz") or u.startswith("E:"):
+            # Punkt 372: unbenutzt wie vielschreiber dynamisch – eine Ausnahme-Regel (entity, feste Liste) wäre für wechselnde Treffer falsch
+            if not ru or ru["typ"] in DYNAMISCH + ("ha_standard", "schutz") or u.startswith("E:"):
                 continue
             for a, s, wa, wu in l:
                 rs = nach_id.get(s)
@@ -359,7 +362,8 @@ def befunde(pl, bestand, ignoriert=(), live=None):
     # 1. wirkungslos: trifft etwas, gewinnt nirgends
     wirkungslos = set()
     for r in aktiv:
-        if r["typ"] == "ha_standard" or gewinnt[r["id"]] or not ueberstimmt[r["id"]]:
+        # Punkt 372: unbenutzt nie als „unwirksam“ melden – heute überstimmte Treffer sagen nichts über die nächste Analyse
+        if r["typ"] in ("ha_standard", "unbenutzt") or gewinnt[r["id"]] or not ueberstimmt[r["id"]]:
             continue
         wirkungslos.add(r["id"])
         var = []
@@ -457,10 +461,10 @@ def befunde(pl, bestand, ignoriert=(), live=None):
                             "Genaue Namen in anderen Event-Regeln behalten ihren Vorrang (genauer Name vor Platzhalter)."],
                            [variante(f"{r['id']}: Muster *", {"setzen": [{**r, "muster": ["*"]}]}, ctx)]))
 
-    # 8. überflüssig: ohne die Regel gälte überall dasselbe – auch ohne Vielschreiber-Regeln (deren Treffer schwanken)
-    ohne_viel = {**bestand, "regeln": [r for r in bestand["regeln"] if r["typ"] != "vielschreiber"]}
+    # 8. überflüssig: ohne die Regel gälte überall dasselbe – auch ohne dynamische Regeln (vielschreiber, unbenutzt: ihre Treffer schwanken)
+    ohne_viel = {**bestand, "regeln": [r for r in bestand["regeln"] if r["typ"] not in DYNAMISCH]}
     for r in aktiv:
-        if r["typ"] in ("ha_standard", "schutz", "vielschreiber") or r["id"] in wirkungslos or not gewinnt[r["id"]]:
+        if r["typ"] in DYNAMISCH + ("ha_standard", "schutz") or r["id"] in wirkungslos or not gewinnt[r["id"]]:
             continue
         v = variante(f"{r['id']} entfernen", {"entfernen": [r["id"]]}, ctx)
         if not v["neutral"]:

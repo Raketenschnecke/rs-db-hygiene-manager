@@ -47,6 +47,7 @@ BESTAND = os.path.join(DATA, "bestand.db")        # Punkt 334: Bestand je Entit�
 STRUKTUR = os.path.join(DATA, "struktur.db")    # Punkt 288: Tagesstand der Tabellen für den Reiter Dashboard (struktur.py)
 REGELN = os.path.join(DATA, "regeln.json")
 HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
+UNBENUTZT_HALTEN = os.path.join(DATA, "unbenutzt_halten.json")   # Punkt 372: Karenz der unbenutzt-Regeln
 LAEUFE = os.path.join(DATA, "laeufe")
 LAEUFE_SUMME = os.path.join(DATA, "laeufe_summe.json")
 VORLAGE = os.path.join(APP_DIR, "regeln_vorlage.json")
@@ -78,18 +79,32 @@ class Zustand:
     def mtime(self, pfad):
         return os.path.getmtime(pfad) if os.path.exists(pfad) else 0
 
+    @staticmethod
+    def verwendung_stempel():
+        """Punkt 372: (verwendet, verwendet_info, Fingerabdruck) der Verwendung der Entitäten. Nicht bestimmbar (Lesefehler, keine
+        Referenzdatei, Registry nicht lesbar, Fehler bei der Auswertung) → verwendet None, der Grund steht in verwendet_info (Regel
+        unbenutzt trifft dann nichts). verwendung_sicher fängt Fehler selbst ab; eigener 5-Minuten-Cache. Der Fingerabdruck (Inhalt der
+        Menge samt Grund und Kennzahlen) gehört in den Schlüssel jedes Caches, dessen Ergebnis von der Verwendung abhängt: ändert sich
+        die Verwendung oder der Grund, wird neu gerechnet."""
+        verwendet, verwendet_info = optimierung.verwendung_sicher(HA_CONFIG)
+        verwendet = verwendet or None
+        return verwendet, verwendet_info, (None if verwendet is None else hash(frozenset(verwendet)),
+                                           tuple(sorted(verwendet_info.items())))
+
     def probelauf(self, ziel, vorgemerkt):
         if not os.path.exists(CACHE):
             return None
         probelauf.messwerte_setzen(STRUKTUR)        # Punkt 293: gemessene Zeilengrößen (Datei-Zeit steckt im Schlüssel)
-        schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR))
+        verwendet, verwendet_info, stempel = self.verwendung_stempel()      # Punkt 372
+        schluessel = (ziel, vorgemerkt, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR), stempel)
         if schluessel in self._pl_cache:           # Treffer ohne Warten, auch während eine andere Rechnung läuft
             return self._pl_cache[schluessel]
         # Punkt 189: Rechnungen nacheinander – gleichzeitige Anfragen (Kacheln, Entitäten, Plan der Integration) rechnen
         # denselben Probelauf nicht mehrfach parallel; wer wartet, findet danach das Ergebnis im Cache
         with self._rechnen:
             if schluessel not in self._pl_cache:
-                erg = probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt, halten_pfad=HALTEN)
+                erg = probelauf.rechne(CACHE, ATTR, rg.lade(REGELN, VORLAGE), ziel, vorgemerkt, halten_pfad=HALTEN,
+                                       unbenutzt_pfad=UNBENUTZT_HALTEN, verwendet=verwendet, verwendet_info=verwendet_info)
                 # 0.5.4 (Punkte 170–176): bis zu drei Stände behalten – Vorschau und Empfehlungen rechnen teils mit
                 # anderen Parametern als die Tabellen und sollen deren Stand nicht verdrängen
                 alt = {k: v for k, v in self._pl_cache.items() if k[2:] == schluessel[2:]}
@@ -102,7 +117,15 @@ class Zustand:
         if not os.path.exists(CACHE):
             return None
         probelauf.messwerte_setzen(STRUKTUR)        # Punkt 293
-        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR))
+        # Punkt 372: der Verlauf ruft halte_unbenutzt nicht auf; ein Probelauf setzt vorher den Modulzustand (Regeltyp unbenutzt).
+        # Außerhalb von _rechnen aufgerufen (nicht wiederbetretbar) – probelauf() nimmt die Sperre selbst und gibt sie wieder frei.
+        try:
+            self.probelauf(ziel, passiv)
+        except Exception:
+            _LOG.exception("Probelauf vor dem Verlauf fehlgeschlagen – Regeltyp unbenutzt ggf. mit altem Stand")
+        # Punkt 372: die Treffer der Regel unbenutzt hängen von der Verwendung ab – deren Fingerabdruck gehört in den Schlüssel
+        schluessel = (ziel, passiv, self.mtime(CACHE), self.mtime(ATTR), self.mtime(REGELN), self.mtime(STRUKTUR),
+                      self.verwendung_stempel()[2])
         if schluessel in self._vl_cache:
             return self._vl_cache[schluessel]
         with self._rechnen:                         # Punkt 189: wie probelauf
@@ -382,7 +405,8 @@ async def probelauf_summe(request):
     r = await asyncio.to_thread(Z.probelauf, ziel, vm)
     if not r:
         return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=404)
-    return web.json_response({"stand": r["stand"], "summe": r["summe"], "regeln": r["regeln"], "events": r.get("events", [])})
+    return web.json_response({"stand": r["stand"], "summe": r["summe"], "regeln": r["regeln"], "events": r.get("events", []),
+                              "unbenutzt": r.get("unbenutzt")})      # Punkt 372: Treffer, Zu-/Abgänge, Karenz der unbenutzt-Regeln
 
 
 async def prognose_verlauf(request):
