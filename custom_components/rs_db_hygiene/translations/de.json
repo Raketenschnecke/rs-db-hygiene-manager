@@ -85,6 +85,28 @@
     "attribut_analyse_starten": {
       "name": "Attribut-Analyse starten (RS DB Hygiene Manager)",
       "description": "Startet in der App die (lesende) Attribut-Analyse (≈ 5–10 min). Sie liefert die Attributzeilen für Plan, Prognose und Entitäten."
+    },
+    "bericht_erstellen": {
+      "name": "Statusbericht erstellen (RS DB Hygiene Manager)",
+      "description": "Holt einen Statusbericht von der App und gibt ihn als Antwortdaten zurück (tote Muster, Regelcheck, neue Entitäten ohne Regel).",
+      "fields": {
+        "zeitraum_tage": {
+          "name": "Zeitraum (Tage)",
+          "description": "Zeitraum, den der Bericht abdeckt (1–90)"
+        },
+        "top_n": {
+          "name": "Top N",
+          "description": "Anzahl Einträge je Liste (1–50)"
+        },
+        "details": {
+          "name": "Details",
+          "description": "zahlen = nur Anzahlen, ids = mit Entitäts-IDs"
+        },
+        "stichtag_setzen": {
+          "name": "Stichtag setzen",
+          "description": "Setzt in der App den Stichtag für den nächsten Bericht"
+        }
+      }
     }
   },
   "entity": {
@@ -128,6 +150,23 @@
       },
       "version_integration": {
         "name": "Version Integration"
+      },
+      "tote_muster": {
+        "name": "Tote Muster"
+      },
+      "regelcheck_rot": {
+        "name": "Regelcheck rot"
+      },
+      "neu_ohne_regel": {
+        "name": "Neu ohne Regel"
+      },
+      "ampel": {
+        "name": "Berichts-Ampel",
+        "state": {
+          "gruen": "grün",
+          "gelb": "gelb",
+          "rot": "rot"
+        }
       }
     },
     "binary_sensor": {
@@ -148,6 +187,12 @@
       "abbrechen": {
         "name": "Löschlauf abbrechen"
       }
+    }
+  },
+  "issues": {
+    "schema_nicht_freigegeben": {
+      "title": "RS DB Hygiene Manager: Löschen pausiert",
+      "description": "{grund}\n\nBis dahin löscht der RS DB Hygiene Manager nichts; Analysen laufen weiter, deine Daten bleiben unverändert.\n\nEinzelheiten: Datenbank-Schema {schema}, freigegeben {freigegeben}."
     }
   }
 }

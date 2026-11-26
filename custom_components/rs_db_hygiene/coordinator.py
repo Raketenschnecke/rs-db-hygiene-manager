@@ -24,12 +24,13 @@ IM_LAUF = timedelta(seconds=5)
 # letzte Stand stehen (Attribut veraltet_seit). Die App antwortet ab 0.4.9 ohnehin sofort aus ihrem Zwischenspeicher.
 FEHLER_BIS_UNVERFUEGBAR = 3
 ANFRAGE_TIMEOUT_S = 30
+BERICHT_TIMEOUT_S = 120   # Punkt 376 (0.6.2b1): die Berechnung des Berichts in der App kann dauern
 
 
-def fehler_text(e) -> str:
+def fehler_text(e, timeout_s: int = ANFRAGE_TIMEOUT_S) -> str:
     """Fehlermeldung mit Typ – ein TimeoutError hat keinen Text."""
     if isinstance(e, TimeoutError):
-        return f"Zeitüberschreitung nach {ANFRAGE_TIMEOUT_S} s"
+        return f"Zeitüberschreitung nach {timeout_s} s"
     return f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
 
 
@@ -44,9 +45,10 @@ class DbhCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.veraltet_seit: float | None = None
         self.version: str | None = None    # Punkt 296/297: Version dieser Integration, gesetzt in async_setup_entry
 
-    async def _anfrage(self, methode: str, pfad: str, daten: dict | None = None) -> tuple[int, dict]:
-        async with self.session.request(methode, f"{self.basis}/{pfad}", json=daten, headers=self.kopf,
-                                        timeout=aiohttp.ClientTimeout(total=ANFRAGE_TIMEOUT_S)) as r:
+    async def _anfrage(self, methode: str, pfad: str, daten: dict | None = None, params: dict | None = None,
+                       timeout_s: int = ANFRAGE_TIMEOUT_S) -> tuple[int, dict]:
+        async with self.session.request(methode, f"{self.basis}/{pfad}", json=daten, params=params, headers=self.kopf,
+                                        timeout=aiohttp.ClientTimeout(total=timeout_s)) as r:
             try:
                 inhalt = await r.json(content_type=None)
             except (aiohttp.ContentTypeError, ValueError):
@@ -86,4 +88,17 @@ class DbhCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_request_refresh()
         if status >= 300:
             raise HomeAssistantError("RS DB Hygiene: " + (" ".join(d.get("sperren") or []) or str(d.get("fehler") or f"HTTP {status}")))
+        return d
+
+    async def bericht(self, params: dict) -> dict:
+        """Punkt 376 (0.6.2b1): Statusbericht der App (GET /bericht) holen und unverändert zurückgeben. Eigener, längerer
+        Timeout; kein Refresh nötig, der Aufruf ändert nichts am Status (außer stichtag_setzen in der App)."""
+        query = {"zeitraum_tage": str(int(params["zeitraum_tage"])), "top_n": str(int(params["top_n"])),
+                 "details": str(params["details"]), "stichtag_setzen": "1" if params.get("stichtag_setzen") else "0"}
+        try:
+            status, d = await self._anfrage("GET", "bericht", params=query, timeout_s=BERICHT_TIMEOUT_S)
+        except (aiohttp.ClientError, TimeoutError) as e:
+            raise HomeAssistantError(f"RS DB Hygiene: App nicht erreichbar bzw. Bericht nicht rechtzeitig fertig ({fehler_text(e, BERICHT_TIMEOUT_S)})") from e
+        if status >= 300:
+            raise HomeAssistantError("RS DB Hygiene: Bericht fehlgeschlagen – " + str(d.get("fehler") or f"HTTP {status}"))
         return d

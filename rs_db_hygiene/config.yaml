@@ -1,5 +1,5 @@
 name: RS DB Hygiene Manager
-version: "0.6.0"
+version: "0.6.2"
 slug: rs_db_hygiene
 description: >-
   Vorhaltezeiten pro Entität (Kurzzeit samt Attributen, Langzeit) und je Event-Typ für die Recorder-Datenbank.
@@ -52,5 +52,19 @@ schema:
   protokoll_tage: int(0,3650)
   # Punkt 287: Speicherung der Zuwachsdaten (Charts „Zeilen pro Tag“) in Monaten, 1 bis 240; optional (?) wie jede neue Option
   zuwachs_monate: int(1,240)?
+  # Punkt 376: Statusbericht: Ampel gelb, wenn weniger Prozent der aktiven Entitäten eine eigene Regel haben (Vorgabe 80)
+  bericht_abdeckung_gelb_pct: int(0,100)?
+  # Punkt 376: Statusbericht: Schreibratensprung ab diesem Faktor gegenüber dem Zeitraum davor (Vorgabe 3)
+  bericht_schreibrate_faktor: float(1,100)?
+  # Punkt 376: Statusbericht: Ampel gelb, wenn der Zuwachs diesen Prozentsatz der Prognose übersteigt (Vorgabe 120)
+  bericht_zuwachs_prognose_pct: int(100,1000)?
+  # Punkt 376: Statusbericht: neue Entitäten ohne Regel unter den so vielen stärksten Schreibern färben gelb (Vorgabe 10)
+  bericht_top_n_ohne_regel: int(1,100)?
+  # Punkt 376: Statusbericht: Ampel rot ab so vielen toten Regelmustern (Vorgabe 1)
+  bericht_tote_muster_rot: int(1,10000)?
+  # Punkte 376/303: Prognosezeitraum in Jahren für Statusbericht und Prognose-Sensor der Integration (Vorgabe 1)
+  prognose_jahre: float(0.5,20)?
+  # Punkt 376: Statusbericht: Ampel rot ab so vielen Regelcheck-Befunden der Stufe rot (Vorgabe 1)
+  bericht_regelcheck_rot: int(1,10000)?
   # Läufe aus HA heraus (Knopf, Dienst, Automation) zulassen – zusätzlich zum Hauptschalter
   automatik_freigegeben: bool

@@ -339,6 +339,21 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .tabelle tbody tr:nth-child(odd) td { background: var(--zeile-hell); }
 .tabelle tbody tr:nth-child(even) td { background: var(--zeile-dunkel); }
 .tabelle tbody tr.klick:hover td { background: var(--accent-weak); cursor: pointer; }
+/* Drilldown im Reiter Events: Aufschlüsselung eines Event-Typs als Unterzeile */
+.evpfeil { background: none; border: 0; cursor: pointer; color: var(--muted); padding: 0 6px 0 0; font-size: 13px; }
+.evpfeil:hover { color: var(--accent); }
+.tabelle tbody tr.unter td { padding: 4px 12px 10px 34px; background: var(--panel) !important; white-space: normal; }
+.tabelle table.evunter { width: auto; table-layout: auto; border-collapse: collapse; }
+.tabelle table.evunter thead { position: static !important; top: auto !important; z-index: auto !important; }   /* die Regel „thead { position: sticky }“ gilt sonst auch für die Unterzeile: ihre Überschrift klebte im Tabellenkopf */
+.tabelle table.evunter thead th { position: static !important; top: auto !important; z-index: auto !important; box-shadow: none !important; }
+.tabelle table.evunter th { position: static; font-weight: 600; color: var(--muted); text-align: right; padding: 3px 14px; background: transparent; border: 0; white-space: nowrap; }
+.tabelle table.evunter th:first-child, .tabelle table.evunter td:first-child { text-align: left; }
+.tabelle table.evunter tbody tr td { background: transparent !important; padding: 2px 14px; text-align: right; white-space: nowrap; border: 0; }
+.tabelle table.evunter tbody tr.ev2 td:first-child { padding-left: 34px; }
+.tabelle table.evunter tbody tr.ev1 td:first-child, .tabelle table.evunter tbody tr.ev2 td:first-child { white-space: normal; max-width: 640px; overflow-wrap: anywhere; }
+.tabelle table.evunter tbody tr.summe td { border-top: 1px solid var(--line); color: var(--muted); }
+.tabelle table.evunter .evdienst { background: none; border: 0; cursor: pointer; color: inherit; font: inherit; padding: 0; text-align: left; }
+.tabelle table.evunter .evdienst:hover { color: var(--accent); }
 /* Feste, ziehbare Spaltenbreiten (Punkt 9) */
 .griff { position: absolute; top: 0; right: 0; bottom: 0; width: 8px; cursor: col-resize; touch-action: none; }
 .griff::after { content: ""; position: absolute; top: 25%; bottom: 25%; right: 3px; width: 2px; border-radius: 1px; background: var(--line); }
@@ -699,6 +714,10 @@ button.dd-sg[aria-pressed="true"] { background: var(--accent-weak); color: var(-
 .dd-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 1em; }
 .dd-row.dd-hl, .dd-box h3.dd-hl { background: var(--dd-hl); }
 .dd-sw { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+.dd-sw.dd-schalt { cursor: pointer; }   /* Punkte 373/374: Farbkästchen blendet die Serie im Zeitverlauf aus/ein, ▲ = auffälliger Eintrag */
+.dd-sw.dd-schalt:hover, .dd-sw.dd-schalt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dd-row.dd-aus .dd-n, .dd-row.dd-aus .dd-v, .dz-leg span.dd-aus { opacity: .5; }
+.dd-auff { color: #e34948; font-size: .85em; flex: none; cursor: help; }
 .dd-n { flex: 1; font-family: var(--mono); font-size: .92em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dd-v { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: .92em; }
 .dd-hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
@@ -975,6 +994,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
             <tr><td><b>glob</b></td><td>Regel, die auf konfigurierbare Muster wirkt (Platzhalter <code>*</code> und <code>?</code>)</td><td>nur aktive</td><td><code>sensor.*_uptime*</code></td></tr>
             <tr><td><b>klasse</b></td><td>Regel, die auf Klassen wirkt (Muster: <code>domain|device_class</code>)</td><td>nur aktive</td><td><code>sensor|power</code></td></tr>
             <tr id="h-integration"><td><b>integration</b></td><td>Regel mit Wirkung auf ganze Integrationen. Auswahlliste, die die Auswahl aller Geräte und Entitäten einer oder mehrerer HA-Integrationen erlaubt</td><td>nur aktive</td><td><code>unifi</code>, <code>mobile_app</code></td></tr>
+            <tr id="h-unbenutzt"><td><b>unbenutzt</b></td><td>Regel für Entitäten, die nirgends verwendet werden. Erkannt wird die Verwendung in Dashboards, Automationen, Skripten, Szenen, Templates (auch in der Schreibweise <code>states.sensor.x</code>), Helfern, Energie-Dashboard, Personen, ESPHome- und Blueprint-YAML, Python-Skripten (<code>python_scripts</code>, <code>pyscript</code>), Jinja-Makros und den Freigaben für Sprachassistenten (soweit in der Konfiguration gespeichert) – auch indirekt: Wird ein Gerät (<code>device_id</code>, Geräte-Automationen), ein Bereich, eine Etage oder ein Label als Ziel genannt, gelten alle Entitäten davon als verwendet; im Zweifel gilt eine Entität als verwendet. <b>Nicht erkannt:</b> externe Systeme (z. B. Grafana, Node-RED, Abfragen über die API), Custom-Integrationen, per Text zusammengesetzte Entity-IDs und Auswahlen ohne feste ID (z. B. alle Sensoren per Template), Ziele, die erst ein Template berechnet – solche Entitäten per Schutz- oder entity-Regel ausnehmen. Nennt nur Kriterium und Vorhaltezeit; welche Entitäten sie trifft, bestimmt jede Analyse neu. Eine Entität zählt erst nach <b>7 Tagen</b> durchgehender Nichtverwendung (Karenz), verlässt die Regel bei erneuter Verwendung mit der nächsten Berechnung (spätestens der nächsten Analyse) und bekommt dann die Karenz von vorn. Trifft die Regel eine Entität nicht (Karenz, wieder verwendet, Verwendung nicht bestimmbar), gilt die nächste passende Regel im Rang bzw. der HA-Standard. Muster leer = alle unbenutzten, sonst optional Entity-Muster als Einschränkung. Setzt nur Kurzzeit und Attribute – die Langzeit ist gesperrt. Gelöschte Daten kommen nicht zurück. <b>Sicherungen:</b> Ließ sich die Konfiguration nicht vollständig lesen (Lesefehler, keine Dashboards/Helfer/Energie lesbar, Registry nicht lesbar) oder ist die Zahl der verwendeten Entitäten gegenüber der letzten akzeptierten Analyse um mehr als 30 % gesunken (z. B. viele Dashboards gelöscht), trifft die Regel vorübergehend nichts und die Karenz läuft nicht weiter; der Reiter Regeln nennt den Grund. Ein starker Rückgang wird bei der nächsten Analyse übernommen, wenn der Wert bleibt. Die Sperre erkennt keinen schleichenden Rückgang in kleinen Schritten und hat beim ersten Lauf keine Vergleichsbasis. <b>Blinde Phasen:</b> Solange die Verwendung nicht bestimmbar ist oder die Sperre greift, läuft die Karenz nicht weiter – nach der Pause rücken alle begonnenen Karenzen um deren Dauer nach hinten. Zeiten, in denen die App nicht lief oder nicht gerechnet hat, werden nicht als solche Pause erkannt und zählen als unbenutzte Zeit.</td><td>nur aktive; nie Zähler, verwaiste, deaktivierte, <code>automation</code>, <code>script</code></td><td>Muster leer bzw. <code>sensor.*</code></td></tr>
             <tr id="h-vielschreiber"><td><b>vielschreiber</b></td><td>Regel wirkt auf Schwellwerte für die Schreibintensität (Zeilen/24 h) und greift bei Entitäten oberhalb des Schwellwerts; optional zusätzlich Entity-Muster mit Platzhaltern</td><td>nur aktive, die mindestens so viel schreiben</td><td><code>1000</code> bzw. <code>1000</code> + <code>sensor.*</code></td></tr>
             <tr><td><b>verwaist</b></td><td>säubert die SQLite-DB von Datenleichen (Datensätze ohne dazugehörige HA-Entitäten)</td><td>nur verwaiste und deaktivierte</td><td><code>*</code></td></tr>
             <tr><td><b>event</b></td><td>Regel wirkt ausschließlich auf Event-Typen, Platzhalter erlaubt</td><td>Events (nicht Entitäten)</td><td><code>call_service</code></td></tr>
@@ -983,14 +1003,14 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
         </table>
         <h3 id="h-rang">Rangfolge – wer gewinnt?</h3>
         <p>Treffen mehrere aktive Regeln dieselbe Entität, gewinnt je Wert (Kurzzeit und Langzeit getrennt) die mit dem höchsten Rang:</p>
-        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › integration › vielschreiber › verwaist › HA-Standard</p>
-        <p>Die Typen <b>integration</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter; wer schon dazugehört, bleibt, bis sein Zuwachs unter 80 % der Schwelle sinkt (Hysterese, damit Entitäten nahe der Schwelle nicht zwischen kurzer und langer Kurzzeit pendeln). Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
-        <p id="h-rangnummer"><b>Rangnummer:</b> Im Reiter Regeln und in der Löschtabelle steht neben jeder Regel ihr Rang als <b>Stufe.Position</b> – die Stufe nach dem Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), die Position innerhalb der Stufe nach der Reihenfolge der Liste. Kleinere Zahl = höherer Rang; <code>3.2</code> ist die zweite glob-Regel. Der Tooltip in der Löschtabelle zeigt, gegen welche Regeln eine Regel bei dieser Entität gewonnen hat (je Wert getrennt).</p>
+        <p class="hilfe-rang">Schutz › E: › entity › glob › klasse › integration › unbenutzt › vielschreiber › verwaist › event › HA-Standard</p>
+        <p>Die Typen <b>integration</b>, <b>unbenutzt</b> und <b>vielschreiber</b> sind Sammelregeln für „den Rest“: Alles, was eine genauere Regel hat, bleibt davon unberührt. Eine <b>unbenutzt</b>-Regel wirkt ebenfalls dynamisch: Sie trifft Entitäten, die 7 Tage durchgehend nirgends verwendet wurden; bei erneuter Verwendung scheiden sie mit der nächsten Berechnung (spätestens der nächsten Analyse) wieder aus (im Reiter Regeln stehen Zu- und Abgänge seit der vorigen Analyse und die Entitäten in Karenz). Erfasst wird nur die Verwendung innerhalb von Home Assistant (auch über Geräte-, Bereichs- und Label-Ziele, ESPHome, Blueprints und Python-Skripte) – Auswertungen außerhalb (z. B. Grafana oder Node-RED) und Custom-Integrationen erkennt die App nicht; solche Entitäten gehören in eine Schutz- oder entity-Regel. Lässt sich die Konfiguration nicht vollständig lesen oder bricht die Zahl der verwendeten Entitäten stark ein, trifft die Regel vorübergehend nichts. Ein Vielschreiber wirkt dynamisch – wer nach einer Analyse die Schwelle erreicht, fällt darunter; wer schon dazugehört, bleibt, bis sein Zuwachs unter 80 % der Schwelle sinkt (Hysterese, damit Entitäten nahe der Schwelle nicht zwischen kurzer und langer Kurzzeit pendeln). Grundlage ist der Zuwachs je Tag aus der letzten Analyse (Spalte Zuwachs im Tab Entitäten).</p>
+        <p id="h-rangnummer"><b>Rangnummer:</b> Im Reiter Regeln und in der Löschtabelle steht neben jeder Regel ihr Rang als <b>Stufe.Position</b> – die Stufe nach dem Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 unbenutzt, 7 vielschreiber, 8 verwaist, 9 event, 99 HA-Standard), die Position innerhalb der Stufe nach der Reihenfolge der Liste. Kleinere Zahl = höherer Rang; <code>3.2</code> ist die zweite glob-Regel. Der Tooltip in der Löschtabelle zeigt, gegen welche Regeln eine Regel bei dieser Entität gewonnen hat (je Wert getrennt).</p>
         <p>Innerhalb desselben Typs gewinnt die Regel, die <b>weiter oben in der Liste</b> steht. Die Reihenfolge änderst du im Tab Regeln mit den Pfeilen.</p>
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
           <li><b>Platzhalter nur bei glob (und schutz):</b> Bei entity wird <code>*</code> wörtlich genommen; die Regel trifft dann nichts. Die App warnt beim Speichern.</li>
-          <li><b>Zähler-Schutz:</b> glob-, klasse-, integration- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der bei Zählern nur die Kurzzeit kürzt – ihre Langzeit bleibt immer unbegrenzt).</li>
+          <li><b>Zähler-Schutz:</b> glob-, klasse-, integration-, unbenutzt- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der bei Zählern nur die Kurzzeit kürzt – ihre Langzeit bleibt immer unbegrenzt).</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
           <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days: 10</code></a>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Die Kurzzeit ist einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events. Auch die <b>Langzeit</b> ist einstellbar (Voreinstellung unbegrenzt): Mit z. B. 1 Jahr wird die Regel zum <b>Lumpensammler</b> für die Stundenstatistik aller Entitäten ohne eigene Langzeit-Regel, <a class="hverweis" href="#h-faq-langzeit">Wie begrenze ich die Langzeit?</a> Die Langzeit der Zähler bleibt dabei immer erhalten. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen und unbegrenzter Langzeit. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
           <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob eine andere Regel irgendwo Vorrang hat. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognose) zählen Entitäten, keine Zeilen.</li>
@@ -1018,7 +1038,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
             <tr><td><b>Entitäten</b></td><td>alle Entitäten mit Zeilen, Zuwachs, wirksamen Vorhaltezeiten und Löschmenge; Filter, Mehrfachauswahl („Regel aus Auswahl anlegen“, „Regel erweitern …“, „Aus Regel entfernen …“, „Schutz aus Auswahl anlegen“, CSV). Die Spalte <b>Labels</b> zeigt die HA-Labels der Entität und ihres Geräts; Klick auf ein Label filtert danach, dann „alle gefilterten auswählen“ und eine Regel anlegen. Die Spalten sind in vier Gruppen geordnet (Stammdaten, Vorhaltezeiten, Aktuell, Löschmenge sofort), jede Gruppe in eigener Farbe – Aktuell rot wie die Kachelzeile Bestand, Löschmenge sofort gelb wie die gleichnamige Kachelzeile oben. Die Spaltenköpfe sind zweizeilig: oben der Titel, darunter Zusatz bzw. Einheit. Die Spalte <b>Entitäts-Status</b> (aktiv/verwaist) zeigt den Zustand der Entität in HA. In den Spalten Kurzzeit und Langzeit öffnet ein Klick auf den Regel-Chip (z. B. „R32“) die Maske dieser Regel; nach einer Regel filtern geht über das Auswahlfeld der Filterzeile. Die Spalte „Entität“ bleibt beim Scrollen nach rechts stehen.</td></tr>
             <tr><td><b>Events</b></td><td>je Event-Typ Menge, Zuwachs und Vorhaltezeit; Klick legt eine Event-Regel an</td></tr>
             <tr><td><b>Statistik ohne Entität</b></td><td>Statistiken, zu denen es keine Entität (mehr) gibt; nur Anzeige, keine Löschung über den RS DB Hygiene Manager (Löschen nur aus Home Assistant möglich)</td></tr>
-            <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), schlägt die App eine <b>Sammelregel</b> vor: eine entity-Regel mit allen unbenutzten Entitäten der Klasse bzw. Integration; künftige Entitäten erfasst sie nicht. „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern. Die Langzeit rühren die Empfehlungen nur in einer eigenen Art an: Die Empfehlung <b>Langzeit</b> ist eine Sammelregel mit 1 Jahr Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit). Die Spalte „Wirkt auf“ zeigt, ob ein Vorschlag die Kurzzeit, die Langzeit oder beide setzt; „Treffer“ lassen sich nicht summieren, weil dieselbe Entität in mehreren Vorschlägen stehen kann.</td></tr>
+            <tr><td><b>Empfehlungen</b></td><td>Regelvorschläge aus der letzten Analyse: gleichartige Entitäten als ein Muster, als eine Klasse oder als eine Regel je Integration, Vielschreiber, große Attribute, nirgends verwendete (außer Automationen und Skripten) und deaktivierte Entitäten, Uhrzeit-Sensoren, verwaiste ohne Regel, Event-Typen ohne Event-Regel – je mit Treffern, Löschmenge sofort und Ersparnis. Passt eine klasse- oder integration-Regel nicht (zu viele der Entitäten werden verwendet oder die Regel würde etwas verlängern), empfiehlt die App stattdessen eine dynamische Regel vom Typ <b>unbenutzt</b>, die auch künftige Entitäten erfasst (<a class="hverweis" href="#h-unbenutzt">Beschreibung</a>); bestehende statische Sammelregeln gelten weiter und können danach entfernt werden. Solange diese dynamische Regel empfohlen wird oder besteht, schlagen die Empfehlungen keine Einzelregeln und Bündel mehr vor, deren einziger Grund „nirgends verwendet“ ist (Vorschläge mit weiterem Grund wie Vielschreiber oder große Attribute bleiben). „Übernehmen …“ öffnet die Regelmaske ausgefüllt und passiv; „In R… aufnehmen“ trägt den Vorschlag in eine bestehende Regel gleichen Typs ein, statt eine neue anzulegen; „passiv: R…“ zeigt eine vorhandene passive Regel, die die Daten schon abdeckt. Der Kasten <b>Wer schreibt am meisten?</b> zeigt die größten Schreiber mit ihrem Anteil am Zuwachs und hilft, die Schwelle einer Vielschreiber-Regel zu bestimmen. Nie für Zähler, geschützte Entitäten oder Quellen von Energie-Dashboard und Helfern. Die Langzeit rühren die Empfehlungen nur in einer eigenen Art an: Die Empfehlung <b>Langzeit</b> ist eine Sammelregel mit 1 Jahr Langzeit für alle nirgends verwendeten Entitäten (ohne Kurzzeit). Die Spalte „Wirkt auf“ zeigt, ob ein Vorschlag die Kurzzeit, die Langzeit oder beide setzt; „Treffer“ lassen sich nicht summieren, weil dieselbe Entität in mehreren Vorschlägen stehen kann.</td></tr>
             <tr><td><b>Regeln</b></td><td>Regeln anlegen, ordnen, aktiv/passiv schalten, optimieren (Spalte Regelwerk-Check/Empfehlungen); Mehrfachauswahl: aktiv/passiv, Werte ändern, entfernen; <b>Regeln verwalten …</b>: Export, Import, Startregeln, Sicherungen; der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> prüft das Regelwerk. Beim Speichern bekommt der Name die Vorhaltedauer als Suffix, z. B. „– 30T/2J“ (Kurzzeit/Langzeit, ∞ = unbegrenzt; Event-Regeln nur „– 7T“).</td></tr>
             <tr><td><b>Löschen</b></td><td>der Plan für den nächsten Lauf, Risiken, „Jetzt ausführen“ (daneben der Umfang – alle aktiven Regeln oder nur eine – und „Plan neu laden“); der Tooltip der Spalte „Vorhaltung · in diesem Lauf“ erklärt je Zeile, was gelöscht wird</td></tr>
             <tr><td><b>Löschprotokolle</b></td><td>alle Läufe mit Pause wegen eines Backups; ein Klick auf einen Lauf zeigt die Einzelheiten je Entität; dazu die Monatssumme je Entität</td></tr>
@@ -1174,8 +1194,9 @@ actions:
         <ol>
           <li><b>Schutz und Auffangnetz:</b> Daten, die nie gekürzt werden dürfen (z. B. Energie), als <i>schutz</i>-Regel. Dann die Kurzzeit von <a class="hverweis" href="#h-ha-standard">HA-Standard</a> auf den Wert stellen, der für alles ohne eigene Regel gelten soll (z. B. 90 Tage); sie fängt auch Zähler und Events auf. Ebenso lässt sich dort die Langzeit begrenzen (z. B. 1 Jahr, <a class="hverweis" href="#h-faq-langzeit">Wie begrenze ich die Langzeit?</a>). Solange HA-Standard auf 10 Tagen steht, bleiben die Empfehlungen fast leer (<a class="hverweis" href="#h-faq-empfehlungen">Warum?</a>).</li>
           <li><b>Bekannte Gruppen:</b> Diagnose-Gruppen (z. B. <code>*_rssi</code>, <code>*_uptime</code>) als glob mit 7 Tagen, Geräte einer Art als klasse (<code>domain|device_class</code>). Die Empfehlungen schlagen beides vor.</li>
-          <li><b>Integrationen (Typ integration):</b> Regeln für laute Monitoring-Integrationen (unifi, proxmoxve, frigate, opnsense …); bei lauten Entitäten die Kurzzeit gleich kurz wählen. Passt eine integration- oder klasse-Regel nicht, weil zu viele ihrer Entitäten verwendet werden, bieten die Empfehlungen eine <b>Sammelregel</b> an; gibt es schon eine passende Regel, bieten sie „In R… aufnehmen“ statt einer neuen.</li>
-          <li><b>Vielschreiber als dynamischer Rest:</b> Neu berechnen und im Kasten „Wer schreibt am meisten?“ die Schwelle bestimmen. Die vielschreiber-Regel steht im Rang hinter entity, glob, klasse und integration; sie fängt nur auf, was keine genauere Regel hat.</li>
+          <li><b>Integrationen (Typ integration):</b> Regeln für laute Monitoring-Integrationen (unifi, proxmoxve, frigate, opnsense …); bei lauten Entitäten die Kurzzeit gleich kurz wählen. Passt eine integration- oder klasse-Regel nicht, weil zu viele ihrer Entitäten verwendet werden, bieten die Empfehlungen die dynamische Regel <b>unbenutzt</b> an; gibt es schon eine passende Regel, bieten sie „In R… aufnehmen“ statt einer neuen.</li>
+          <li><b>Unbenutzte als dynamischer Rest:</b> Eine Regel vom Typ <a class="hverweis" href="#h-unbenutzt">unbenutzt</a> (Muster leer, Kurzzeit z. B. 14 Tage) ersetzt die von Hand geführte Sammelregel: Sie trifft jede Entität, die 7 Tage durchgehend nirgends verwendet wurde, und lässt sie wieder los, sobald sie verwendet wird. Die Langzeit setzt dieser Typ nicht.</li>
+          <li><b>Vielschreiber als dynamischer Rest:</b> Neu berechnen und im Kasten „Wer schreibt am meisten?“ die Schwelle bestimmen. Die vielschreiber-Regel steht im Rang hinter entity, glob, klasse, integration und unbenutzt; sie fängt nur auf, was keine genauere Regel hat.</li>
           <li><b>Ausnahmen:</b> Was länger gebraucht wird, bekommt eine entity-Regel (oder eine E:-Regel im Tab Entitäten); sie steht im Rang vor allen Mustern und kann deshalb jederzeit später dazukommen. Für verwaiste Entitäten eine verwaist-Regel mit 30 Tagen (die App schlägt sie immer vor, solange keine aktiv ist).</li>
           <li><b>Aufräumen und prüfen:</b> Der <a class="hverweis" href="#h-regelcheck">Regelwerk-Check</a> im Reiter Regeln findet doppelte, wirkungslose und zusammenlegbare Regeln. In der Löschtabelle zeigen die Rangnummern und der Tooltip „hat Vorrang vor …“, ob z. B. eine integration-Regel eine kürzere vielschreiber-Regel überstimmt.</li>
         </ol>
@@ -1451,7 +1472,7 @@ const STATUS_HILFE = "Zustand der Entität in HA (aktiv / deaktiviert / verwaist
 const SONDER = { kurzzeit: ["global", "keine"], attribute: ["wie_kurzzeit", "keine"], langzeit: ["unbegrenzt", "keine"] };
 // Punkt 246 (0.5.6b6): Anzeigename des Regeltyps „herkunft“ ist „integration“ (interner Schlüssel unverändert)
 const typName = t => t === "herkunft" ? "integration" : t;
-const REGELTYPEN = ["entity", "glob", "klasse", "herkunft", "vielschreiber", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111); herkunft/vielschreiber ab 0.5.5b9 (Punkte 196/193)
+const REGELTYPEN = ["entity", "glob", "klasse", "herkunft", "unbenutzt", "vielschreiber", "verwaist", "event", "schutz"];   // schutz ab 0.4.9 (Punkt 111); herkunft/vielschreiber ab 0.5.5b9 (Punkte 196/193); unbenutzt ab 0.6.1b2 (Punkt 372)
 // Punkt 127 (0.5.3): Regel HA-Standard – feste ID, nur aktiv/passiv, nicht löschbar, im Regel-Dialog nicht wählbar
 const HA_STD = "HA:standard";
 const tabRegeln = () => S.regeln.regeln.filter(r => r.typ !== "ha_standard");   // Punkt 330: HA-Standard ist Grundeinstellung (Chip), keine Zeile der Regelliste
@@ -1506,7 +1527,8 @@ const SORT_STD_ENT = [{ k: "rows", desc: true }];
 const S = { offset: 0, limit: +speicher.lies("dbh_limit", "100"), sortierung: ladeSort("dbh_sort_ent", SORT_STD_ENT), regeln: null, version: 0,
             status: null, f: {}, optionen: null, render: 0, probe: null, auswahl: new Set(),
             auswahlEnt: new Set(), auswahlEv: new Set(), entGesamt: 0, entFilter: "",   // Punkt 91
-            auswahlOpt: new Set() };   // Punkt 195
+            auswahlOpt: new Set(),   // Punkt 195
+            evAuf: {}, evTypen: {}, evTypenGeladen: false };   // Drilldown im Reiter Events
 $("#fLimit").value = String(S.limit);
 if ($("#fLimit").value !== String(S.limit)) { S.limit = 100; $("#fLimit").value = "100"; }
 // Punkt 68: Prognosezeitraum je Browser gemerkt
@@ -1908,7 +1930,7 @@ class LokaleTabelle {
     const von = this.seite ? this.pg * this.seite : 0, sicht = this.seite ? l.slice(von, von + this.seite) : l, gk = this.klassen(sp);
     this.el.querySelector("tbody").innerHTML = l.length
       ? sicht.map(r => `<tr ${this.zeileAttr ? this.zeileAttr(r) : ""}>${sp.map((s, i) =>
-          `<td class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${s.tdKlasse ? " " + s.tdKlasse : ""}${gk[i]}" title="${esc(s.tip ? s.tip(r) : (s.typ === "text" ? s.wert(r) : ""))}">${s.zelle(r)}</td>`).join("")}</tr>`).join("")
+          `<td class="${s.n ? "n" : ""}${s.mitte ? " mitte" : ""}${s.tdKlasse ? " " + s.tdKlasse : ""}${gk[i]}" title="${esc(s.tip ? s.tip(r) : (s.typ === "text" ? s.wert(r) : ""))}">${s.zelle(r)}</td>`).join("")}</tr>${this.unterZeilen ? this.unterZeilen(r, sp.length) : ""}`).join("")
       : `<tr><td colspan="${sp.length}" class="leer">${esc(this.leer || "keine Einträge")}</td></tr>`;
     const aus = this.spalten.filter(s => !s.fest && !this.sichtbar.has(s.k) && (this.f[s.k] || "").trim());
     // Punkt 153 (0.5.3): Anzahl entfällt (steht in der Summenzeile); bei Tabellen mit Seiten bleibt die Auswahl „Zeilen“ samt Bereich
@@ -2163,7 +2185,8 @@ const HILFE = {
 };
 const hilfeTexte = (k) => HILFE[k].slice(1).map(t => t.replaceAll("{ziel}", jahreText(zielJahre()))
   .replaceAll("{pkd}", S.status?.analyse?.purge_keep_days || "?"));
-const hilfeTip = k => { const [b, e, h] = hilfeTexte(k); return `${b}\n\n${e}\n\nEmpfehlung: ${h}`; };
+// Punkt 377: Tooltips der Raster-Köpfe (Kacheln) ohne Absatz „Empfehlung“ – der steht weiter im ⓘ-Dialog
+const hilfeTip = (k, mitEmpfehlung = true) => { const [b, e, h] = hilfeTexte(k); return `${b}\n\n${e}` + (mitEmpfehlung ? `\n\nEmpfehlung: ${h}` : ""); };
 function setzeBedienTooltips() {
   $("#lblZiel").title = hilfeTip("ziel");
   $("#lblPassiv").title = hilfeTip("passiv");
@@ -2247,9 +2270,9 @@ function rasterHtml(s, st) {
   const zsub = { ist: "Stand der Analyse", loesch: "aktive Regeln, ohne Obergrenze", prog: `über ${zr}` };
   const knopf = (k, name) => `<button class="hilfeknopf" data-hilfe="${k}" aria-label="Erläuterung: ${esc(name)}">ⓘ</button>`;
   let h = `<div></div>` + RSPALTEN.map(([k, name, kurz]) =>
-    `<div class="rkopf" title="${esc(hilfeTip("c_" + k))}"><span class="lang">${esc(name)}</span><span class="kurz">${esc(kurz)}</span>${knopf("c_" + k, name)}</div>`).join("");
+    `<div class="rkopf" title="${esc(hilfeTip("c_" + k, false))}"><span class="lang">${esc(name)}</span><span class="kurz">${esc(kurz)}</span>${knopf("c_" + k, name)}</div>`).join("");
   for (const [z, zname, zkurz, klasse] of RZEILEN) {
-    h += `<div class="zkopf ${klasse}" title="${esc(hilfeTip("r_" + z))}"><div><span class="lang">${esc(zname)}</span><span class="kurz">${esc(zkurz)}</span>${knopf("r_" + z, zname)}</div>
+    h += `<div class="zkopf ${klasse}" title="${esc(hilfeTip("r_" + z, false))}"><div><span class="lang">${esc(zname)}</span><span class="kurz">${esc(zkurz)}</span>${knopf("r_" + z, zname)}</div>
       <span class="sub">${esc(zsub[z])}</span></div>`;
     for (const [k, kname] of RSPALTEN) {
       const c = werte[z][k];
@@ -2270,7 +2293,7 @@ async function ladeKacheln() {
     zeigeGlobal();
     $("#raster").innerHTML = rasterHtml(r.summe, r.stand);
     T.probe.daten(r.regeln); Vorh.neu();
-    S.events = r.events || []; T.events.daten(S.events); zeigeEvHinweis();
+    S.events = r.events || []; T.events.daten(S.events); zeigeEvHinweis(); evTypenLaden();
     if (S.regeln) T.regeln.daten(tabRegeln());   // Spalte „Treffer“ aktualisieren
   } catch (e) {
     $("#raster").innerHTML = `<div class="kachel leer ganz">${esc(leerText(e))}</div>`;
@@ -3217,10 +3240,11 @@ function spaltenEnt() {
 
 // ================================================ Regeln, Regel, Statistik ohne Entität
 const regelIndex = r => S.regeln.regeln.indexOf(r);
-// Punkt 199 (0.5.5b10): Rang „Stufe.Position“ – Stufe nach Typ (Schutz 0, E: 1, entity 2 … verwaist 7, event 8, HA-Standard 99),
+// Punkt 199 (0.5.5b10): Rang „Stufe.Position“ – Stufe nach Typ (Schutz 0, E: 1, entity 2 … verwaist 8, event 9, HA-Standard 99; Punkt 372: seitdem mit unbenutzt 6),
 // Position innerhalb der Stufe in der Reihenfolge der Regelliste (aktive und passive, damit die Nummer beim Umschalten bleibt)
-const RANG_STUFE = { schutz: 0, entity: 2, glob: 3, klasse: 4, herkunft: 5, vielschreiber: 6, verwaist: 7, event: 8, ha_standard: 99 };
-const RANG_NAME = { 0: "Schutz", 1: "eigene Vorhaltezeit (E:)", 2: "entity", 3: "glob", 4: "klasse", 5: "integration", 6: "vielschreiber", 7: "verwaist", 8: "event", 99: "HA-Standard" };
+// Punkt 372: unbenutzt steht hinter integration und vor vielschreiber (6), danach verwaist 8 und event 9
+const RANG_STUFE = { schutz: 0, entity: 2, glob: 3, klasse: 4, herkunft: 5, unbenutzt: 6, vielschreiber: 7, verwaist: 8, event: 9, ha_standard: 99 };
+const RANG_NAME = { 0: "Schutz", 1: "eigene Vorhaltezeit (E:)", 2: "entity", 3: "glob", 4: "klasse", 5: "integration", 6: "unbenutzt", 7: "vielschreiber", 8: "verwaist", 9: "event", 99: "HA-Standard" };
 const rangStufe = r => r.typ === "schutz" ? 0 : String(r.id).startsWith("E:") ? 1 : RANG_STUFE[r.typ] ?? 50;
 const RANG_CACHE = new WeakMap();
 function regelRang(id) {
@@ -3237,9 +3261,38 @@ function regelRang(id) {
   return m.get(id) || null;
 }
 const rangTip = g => g.stufe === 99 ? "Rang 99: HA-Standard – immer der niedrigste Rang"
-  : `Rang ${g.text}: Stufe ${g.stufe} (${RANG_NAME[g.stufe]}), ${g.pos}. Regel dieser Stufe in der Liste` + (g.stufe === 8 ? " – bei Event-Regeln geht ein genauer Name vor Platzhaltern" : "");
+  : `Rang ${g.text}: Stufe ${g.stufe} (${RANG_NAME[g.stufe]}), ${g.pos}. Regel dieser Stufe in der Liste` + (g.stufe === 9 ? " – bei Event-Regeln geht ein genauer Name vor Platzhaltern" : "");
 const rangChip = id => { const g = regelRang(id); return g ? `<span class="rang" title="${esc(rangTip(g))}">${g.text}</span>` : ""; };
 const trefferVon = r => { const x = (S.probe?.regeln || []).find(p => p.regel === r.id); return x ? x.entitaeten : (r.aktiv || S.probe?.stand?.mit_vorgemerkten ? 0 : null); };
+// Punkt 372: Regeln vom Typ unbenutzt – Zu-/Abgänge seit der vorigen Analyse und Entitäten in Karenz (Block „unbenutzt“ des Probelaufs,
+// Endpunkt probelauf). bekannt=false: Die Verwendung ließ sich nicht bestimmen, die Regel trifft dann nichts.
+function unbenutztVon(r) {
+  const u = S.probe?.unbenutzt, je = u?.regeln?.[r.id]; if (!je) return null;
+  return { bekannt: u.bekannt !== false, grund: u.grund || "", tage: u.karenz_tage ?? 7, treffer: je.treffer || 0, zugaenge: je.zugaenge || [], abgaenge: je.abgaenge || [], karenz: je.karenz || [] };
+}
+function unbenutztChips(r) {
+  if (r.typ !== "unbenutzt") return "";
+  const u = unbenutztVon(r); if (!u) return "";
+  if (!u.bekannt) {   // Grund aus dem Backend (Lesefehler, Registry, starker Rückgang der Verwendung …)
+    const l = S.probe?.unbenutzt?.lesen, kz = l ? `\nGelesen: ${l.storage ?? 0} Referenzdateien (davon ${l.dashboards ?? 0} Dashboard-Quellen), ${l.dateien ?? 0} YAML-/Skriptdateien (davon ${l.yaml ?? 0} YAML), ${l.fehler ?? 0} Lesefehler, Registry ${l.registry ? "lesbar" : "nicht lesbar"}` : "";
+    return `<span class="chip warn" title="${esc((u.grund || "Die Konfiguration von Home Assistant war nicht lesbar oder die Auswertung schlug fehl.") + "\nZur Sicherheit trifft die Regel nichts und die Karenz läuft nicht weiter, bis die Verwendung wieder verlässlich bestimmt werden kann (danach rücken begonnene Karenzen um die Dauer der Pause nach hinten; Zeiten ohne Lauf der App erkennt das nicht)." + kz)}">Verwendung nicht bestimmbar – Regel trifft derzeit nichts${u.grund ? `: ${esc(u.grund)}` : ""}</span>`;
+  }
+  const tip = `Klick: Zugänge, Abgänge und Karenz dieser Regel\n${mzahl(u.zugaenge.length, "Entität", "Entitäten")} neu getroffen, ${mzahl(u.abgaenge.length, "Entität", "Entitäten")} nicht mehr (seit der vorigen Analyse)`;
+  return `<span class="chip" data-unbenutzt="${esc(r.id)}" role="button" tabindex="0" style="cursor:pointer" title="${esc(tip)}">+${zahl(u.zugaenge.length)} / −${zahl(u.abgaenge.length)} seit voriger Analyse</span>` +
+    (u.karenz.length ? `<span class="chip" data-unbenutzt="${esc(r.id)}" role="button" tabindex="0" style="cursor:pointer" title="${esc(`${mzahl(u.karenz.length, "Entität ist", "Entitäten sind")} unbenutzt, aber noch in der Karenz von ${u.tage} Tagen – Klick: Liste mit Resttagen`)}">${zahl(u.karenz.length)} in Karenz</span>` : "");
+}
+function zeigeUnbenutzt(id) {
+  const i = S.regeln.regeln.findIndex(x => x.id === id), r = S.regeln.regeln[i], u = r && unbenutztVon(r); if (!u) return;
+  const liste = (l, leer) => l.length ? `<div class="mono" style="max-height:200px;overflow:auto;white-space:pre-wrap">${l.map(x => esc(x)).join("<br>")}</div>` : `<p class="sub">${leer}</p>`;
+  const kar = [...u.karenz].sort((a, b) => a.rest_tage - b.rest_tage || String(a.entity_id).localeCompare(b.entity_id))
+    .map(k => `${k.entity_id} – noch ${k.rest_tage} ${k.rest_tage === 1 ? "Tag" : "Tage"}`);
+  dialog(`Regel ${id}: unbenutzte Entitäten`, `<p><b>${zahl(u.treffer)}</b> ${u.treffer === 1 ? "Entität wird" : "Entitäten werden"} getroffen (nirgends verwendet, Karenz von ${u.tage} Tagen vorbei).</p>
+    <h4>Zugänge seit der vorigen Analyse (${zahl(u.zugaenge.length)})</h4>${liste(u.zugaenge, "keine")}
+    <h4>Abgänge seit der vorigen Analyse (${zahl(u.abgaenge.length)})</h4>${liste(u.abgaenge, "keine")}
+    <h4>In Karenz (${zahl(u.karenz.length)})</h4>${liste(kar, "keine")}
+    <p class="sub">Karenz: Eine Entität zählt erst, wenn sie ${u.tage} Tage durchgehend unbenutzt war. Wird sie wieder verwendet, scheidet sie mit der nächsten Berechnung (spätestens der nächsten Analyse) aus der Regel aus und die Karenz beginnt neu.</p>`,
+    [["Regel öffnen", () => bearbeiteRegel(i)], ["Schließen", () => $("#dlg").close(), true]]);
+}
 const wertSpalte = art => ({
   k: art, titel: WNAME[art], typ: "auswahl", breite: art === "kurzzeit" ? 200 : 190, wert: r => wertAnzeige(r[art]),
   hilfe: art === "kurzzeit" ? `gilt für States und 5-Min-Statistik; bei Regeln vom Typ event: ${EV_NAME}` : art === "attribute" ? "nach dieser Frist werden die Attribute von den States getrennt (höchstens die Kurzzeit); leer = Attribut-Standard; bei Schutz-Regeln „wie Kurzzeit“ = Attribute mitgeschützt" : "gilt für die Stundenstatistik",
@@ -3272,7 +3325,7 @@ T.regeln = new LokaleTabelle({
       // Filter auf die Stufe (Zahl vor dem Punkt): nur die Stufen, die in der Regelliste vorkommen
       optionen: l => [...new Set(l.map(r => regelRang(r.id)?.stufe).filter(s => s != null))].sort((a, b) => a - b).map(s => [String(s), `${s} – ${RANG_NAME[s] ?? "?"}`]),
       passt: (r, w) => String(regelRang(r.id)?.stufe) === w,
-      hilfe: "Stufe.Position: Stufe nach Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard), Position innerhalb der Stufe. Kleinere Zahl = höherer Rang. Je Wert gewinnt unter den passenden aktiven Regeln die mit dem höchsten Rang.",
+      hilfe: "Stufe.Position: Stufe nach Typ (0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 unbenutzt, 7 vielschreiber, 8 verwaist, 9 event, 99 HA-Standard), Position innerhalb der Stufe. Kleinere Zahl = höherer Rang. Je Wert gewinnt unter den passenden aktiven Regeln die mit dem höchsten Rang.",
       zelle: r => {
         const g = regelRang(r.id) || {}, chip = rangChip(r.id);
         if (r.id.startsWith("E:") || r.typ === "ha_standard") return chip;   // E: und HA-Standard: Position ohne Bedeutung bzw. fest
@@ -3291,10 +3344,13 @@ je Stufe: ${[...new Set(g.map(r => regelRang(r.id)?.stufe))].sort((x, y) => x - 
           (r.typ === "entity" && p.verwaist ? `<span class="chip warn" title="${zahl(p.verwaist)} der Entitäten sind verwaist – die Regel gilt dort nur noch für Altdaten. Behalten oder entfernen entscheidest du.">Entität verwaist</span>` : "") +
           // Punkt 225 (0.5.5b14): „andere Regel hat Vorrang“ statt „überstimmt“
           (p.ueberstimmt ? `<span class="chip" title="${esc(`Andere Regel hat Vorrang: bei ${mzahl(p.ueberstimmt, "Entität", "Entitäten")} für mindestens einen Wert\nDetails: Klick auf die Entität im Tab Entitäten`)}">${zahl(p.ueberstimmt)}× andere Regel hat Vorrang</span>` : "") +
-          (ueber.length ? `<span class="chip warn" title="${esc(ueber.map(([eid, ids]) => `${eid}: ${ids.join(" › ")}`).join("\n"))}">Überschneidung</span>` : "");
+          (ueber.length ? `<span class="chip warn" title="${esc(ueber.map(([eid, ids]) => `${eid}: ${ids.join(" › ")}`).join("\n"))}">Überschneidung</span>` : "") +
+          unbenutztChips(r);
       } },
     { k: "muster", titel: "Muster", typ: "text", breite: 260, wert: r => r.muster.join(" "), tip: r => r.muster.join("\n"),
-      zelle: r => r.typ === "vielschreiber"   // Punkt 193: Schwelle lesbar, Einschränkung dahinter
+      zelle: r => r.typ === "unbenutzt" && !r.muster.length   // Punkt 372: leeres Muster = alle unbenutzten Entitäten
+        ? `<span class="sub" title="Kein Muster: die Regel trifft alle unbenutzten Entitäten (nach 7 Tagen Karenz)">alle unbenutzten</span>`
+        : r.typ === "vielschreiber"   // Punkt 193: Schwelle lesbar, Einschränkung dahinter
         ? `<span class="mono">≥ ${esc(zahl(+r.muster[0]))} Zeilen/Tag</span>${r.muster.length > 1 ? ` <span class="sub mono">${esc(r.muster.slice(1, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}` : ""}`
         : `<span class="mono">${esc(r.muster.slice(0, 2).join(", "))}</span>${r.muster.length > 2 ? ` <span class="chip">+${r.muster.length - 2}</span>` : ""}${r.typ === "entity" && platzhalter(r.muster) ? ` <span class="chip warn" title="Bei Typ entity sind * ? [ keine Platzhalter – die Regel trifft nichts. Typ auf glob ändern.">Platzhalter – 0 Treffer</span>` : ""}`,
       csv: r => r.muster.join(", "), summe: anzahlSumme(r => r.muster.length) },
@@ -3383,7 +3439,7 @@ T.lts = new LokaleTabelle({
 // Punkte 205/208 (0.5.5b11): Vorschläge je Integration (herkunft) und je Klasse
 const wirktAuf = r => !r.regel.kurzzeit && !r.regel.langzeit && r.regel.attribute ? "Attribute"   // Punkt 254
   : r.regel.langzeit && r.regel.kurzzeit ? "Kurz- und Langzeit" : r.regel.langzeit ? "Langzeit" : "Kurzzeit";
-const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", sammel: "Sammelregel", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events", langzeit: "Langzeit", attribute: "Attribute" };
+const OPT_ART = { gruppe: "Gruppe", klasse: "Klasse", unbenutzt: "Unbenutzte (dynamisch)", herkunft: "Integration", entitaet: "Entität", verwaist: "Verwaiste", event: "Events", langzeit: "Langzeit", attribute: "Attribute" };
 // Punkt 207: Ersparnis unter 1 GB in MB, sonst GB
 const gbmb = b => b == null ? "–" : Math.abs(b) < 1e9 ? mb(b) : gb(b);
 const optStatus = v => v.vorhanden ? `<span class="chip regel regelklick" data-regel-edit="${esc(v.vorhanden.id)}" title="Regel mit genau diesem Muster gibt es schon (${v.vorhanden.aktiv ? "aktiv" : "passiv"}) – Klick öffnet sie">${esc(v.vorhanden.id)} ${v.vorhanden.aktiv ? "" : "passiv"}</span>`
@@ -3436,8 +3492,9 @@ T.opt = new LokaleTabelle({
     { k: "titel", titel: "Vorschlag", typ: "text", fest: 1, breite: 330, wert: r => r.titel, zelle: r => `<span class="mono">${esc(r.titel)}</span>`, csv: r => r.titel },
     { k: "typ", titel: "Regeltyp", typ: "auswahl", breite: 85, wert: r => r.regel.typ, zelle: r => esc(r.regel.typ), csv: r => r.regel.typ,
       optionen: l => [...new Set(l.map(r => r.regel.typ))].map(t => [t, t]) },
-    { k: "muster", titel: "Muster", typ: "text", breite: 220, wert: r => r.regel.muster.join(" "), tip: r => r.regel.muster.join("\n"),
-      zelle: r => `<span class="mono">${esc(r.regel.muster.join(", "))}</span>`, csv: r => r.regel.muster.join(", ") },
+    { k: "muster", titel: "Muster", typ: "text", breite: 220, wert: r => r.regel.typ === "unbenutzt" && !r.regel.muster.length ? "alle unbenutzten" : r.regel.muster.join(" "), tip: r => r.regel.muster.join("\n"),
+      zelle: r => r.regel.typ === "unbenutzt" && !r.regel.muster.length ? `<span class="sub">alle unbenutzten</span>` : `<span class="mono">${esc(r.regel.muster.join(", "))}</span>`,   // Punkt 372
+      csv: r => r.regel.typ === "unbenutzt" && !r.regel.muster.length ? "alle unbenutzten" : r.regel.muster.join(", ") },
     { k: "kurzzeit", titel: WNAME.kurzzeit, typ: "auswahl", breite: 200, wert: r => wertAnzeige(r.regel.kurzzeit), zelle: r => esc(wertAnzeige(r.regel.kurzzeit)),
       csv: r => r.regel.kurzzeit, optionen: l => [...new Set(l.map(r => wertAnzeige(r.regel.kurzzeit)))].map(v => [v, v]),
       hilfe: "vorgeschlagene Kurzzeit (States, 5-Min-Statistik bzw. Events; Attribute folgen ihr höchstens); leer = die Kurzzeit bleibt unverändert" },
@@ -3458,7 +3515,7 @@ T.opt = new LokaleTabelle({
       zelle: r => esc(r.gruende.join(" · ")), csv: r => r.gruende.join(" | "), tip: r => r.gruende.join("\n") + (r.beispiele?.length ? `\n\nBeispiele: ${r.beispiele.join(", ")}` : "") },
     { k: "aktion", titel: "Aktion", typ: "keine", breite: 330, wert: () => 0,
       zelle: r => `<div class="aktion">${optStatus(r)}${r.erweitern ? `<button data-opt="erweitern" data-vid="${esc(r.id)}" title="${esc(erweiternTip(r))}">${r.erweitern.langzeit ? "⚠ " : ""}In ${esc(r.erweitern.id)} aufnehmen …</button>` : ""}<button data-opt="nehmen" data-vid="${esc(r.id)}" title="Regelmaske ausgefüllt öffnen (passiv)${r.erweitern ? " – als neue Regel statt in " + esc(r.erweitern.id) : ""}">${r.erweitern ? "Neue Regel …" : "Übernehmen …"}</button>` +
-        (r.regel.typ === "event" ? "" : `<button data-opt="ansehen" data-vid="${esc(r.id)}" title="Treffer im Tab Entitäten zeigen">Ansehen</button>`) +
+        (r.regel.typ === "event" || (r.regel.typ === "unbenutzt" && !r.regel.muster.length) ? "" : `<button data-opt="ansehen" data-vid="${esc(r.id)}" title="Treffer im Tab Entitäten zeigen">Ansehen</button>`) +
         `<button data-opt="${r.ignoriert ? "zeigen" : "ignorieren"}" data-vid="${esc(r.id)}">${r.ignoriert ? "wieder zeigen" : "ignorieren"}</button></div>` },
   ],
   zeileAttr: r => `data-vid="${esc(r.id)}"${r.ignoriert ? ' class="ignoriert"' : ""}`,
@@ -3617,7 +3674,7 @@ async function fasseZusammen(gew) {
   }
   const w = await frageWahl("Zusammenfassen", `Die ${mzahl(gew.length, "Empfehlung", "Empfehlungen")} lassen sich nicht in eine einzige Regel fassen ` +
     `(eine Regel hat genau einen Typ${jeKz ? " und eine Kurzzeit" : ""}). Vorschlag – ${mzahl(eintraege.length, "Regel", "Regeln")}:\n\n` +
-    eintraege.map(x => `• ${typName(x.regel.typ)} · ${wertAnzeige(x.regel.kurzzeit)} · ${x.regel.muster.length} Muster: ${x.titel}${x.vorhanden ? ` (gibt es schon: ${x.vorhanden.id})` : ""}`).join("\n") +
+    eintraege.map(x => `• ${typName(x.regel.typ)} · ${wertAnzeige(x.regel.kurzzeit)} · ${x.regel.muster.length || x.regel.typ !== "unbenutzt" ? `${x.regel.muster.length} Muster` : "alle unbenutzten"}: ${x.titel}${x.vorhanden ? ` (gibt es schon: ${x.vorhanden.id})` : ""}`).join("\n") +
     "\n\nPassiv anlegen oder gleich aktiv (mit Warnprüfung)?", "Passiv anlegen", "Aktiv anlegen …");
   if (w === "nein") return;
   return legeRegelnAn(eintraege, w === "extra");
@@ -3762,6 +3819,98 @@ $("#evHinweis").addEventListener("click", ev => {
   bearbeiteRegel(-1, { id, typ: "event", muster: evOhneRegel().map(e => e.event_type), name: "Events ohne eigene Regel – 14 Tage", kurzzeit: "14d",
     aktiv: false, notiz: "Empfehlung des RS DB HM: Event-Typen, die bisher nach HA-Standard bzw. global aufbewahrt wurden", typManuell: true });
 });
+// ---- Drilldown Events (Aufschlüsselung eines Typs nach Dienst/Automation …, bei call_service zusätzlich nach Parameter)
+const EV_FAKTOR_MIN = 1.5, EV_DIFF_MIN = 100;   // ab wann „gestern“ gegenüber dem Ø der 7 Tage davor auffällt
+async function evTypenLaden() {
+  if (S.evTypenGeladen) return;
+  S.evTypenGeladen = true;
+  try { S.evTypen = (await api("events/aufschluesselung")).typen || {}; T.events.zeige(); } catch { S.evTypen = {}; }
+}
+function evPfeil(typ) {
+  if (!(typ in S.evTypen)) return "";
+  const offen = !!S.evAuf[typ]?.offen;
+  return `<button class="evpfeil" data-ev-auf="${esc(typ)}" aria-expanded="${offen}" title="${offen ? "Aufschlüsselung einklappen" : "Aufschlüsselung des Event-Typs zeigen"}">${offen ? "▾" : "▸"}</button>`;
+}
+const evZahl = v => v == null ? "–" : zahl(v);
+function evAbweichung(z) {
+  if (z.davor_pro_tag == null) return "";   // keine Vergleichstage (Vorhaltezeit des Typs zu kurz)
+  const d = z.gestern - z.davor_pro_tag;
+  if (z.davor_pro_tag === 0 && z.gestern >= EV_DIFF_MIN) return `<span class="chip warn" title="gestern ${zahl(z.gestern)} Events, an den Tagen davor keine">neu</span>`;
+  if (z.davor_pro_tag > 0 && z.gestern / z.davor_pro_tag >= EV_FAKTOR_MIN && d >= EV_DIFF_MIN)
+    return `<span class="chip warn" title="gestern ${zahl(z.gestern)} gegenüber Ø ${zahl(z.davor_pro_tag)} pro Tag an den Tagen davor">× ${(z.gestern / z.davor_pro_tag).toLocaleString("de-DE", { maximumFractionDigits: 1 })}</span>`;
+  if (z.davor_pro_tag >= EV_DIFF_MIN * 5 && z.gestern / z.davor_pro_tag <= 1 / EV_FAKTOR_MIN)
+    return `<span class="chip" title="gestern ${zahl(z.gestern)} gegenüber Ø ${zahl(z.davor_pro_tag)} pro Tag an den Tagen davor">▼</span>`;
+  return "";
+}
+function evZeilen(a, stufe, typ) {
+  return a.zeilen.concat(a.weitere ? [a.weitere] : []).map(z => {
+    const weitere = a.weitere === z, name = esc(z.name);
+    const offen = stufe === 1 && !weitere && S.evAuf[typ].offenDienst.has(z.name);
+    const kopf = stufe === 1 && a.hat_stufe2 && !weitere
+      ? `<button class="evdienst mono" data-ev-typ="${esc(typ)}" data-ev-dienst="${name}" aria-expanded="${offen}" title="Parameter dieses Dienstes zeigen">${offen ? "▾" : "▸"} ${name}</button>`
+      : `<span class="mono${weitere ? " sub" : ""}">${name}</span>`;
+    let h = `<tr class="ev${stufe}"><td>${kopf}</td><td>${evZahl(z.pro_tag)}</td><td>${zahl(z.gestern)}</td><td>${evZahl(z.davor_pro_tag)}</td><td>${evAbweichung(z)}</td></tr>`;
+    if (offen) h += evDetailHtml(typ, z.name);
+    return h;
+  }).join("");
+}
+function evDetailHtml(typ, dienst) {
+  const d = S.evAuf[typ].detail[dienst];
+  if (!d || d.lade) return `<tr class="ev2"><td colspan="5" class="sub">wird berechnet …</td></tr>`;
+  if (d.fehler) return `<tr class="ev2"><td colspan="5" class="sub">${esc(d.fehler)}</td></tr>`;
+  return evZeilen(d, 2, typ);
+}
+function evUnterHtml(typ) {
+  const a = S.evAuf[typ];
+  if (!a.daten && !a.fehler) return `<span class="sub">wird berechnet …</span>`;
+  if (a.fehler) return `<span class="sub">${esc(a.fehler)}</span> <button data-ev-neu="${esc(typ)}">Neu laden</button>`;
+  const d = a.daten, g = d.gesamt, stand = new Date(d.stand * 1000).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
+  return `<table class="evunter"><thead><tr><th>${d.hat_stufe2 ? "Dienst (Klick: Parameter)" : "Untergruppe"}</th>
+      <th title="Mittel der noch vorhandenen vollen Tage, höchstens 7 (hier: ${d.tage})">Ø pro Tag (${d.tage} d)</th><th title="Gestern, voller Kalendertag">gestern</th>
+      <th title="Mittel der vollen Tage vor gestern, soweit die Vorhaltezeit des Event-Typs sie noch hält (${Math.max(0, d.tage - 1)} Tage)">Ø davor pro Tag</th><th title="gestern gegenüber den 7 Tagen davor">Auffälligkeit</th></tr></thead>
+    <tbody>${evZeilen(d, 1, typ)}
+      <tr class="summe"><td>gesamt</td><td>${evZahl(g.pro_tag)}</td><td>${zahl(g.gestern)}</td><td>${evZahl(g.davor_pro_tag)}</td><td>${evAbweichung(g)}</td></tr>
+    </tbody></table>
+    <div class="sub" style="margin-top:6px">Stand ${esc(stand)} · nur lesend aus der Recorder-DB, Fenster: ${d.tage} volle Tage bis gestern · <button data-ev-neu="${esc(typ)}">Neu laden</button></div>`;
+}
+async function evLaden(typ, neu) {
+  const a = S.evAuf[typ];
+  if (!a || (a.daten && !neu) || a.lade) return;
+  a.lade = true; a.fehler = null; T.events.zeige();
+  try {
+    a.daten = await api("events/aufschluesselung?typ=" + encodeURIComponent(typ));
+    if (neu) {
+      a.detail = {};
+      await Promise.all([...a.offenDienst].map(dn => evDetailLaden(typ, dn, true)));
+    }
+  } catch (e) { a.fehler = e.message; }
+  a.lade = false; T.events.zeige();
+}
+async function evDetailLaden(typ, dienst, still) {
+  const a = S.evAuf[typ];
+  a.detail[dienst] = { lade: true }; if (!still) T.events.zeige();
+  try { a.detail[dienst] = await api("events/aufschluesselung?typ=" + encodeURIComponent(typ) + "&schluessel=" + encodeURIComponent(dienst)); }
+  catch (e) { a.detail[dienst] = { fehler: e.message }; }
+  if (!still) T.events.zeige();
+}
+document.addEventListener("click", ev => {
+  const pf = ev.target.closest("[data-ev-auf]");
+  if (pf) {
+    const typ = pf.dataset.evAuf, a = S.evAuf[typ] ||= { offen: false, offenDienst: new Set(), detail: {} };
+    a.offen = !a.offen; T.events.zeige();
+    if (a.offen) evLaden(typ, false);
+    return;
+  }
+  const dn = ev.target.closest("[data-ev-dienst]");
+  if (dn) {
+    const typ = dn.dataset.evTyp, name = dn.dataset.evDienst, a = S.evAuf[typ];
+    if (a.offenDienst.has(name)) { a.offenDienst.delete(name); return T.events.zeige(); }
+    a.offenDienst.add(name);
+    return a.detail[name] ? T.events.zeige() : evDetailLaden(typ, name);
+  }
+  const nl = ev.target.closest("[data-ev-neu]");
+  if (nl) evLaden(nl.dataset.evNeu, true);
+});
 // ---- Events je Typ (Punkt 42/48): Vorhaltezeit je Event-Typ, gespeichert in der Regeldatei unter "events"
 T.events = new LokaleTabelle({
   id: "#tEvents", treffer: "#trefferEvents", schluessel: "dbh_breiten_events", einheit: "Event-Typen", sortStd: { k: "zeilen", desc: true },
@@ -3777,7 +3926,7 @@ T.events = new LokaleTabelle({
       fest: 1, breite: 40, mitte: 1, wert: () => 0,
       zelle: r => `<input type="checkbox" class="wahl" data-wahl-ev="${esc(r.event_type)}" ${S.auswahlEv.has(r.event_type) ? "checked" : ""} aria-label="Event-Typ ${esc(r.event_type)} auswählen">`,
       summe: () => [S.auswahlEv.size ? `${zahl(S.auswahlEv.size)} ✓` : "", "–"] },
-    { k: "event_type", titel: "Event-Typ", typ: "text", fest: 1, breite: 300, wert: r => r.event_type, zelle: r => `<span class="mono">${esc(r.event_type)}</span>`, csv: r => r.event_type,
+    { k: "event_type", titel: "Event-Typ", typ: "text", fest: 1, breite: 300, wert: r => r.event_type, zelle: r => `${evPfeil(r.event_type)}<span class="mono">${esc(r.event_type)}</span>`, csv: r => r.event_type,
       summe: (g, a) => [zahl(g.length), zahl(a.length)] },
     // Punkt 226 (0.5.5b14): wie Kurzzeit im Tab Entitäten – Wert, Regel-Chip, Chip „+N“ (Punkt 225: „hat Vorrang vor“);
     // die wirksamen Tage nur in der Zelle, wenn sie vom Wert abweichen (global bzw. länger als purge_keep_days)
@@ -3801,10 +3950,11 @@ T.events = new LokaleTabelle({
     { k: "loeschbar", titel: "Events (Zeilen)", typ: "zahl", n: 1, breite: 170, hilfe: HILFE_LOESCH, wert: r => r.loeschbar, zelle: r => zahl(r.loeschbar), csv: r => r.loeschbar, summe: anzahlSumme(r => r.loeschbar) },
   ],
   zeileAttr: r => `class="klick" data-ev="${esc(r.event_type)}"`,
+  unterZeilen: (r, n) => S.evAuf[r.event_type]?.offen ? `<tr class="unter" data-ev-unter="${esc(r.event_type)}"><td colspan="${n}">${evUnterHtml(r.event_type)}</td></tr>` : "",
   nachher: () => zeigeAuswahlEv(),
 });
 $("#tEvents").addEventListener("click", ev => {
-  if (ev.target.closest("[data-wahl-ev]") || ev.target.closest("td.mitte") || ev.target.closest("[data-regel-edit]")) return;   // Punkt 91; Punkt 144: Regel-Chip öffnet die Regel selbst
+  if (ev.target.closest("[data-wahl-ev]") || ev.target.closest("td.mitte") || ev.target.closest("[data-regel-edit]") || ev.target.closest("[data-ev-auf]")) return;   // Punkt 91; Punkt 144: Regel-Chip öffnet die Regel selbst
   const tr = ev.target.closest("tr[data-ev]"); if (!tr || T.events.z.klickIstZiehen?.(ev)) return;
   // Punkt 51: Event-Vorhaltezeiten sind Regeln vom Typ event – vorhandene öffnen, sonst eine anlegen
   const typ = tr.dataset.ev, e = (S.events || []).find(x => x.event_type === typ);
@@ -4041,6 +4191,8 @@ $("#tRegeln").addEventListener("click", async ev => {
   if (ev.target.closest("thead") || ev.target.closest("[data-wahl]")) return;
   const bf = ev.target.closest("[data-befund]");   // Punkt 232: Chip des Regelwerk-Checks statt Regelmaske
   if (bf) { ev.stopPropagation(); return zeigeBefund(bf.dataset.befund); }
+  const ub = ev.target.closest("[data-unbenutzt]");   // Punkt 372: Zu-/Abgänge und Karenz einer unbenutzt-Regel
+  if (ub) { ev.stopPropagation(); return zeigeUnbenutzt(ub.dataset.unbenutzt); }
   const sch = ev.target.closest("[data-umschalten]");
   if (sch) {
     ev.stopPropagation();
@@ -4215,10 +4367,10 @@ async function verwalteRegeln() {
   });
 }
 $("#btnVerwalten").onclick = verwalteRegeln;
-// Punkt 55: Schnellfilter „nur Event-Regeln“ (Spaltenfilter Rang, Stufe 8) und neue Event-Regel aus dem Reiter Events
+// Punkt 55: Schnellfilter „nur Event-Regeln“ (Spaltenfilter Rang, Stufe 9) und neue Event-Regel aus dem Reiter Events
 $("#nurEvent").onclick = () => {
-  const an = T.regeln.f.rang !== "8";
-  T.regeln.f.rang = an ? "8" : ""; T.regeln.baueKopf(); T.regeln.zeige();
+  const an = T.regeln.f.rang !== "9";   // Punkt 372: Event ist Stufe 9
+  T.regeln.f.rang = an ? "9" : ""; T.regeln.baueKopf(); T.regeln.zeige();
   $("#nurEvent").classList.toggle("primaer", an);
 };
 $("#evNeueRegel").onclick = () => bearbeiteRegel(-1, { id: "EV:", typ: "event", muster: [], name: "Events ", kurzzeit: "7d" });
@@ -4389,18 +4541,27 @@ function zeigeChips() {
   else if (ig && !ig.exakt) chip("integration", "Integration ohne purge_states", "warn", "Die geladene Integration ist älter als 0.4.5 – Löschen bis zur lokalen Mitternacht ist nicht möglich.");
   else if (ig?.version && versionNr(ig.version) && versionKleiner(versionNr(ig.version), [0, 5, 6, 9]))
     chip("integration", `Integration ${ig.version} zu alt`, "warn", "Das Abtrennen und Löschen der Attribute braucht die Integration ab 0.5.6b9 (nach dem Update HA neu starten).");
+  // 5b. Punkt 302: Datenbank-Aufbau (Recorder-Schema) nicht freigegeben bzw. eigene Freigabe aktiv
+  const ko = st.kompatibilitaet;
+  if (ko?.befund) chip("schema", SCHEMA_CHIP[ko.befund.fall] || "Löschen pausiert", "warn", `${ko.befund.text}\n\nEinzelheiten: ${ko.befund.details}`);
+  if (ko?.eigene_freigabe) chip("schema", "Eigene Freigabe aktiv", "warn",
+    "Die Datei /homeassistant/rs_db_hygiene_kompatibilitaet.json ersetzt die Freigaben dieser Version"
+    + (ko.app ? ` (App: Schema ${ko.app.von}–${ko.app.bis})` : "") + ". Nach dem nächsten Update wieder entfernen.");
   // 6. Sperren – nur wenn gesetzt
   if (op.loeschen_freigegeben === false) chip("sperre", "Löschen aus", "warn", "Der Hauptschalter „Löschen freigegeben“ ist aus – kein Löschlauf wird ausgeführt.");
   else if (op.automatik_freigegeben === false) chip("sperre", "Automatik aus", "warn", "„Automatik freigegeben“ ist aus – Läufe aus HA (Knopf, Dienst, Automation) werden abgelehnt.");
   zeile.innerHTML = chips.join("");
 }
-const CHIP_KLICK = { ha: "Einstellungen des HA-Standards öffnen", attr: "Attribut-Standard ändern", analyse: "Analyse starten", integration: "Erklärung zeigen", sperre: "zum Tab Löschen" };
+const CHIP_KLICK = { ha: "Einstellungen des HA-Standards öffnen", attr: "Attribut-Standard ändern", analyse: "Analyse starten", integration: "Erklärung zeigen", sperre: "zum Tab Löschen", schema: "zum Tab Löschen" };
+// Punkt 302: Kurztext je Fall (kompatibilitaet.bewerte); der volle Text steht im Tooltip und als Sperre im Tab Löschen
+const SCHEMA_CHIP = { 0: "Löschen pausiert: Freigabe prüfen", 1: "Löschen pausiert: Integration veraltet", 2: "Löschen pausiert: HA-Update noch nicht freigegeben",
+  3: "Löschen pausiert: HA zu alt", 4: "Löschen pausiert: App veraltet" };
 function chipKlick(id) {
   if (id === "attr") return attrStandardDialog();
   if (id === "ha") { const i = S.regeln.regeln.findIndex(r => r.id === HA_STD); if (i >= 0) bearbeiteRegel(i); return; }
   if (id === "analyse") return $("#btnAnalyse").click();
   if (id === "integration") return meldung("Integration RS DB Hygiene", INTEGRATION_FEHLT);
-  if (id === "sperre") document.querySelector('#tabs button[data-tab="loeschen"]').click();
+  if (id === "sperre" || id === "schema") document.querySelector('#tabs button[data-tab="loeschen"]').click();
 }
 function attrStandardDialog() {
   dialog("Attribut-Standard", `<div class="sub">Frist, nach der ein Löschlauf die Attributzeilen löscht – für alles, was keine Regel mit eigenem Attribut-Wert trifft.
@@ -4711,6 +4872,7 @@ const MUSTERHILFE = {
   glob: "Muster mit * und ?, z. B. sensor.*_airq_*",
   klasse: "eine oder mehrere Klassen (domain|device_class) aus der letzten Analyse wählen",
   herkunft: "eine oder mehrere Integrationen (platform der Registry, z. B. unifi, mobile_app) aus der letzten Analyse wählen – trifft alles dieser Integration ohne genauere Regel (ohne Zähler und verwaiste)",
+  unbenutzt: "leer lassen = alle unbenutzten Entitäten; optional Entity-Muster mit * und ?, z. B. sensor.*, als Einschränkung. Trifft aktive Entitäten, die nirgends verwendet werden (ohne Zähler, automation, script), dynamisch nach jeder Analyse, erst nach 7 Tagen Karenz; wird eine Entität wieder verwendet, verlässt sie die Regel mit der nächsten Berechnung (spätestens der nächsten Analyse). Trifft die Regel nicht, gilt die nächste passende Regel bzw. der HA-Standard.",
   vielschreiber: "erste Zeile: Schwelle in Zeilen je Tag, z. B. 1000 – optional weitere Zeilen mit Entity-Mustern wie sensor.* als Einschränkung. Trifft aktive Entitäten, die mindestens so viel schreiben (ohne Zähler), dynamisch nach jeder Analyse; wer schon dazugehört, bleibt bis unter 80 % der Schwelle.",
   verwaist: "Art: alle (alle Verwaisten), geloescht (in der Registry als gelöscht vermerkt), ohne_spur oder deaktiviert (abgeschaltet, ohne Zustand; nicht in alle enthalten) – optional zusätzlich ein Entity-Muster wie sensor.windfang_*. Wirkt nur auf verwaiste und deaktivierte Entitäten.",
   event: "Event-Typen, auch mit * und ?, z. B. call_service oder script_* – Vorhaltezeit der Events (Logbuch); wirkt nie auf Entitäten.",
@@ -4812,7 +4974,7 @@ function zeigeHaStandard(r) {
 }
 // Punkt 175 (0.5.4): Typen mit Klartext; bei neuen Regeln wird der Typ aus den Mustern abgeleitet, solange er nicht von Hand gewählt wurde
 const TYP_TEXT = { entity: "entity – einzelne Entitäten (genaue ID)", glob: "glob – Namensmuster mit * und ?", klasse: "klasse – Geräteklasse (domain|device_class)",
-  herkunft: "integration – Integration (Plattform) der Entität, z. B. unifi", vielschreiber: "vielschreiber – ab n Zeilen je Tag",
+  herkunft: "integration – Integration (Plattform) der Entität, z. B. unifi", unbenutzt: "unbenutzt – nirgends verwendete Entitäten (nach 7 Tagen)", vielschreiber: "vielschreiber – ab n Zeilen je Tag",
   verwaist: "verwaist – nur verwaiste und deaktivierte Entitäten", event: "event – Vorhaltezeit je Event-Typ", schutz: "schutz – nie kürzen" };
 // Punkte 172/173: kompakte Liste aller Entitäten (je Analyse-Stand einmal geladen)
 async function entListe() {
@@ -4834,7 +4996,7 @@ function bearbeiteRegel(i, vorlage) {
   const r = neu ? { id: vorschlagId, name: "", typ: "glob", muster: [], aktiv: true, kurzzeit: null, attribute: null, langzeit: null, notiz: "", ...(vorlage || {}) }
                 : S.regeln.regeln[i];
   // Punkt 175: Typ-Automatik nur bei neuen Regeln, deren Typ nicht vorgegeben oder von Hand gewählt ist
-  let typManuell = !neu || !!r.typManuell || ["verwaist", "event", "schutz", "herkunft", "vielschreiber"].includes(r.typ);
+  let typManuell = !neu || !!r.typManuell || ["verwaist", "event", "schutz", "herkunft", "unbenutzt", "vielschreiber"].includes(r.typ);
   dialog(neu ? "Neue Regel" : "Regel " + r.id, `<div id="rMaske" style="display:contents">
     <!-- Punkt 292: wie in der Entitäten-Karte direkt unter der Überschrift -->
     <details id="rEvZuwachs" ${r.typ === "event" ? "" : "hidden"}><summary>Zeilen pro Tag (Zuwachs)</summary>
@@ -4854,6 +5016,13 @@ function bearbeiteRegel(i, vorlage) {
     <div class="sub" id="rVerwaistHinweis" ${r.typ === "verwaist" ? "" : "hidden"}>Empfehlung: Kurzzeit mit Frist (z. B. 30 Tage) statt „keine“ – eine verwaiste Entität schreibt nichts mehr,
       nach der Frist ist alles weg, und bis dahin lässt sich eine versehentlich umbenannte Entität wiederherstellen.
       Langzeit „keine“ entfernt auch die Stundenstatistik, die HA sonst für immer behält.</div>
+    <div class="sub" id="rUnbenutztHinweis" ${r.typ === "unbenutzt" ? "" : "hidden"}><b>Diese Regel wirkt dynamisch:</b> Sie hat keine feste Liste von Entitäten. Jede Analyse bestimmt neu, welche Entitäten nirgends verwendet werden –
+      neue kommen von selbst dazu, wieder verwendete fallen heraus. Eine Entität zählt erst, wenn sie <b>7 Tage durchgehend</b> unbenutzt war (Karenz, fest) –
+      also in keinem Dashboard, keiner Automation, keinem Skript, keiner Szene, keinem Template, Helfer, Energie-Dashboard, keiner Person, keinem ESPHome-/Blueprint-YAML und keinem Python-Skript vorkommt – auch nicht indirekt über ein Gerät, einen Bereich, eine Etage oder ein Label als Ziel (dann gelten alle Entitäten davon als verwendet). Die Treffer wechseln mit jeder Analyse; sobald eine Entität wieder verwendet wird, scheidet sie mit der nächsten Berechnung (spätestens der nächsten Analyse) aus der Regel aus.
+      <b>Gelöschte Daten kommen nicht zurück.</b> Erfasst wird nur die Verwendung innerhalb von Home Assistant: Externe Auswertungen (z. B. Grafana oder Node-RED), Custom-Integrationen, per Text zusammengesetzte Entity-IDs und von einem Template berechnete Ziele erkennt die App nicht – solche Entitäten per Schutz- oder entity-Regel ausnehmen.
+      <b>Sicherungen:</b> Ist die Konfiguration nicht vollständig lesbar (Lesefehler, Registry nicht lesbar) oder fällt die Zahl der verwendeten Entitäten gegenüber der letzten akzeptierten Analyse um mehr als 30 %, trifft die Regel vorübergehend nichts und die Karenz läuft nicht weiter; im Reiter Regeln steht der Grund. Ein starker Rückgang gilt ab der nächsten Analyse, wenn er bleibt; die Sperre erkennt keinen schleichenden Rückgang und hat beim ersten Lauf keine Vergleichsbasis.
+      Solche Pausen verlängern die Karenz um ihre Dauer (begonnene Karenzen rücken nach hinten); Zeiten, in denen die App nicht lief oder nicht gerechnet hat, erkennt sie nicht.
+      Nie betroffen: Zähler, verwaiste und deaktivierte Entitäten, automation und script. Die Langzeit ist für diesen Typ gesperrt; die Stundenstatistik ließe sich nach dem Löschen nicht wiederherstellen.</div>
     <div class="sub" id="rEventHinweis" ${r.typ === "event" ? "" : "hidden"}>Event-Regeln setzen nur die <b>Vorhaltezeit der Events</b> (Feld „${EV_NAME}“). Events braucht nur das Logbuch („Aktivität“);
       Verlauf, Statistik und Energie-Dashboard sind nicht betroffen. Bei mehreren passenden Event-Regeln gilt der genaue Name vor Platzhaltern, dann die Reihenfolge.</div>
     <div class="sub" id="rSchutzHinweis" ${r.typ === "schutz" ? "" : "hidden"}>🔒 <b>Schutz:</b> Kurzzeit „global“ und Langzeit „unbegrenzt“ sind fest; die Attribute schützt die Option darunter. Höchster Rang – vor allen anderen Regeln, auch vor E:-Regeln –, gilt auch für verwaiste Entitäten und Zähler. Der Löschplan schließt diese Entitäten zusätzlich aus. „global“ heißt purge_keep_days: HA selbst löscht nach dieser Zeit.</div>
@@ -4912,6 +5081,7 @@ function bearbeiteRegel(i, vorlage) {
       muster: $("#rMuster").value.split("\n").map(s => s.trim()).filter(Boolean), aktiv: $("#rAktiv").checked, notiz: $("#rNotiz").value };
     $("#dlgInhalt").querySelectorAll(".wertwahl").forEach(el => x[el.dataset.art] = wertLesen(el));
     if (x.typ === "event") x.attribute = x.langzeit = null;   // Event-Regeln setzen nur die Vorhaltezeit
+    if (x.typ === "unbenutzt") x.langzeit = null;             // Punkt 372: das Backend lehnt eine Langzeit bei unbenutzt ab
     if (x.typ === "schutz") {   // Punkt 111; Punkt 254: Attribute mitschützen
       const mit = $("#rSchutzAttr").checked;
       Object.assign(x, { kurzzeit: "global", attribute: mit ? "wie_kurzzeit" : null, attribute_schutz: mit, langzeit: "unbegrenzt" });
@@ -4941,7 +5111,8 @@ function bearbeiteRegel(i, vorlage) {
     $("#rEvZuwachs").hidden = t !== "event";   // Punkt 292
     $("#rSchutzHinweis").hidden = t !== "schutz";   // Punkt 111: bei Schutz sind die Werte fest – Blöcke ausblenden
     $("#rSchutzAttrZeile").hidden = t !== "schutz";   // Punkt 254
-    ["attribute", "langzeit"].forEach(a => { const b = $(`#dlgInhalt .wertwahl[data-art="${a}"]`)?.closest(".wertblock"); if (b) b.hidden = t === "event" || t === "schutz"; });
+    ["attribute", "langzeit"].forEach(a => { const b = $(`#dlgInhalt .wertwahl[data-art="${a}"]`)?.closest(".wertblock"); if (b) b.hidden = t === "event" || t === "schutz" || (a === "langzeit" && t === "unbenutzt"); });   // Punkt 372: Langzeit bei unbenutzt gesperrt (Grund im Hinweis)
+    $("#rUnbenutztHinweis").hidden = t !== "unbenutzt";
     const block = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]')?.closest(".wertblock");
     if (block) block.hidden = t === "schutz";
     const kopf = block?.querySelector(".wertkopf b");
@@ -4970,6 +5141,10 @@ function bearbeiteRegel(i, vorlage) {
     if (t === "event" && neu) {   // Vorlage für neue Event-Regeln: 7 Tage
       const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
       if (kz && !wertLesen(kz)) setzeWert(kz, "7d");
+    }
+    if (t === "unbenutzt" && neu) {   // Punkt 372: Vorlage Muster leer (alle unbenutzten), Kurzzeit 14 Tage
+      const kz = $('#dlgInhalt .wertwahl[data-art="kurzzeit"]');
+      if (kz && !wertLesen(kz)) setzeWert(kz, "14d");
     }
     if (t === "vielschreiber" && neu) {   // Punkt 193: Vorlage Schwelle 1000 Zeilen/Tag, Kurzzeit 14 Tage
       const ta = $("#rMuster");
@@ -5030,7 +5205,7 @@ function bearbeiteRegel(i, vorlage) {
     vTimer = setTimeout(async () => {
       const box = $("#rVorschau"); if (!box || !$("#dlg").open) return;
       const x = lies(), nr = ++vNr;
-      if (!x.muster.length) { box.innerHTML = `<span class="sub">Vorschau: noch kein Muster eingetragen</span>`; return; }
+      if (!x.muster.length && x.typ !== "unbenutzt") { box.innerHTML = `<span class="sub">Vorschau: noch kein Muster eingetragen</span>`; return; }
       const ohneWert = x.typ !== "schutz" && !WERTE_MASKE.some(a => x[a]);   // Punkt 258: auch der Attribut-Wert ist ein Wert
       box.classList.add("laed");
       try {
@@ -5049,6 +5224,16 @@ function bearbeiteRegel(i, vorlage) {
     const box = $("#rVerdichten");
     const m = $("#rMuster").value.split("\n").map(s => s.trim()).filter(Boolean);
     if ($("#rTyp").value !== "entity" || m.length < 3 || platzhalter(m)) { box.hidden = true; return; }
+    // Punkt 372: statische Sammelregel „alle unbenutzten“ – ein Muster nach Namensschema träfe auch verwendete Entitäten;
+    // statt „Kürzer als Muster“ der Hinweis auf den dynamischen Regeltyp unbenutzt
+    if (($("#rNotiz").value || "").startsWith("Empfehlung des RS DB HM: alle unbenutzten Entitäten in einer Regel")) {
+      clearTimeout(dTimer); ++dNr;
+      box.innerHTML = `<div><b>Feste Liste:</b> Diese Regel nennt die Entitäten, die am Tag der Anlage nirgends verwendet wurden. Sie ändert sich nicht von selbst –
+        neue unbenutzte Entitäten kommen nicht dazu, wieder verwendete bleiben enthalten.
+        Der Regeltyp <b>unbenutzt</b> wirkt dynamisch: Er bestimmt seine Treffer bei jeder Analyse neu und kann diese Regel ersetzen.</div>`;
+      box.hidden = false;
+      return;
+    }
     dTimer = setTimeout(async () => {
       const nr = ++dNr;
       try {
@@ -5212,7 +5397,7 @@ function ketteTip(r) {
   const k = r.kette || {}, wn = { kurzzeit: WNAME.kurzzeit, langzeit: WNAME.langzeit, events: EV_NAME };
   const gew = { kurzzeit: r.regel_k, langzeit: r.regel_l, events: r.regel_e };
   const z = Object.keys(wn).filter(a => gew[a]).map(a => `${wn[a]}: ${rangVon(gew[a])}${(k[a] || []).length ? ` hat Vorrang vor ${k[a].map(ketteGlied).join(", ")}` : " – keine andere Regel trifft"}`);
-  return z.length ? z.join("\n") + "\n\nRang Stufe.Position: 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 vielschreiber, 7 verwaist, 8 event, 99 HA-Standard" : "";
+  return z.length ? z.join("\n") + "\n\nRang Stufe.Position: 0 Schutz, 1 E:, 2 entity, 3 glob, 4 klasse, 5 integration, 6 unbenutzt, 7 vielschreiber, 8 verwaist, 9 event, 99 HA-Standard" : "";
 }
 function planZeilen(p) {
   const zeilen = {};
@@ -6581,6 +6766,7 @@ const Zeit = (() => {
   let vz = waehle("dbh_zeit_vz", Object.keys(VZ), "alle"), mass = waehle("dbh_zeit_mass", Object.keys(MASS), "zeilen"), grp = waehle("dbh_zeit_grp", Object.keys(GRP), "kategorie");
   let ansichten = [{ aufl: null, von: null, bis: null, label: "Gesamtzeitraum" }];   // gezoomte Zeiträume; die letzte ist die aktuelle
   let plat = null, geraet = null, sel = null, D = null, nr = 0;
+  let aus = new Set();   // Punkt 374: im Diagramm ausgeblendete Serien (Schlüssel); gilt, solange dieselben Serien gezeigt werden
   let sicht = "zuwachs";   // Punkt 334: dieselbe Ansicht zeigt den Zuwachs (Summe je Zeitraum) oder den Bestand (Stand am Ende des Zeitraums)
   const bestandSicht = () => sicht === "bestand";
 
@@ -6611,6 +6797,35 @@ const Zeit = (() => {
     });
   }
   const serienFarbe = s => farben.get(s.key) || GRAU;
+  const sichtbar = () => D.serien.filter(s => !aus.has(s.key));
+  const sichtSumme = b => aus.size ? sichtbar().reduce((n, s) => n + (b.werte[s.key] || 0), 0) : b.summe;
+  // Punkt 373: Text zum Warnsymbol eines Eintrags (a = {median, faktor, wert, anzahl?, tage?} aus verlauf.py)
+  const fach = f => f.toLocaleString("de-DE", { maximumFractionDigits: 1 });
+  const auffMass = a => a.faktor != null ? `das ${fach(a.faktor)}-Fache des eigenen Tagesmedians (${fmtW(a.median)})` : "an den übrigen Tagen kein Zuwachs";
+  const auffText = a => a.tage
+    ? `▲ auffällig an ${a.anzahl === 1 ? "einem Tag" : zahl(a.anzahl) + " Tagen"}: ${a.tage.map(t => dt(t).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })).join(", ")}${a.anzahl > a.tage.length ? " …" : ""} – größter Wert ${fmtW(a.wert)}, ${auffMass(a)}`
+    : `▲ auffällig: ${a.wert != null ? fmtW(a.wert) + " an diesem Tag – " : ""}${auffMass(a)}`;
+  const schalte = key => { if (aus.has(key)) aus.delete(key); else aus.add(key); zeichne(); zeichneListe(); };
+  // Punkt 375: nur diese Serie zeigen; steht sie schon allein, wieder alle einblenden
+  const nurDiese = key => {
+    const alle = D.serien.map(s => s.key), allein = alle.every(k => (k === key) !== aus.has(k));
+    aus = new Set(allein ? [] : alle.filter(k => k !== key)); zeichne(); zeichneListe();
+  };
+  let letzterKlick = { key: null, zeit: 0 };   // Doppelklick über die Zeit erkennen: die Liste wird nach jedem Klick neu gezeichnet, ein dblclick-Ereignis käme nicht an
+  const klickSchalter = (key, ev) => {
+    const jetzt = Date.now(), doppelt = letzterKlick.key === key && jetzt - letzterKlick.zeit < 400;
+    if (doppelt) aus = letzterKlick.vorher;   // der erste Klick des Doppelklicks hat schon umgeschaltet: Stand davor wiederherstellen
+    letzterKlick = { key: doppelt ? null : key, zeit: jetzt, vorher: new Set(aus) };
+    if (doppelt || ev.ctrlKey || ev.metaKey) nurDiese(key); else schalte(key);
+  };
+  // Punkt 374: Farbkästchen als Schalter; ausgeblendet = nur Rahmen in der Serienfarbe
+  function schalter(key, farbe, tag = "span") {
+    const e = document.createElement(tag); e.className = "dd-sw dd-schalt"; e.tabIndex = 0; e.setAttribute("role", "button"); e.setAttribute("aria-pressed", String(!aus.has(key)));
+    e.title = "Klick: Serie im Diagramm aus-/einblenden\nDoppelklick oder Strg+Klick: nur diese Serie zeigen (noch einmal: wieder alle)"; e.style.cssText = aus.has(key) ? `background:transparent;box-shadow:inset 0 0 0 2px ${farbe}` : `background:${farbe}`;
+    e.onclick = ev => { ev.stopPropagation(); klickSchalter(key, ev); };
+    e.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.stopPropagation(); if (ev.ctrlKey || ev.metaKey) nurDiese(key); else schalte(key); } };
+    return e;
+  }
 
   const isoDat = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const addTage = (iso, n) => { const d = dt(iso); d.setDate(d.getDate() + n); return isoDat(d); };
@@ -6632,7 +6847,7 @@ const Zeit = (() => {
     if (!D || !D.buckets || !D.buckets.length || box.offsetParent === null) return;
     const W = Math.max(320, box.clientWidth), H = Math.max(140, box.clientHeight);
     const tage = D.aufl === "tag", L = 74, R = 8, T = 20, B = tage ? 44 : 26, n = D.buckets.length, bw = (W - L - R) / n, luecke = Math.min(4, bw * 0.2);
-    const top = nice(Math.max(...D.buckets.map(b => b.summe), 1)), ph = H - T - B;
+    const top = nice(Math.max(...D.buckets.map(sichtSumme), 1)), ph = H - T - B, zeig = sichtbar();   // Punkt 374: Skala nach den sichtbaren Serien
     const y = v => T + ph * (1 - v / top);
     const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": bestandSicht() ? "Bestand im Zeitverlauf" : "Zuwachs im Zeitverlauf" });
     for (let i = 0; i <= 4; i++) {
@@ -6645,24 +6860,26 @@ const Zeit = (() => {
       const g = el("g", { class: "dz-sp" }), x0 = L + i * bw, x = x0 + luecke / 2, w = Math.max(1, bw - luecke);
       if (D.aufl === "tag") { const wt = dt(b.von).getDay(); if (wt === 0 || wt === 6) g.append(el("rect", { class: "dz-we", x: x0, y: T, width: bw, height: ph })); }
       let unten = H - B;
-      D.serien.forEach(s => {
+      zeig.forEach(s => {
         const v = b.werte[s.key]; if (!v) return;
         const h = ph * v / top; unten -= h;
         g.append(el("rect", { class: "dz-b" + (b.voll ? "" : " dz-teil"), x, y: unten, width: w, height: h, fill: serienFarbe(s) }));
       });
       const zusatz = bestandSicht() ? (b.stand ? ` · Stand ${dt(b.stand).toLocaleDateString("de-DE")}${b.geschaetzt ? ", zurückgerechnet (geschätzt)" : ", gemessen"}` : " · keine Messung") : (b.voll ? "" : " · nicht vollständig erfasst");
       const zeilen = [`# ${zeitLabel(b, D.aufl, true)}: ${fmtW(b.summe)}${zusatz}`]
-        .concat(D.serien.filter(s => b.werte[s.key]).reverse().map(s =>   // oberstes Segment zuerst, wie der Balkenstapel von oben gelesen
- `${s.name}: ${fmtW(b.werte[s.key])} (${fmtP(100 * b.werte[s.key] / b.summe)})`));
+        .concat(zeig.filter(s => b.werte[s.key]).reverse().map(s => {   // oberstes Segment zuerst, wie der Balkenstapel von oben gelesen
+          const a = b.auff && b.auff[s.key];   // Punkt 373: ▲ vor der Serie, die an diesem Tag über ihrem eigenen Median liegt
+          return `${a ? "▲ " : ""}${s.name}: ${fmtW(b.werte[s.key])} (${fmtP(100 * b.werte[s.key] / b.summe)})${a ? (a.faktor != null ? ` · ${fach(a.faktor)}-fach` : " · sonst kein Zuwachs") : ""}`; }));
+      if (aus.size) zeilen.push(`sichtbar: ${fmtW(sichtSumme(b))} – ${aus.size === 1 ? "eine Serie" : aus.size + " Serien"} ausgeblendet`);
       if (b.auffaellig) zeilen.push(`! ▲ auffällig: mehr als das ${String(2.5).replace(".", ",")}-Fache des Tagesmedians (${fmtW(D.median)})`);
       zeilen.push(NAECHSTE[D.aufl] ? "Klick: hineinzoomen" : "Klick: Aufschlüsselung nur für diesen Tag");
       const hit = el("rect", { class: "dz-hit", x: x0, y: T, width: bw, height: H - T - B });
-      hit.dataset.tipFarben = JSON.stringify([null, ...D.serien.filter(s => b.werte[s.key]).reverse().map(serienFarbe)]);   // Farbmarke je Serienzeile (Legendenfarbe)
+      hit.dataset.tipFarben = JSON.stringify([null, ...zeig.filter(s => b.werte[s.key]).reverse().map(serienFarbe)]);   // Farbmarke je Serienzeile (Legendenfarbe)
       hit.setAttribute("title", zeilen.join("\n"));   // Punkt 308: title-Attribut statt SVG-<title> → eigene Tooltip-Anzeige (Punkt 216)
       hit.onclick = () => klick(b);
       g.append(hit);
       if (b.key === D.sel) g.append(el("rect", { class: "dz-sel", x: x0 + 0.8, y: T, width: bw - 1.6, height: ph }));
-      if (b.auffaellig) { const a = el("text", { class: "dz-auff", x: x0 + bw / 2, y: Math.max(T - 4, y(b.summe) - 3) }); a.textContent = "▲"; g.append(a); }
+      if (b.auffaellig) { const a = el("text", { class: "dz-auff", x: x0 + bw / 2, y: Math.max(T - 4, y(sichtSumme(b)) - 3) }); a.textContent = "▲"; g.append(a); }
       if (i % jedes === 0) { const t = el("text", { class: "dz-ach", x: x0 + bw / 2, y: tage ? H - 27 : H - 9 }); t.textContent = zeitLabel(b, D.aufl, false); g.append(t); }
       if (tage && i > 0 && dt(b.von).getDay() === 1) svg.append(el("line", { class: "dz-kwl", x1: x0, x2: x0, y1: T, y2: H - 20 }));   // Wochengrenze (Montag)
       svg.append(g);
@@ -6769,21 +6986,31 @@ const Zeit = (() => {
     const ebeneName = { plattform: "Integrationen", geraet: "Geräte", entitaet: "Entitäten" }[D.ebene];
     const stB = bestandSicht() && (D.buckets.find(b => b.key === sel) || [...D.buckets].reverse().find(b => b.stand));   // Bestand: Stand des gewählten bzw. letzten Zeitraums
     kopf.textContent = `${ebeneName} ${stB ? `– Stand ${dt(stB.stand).toLocaleDateString("de-DE")}${stB.geschaetzt ? " (geschätzt)" : ""}` : `in „${wo}“`}: ${fmtW(a.summe)}${a.knoten_gesamt > a.knoten.length ? ` · die größten ${a.knoten.length} von ${zahl(a.knoten_gesamt)}` : ""}${D.ebene !== "entitaet" ? " · Klick auf einen Eintrag filtert die Balken" : ""}`;
+    if (aus.size) {   // Punkte 374/375: ausgeblendete Serien mit einem Klick zurückholen
+      const alle = document.createElement("button"); alle.type = "button"; alle.className = "dd-sg"; alle.style.marginLeft = "10px";
+      alle.textContent = `alle einblenden (${aus.size} ausgeblendet)`; alle.onclick = () => { aus = new Set(); zeichne(); zeichneListe(); };
+      kopf.appendChild(alle);
+    }
     L.appendChild(kopf);
     // Bei „nach DB-Tabelle“ sind die Balken nach Tabellen gefärbt, die Liste zeigt aber Integrationen/Geräte/Entitäten: Die Farben der Tabellen stehen
     // deshalb als Legende darüber (für den gewählten Tag bzw. den ganzen Zeitraum), die Listenmarken sind neutral
     if (grp === "tabelle") {
       const b = sel && D.buckets.find(x => x.key === sel), leg = document.createElement("div"); leg.className = "dz-leg";
       const wert = s => b ? (b.werte[s.key] || 0) : s.summe, ges = D.serien.reduce((n, s) => n + wert(s), 0) || 1;
-      D.serien.forEach(s => { if (!wert(s)) return; const e = document.createElement("span");
-        e.innerHTML = `<i class="dd-sw" style="background:${serienFarbe(s)}"></i>${esc(s.name)}: ${fmtW(wert(s))} · ${fmtP(100 * wert(s) / ges)}`; leg.appendChild(e); });
+      D.serien.forEach(s => { if (!wert(s)) return; const e = document.createElement("span"), a = b && b.auff && b.auff[s.key];
+        if (aus.has(s.key)) e.className = "dd-aus";
+        e.innerHTML = `${a ? `<span class="dd-auff" title="${esc(auffText({ ...a, wert: b.werte[s.key] }))}">▲</span>` : ""}${esc(s.name)}: ${fmtW(wert(s))} · ${fmtP(100 * wert(s) / ges)}`;
+        e.prepend(schalter(s.key, serienFarbe(s), "i")); leg.appendChild(e); });
       L.appendChild(leg);
     }
     if (!a.knoten.length) { const p = document.createElement("p"); p.className = "sub"; p.textContent = bestandSicht() ? "Kein Bestand in diesem Zeitraum." : "Keine Zuwächse in diesem Zeitraum."; L.appendChild(p); return; }
     a.knoten.forEach(k => {
       const r = document.createElement("div"); r.className = "dd-row" + (k.tiefer ? " dd-zoom" : "");
-      const sw = grp === "tabelle" ? `<span class="dd-sw neutral"></span>` : `<span class="dd-sw" style="background:${farben.get(k.key) || GRAU}"></span>`;
-      r.innerHTML = `${sw}<span class="dd-n" title="${esc(k.name)}">${esc(k.name)}</span><span class="dd-v">${fmtW(k.wert)} · ${fmtP(k.anteil)}</span>`;
+      const schaltbar = grp !== "tabelle" && farben.has(k.key);   // Punkt 374: nur Einträge mit eigener Serie im Diagramm
+      const sw = grp === "tabelle" ? `<span class="dd-sw neutral"></span>` : schaltbar ? "" : `<span class="dd-sw" style="background:${GRAU}" title="keine eigene Serie im Diagramm (steckt in „übrige“)"></span>`;
+      const warn = k.auff ? `<span class="dd-auff" title="${esc(auffText(k.auff))}">▲</span>` : "";   // Punkt 373
+      r.innerHTML = `${sw}${warn}<span class="dd-n" title="${esc(k.name)}">${esc(k.name)}</span><span class="dd-v">${fmtW(k.wert)} · ${fmtP(k.anteil)}</span>`;
+      if (schaltbar) { r.prepend(schalter(k.key, farben.get(k.key))); if (aus.has(k.key)) r.classList.add("dd-aus"); }
       if (k.tiefer) {
         r.tabIndex = 0; r.setAttribute("role", "button");
         const los = () => { if (D.ebene === "plattform") plat = k.key; else geraet = k.key; laden(); };
@@ -6791,6 +7018,14 @@ const Zeit = (() => {
       }
       L.appendChild(r);
     });
+    // Punkt 374: die zusammengefassten kleinen Serien („übrige“) haben keinen Listeneintrag – eigener Schalter am Ende
+    const rest = grp !== "tabelle" && D.serien.find(s => s.key === "~rest");
+    if (rest) {
+      const b = sel && D.buckets.find(x => x.key === sel), w = b ? (b.werte[rest.key] || 0) : rest.summe;
+      const r = document.createElement("div"); r.className = "dd-row" + (aus.has(rest.key) ? " dd-aus" : "");
+      r.innerHTML = `<span class="dd-n" title="alle Einträge ohne eigene Serie im Diagramm">${esc(rest.name)}</span><span class="dd-v">${fmtW(w)}</span>`;
+      r.prepend(schalter(rest.key, serienFarbe(rest))); L.appendChild(r);
+    }
   }
 
   // ---- Laden ----
@@ -6821,6 +7056,7 @@ const Zeit = (() => {
     if (!ansichten[0].aufl) ansichten[0].aufl = D.aufl;
     if (sel && D.sel !== sel) sel = null;
     const g1 = $("#dzGrp button"); if (g1) g1.textContent = { plattform: "nach Integration", geraet: "nach Gerät", entitaet: "nach Entität" }[D.ebene];   // folgt der Auswahl
+    aus = new Set([...aus].filter(k => D.serien.some(s => s.key === k)));   // Punkt 374
     baueFarben(); zeichnePfade(); zeichne(); zeichneListe();
     const attr = D.abdeckung.attr, tag = iso => dt(iso).toLocaleDateString("de-DE");
     const deckung = [];

@@ -1,0 +1,274 @@
+# Beispiel-Automation „RS DB Hygiene – Nachtlauf, Statusbericht und Alarm“ (Punkt 376) – zum Einfügen unter
+# Einstellungen → Automationen (YAML-Modus) oder in automations.yaml. Eine Automation für das Gerät „RS DB Hygiene“ mit drei Zweigen
+# (Auswahl über trigger_id):
+#   nachtlauf  03:00           Löschlauf, Purge, Repack, Analyse (bisherige Nachtlauf-Automation, vollständig enthalten)
+#   bericht    montags 07:00   Statusbericht zum Regelwerk (Aktion rs_db_hygiene.bericht_erstellen) und Versand per Mail
+#   alarm      tote Regelmuster > 0 seit 24 h oder Ampel „rot“ seit 1 h → kurze Benachrichtigung
+#
+# Voraussetzungen
+#   - App und Integration RS DB Hygiene ≥ 0.6.2 (Integration nach dem Update: Home Assistant neu starten).
+#   - Für den Nachtlauf-Zweig: App-Optionen „Löschen freigegeben“ und „Automatik freigegeben“.
+#   - Mailversand: SMTP-Integration in HA einrichten (Einstellungen → Geräte & Dienste → Integration hinzufügen → SMTP). Je Empfänger
+#     entsteht eine notify-Entität; ihren Namen unten bei `notify.empfaenger` einsetzen (Platzhalter!).
+#     Quelle: https://www.home-assistant.io/integrations/smtp/
+#   - Aktion smtp.send_message (Felder title, message, html, attachments, priority; seit HA 2026.8):
+#     https://www.home-assistant.io/actions/smtp.send_message/
+#
+# Datenschutz: Die App selbst sendet nichts ins Netz; sie liefert den Bericht nur an die Integration (lokal). Die Mail verschickt HA über
+# Ihren SMTP-Server. Der Inhalt der Mail erreicht damit Ihren Mail-Anbieter. Deshalb steht `details: zahlen` (keine Entity-IDs, keine
+# Regelmuster, nur Zahlen und Regelnamen). Mit `details: ids` enthält die Antwort Entity-IDs und Muster – nur wählen, wenn Sie dem
+# Mail-Anbieter vertrauen.
+#
+# Antwort der Aktion: `response_variable: b` (https://www.home-assistant.io/docs/automation/action/). Die Aktion hat kein Entitätsziel,
+# daher liegt die Antwort direkt in `b` (b.ampel, b.abdeckung …) und nicht nach entity_id verschachtelt [nicht geprüft].
+# Felder ohne Wert sind null (z. B. kein Probelauf, Datenquelle nicht lesbar); der Jinja-Filter `default` greift bei None nicht, deshalb
+# die Hilfsfunktion `z()` unten. `stichtag_setzen: true` merkt sich den Zeitpunkt; „neu seit dem letzten Bericht“ zählt ab diesem Stichtag.
+#
+# Der Nachtlauf kann bis zu gut 3 Stunden dauern; `mode: queued` verhindert, dass Bericht oder Alarm in dieser Zeit verworfen werden.
+alias: RS DB Hygiene – Nachtlauf, Statusbericht und Alarm
+description: Nachtlauf (täglich 03:00), Statusmail zum Regelwerk (montags 07:00) und Alarm bei toten Regelmustern oder roter Ampel
+mode: queued
+max: 5
+triggers:
+  - trigger: time
+    at: "03:00:00"
+    id: nachtlauf
+  - trigger: time
+    at: "07:00:00"
+    id: bericht
+  - trigger: numeric_state
+    entity_id: sensor.rs_db_hygiene_tote_muster
+    above: 0
+    for: "24:00:00"
+    id: alarm
+  - trigger: state
+    entity_id: sensor.rs_db_hygiene_ampel
+    to: "rot"
+    for: "01:00:00"
+    id: alarm
+conditions: []
+actions:
+  - choose:
+      # ------------------------------------------------------------------ Zweig 1: Nachtlauf
+      - conditions:
+          - condition: trigger
+            id: nachtlauf
+        sequence:
+          # Ablauf: Analyse der App zur eingestellten Uhrzeit (Option analyse_uhrzeit, Vorgabe 00:05) → 03:00 Löschlauf → warten bis fertig → 10 min Pause →
+          #         recorder.purge (ersetzt auto_purge) → sonntags zusätzlich Repack (ersetzt auto_repack) → Analyse und Attribut-Analyse.
+          # Erst wenn dieser Zweig zuverlässig läuft: in configuration.yaml unter recorder: auto_purge: false und auto_repack: false
+          # setzen (mit Backup und ha core check), danach HA neu starten.
+          - if:
+              - condition: state
+                entity_id: sensor.rs_db_hygiene_status
+                state: bereit
+              - condition: numeric_state
+                entity_id: sensor.rs_db_hygiene_geplante_zeilen
+                above: 0
+            then:
+              - action: rs_db_hygiene.loeschlauf_starten
+              - wait_for_trigger:
+                  - trigger: event
+                    event_type: rs_db_hygiene_lauf_beendet
+                timeout: "03:00:00"
+                continue_on_timeout: true
+              - action: persistent_notification.create
+                data:
+                  title: RS DB Hygiene – Nachtlauf
+                  message: >-
+                    {% if wait.trigger %}Löschlauf {{ wait.trigger.event.data.status }}:
+                    {{ wait.trigger.event.data.geloescht }} Zeilen, {{ wait.trigger.event.data.attributzeilen or 0 }} Attributzeilen,
+                    {{ wait.trigger.event.data.dauer_s }} s.{% else %}Löschlauf nach 3 h nicht beendet.{% endif %}
+            else:
+              - action: persistent_notification.create
+                data:
+                  title: RS DB Hygiene – Nachtlauf
+                  message: >-
+                    Kein Löschlauf: Status {{ states('sensor.rs_db_hygiene_status') }}
+                    {{ state_attr('sensor.rs_db_hygiene_status', 'sperren') | join(' ') if state_attr('sensor.rs_db_hygiene_status', 'sperren') }}
+          - delay: "00:10:00"
+          # ersetzt auto_purge: alles älter als purge_keep_days (7300 = 20 Jahre; muss dem Wert in der configuration.yaml entsprechen)
+          - action: recorder.purge
+            data:
+              keep_days: 7300
+              repack: false
+          # ersetzt auto_repack: einmal pro Woche verdichten (VACUUM sperrt den Recorder einige Minuten)
+          - if:
+              - condition: time
+                weekday: sun
+            then:
+              - delay: "00:15:00"
+              - action: recorder.purge
+                data:
+                  keep_days: 7300
+                  repack: true
+          # Dateigröße, Bestand und Prognose der App nach Purge/Repack neu erfassen
+          - wait_template: "{{ is_state('sensor.rs_db_hygiene_status', 'bereit') }}"
+            timeout: "00:05:00"
+            continue_on_timeout: true
+          - action: rs_db_hygiene.analyse_starten
+          - delay: "00:01:00"      # Status muss auf „analyse“ gesprungen sein, bevor auf „bereit“ gewartet wird
+          - wait_template: "{{ is_state('sensor.rs_db_hygiene_status', 'bereit') }}"
+            timeout: "00:05:00"
+            continue_on_timeout: true
+          - action: rs_db_hygiene.attribut_analyse_starten
+
+      # ------------------------------------------------------------------ Zweig 2: wöchentlicher Statusbericht (montags 07:00)
+      - conditions:
+          - condition: trigger
+            id: bericht
+          - condition: time
+            weekday:
+              - mon
+        sequence:
+          # Nach dem Nachtlauf rechnet die App den Bericht im Hintergrund vor; die Aktion wartet höchstens 120 s. Deshalb erst warten,
+          # bis die App wieder bereit ist (Analysen fertig), und bei einem Fehler trotzdem weitermachen (Hinweis statt Bericht).
+          - wait_template: "{{ states('sensor.rs_db_hygiene_status') in ['bereit', 'nichts_zu_tun', 'gesperrt', 'fehler'] }}"
+            timeout: "01:00:00"
+            continue_on_timeout: true
+          - action: rs_db_hygiene.bericht_erstellen
+            continue_on_error: true
+            data:
+              zeitraum_tage: 7
+              top_n: 5
+              details: zahlen
+              stichtag_setzen: true
+            response_variable: b
+          # Aktion fehlgeschlagen (App nicht erreichbar, Zeitüberschreitung): kurzer Hinweis statt Bericht, dann Ende dieses Laufs
+          - if:
+              - condition: template
+                value_template: "{{ b is not defined or b is none }}"
+            then:
+              - action: notify.send_message
+                target:
+                  entity_id: notify.empfaenger
+                data:
+                  title: "RS DB Hygiene – Statusbericht nicht erstellt"
+                  message: "Der Statusbericht konnte nicht erstellt werden. Bitte das Log der App und der Integration prüfen."
+              - stop: "Kein Statusbericht"
+          - variables:
+              # z(x): Wert oder „–“ bei null (0 bleibt 0; der Filter `default` ersetzt None nicht)
+              ampel_text: >-
+                {{ {'gruen': 'grün', 'gelb': 'gelb', 'rot': 'rot'}.get(b.ampel, '–') }}
+              ampel_farbe: >-
+                {{ {'gruen': '#2e7d32', 'gelb': '#f9a825', 'rot': '#c62828'}.get(b.ampel, '#757575') }}
+          - action: smtp.send_message
+            target:
+              entity_id: notify.empfaenger        # Platzhalter: notify-Entität der SMTP-Integration
+            data:
+              title: >-
+                RS DB Hygiene – Statusbericht {{ now().strftime('%d.%m.%Y') }}: Ampel {{ ampel_text }}
+              message: |-
+                {%- macro z(x) %}{{ x if x is not none else '–' }}{% endmacro -%}
+                {%- macro dz(t) %}{% if t %}{% set j = (t / 365) | round(1) %}{{ t }} Tage (≈ {{ '%g' % j }} {{ 'Jahr' if j == 1 else 'Jahre' }}){% else %}–{% endif %}{% endmacro -%}
+                {%- macro pz(t) %}{% if t %}{% set j = (t / 365) | round(1) %}nach {{ t }} Tagen (≈ {{ '%g' % j }} {{ 'Jahr' if j == 1 else 'Jahren' }}){% else %}im Prognosezeitraum{% endif %}{% endmacro -%}
+                Statusbericht zum Regelwerk, Zeitraum {{ z(b.stand.zeitraum_tage) }} Tage
+                (Analyse: {{ (b.stand.analyse_zeit | timestamp_custom('%d.%m.%Y %H:%M')) if b.stand.analyse_zeit is not none else '–' }})
+                Ampel: {{ ampel_text }}
+                {% for g in (b.ampel_gruende or []) %}- {{ g }}
+                {% endfor %}
+                Abdeckung
+                - Aktive Entitäten: {{ z(b.abdeckung.entitaeten) }}
+                - Mit eigener Regel: {{ z(b.abdeckung.eigene_regel) }} ({{ z(b.abdeckung.eigene_regel_pct) }} %)
+                - Nur Standard: {{ z(b.abdeckung.nur_standard) }}
+                - Neu seit dem letzten Bericht: {{ z(b.abdeckung.neu_seit_stichtag) }}, davon ohne Regel: {{ z(b.abdeckung.neu_ohne_regel) }}
+                Drift
+                - Tote Regelmuster: {{ z(b.drift.tote_muster) }}
+                - Regeln ohne Treffer: {{ z(b.drift.regeln_ohne_treffer) }}
+                - Verdacht auf Umbenennung: {{ z(b.drift.umbenennung_verdacht_anzahl) }}
+                - Verwaiste Entitäten: {{ z(b.drift.verwaist) }}
+                - Langzeitstatistik ohne Entität: {{ z(b.drift.lts_ohne_entitaet) }}
+                - Schreibratensprünge: {{ z(b.drift.schreibrate_sprung_anzahl) }}
+                Wirkung
+                - Datenbank heute: {{ z(b.wirkung.db_gb) }} GB
+                - Prognose: Datenbank {{ pz(b.wirkung.prognose_tage) }}: {{ z(b.wirkung.prognose_gb) }} GB
+                  (Die Prognose hängt stark vom Zeitraum ab: Sie zeigt, wie groß die Datenbank wird, wenn die aktiven Regeln so lange wirken.
+                  Jede Entität zählt mit ihrer Vorhaltezeit, höchstens mit diesem Zeitraum; Daten mit langer oder unbegrenzter Vorhaltezeit wachsen über den ganzen Zeitraum.
+                  Dieser Bericht und der Sensor „Prognose“ der Integration rechnen mit der App-Option „Prognosezeitraum für Sensor und
+                  Statusbericht“ = {{ dz(b.wirkung.prognose_tage) }}. Die Kacheln der App rechnen mit dem Feld „Prognosezeitraum“ oben in der App
+                  (Standard 1 Jahr, im Browser gemerkt) und zeigen bei anderem Zeitraum einen anderen Wert. Zum Vergleich: purge_keep_days in HA
+                  = {{ dz(b.wirkung.purge_keep_days) }}.)
+                - Zuwachs je Woche: gemessen {{ z(b.wirkung.zuwachs_mb_woche) }} MB, erwartet {{ z(b.wirkung.zuwachs_prognose_mb_woche) }} MB
+                  (gemessen = neue Zeilen laut Zuwachs-Statistik; erwartet = aus der Schreibrate der aktiven Entitäten geschätzt, meist etwas höher)
+                - Gelöschte Zeilen: {{ z(b.wirkung.geloescht_zeilen) }}
+                Läufe
+                - Gesamt {{ z(b.laeufe.gesamt) }}, ok {{ z(b.laeufe.ok) }}, Fehler {{ z(b.laeufe.fehler) }},
+                  abgebrochen {{ z(b.laeufe.abgebrochen) }}, Nächte ohne Lauf {{ z(b.laeufe.naechte_ohne_lauf) }}
+                Regelcheck
+                (offene Hinweise des Regelwerk-Checks, siehe Reiter „Regeln“)
+                - rot {{ z(b.regelcheck.rot) }}: Fehler oder Konflikt, eine Regel wirkt ganz oder teilweise nicht, weil andere Regeln Vorrang haben
+                - gelb {{ z(b.regelcheck.gelb) }}: Verdichtung möglich, z. B. doppelte Muster, zusammenlegbare Regeln, lange Listen statt Platzhalter
+                - grau {{ z(b.regelcheck.grau) }}: Hinweis, eine Regel ist überflüssig oder wird meist von anderen Regeln überstimmt
+                - tot {{ z(b.regelcheck.tot) }}: Regeln mit Mustern, zu denen es keine Entität mehr gibt (gelöscht oder umbenannt)
+                Empfehlungen
+                (aktuell offene Regel-Empfehlungen der App, siehe Reiter „Empfehlungen“)
+                {% for e in (b.empfehlungen or []) %}- {{ e.text }}: {{ z(e.entitaeten) }} {{ 'Entität' if e.entitaeten == 1 else 'Entitäten' }}, Ersparnis ca. {{ z(e.ersparnis_mb) }} MB
+                {% else %}- keine
+                {% endfor %}
+              html: |-
+                {%- macro z(x) %}{{ x if x is not none else '–' }}{% endmacro -%}
+                {%- macro dz(t) %}{% if t %}{% set j = (t / 365) | round(1) %}{{ t }} Tage (≈ {{ '%g' % j }} {{ 'Jahr' if j == 1 else 'Jahre' }}){% else %}–{% endif %}{% endmacro -%}
+                {%- macro pz(t) %}{% if t %}{% set j = (t / 365) | round(1) %}nach {{ t }} Tagen (≈ {{ '%g' % j }} {{ 'Jahr' if j == 1 else 'Jahren' }}){% else %}im Prognosezeitraum{% endif %}{% endmacro -%}
+                <div style="font-family:sans-serif;max-width:640px">
+                <h2 style="margin:0 0 8px">RS DB Hygiene – Statusbericht</h2>
+                <p style="margin:0 0 12px;color:#555">Zeitraum {{ z(b.stand.zeitraum_tage) }} Tage · Analyse {{ (b.stand.analyse_zeit | timestamp_custom('%d.%m.%Y %H:%M')) if b.stand.analyse_zeit is not none else '–' }}</p>
+                <p style="margin:0 0 4px"><span style="display:inline-block;padding:4px 12px;border-radius:12px;color:#fff;background:{{ ampel_farbe }}">Ampel: {{ ampel_text }}</span></p>
+                <ul>{% for g in (b.ampel_gruende or []) %}<li>{{ g | e }}</li>{% endfor %}</ul>
+                <h3>Abdeckung</h3>
+                <table cellpadding="4" style="border-collapse:collapse">
+                <tr><td>Aktive Entitäten</td><td align="right">{{ z(b.abdeckung.entitaeten) }}</td></tr>
+                <tr><td>Mit eigener Regel</td><td align="right">{{ z(b.abdeckung.eigene_regel) }} ({{ z(b.abdeckung.eigene_regel_pct) }} %)</td></tr>
+                <tr><td>Nur Standard</td><td align="right">{{ z(b.abdeckung.nur_standard) }}</td></tr>
+                <tr><td>Neu seit dem letzten Bericht</td><td align="right">{{ z(b.abdeckung.neu_seit_stichtag) }}</td></tr>
+                <tr><td>davon ohne Regel</td><td align="right">{{ z(b.abdeckung.neu_ohne_regel) }}</td></tr>
+                </table>
+                <h3>Drift</h3>
+                <table cellpadding="4" style="border-collapse:collapse">
+                <tr><td>Tote Regelmuster</td><td align="right">{{ z(b.drift.tote_muster) }}</td></tr>
+                <tr><td>Regeln ohne Treffer</td><td align="right">{{ z(b.drift.regeln_ohne_treffer) }}</td></tr>
+                <tr><td>Verdacht auf Umbenennung</td><td align="right">{{ z(b.drift.umbenennung_verdacht_anzahl) }}</td></tr>
+                <tr><td>Verwaiste Entitäten</td><td align="right">{{ z(b.drift.verwaist) }}</td></tr>
+                <tr><td>Langzeitstatistik ohne Entität</td><td align="right">{{ z(b.drift.lts_ohne_entitaet) }}</td></tr>
+                <tr><td>Schreibratensprünge</td><td align="right">{{ z(b.drift.schreibrate_sprung_anzahl) }}</td></tr>
+                </table>
+                <h3>Wirkung</h3>
+                <table cellpadding="4" style="border-collapse:collapse">
+                <tr><td>Datenbank heute</td><td align="right">{{ z(b.wirkung.db_gb) }} GB</td></tr>
+                <tr><td>Prognose: Datenbank {{ pz(b.wirkung.prognose_tage) }}</td><td align="right">{{ z(b.wirkung.prognose_gb) }} GB</td></tr>
+                <tr><td>Zuwachs je Woche gemessen</td><td align="right">{{ z(b.wirkung.zuwachs_mb_woche) }} MB</td></tr>
+                <tr><td>Zuwachs je Woche erwartet</td><td align="right">{{ z(b.wirkung.zuwachs_prognose_mb_woche) }} MB</td></tr>
+                <tr><td>Gelöschte Zeilen</td><td align="right">{{ z(b.wirkung.geloescht_zeilen) }}</td></tr>
+                </table>
+                <p style="margin:4px 0 0;color:#555;font-size:13px">Die Prognose hängt stark vom Zeitraum ab: Sie zeigt, wie groß die Datenbank wird, wenn die aktiven Regeln so lange wirken. Jede Entität zählt mit ihrer Vorhaltezeit, höchstens mit diesem Zeitraum; Daten mit langer oder unbegrenzter Vorhaltezeit wachsen über den ganzen Zeitraum.<br>
+                Dieser Bericht und der Sensor „Prognose“ der Integration rechnen mit der App-Option „Prognosezeitraum für Sensor und Statusbericht“ = <b>{{ dz(b.wirkung.prognose_tage) }}</b>. Die Kacheln der App rechnen mit dem Feld „Prognosezeitraum“ oben in der App (Standard 1 Jahr, im Browser gemerkt) und zeigen bei anderem Zeitraum einen anderen Wert. Zum Vergleich: purge_keep_days in HA = <b>{{ dz(b.wirkung.purge_keep_days) }}</b>.<br>
+                Zuwachs gemessen: neue Zeilen laut Zuwachs-Statistik. Erwartet: aus der Schreibrate der aktiven Entitäten geschätzt, liegt meist etwas höher.</p>
+                <h3>Läufe</h3>
+                <p>Gesamt {{ z(b.laeufe.gesamt) }}, ok {{ z(b.laeufe.ok) }}, Fehler {{ z(b.laeufe.fehler) }}, abgebrochen {{ z(b.laeufe.abgebrochen) }}, Nächte ohne Lauf {{ z(b.laeufe.naechte_ohne_lauf) }}</p>
+                <h3>Regelcheck</h3>
+                <p style="margin:4px 0 0;color:#555;font-size:13px">Offene Hinweise des Regelwerk-Checks, siehe Reiter „Regeln“.</p>
+                <table cellpadding="4" style="border-collapse:collapse">
+                <tr><td><b style="color:#c62828">rot</b></td><td align="right">{{ z(b.regelcheck.rot) }}</td><td>Fehler oder Konflikt: Eine Regel wirkt ganz oder teilweise nicht, weil andere Regeln Vorrang haben.</td></tr>
+                <tr><td><b style="color:#f9a825">gelb</b></td><td align="right">{{ z(b.regelcheck.gelb) }}</td><td>Verdichtung möglich: doppelte Muster, zusammenlegbare Regeln, lange Listen statt Platzhalter.</td></tr>
+                <tr><td><b style="color:#757575">grau</b></td><td align="right">{{ z(b.regelcheck.grau) }}</td><td>Hinweis: Eine Regel ist überflüssig oder wird meist von anderen Regeln überstimmt.</td></tr>
+                <tr><td><b style="color:#ad1457">tot</b></td><td align="right">{{ z(b.regelcheck.tot) }}</td><td>Regeln mit Mustern, zu denen es keine Entität mehr gibt (gelöscht oder umbenannt).</td></tr>
+                </table>
+                <h3>Empfehlungen</h3>
+                <p style="margin:4px 0 0;color:#555;font-size:13px">Aktuell offene Regel-Empfehlungen der App, siehe Reiter „Empfehlungen“.</p>
+                <ul>{% for e in (b.empfehlungen or []) %}<li>{{ e.text | e }}: {{ z(e.entitaeten) }} {{ 'Entität' if e.entitaeten == 1 else 'Entitäten' }}, Ersparnis ca. {{ z(e.ersparnis_mb) }} MB</li>{% else %}<li>keine</li>{% endfor %}</ul>
+                </div>
+
+      # ------------------------------------------------------------------ Zweig 3: Alarm (tote Regelmuster oder rote Ampel)
+      - conditions:
+          - condition: trigger
+            id: alarm
+        sequence:
+          - action: notify.send_message
+            target:
+              entity_id: notify.empfaenger        # Platzhalter: notify-Entität, z. B. der Companion-App oder der SMTP-Integration
+            data:
+              title: RS DB Hygiene – Alarm
+              message: >-
+                Tote Regelmuster: {{ states('sensor.rs_db_hygiene_tote_muster') }},
+                Regelcheck rot: {{ states('sensor.rs_db_hygiene_regelcheck_rot') }},
+                Ampel: {{ states('sensor.rs_db_hygiene_ampel') }}.
+                Details im Reiter Regeln der App.

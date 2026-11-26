@@ -156,6 +156,15 @@ actions:
 - A repack locks the recorder for a few minutes, with large databases also longer. The recorder buffers new values during this time and writes them afterwards.
 - It temporarily needs free space the size of the database. Do not run it at the same time as a backup.
 
+## Status report (weekly mail)
+
+From version 0.6.2 the app can summarise how well your rules still work while entities change: a traffic light (green/yellow/red) with reasons, coverage (entities with their own rule, new entities without one), drift (dead rule patterns, suspected renames, write-rate jumps), effect (database size, growth versus forecast, deleted rows), runs and recommendations. The app computes it after every analysis and never sends anything to the network. Home Assistant sends the mail itself through the [SMTP integration](https://www.home-assistant.io/integrations/smtp/) (action `smtp.send_message`).
+
+- Integration action `rs_db_hygiene.bericht_erstellen` returns the report as response data (`zeitraum_tage`, `top_n`, `details`, `stichtag_setzen`).
+- Sensors for alarms: `sensor.rs_db_hygiene_tote_muster`, `sensor.rs_db_hygiene_regelcheck_rot`, `sensor.rs_db_hygiene_neu_ohne_regel`, `sensor.rs_db_hygiene_ampel`.
+- A complete example (nightly run, Monday mail, alarm in one automation) is in [`docs/automation_statusmail.yaml`](docs/automation_statusmail.yaml). Thresholds are optional app options `bericht_*`.
+- Privacy: the content of the mail reaches your mail provider. The default `details: zahlen` contains numbers and rule names only, no entity IDs or rule patterns.
+
 ## Updates
 
 - **App:** appears as an update in the App Store or under Settings → Updates.

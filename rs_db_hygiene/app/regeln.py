@@ -17,11 +17,11 @@ Werte:  "<n>d" Tage, "<n>w" Wochen (7 d), "<n>m" Monate (30 d), "<n>j" Jahre (36
         "keine" (attribute, langzeit) bzw. null = Regel setzt diesen Wert nicht.
 
 Auflösung je Wert getrennt: Es gilt die höchstrangige aktive Regel, die den Wert setzt.
-Rang: entity > glob > klasse > herkunft > vielschreiber, innerhalb eines Typs die Reihenfolge in der Datei.
+Rang: entity > glob > klasse > herkunft > unbenutzt > vielschreiber, innerhalb eines Typs die Reihenfolge in der Datei.
 Zähler-Schutz: glob/klasse greifen nie bei state_class total/total_increasing.
 
 Rang ab 0.1.7: E:-Regeln (eigene Vorhaltezeiten aus dem Entitäts-Dialog) stehen immer ganz vorn, unabhängig
-von ihrer Position in der Datei; danach entity > glob > klasse > herkunft > vielschreiber > verwaist.
+von ihrer Position in der Datei; danach entity > glob > klasse > herkunft > unbenutzt > vielschreiber > verwaist.
 Je Wert wird neben dem Gewinner auch die Liste der überstimmten Regeln geliefert (Nachvollziehbarkeit).
 
 Typ „verwaist“ (ab 0.1.6) wirkt ausschließlich auf verwaiste Entitäten. Ab 0.1.7 gelten für Verwaiste zusätzlich
@@ -59,10 +59,29 @@ Typ „vielschreiber“ (ab 0.5.5b9, Punkt 193): genau ein Muster ist eine Zahl 
   fällt nach der nächsten Analyse darunter, wer weniger schreibt, wieder heraus. Ab 0.5.5b12 (Punkt 201) mit Hysterese:
   Wer bei der vorigen Analyse dazugehörte, bleibt, bis sein Zuwachs unter 80 % der Schwelle fällt – sonst pendeln
   Entitäten nahe der Schwelle zwischen kurzer und langer Kurzzeit. Den Stand hält halte_vielschreiber() je Analyse fest.
+
+Typ „unbenutzt“ (ab 0.6.1b2, Punkt 372): nennt nur das Kriterium, welche Entitäten er trifft, bestimmt jede Analyse neu –
+  nicht verwaiste Entitäten, die laut optimierung.verwendung_sicher() nirgends verwendet werden (Dashboards, Automationen, Skripte,
+  Szenen, Templates, Helfer, Energie, ESPHome-/Blueprint-YAML, Python-Skripte, Personen, Freigaben für Sprachassistenten) und das seit
+  mindestens KARENZ_TAGE (7) vollen Tagen (7 * 86400 s) durchgehend, gemessen vom Zeitpunkt der Feststellung bis zum Analyse-Stand.
+  Muster: leer (alle) oder optionale Entity-Muster (glob) als Einschränkung. Gesetzt werden nur Kurzzeit und Attribute; eine
+  Langzeit ist gesperrt (die Stundenstatistik lässt sich nicht wiederherstellen). Nie bei Zählern (total*), Deaktivierten,
+  Verwaisten und der Domain automation/script. Rang nach herkunft, vor vielschreiber.
+  Austritt: Wird eine Entität wieder verwendet, entfällt ihr „seit“ mit der nächsten Berechnung, die Karenz beginnt danach neu.
+  Sicher bei Fehlern: Ist die Verwendung unbekannt (verwendet is None: Lesefehler, keine Referenzdatei, Registry nicht lesbar),
+  trifft die Regel nichts. Dasselbe gilt bei einem Einbruch der Zahl verwendeter Entitäten um mehr als EINBRUCH_ANTEIL gegenüber
+  dem zuletzt akzeptierten Wert (Plausibilitätssperre, siehe halte_unbenutzt). In solchen blinden Phasen läuft die Karenz nicht weiter:
+  die Zustandsdatei vermerkt den Beginn (blind_ab), und bei der nächsten gültigen Auswertung rücken alle „seit“ um die Dauer nach hinten.
+  Zeiten, in denen die App nicht lief oder nicht gerechnet hat, erkennt das nicht. Das Kriterium ist unabhängig von einzelnen Regeln;
+  halte_unbenutzt() führt den Stand deshalb immer, sobald die Verwendung bekannt ist – auch ohne unbenutzt-Regel –, damit eine neue
+  Regel nicht erst 7 Tage warten muss.
+  Zustandsdatei: {stand, seit: {entity_id: Zeitstempel}, ids (Treffer dieses Stands), vorher (Treffer des vorigen Stands), zaehlweise,
+  pruef_stand, basis, vorgemerkt, basis_alt, vorgemerkt_alt (Plausibilitätssperre), blind_ab (nur während einer blinden Phase)}.
 """
 import fnmatch
 import json
 import logging
+import math
 import os
 import re
 import shutil
@@ -75,10 +94,21 @@ EINHEIT_NAME = {"d": "Tage", "w": "Wochen", "m": "Monate", "j": "Jahre"}
 SONDERWERTE = {"kurzzeit": {"global", "keine"}, "attribute": {"wie_kurzzeit", "keine"}, "langzeit": {"unbegrenzt", "keine"}}
 ATTR_STANDARD = "wie_kurzzeit"      # Punkt 254: Voreinstellung des Attribut-Standards (Attribute folgen der Kurzzeit; 30 d o. ä. einstellbar)
 STANDARD = {"kurzzeit": "global", "attribute": ATTR_STANDARD, "langzeit": "unbegrenzt"}
-TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "herkunft": 4, "vielschreiber": 5, "verwaist": 6, "event": 7,
-            "ha_standard": 8}
-# Punkte 193/196: wirken wie glob/klasse nur auf nicht verwaiste Entitäten und nie auf Zähler
-MUSTER_TYPEN = ("glob", "klasse", "herkunft", "vielschreiber")
+TYP_RANG = {"schutz": 0, "entity": 1, "glob": 2, "klasse": 3, "herkunft": 4, "unbenutzt": 5, "vielschreiber": 6, "verwaist": 7,
+            "event": 8, "ha_standard": 9}      # Punkt 372: unbenutzt nach herkunft, vor vielschreiber
+# Punkte 193/196/372: wirken wie glob/klasse nur auf nicht verwaiste Entitäten und nie auf Zähler
+MUSTER_TYPEN = ("glob", "klasse", "herkunft", "unbenutzt", "vielschreiber")
+# Punkt 372: Karenz des Typs unbenutzt (Kalendertage durchgehend unbenutzt, bevor die Regel trifft). UNBENUTZT: Modulzustand für
+# _trifft – Entitäten, die die Karenz erfüllt haben (gesetzt von halte_unbenutzt); bekannt=False: Verwendung nicht bestimmbar
+KARENZ_TAGE = 7
+# Punkt 372: Plausibilitätssperre – ist die Verwendungsmenge um mehr als diesen Anteil kleiner als der zuletzt akzeptierte Wert,
+# gilt der Analyse-Stand als nicht bestimmbar (halte_unbenutzt)
+EINBRUCH_ANTEIL = 0.3
+# Punkt 372: Zählweise der Plausibilitätssperre in der Zustandsdatei (2 = verwendete Entitäten aus ents; Dateien ohne dieses Feld
+# zählten Wörter mit Punkt): weicht sie ab, wird die Basis ohne Vergleich neu übernommen
+ZAEHLWEISE = 2
+UNBENUTZT = {"treffer": frozenset(), "bekannt": False}
+NIE_UNBENUTZT_DOMAINS = ("automation", "script")    # Punkt 372: wie optimierung.NIE_UNBENUTZT (kein Import dorthin)
 _SCHWELLE = re.compile(r"^(?:>=|≥)?\s*(\d{1,9})$")
 # Punkt 201: Hysterese der Vielschreiber – Austritt erst unter diesem Anteil der Schwelle. HALTEN: je Regel-ID die
 # Schwelle und die Entitäten, die bei der vorigen Analyse dazugehörten (gesetzt von halte_vielschreiber)
@@ -224,12 +254,12 @@ def normalisiere(daten):
             regeln.append(ha_standard(kz, r.get("aktiv", True) is not False, lz))
             continue
         if typ not in TYP_RANG:
-            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft (Anzeige: integration), vielschreiber, verwaist oder event sein")
+            raise RegelFehler(f"{rid}: typ muss schutz, entity, glob, klasse, herkunft (Anzeige: integration), unbenutzt, vielschreiber, verwaist oder event sein")
         roh = r.get("muster") or []
         if isinstance(roh, str):
             roh = re.split(r"[\n,]", roh)
         muster = [str(m).strip() for m in roh if str(m).strip()]
-        if not muster:
+        if not muster and typ != "unbenutzt":      # Punkt 372: bei unbenutzt bedeutet leer „alle unbenutzten Entitäten“
             raise RegelFehler(f"{rid}: mindestens ein Muster nötig")
         if typ == "klasse" and any("|" not in m for m in muster):
             raise RegelFehler(f"{rid}: klasse-Muster haben die Form domain|device_class")
@@ -251,6 +281,8 @@ def normalisiere(daten):
             neu["attribute_schutz"] = schutz_attr
         if neu["attribute"] == "keine":       # Punkt 254: Attribute ganz ohne Frist gibt es nicht (Mindestfrist 1 Tag)
             raise RegelFehler(f"{rid}: Attribute „keine“ ist nicht erlaubt (Dauer, wie_kurzzeit oder leer = Attribut-Standard)")
+        if typ == "unbenutzt" and neu["langzeit"]:     # Punkt 372: Stundenstatistik lässt sich nach dem Löschen nicht wiederherstellen
+            raise RegelFehler(f"{rid}: Regeln vom Typ unbenutzt setzen keine Langzeit (das Löschen der Stundenstatistik ist nicht umkehrbar) – nur Kurzzeit und Attribute")
         if neu["kurzzeit"] == "keine" and typ != "verwaist":
             raise RegelFehler(f"{rid}: Kurzzeit „keine“ ist nur beim Regeltyp verwaist erlaubt")
         if typ == "verwaist":
@@ -452,6 +484,146 @@ def halte_vielschreiber(daten, ents, stand, pfad):
         os.replace(pfad + ".tmp", pfad)
 
 
+def _ganzzahl(x):
+    return x if isinstance(x, int) and not isinstance(x, bool) and x >= 0 else None
+
+
+def _plausibel(wert, grenze):
+    """Punkt 372: Zeitstempel (Sekunden seit 1970) aus der Zustandsdatei als float, wenn plausibel (1e9 < wert <= grenze), sonst None.
+    Wahrheitswerte, NaN, unendliche, zu kleine und in der Zukunft liegende Werte gelten als unplausibel."""
+    try:
+        s = float(wert)
+    except (TypeError, ValueError):
+        return None
+    return s if 1e9 < s <= grenze else None
+
+
+def _lies_json(pfad):
+    try:
+        with open(pfad, encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return d if isinstance(d, dict) else {}
+
+
+def _schreibe_json(pfad, daten):
+    with open(pfad + ".tmp", "w", encoding="utf-8") as f:
+        json.dump(daten, f, ensure_ascii=False)
+    os.replace(pfad + ".tmp", pfad)
+
+
+def _blind_merken(pfad, alt, wand, zusatz):
+    """Punkt 372: Beginn der blinden Phase (Verwendung nicht bestimmbar oder Plausibilitätssperre) in der Zustandsdatei vermerken
+    (blind_ab, Wanduhr, nur beim ersten Mal) – nur wenn es Karenz-Stände zu verschieben gibt (seit nicht leer). zusatz: weitere
+    Felder, die mitgeschrieben werden (Größenfelder). seit/ids/vorher/stand bleiben unverändert. True, wenn nichts zu schreiben war oder
+    das Schreiben gelang; False bei OSError (dann bleibt es bei „trifft nichts“)."""
+    neu = {**alt, **zusatz}
+    if isinstance(alt.get("seit"), dict) and alt["seit"] and _plausibel(alt.get("blind_ab"), wand) is None:
+        neu["blind_ab"] = wand
+    if neu == alt:
+        return True
+    try:
+        _schreibe_json(pfad, neu)
+    except OSError as x:
+        _LOG.warning("unbenutzt-Stand nicht gespeichert: %s", x)
+        return False
+    return True
+
+
+def halte_unbenutzt(daten, ents, stand, pfad, verwendet, grund=None):
+    """Punkt 372: Karenz der unbenutzt-Regeln über Analysen hinweg.
+
+    verwendet: Menge der verwendeten Entity-IDs (optimierung.verwendung_sicher) oder None, wenn sie nicht bestimmbar ist (Lesefehler,
+    keine Referenzdatei, Registry nicht lesbar; grund nennt den Text für die GUI) – dann trifft die Regel nichts (UNBENUTZT leer,
+    bekannt=False). daten ist für spätere Regelbezüge reserviert; das Kriterium gilt global und wird immer geführt, sobald verwendet
+    bekannt ist.
+    Plausibilitätssperre (EINBRUCH_ANTEIL): Gezählt werden die verwendeten ENTITÄTEN, also die Schnittmenge von verwendet mit den
+    Entity-IDs aus ents (verwendet enthält jedes Wort mit Punkt und wäre zu groß und zu unruhig). Ist diese Zahl n gegenüber dem
+    zuletzt akzeptierten Wert (basis) um mehr als 30 % kleiner, gilt dieser Analyse-Stand als nicht bestimmbar (bekannt=False, keine
+    Treffer, seit/ids/vorher bleiben unverändert). Der kleinere Wert wird vorgemerkt und beim nächsten neuen Analyse-Stand akzeptiert,
+    wenn er dann nicht erneut mehr als 30 % unter dem vorgemerkten liegt – eine echte Änderung (viele Dashboards gelöscht) blockiert die
+    Regel so nicht dauerhaft. Wachstum ist nie ein Sperrgrund; ohne gespeicherten Wert (erster Lauf) gibt es keinen Vergleich; die Sperre
+    erkennt auch keinen schleichenden Rückgang in kleinen Schritten. Hat die Zustandsdatei eine andere Zählweise (Feld zaehlweise fehlt
+    oder ≠ ZAEHLWEISE, z. B. Dateien bis 0.6.1b2, die Wörter zählten), wird die Basis ohne Vergleich neu übernommen.
+    Blinde Phase (W5): Gilt die Verwendung als nicht bestimmbar oder greift die Plausibilitätssperre, vermerkt die Datei beim ersten Mal
+    den Beginn (blind_ab, Wanduhr; nur wenn es Karenz-Stände gibt; seit/ids/vorher/stand unverändert). Bei der nächsten gültigen
+    Auswertung rücken alle bestehenden seit um die Dauer der blinden Phase nach hinten (höchstens bis zur Feststellung), blind_ab entfällt:
+    Die Karenz zählt in blinden Phasen nicht weiter. Nicht erkannt werden Zeiten, in denen die App nicht lief oder nicht gerechnet hat
+    (kein Lauf, kein Vermerk) – sie zählen als unbenutzte Zeit. Lässt sich blind_ab nicht schreiben, trifft die Regel wie bisher nichts.
+    In pfad: stand (Analyse-Stand der Treffer), seit (je Entität der Zeitpunkt, zu dem sie erstmals als unbenutzt gesehen wurde; nur
+    plausible Werte 1e9 < seit <= Feststellung werden übernommen, sonst gilt die Feststellung), ids (Treffer dieses Stands) und vorher
+    (Treffer des vorigen Stands); dazu die Größenprüfung: zaehlweise, pruef_stand (Stand, für den sie gerechnet wurde), basis/vorgemerkt
+    (Werte danach) und basis_alt/vorgemerkt_alt (Werte vor diesem Stand – gleicher Stand rechnet damit erneut und kommt zum selben
+    Ergebnis) sowie, nur während einer blinden Phase, blind_ab. Zeitbasis ist der Analyse-Stand (Sekunden seit 1970 als Text oder Zahl)
+    als „heute“. Ein neuer Kandidat erhält als „seit“ den Zeitpunkt der Feststellung (max aus Analyse-Stand und Wanduhr beim Aufruf),
+    wird also nie rückdatiert; die Karenz gilt, wenn Stand − seit mindestens KARENZ_TAGE * 86400 s beträgt. Gleicher Stand rechnet mit
+    demselben vorher und kommt zum selben Ergebnis (bestehende „seit“ bleiben, kein Schreibvorgang). Scheitert das Schreiben des Stands
+    (OSError), trifft die Regel sicherheitshalber nichts (wie bei unbekannter Verwendung).
+    Liefert {bekannt, grund (None oder Text, warum nicht bestimmbar), groesse (Zahl der verwendeten Entitäten oder None), karenz_tage,
+    treffer, zugaenge, abgaenge, karenz: [{entity_id, rest_tage}]} (global, Listen sortiert)."""
+    leer = {"bekannt": False, "grund": None, "groesse": None, "karenz_tage": KARENZ_TAGE, "treffer": 0, "zugaenge": [], "abgaenge": [],
+            "karenz": []}
+    n = None if verwendet is None else len({e["entity_id"] for e in ents}.intersection(verwendet))
+
+    def unbekannt(text):
+        UNBENUTZT["treffer"], UNBENUTZT["bekannt"] = frozenset(), False
+        return {**leer, "grund": text, "groesse": n}
+    wand = time.time()
+    alt = _lies_json(pfad)
+    if verwendet is None:     # erst hier leeren: bei bekannter Verwendung sehen parallele Leser bis zum Ende den vorigen Stand
+        _blind_merken(pfad, alt, wand, {})
+        return unbekannt(grund or "Verwendung nicht bestimmbar")
+    try:
+        jetzt = float(stand)
+    except (TypeError, ValueError):
+        jetzt = wand
+    feststellung = max(jetzt, wand)      # „seit“ neuer Kandidaten: Zeitpunkt der Feststellung, nie vor dem Analyse-Stand
+    # Plausibilitätssperre: Größe der Verwendungsmenge gegenüber dem zuletzt akzeptierten Wert (siehe Dokstring)
+    gleiche_zaehlweise = alt.get("zaehlweise") == ZAEHLWEISE
+    gleich_pruef = gleiche_zaehlweise and alt.get("pruef_stand") == stand
+    basis_alt = _ganzzahl(alt.get("basis_alt") if gleich_pruef else alt.get("basis")) if gleiche_zaehlweise else None
+    vorgemerkt_alt = _ganzzahl(alt.get("vorgemerkt_alt") if gleich_pruef else alt.get("vorgemerkt")) if gleiche_zaehlweise else None
+    grenze = 1 - EINBRUCH_ANTEIL
+    if basis_alt is None or n >= basis_alt * grenze or (vorgemerkt_alt is not None and n >= vorgemerkt_alt * grenze):
+        basis, vorgemerkt, gesperrt = n, None, False
+    else:
+        basis, vorgemerkt, gesperrt = basis_alt, n, True
+    pruefung = {"zaehlweise": ZAEHLWEISE, "pruef_stand": stand, "basis": basis, "vorgemerkt": vorgemerkt, "basis_alt": basis_alt,
+                "vorgemerkt_alt": vorgemerkt_alt}
+    if gesperrt:
+        text = (f"Die Verwendung ist stark gesunken ({n} statt {basis_alt} Entitäten, mehr als {round(EINBRUCH_ANTEIL * 100)} %) – "
+                "zur Sicherheit trifft die Regel vorerst nichts; bleibt der Wert, wird er mit der nächsten Analyse übernommen")
+        _blind_merken(pfad, alt, wand, pruefung)      # ohne vorgemerkten Wert bliebe die Sperre dauerhaft: Fehler nur melden
+        return unbekannt(text)
+    alt_seit = alt.get("seit") if isinstance(alt.get("seit"), dict) else {}
+    blind_ab = _plausibel(alt.get("blind_ab"), wand)
+    dauer = max(0.0, wand - blind_ab) if blind_ab is not None else 0.0     # blinde Phase: so lange rückt jedes bestehende „seit“ nach hinten
+    kandidaten = {e["entity_id"] for e in ents
+                  if e["status"] == "aktiv" and not (e.get("state_class") or "").startswith("total")
+                  and e["entity_id"].split(".", 1)[0] not in NIE_UNBENUTZT_DOMAINS}
+    seit = {}
+    for eid in kandidaten.difference(verwendet):      # wer wieder verwendet wird, verliert sein „seit“ (Austritt)
+        s = _plausibel(alt_seit.get(eid), feststellung)
+        seit[eid] = feststellung if s is None else min(s + dauer, feststellung)
+    karenz_s = KARENZ_TAGE * 86400
+    ids = {eid for eid, s in seit.items() if jetzt - s >= karenz_s}
+    gleich = alt.get("stand") == stand
+    vorher = set(alt.get("vorher") or []) if gleich else set(alt.get("ids") or [])
+    neu = {"stand": stand, "seit": seit, "ids": sorted(ids), "vorher": sorted(vorher), **pruefung}
+    if neu != alt:
+        try:
+            _schreibe_json(pfad, neu)
+        except OSError as x:      # ohne gespeicherten Stand würde die Karenz nie ablaufen: sicher nichts treffen
+            _LOG.warning("unbenutzt-Stand nicht gespeichert: %s", x)
+            return unbekannt("Zustandsdatei der Regel nicht schreibbar")
+    UNBENUTZT["treffer"], UNBENUTZT["bekannt"] = frozenset(ids), True
+    karenz = sorted(({"entity_id": eid, "rest_tage": min(KARENZ_TAGE, max(1, math.ceil((karenz_s - (jetzt - s)) / 86400)))}
+                     for eid, s in seit.items() if eid not in ids), key=lambda k: (k["rest_tage"], k["entity_id"]))
+    return {"bekannt": True, "grund": None, "groesse": n, "karenz_tage": KARENZ_TAGE, "treffer": len(ids), "zugaenge": sorted(ids - vorher),
+            "abgaenge": sorted(vorher - ids), "karenz": karenz}
+
+
 class Aufloeser:
     """Ermittelt je Entität die wirksamen drei Werte samt Herkunft."""
 
@@ -474,6 +646,12 @@ class Aufloeser:
             if globs and not any(fnmatch.fnmatchcase(eid, m) for m in globs):
                 return None
             return f"≥ {schwelle}/Tag" + (f" (gehalten bis {int(HYSTERESE * schwelle)})" if gehalten else "")
+        if r["typ"] == "unbenutzt":           # Punkt 372: nirgends verwendet, Karenz erfüllt (Stand aus halte_unbenutzt), optional glob
+            if eid not in UNBENUTZT["treffer"]:
+                return None
+            if r["muster"] and not any(fnmatch.fnmatchcase(eid, m) for m in r["muster"]):
+                return None
+            return "nirgends verwendet"
         if r["typ"] == "herkunft":            # Punkt 196: Integration der Registry
             return next((m for m in r["muster"] if plattform and fnmatch.fnmatchcase(plattform, m)), None)
         if r["typ"] == "verwaist":

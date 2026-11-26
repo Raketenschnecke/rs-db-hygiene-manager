@@ -6,8 +6,10 @@ Alles rechnet auf dem Probelauf (Analyse-Cache + aktuelle Regeln), ohne neue Abf
                 zusätzliche Löschmenge sofort (aus den Tageshistogrammen) und Ersparnis im Prognosezeitraum.
   vorschlaege() Regelvorschläge nach der Analyse: Gruppen (Diagnose-Endungen), einzelne Entitäten (Vielschreiber,
                 große Attribute, nirgends verwendet, deaktiviert, Uhrzeit), zusammengefasst je Klasse (Punkt 208), je
-                Integration (Punkt 205) oder Namensmuster; wo klasse/herkunft nicht sicher sind, eine Sammelregel mit den
-                unbenutzten Entitäten (Punkte 233/234); verwaiste ohne Regel, Event-Typen ohne Event-Regel.
+                Integration (Punkt 205) oder Namensmuster; für nirgends verwendete Entitäten die dynamische Regel
+                vom Typ unbenutzt (Punkt 372, ersetzt die statische Sammelregel der Punkte 233/234; wird sie empfohlen oder
+                besteht sie, entfallen Einzel-/Bündelvorschläge, deren einziger Grund „nirgends verwendet“ ist);
+                verwaiste ohne Regel, Event-Typen ohne Event-Regel.
                 Leitplanken: nie Energie- oder Helfer-Quellen, nie geschützte Entitäten oder Zähler, die Langzeit nur
                 in der eigenen Empfehlung „Langzeit“ (Punkt 249, nirgends verwendete Entitäten);
                 nur wo heute keine eigene Kurzzeit gilt (Standard bzw. HA-Standard) und der Vorschlag kürzer ist.
@@ -15,9 +17,11 @@ Alles rechnet auf dem Probelauf (Analyse-Cache + aktuelle Regeln), ohne neue Abf
 """
 import fnmatch
 import json
+import logging
 import os
 import re
 import sqlite3
+import threading
 import time
 
 import herkunft
@@ -47,6 +51,8 @@ HERKUNFT_NIE = ("mqtt", "esphome", "template", "group", "automation", "script", 
 KLASSE_VERWENDET = 0.1
 # Punkt 206: Automationen und Skripte nennt keine andere Stelle – „nirgends verwendet“ wäre für sie immer wahr
 NIE_UNBENUTZT = ("automation", "script")
+# Punkt 372: Notiz der früheren statischen Sammelregeln (entity mit fester Liste) – die dynamische Regel ersetzt sie
+SAMMEL_NOTIZ = "Empfehlung des RS DB HM: alle unbenutzten Entitäten in einer Regel"
 UHRZEIT_PLATTFORMEN = ("time_date",)   # Punkt 208: Uhrzeit-/Datumssensoren, Verlauf ohne Nutzen
 # Endungen typischer Diagnose-Entitäten (Funk, Laufzeit, Netz, Systemwerte) – Grundlage der Gruppen
 DIAGNOSE_ENDUNGEN = ("rssi", "linkquality", "signal_strength", "wifi_signal", "signal", "uptime", "last_seen", "last_restart",
@@ -58,8 +64,46 @@ DIAGNOSE_ENDUNGEN = ("rssi", "linkquality", "signal_strength", "wifi_signal", "s
 # Punkt 237: Endungen von Diagnose-Entitäten (entity_category diagnostic) außerhalb der Liste – mindestens so viele Wortteile
 # oder Zeichen, damit kurze Endungen wie _max oder _id nicht künftige fremde Entitäten treffen
 DIAG_MIN_TEILE, DIAG_MIN_ZEICHEN, DIAG_MAX_TEILE = 2, 8, 3
-_ID = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z0-9_]+)\b")
-REFERENZ_DATEIEN = ("lovelace", "lovelace_dashboards", "energy", "core.config_entries", "automations", "scripts", "scenes")
+_LOG = logging.getLogger("optimierung")
+# Punkt 372 (Erkennung der Verwendung). Alle Regexe ohne Rücksicht auf Groß-/Kleinschreibung (HA akzeptiert z. B. entity_id: sensor.Temp_WZ);
+# Funde werden in Kleinbuchstaben übernommen. _ID erfasst quotierte und freie Entity-IDs (states('sensor.x'), states["sensor.x"],
+# state_attr('sensor.x', …), is_state(…), expand(…), entity_id: sensor.x), aber bei der Punktschreibweise states.sensor.x.state nur
+# „states.sensor“ und „x.state“ – dafür die beiden Regexe unten (states.<domain>.<objekt> und states.<domain>['<objekt>'])
+_ID = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z0-9_]+)\b", re.IGNORECASE)
+_STATES_PUNKT = re.compile(r"\bstates\.([a-z_][a-z0-9_]*)\.([a-z0-9_]+)\b", re.IGNORECASE)
+_STATES_KLAMMER = re.compile(r"""\bstates\.([a-z_][a-z0-9_]*)\[\s*['"]([a-z0-9_]+)['"]\s*\]""", re.IGNORECASE)
+# Registry-IDs von Entitäten und Geräten (32 Hex-Zeichen) – Geräte-Automationen, switch_as_x und Helfer speichern darüber [Fachwissen, nicht geprüft]
+_HEX32 = re.compile(r"\b[0-9a-f]{32}\b", re.IGNORECASE)
+# Bereichs-/Label-/Etagen-Ziele: Wert hinter dem Schlüssel als Einzelwert, YAML-Block- oder Flow-Liste bzw. JSON-Liste (Kommentar hinter dem
+# Doppelpunkt und Leer-/Kommentarzeilen vor oder zwischen den Listenelementen erlaubt); „area“ ist der Schlüssel der Dashboard-Karte
+# Bereich [Fachwissen, nicht geprüft]
+_ZIEL_SCHLUESSEL = re.compile(r"""["']?\b(area_id|area|label_id|floor_id)["']?[ \t]*:[ \t]*(?:\#[^\n]*)?"""
+                              r"""(\[[^\]]*\]|"[^"\n]*"|'[^'\n]*'|(?:(?:\r?\n[ \t]*(?:\#[^\n]*)?)*\r?\n[ \t]*-[ \t]*[^\n]+)+|[^\s,#\]\[}{]+)""")
+_ZIEL_SCHLUESSEL_NAMEN = ("area_id", "area", "label_id", "floor_id")
+# Template-Funktionen mit Bereichs-/Etagen-/Label-/Integrationsnamen als Zeichenkette (area_entities('x'), 'x' | area_entities); area_id('x')
+# usw. stehen oft verschachtelt (area_entities(area_id('x'))) [Fachwissen, nicht geprüft: Funktionsumfang der Templates]
+_FUNKTIONEN = ("area_entities|area_devices|area_id|floor_areas|floor_entities|floor_id|label_entities|label_devices|label_areas|label_id"
+               "|integration_entities")
+_ZIEL_FUNKTION = re.compile(r"\b(" + _FUNKTIONEN + r")\s*\(\s*(['\"])(.*?)\2")
+_ZIEL_FILTER = re.compile(r"""(['"])([^'"\n]+)\1\s*\|\s*(""" + _FUNKTIONEN + r")\b")
+_WORT = re.compile(r"[A-Za-z0-9_]+")
+# Anführungszeichen-Inhalte einer Zeile (Mehrwort-Namen wie „Wohn Zimmer“) und YAML-Anker/-Tags vor einem Skalar
+_ZITAT = re.compile(r"""\"((?:[^\"\\\n]|\\.)*)\"|'([^'\n]*)'""")
+_KOMMENTAR = re.compile(r"\s#.*$")
+_ANKER = re.compile(r"^(?:[&!][^\s]*\s+)+")
+# Referenzdateien in .storage (Präfix). Punkt 372 zusätzlich: person (device_trackers) und homeassistant.exposed_entities (für Sprachassistenten
+# freigegebene Entitäten) [Fachwissen, nicht geprüft: Aufbau dieser Dateien]. Bewusst nicht dabei: core.restore_state und trace.* (nennen auch
+# längst ungenutzte Entitäten), die Registry-Dateien (nennen jede Entität) und cloud (kann Webhook-Kennungen enthalten, Nutzen unbelegt).
+# Der Präfixvergleich trifft auch Verwandte wie lovelace_resources, lovelace.<dashboard> oder Sicherungs-/Zwischendateien mit demselben Anfang:
+# zusätzliche Treffer machen eine Entität höchstens „verwendet“ (sichere Seite), eine unlesbare davon zählt als Lesefehler
+REFERENZ_DATEIEN = ("lovelace", "lovelace_dashboards", "energy", "core.config_entries", "automations", "scripts", "scenes",
+                    "person", "homeassistant.exposed_entities")
+# Punkt 372: Quellen, in denen jeder Skalarwert, der genau einer Bereichs-/Label-/Etagen-ID oder einem solchen Namen entspricht, als Ziel gilt
+# (Blueprint-Eingaben und andere frei benannte Schlüssel). Dazu alle YAML-Dateien; nie die Registry-Dateien oder core.config_entries
+SKALAR_QUELLEN = ("lovelace", "automations", "scripts", "scenes")
+# .storage-Dateien, die als Dashboard-Quelle zählen: das Standard-Dashboard und weitere Dashboards (lovelace.<url>)
+DASHBOARD_DATEIEN = ("lovelace", "lovelace.")
+MAX_LOG = 10        # höchstens so viele Lesefehler je Durchlauf einzeln loggen
 IGNORIERT_DATEI = "optimierungen_ignoriert.json"
 
 
@@ -118,6 +162,9 @@ def _vorfilter(regel, ents):
         return [e for e in ents if (e["rows_24h"] or 0) >= s]
     if t == "herkunft":           # Punkt 196
         return [e for e in ents if e.get("plattform") and any(fnmatch.fnmatchcase(e["plattform"], x) for x in m)]
+    if t == "unbenutzt":          # Punkt 372: dynamisch – Treffer des Kerns (Karenz erfüllt), leeres Muster = alle, sonst glob als Einschränkung
+        return [e for e in ents if e["entity_id"] in rg.UNBENUTZT["treffer"]
+                and (not m or any(fnmatch.fnmatchcase(e["entity_id"], x) for x in m))]
     return ents
 
 
@@ -270,38 +317,329 @@ def registry_info(config):
     return out
 
 
-_VERWENDET = {"zeit": 0, "ids": None}
+_VERWENDET = {"zeit": 0, "ttl": 300, "ergebnis": None, "config": None}
+_VERWENDET_SPERRE = threading.Lock()     # Punkt 372: bei Cache-Ablauf rechnet nur ein Thread, die anderen warten auf dessen Ergebnis
+
+
+def _lies_registry(pfad):
+    """(data, Zustand) einer Registry-Datei aus .storage; Zustand: „ok“, „fehlt“ (Datei gibt es nicht) oder „fehler“ (nicht lesbar/ungültig)."""
+    try:
+        with open(pfad, encoding="utf-8") as f:
+            d = json.load(f)
+    except FileNotFoundError:
+        return None, "fehlt"
+    except (OSError, ValueError, RecursionError):
+        return None, "fehler"
+    d = d.get("data") if isinstance(d, dict) else None
+    return (d, "ok") if isinstance(d, dict) else (None, "fehler")
+
+
+def _json_texte(obj):
+    """Punkt 372: alle Zeichenketten eines geladenen JSON-Dokuments (iterativ): (Werte, Schlüssel, Ziele). Die Werte sind die entschlüsselten
+    Texte (aus \\" wird ", aus \\n ein Zeilenumbruch) – nur so erkennen die Regexe Templates in .storage-Dateien. Ziele = [(schluessel,
+    [Zeichenketten])] für Einträge mit Ziel-Schlüssel (area_id, area, label_id, floor_id), Wert als Zeichenkette oder Liste von Zeichenketten."""
+    werte, schluessel, ziele, stapel = [], [], [], [obj]
+    while stapel:
+        x = stapel.pop()
+        if isinstance(x, str):
+            werte.append(x)
+        elif isinstance(x, dict):
+            for k, v in x.items():
+                if isinstance(k, str):
+                    schluessel.append(k)
+                    if k.lower() in _ZIEL_SCHLUESSEL_NAMEN:
+                        ziele.append((k.lower(), [v] if isinstance(v, str) else [s for s in v if isinstance(s, str)] if isinstance(v, list) else []))
+                stapel.append(v)
+        elif isinstance(x, list):
+            stapel.extend(x)
+    return werte, schluessel, ziele
+
+
+def _yaml_skalare(text):
+    """Punkt 372: mögliche Skalarwerte einer YAML-Datei ohne YAML-Parser (grob, auf der sicheren Seite): Anführungszeichen-Inhalte, der Rest
+    jeder Zeile hinter „- “ bzw. „Schlüssel: “ ohne Kommentar und YAML-Anker/-Tags, Elemente einer Flow-Liste [a, b]. Restlücke: Werte über
+    mehrere Zeilen (Block-/Faltungs-Skalare) und Namen mit Sonderzeichen in einer Flow-Liste ohne Anführungszeichen."""
+    for zeile in text.splitlines():
+        s = zeile.strip()
+        if not s or s.startswith("#"):
+            continue
+        for m in _ZITAT.finditer(zeile):
+            yield m.group(1) if m.group(1) is not None else m.group(2)
+        s = _KOMMENTAR.sub("", s)
+        while s.startswith("- ") or s == "-":
+            s = s[1:].lstrip()
+        teile = [s]
+        if ": " in s:
+            teile.append(s.split(": ", 1)[1])
+        for t in teile:
+            t = _ANKER.sub("", t.strip())
+            if t.startswith("[") and t.endswith("]"):
+                yield from t[1:-1].split(",")
+            else:
+                yield t
+
+
+def _relativ(config, pfad):
+    try:
+        return os.path.relpath(pfad, config).replace(os.sep, "/")
+    except ValueError:
+        return "?"
+
+
+def _namen(x):
+    """Name und Aliase eines Registry-Eintrags (Bereich, Etage, Label) in Kleinbuchstaben."""
+    s = {str(x.get("name") or "").strip().lower()}
+    if isinstance(x.get("aliases"), list):
+        s.update(str(a).strip().lower() for a in x["aliases"] if isinstance(a, str))
+    s.discard("")
+    return s
+
+
+def _wert_tokens(wert):
+    """Ziel-Tokens eines Werts hinter area_id/label_id/floor_id: jedes Wort, die ganze Zeichenkette und – bei Listen – jedes Element
+    (Mehrwort-Namen wie „Wohn Zimmer“ bleiben so als Ganzes erhalten)."""
+    t = {w.lower() for w in _WORT.findall(wert)}
+    t.add(wert.strip(" \t\r\n[]\"'").lower())
+    for teil in re.split(r"[,\n]", wert):
+        t.add(teil.strip().lstrip("-").strip().strip("[]\"' \t").lower())
+    t.discard("")
+    return t
+
+
+def _berechne_verwendung(config):
+    st = os.path.join(config, ".storage")
+    ids, hexe = set(), set()
+    bereiche, labels, etagen, plattformen = set(), set(), set(), set()
+    zaehler = {"fehler": 0, "log": 0}
+    n = {"storage": 0, "dateien": 0, "dashboards": 0, "yaml": 0}
+
+    def fehler(pfad):
+        zaehler["fehler"] += 1
+        if zaehler["log"] < MAX_LOG:      # Ursache auffindbar machen, ohne das Log zu fluten
+            zaehler["log"] += 1
+            _LOG.warning("Verwendung: Datei nicht lesbar: %s", _relativ(config, pfad))
+
+    # --- Registry zuerst: Sie liefert die bekannten Bereichs-/Label-/Etagen-IDs und -Namen für die Erkennung frei benannter Ziele
+    reg, z_reg = _lies_registry(os.path.join(st, "core.entity_registry"))
+    eintraege = [e for e in (reg or {}).get("entities", []) if isinstance(e, dict) and e.get("entity_id")]
+    registry = z_reg == "ok" and bool(eintraege)
+    dev = fl = lb = fo = None
+    if registry:
+        dev, z_dev = _lies_registry(os.path.join(st, "core.device_registry"))
+        fl, z_fl = _lies_registry(os.path.join(st, "core.area_registry"))
+        lb, z_lb = _lies_registry(os.path.join(st, "core.label_registry"))
+        fo, z_fo = _lies_registry(os.path.join(st, "core.floor_registry"))
+        if z_dev == "fehler" or (z_dev == "fehlt" and any(e.get("device_id") for e in eintraege)):
+            zaehler["fehler"] += 1       # ohne Geräteregister sind device_id und Gerätebereich nicht auflösbar
+        # Bereichs-/Label-/Etagen-Register dürfen fehlen (es gibt dann keine), nicht defekt sein
+        zaehler["fehler"] += (z_fl == "fehler") + (z_lb == "fehler") + (z_fo == "fehler")
+    geraete = {d["id"]: d for d in (dev or {}).get("devices", []) if isinstance(d, dict) and d.get("id")}
+    flaechen = [a for a in (fl or {}).get("areas", []) if isinstance(a, dict)]
+    etagen_reg = [f for f in (fo or {}).get("floors", []) if isinstance(f, dict)]
+    labels_reg = [x for x in (lb or {}).get("labels", []) if isinstance(x, dict)]
+    if registry and z_fo == "fehlt" and any(a.get("floor_id") for a in flaechen):
+        zaehler["fehler"] += 1           # Bereiche verweisen auf Etagen, das Etagenregister fehlt: Etagen sind nicht auflösbar
+    bereich_namen = {a.get("id"): _namen(a) for a in flaechen}
+    bereich_etage = {a.get("id"): str(a.get("floor_id") or "") for a in flaechen}
+    bereich_labels = {a.get("id"): [x for x in (a.get("labels") or []) if isinstance(x, str)] for a in flaechen}
+    etage_namen = {f.get("floor_id"): _namen(f) for f in etagen_reg}
+    label_namen = {x.get("label_id"): _namen(x) for x in labels_reg}
+    bekannt = {}         # Token (ID oder Name, klein) → Mengen, in die es als Ziel gehört
+    for kennung, namen, menge in ([(a.get("id"), bereich_namen[a.get("id")], bereiche) for a in flaechen]
+                                  + [(f.get("floor_id"), etage_namen[f.get("floor_id")], etagen) for f in etagen_reg]
+                                  + [(x.get("label_id"), label_namen[x.get("label_id")], labels) for x in labels_reg]):
+        for tok in {str(kennung or "").strip().lower(), *namen} - {""}:
+            bekannt.setdefault(tok, []).append(menge)
+
+    def ziel_menge(art):
+        return labels if art == "label_id" else etagen if art == "floor_id" else bereiche
+
+    def funktionsziel(fn, arg):
+        ziel = labels if fn.startswith("label") else etagen if fn.startswith("floor") else plattformen if fn.startswith("integration") else bereiche
+        ziel.add(arg.strip().lower())
+        ziel.update(w.lower() for w in _WORT.findall(arg))
+
+    def skalare(kandidaten):
+        """Jeder Skalarwert, der genau einer bekannten Bereichs-/Label-/Etagen-ID oder einem solchen Namen entspricht, gilt als Ziel."""
+        if not bekannt:
+            return
+        for c in kandidaten:
+            if len(c) > 200:
+                continue
+            tok = c.strip().strip("\"'").strip().lower()
+            for menge in bekannt.get(tok, ()):
+                menge.add(tok)
+
+    def auswerten(text):
+        ids.update(m.lower() for m in _ID.findall(text))
+        ids.update(f"{d}.{o}".lower() for d, o in _STATES_PUNKT.findall(text))      # {{ states.sensor.temp.state }} → sensor.temp
+        ids.update(f"{d}.{o}".lower() for d, o in _STATES_KLAMMER.findall(text))    # states.sensor['temp'] → sensor.temp
+        hexe.update(h.lower() for h in _HEX32.findall(text))
+        for art, wert in _ZIEL_SCHLUESSEL.findall(text):
+            ziel_menge(art.lower()).update(_wert_tokens(wert))
+        for fn, _q, arg in _ZIEL_FUNKTION.findall(text):
+            funktionsziel(fn, arg)
+        for _q, arg, fn in _ZIEL_FILTER.findall(text):
+            funktionsziel(fn, arg)
+
+    def lies(pfad, mit_skalaren):
+        try:
+            with open(pfad, encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+        except OSError:
+            fehler(pfad)
+            return False
+        auswerten(text)
+        if mit_skalaren:
+            skalare(_yaml_skalare(text))
+        return True
+
+    def lies_storage(pfad, name):
+        """.storage-Datei ist JSON: Rohtext (Schlüssel wie "area_id": […]) und die entschlüsselten Zeichenketten (Werte und Schlüssel)
+        auswerten; Templates stehen dort mit maskierten Anführungszeichen und Zeilenumbrüchen. Ungültiges JSON zählt als Lesefehler."""
+        try:
+            with open(pfad, encoding="utf-8") as f:
+                roh = f.read()
+            daten = json.loads(roh)
+        except (OSError, ValueError, RecursionError):
+            fehler(pfad)
+            return False
+        auswerten(roh)
+        werte, schluessel, ziele = _json_texte(daten)
+        auswerten("\n".join(werte))
+        auswerten("\n".join(schluessel))
+        for art, liste in ziele:
+            for s in liste:
+                ziel_menge(art).update(_wert_tokens(s))
+        if name.startswith(SKALAR_QUELLEN):
+            skalare(werte)
+        return True
+
+    try:
+        namen = sorted(os.listdir(st))
+    except OSError:
+        namen = []
+        fehler(st)
+    for name in namen:
+        pfad = os.path.join(st, name)
+        if name.startswith(REFERENZ_DATEIEN) and os.path.isfile(pfad) and lies_storage(pfad, name):
+            n["storage"] += 1
+            if name == "lovelace" or name.startswith("lovelace."):
+                n["dashboards"] += 1
+    dateien, f_walk = herkunft.verwendungs_dateien(config)
+    zaehler["fehler"] += f_walk
+    for pfad in dateien:
+        ist_yaml = pfad.endswith((".yaml", ".yml"))
+        if lies(pfad, ist_yaml):
+            n["dateien"] += 1
+            n["yaml"] += ist_yaml
+    for s in (bereiche, labels, etagen, plattformen):
+        s.discard("")
+
+    # --- Auflösung über die Registry
+    aufgeloest = 0
+    if registry:
+        geraet_verwendet = {d for d in geraete if d in hexe}
+
+        def etage_gemeint(fid):
+            return bool(fid) and (str(fid).lower() in etagen or bool(etage_namen.get(fid, set()) & etagen))
+
+        def label_gemeint(lid):
+            return bool(lid) and (str(lid).lower() in labels or bool(label_namen.get(lid, set()) & labels))
+
+        def bereich_gemeint(aid):
+            """Bereich genannt (ID oder Name), seine Etage genannt oder eines seiner Labels genannt."""
+            return bool(aid) and (str(aid).lower() in bereiche or bool(bereich_namen.get(aid, set()) & bereiche)
+                                  or etage_gemeint(bereich_etage.get(aid))
+                                  or any(label_gemeint(x) for x in bereich_labels.get(aid, ())))
+
+        for e in eintraege:
+            eid = e["entity_id"].lower()
+            if eid in ids:
+                continue
+            gd = geraete.get(e.get("device_id")) or {}
+            if ((e.get("id") and str(e["id"]).lower() in hexe) or e.get("device_id") in geraet_verwendet
+                    or bereich_gemeint(e.get("area_id")) or bereich_gemeint(gd.get("area_id"))
+                    or any(label_gemeint(x) for x in (e.get("labels") or []) + (gd.get("labels") or []))
+                    or (e.get("platform") or "").lower() in plattformen):
+                ids.add(eid)
+                aufgeloest += 1
+    erg = {"ids": ids, "storage": n["storage"], "dateien": n["dateien"], "dashboards": n["dashboards"], "yaml": n["yaml"],
+           "fehler": zaehler["fehler"], "registry": registry, "aufgeloest": aufgeloest}
+    return erg
+
+
+def verwendung(config):
+    """Punkt 372: Verwendung der Entitäten samt Kennzahlen: {"ids": set, "storage": n, "dateien": n, "dashboards": n, "yaml": n, "fehler": n,
+    "registry": bool, "aufgeloest": n}. ids sind alle Entity-IDs (klein geschrieben), die irgendwo in der Konfiguration genannt werden:
+    Dashboards, Automationen, Skripte, Szenen, Templates und Helfer (UI und YAML), Energie-Dashboard, ESPHome- und Blueprint-YAML,
+    Python-Skripte (python_scripts, pyscript), Jinja-Makros, Personen und Freigaben für Sprachassistenten (soweit in
+    homeassistant.exposed_entities gespeichert). .storage-Dateien sind JSON: ausgewertet werden der Rohtext und die entschlüsselten
+    Zeichenketten (Werte und Schlüssel), weil Templates dort mit maskierten Anführungszeichen stehen. Grob, aber auf der sicheren Seite:
+    jedes Vorkommen zählt, ohne Rücksicht auf Groß-/Kleinschreibung. Dazu die Auflösung über die Registry: Registry-ID einer Entität oder
+    device_id eines Geräts im Text → Entität bzw. alle Entitäten des Geräts; area_id/label_id/floor_id (und area_entities('…'),
+    floor_entities('…'), label_entities('…') usw.) → alle Entitäten des Bereichs (eigener oder der des Geräts), des Bereichs auf der
+    Etage bzw. mit dem Label (Label an Entität, Gerät oder Bereich); integration_entities('…') → alle der Plattform. Frei benannte
+    Schlüssel (Blueprint-Eingaben): jeder Skalarwert in Dashboards, Automationen, Skripten, Szenen und YAML-Dateien, der genau einer
+    Bereichs-/Label-/Etagen-ID oder einem solchen Namen entspricht, gilt als Ziel (bewusst breit). storage = gelesene .storage-
+    Referenzdateien, dashboards = davon Dashboard-Quellen (lovelace, lovelace.<url>), dateien = gelesene YAML-/py-/Jinja-Dateien,
+    yaml = davon YAML-Dateien, fehler = Lesefehler (ein fehlender optionaler Ordner zählt nicht), registry = Entity-Registry gelesen und
+    nicht leer, aufgeloest = über die Registry ergänzte Entitäten. Ob das Ergebnis für die Regel unbenutzt verlässlich ist, sagt
+    verwendung_grund(). 5 min zwischengespeichert (bei Lesefehlern nur 60 s); bei Cache-Ablauf rechnet ein Thread, die übrigen warten.
+    Die Registry-Dateien selbst werden nicht als Text ausgewertet (sie nennen jede Entität)."""
+    def frisch():
+        e = _VERWENDET["ergebnis"]
+        if e is not None and _VERWENDET["config"] == config and time.time() - _VERWENDET["zeit"] < _VERWENDET["ttl"]:
+            return e
+        return None
+    erg = frisch()
+    if erg is not None:
+        return erg
+    with _VERWENDET_SPERRE:
+        erg = frisch()
+        if erg is None:
+            erg = _berechne_verwendung(config)
+            _VERWENDET.update(zeit=time.time(), ttl=60 if (erg["fehler"] or not erg["registry"]) else 300, ergebnis=erg, config=config)
+        return erg
+
+
+def verwendung_grund(v):
+    """Punkt 372: None, wenn die Verwendung verlässlich bestimmt ist, sonst der Grund (Text für die GUI). Nicht bestimmbar bei
+    Lesefehlern, ohne gelesene .storage-Referenzdatei, ohne gelesene Dashboard-Quelle (.storage/lovelace*) und YAML-Datei oder bei nicht
+    lesbarer Entity-Registry."""
+    if not v["registry"]:
+        return "Entity-Registry nicht lesbar"
+    if v["fehler"]:
+        return f"{v['fehler']} Lesefehler in der Konfiguration – die Verwendung wäre unvollständig"
+    if not v["storage"]:
+        return "keine Referenzdatei (Dashboards, Helfer, Energie) im Speicherordner von Home Assistant lesbar"
+    if not (v.get("dashboards") or v.get("yaml")):
+        return "weder eine Dashboard-Quelle (.storage/lovelace*) noch eine YAML-Datei der Konfiguration lesbar"
+    if not v["ids"]:
+        return "in der Konfiguration wurde keine Entität gefunden"
+    return None
+
+
+def verwendung_sicher(config):
+    """Punkt 372: (ids, info). ids = Menge der verwendeten Entity-IDs oder None, wenn die Verwendung nicht bestimmbar ist; info =
+    {grund, storage, dateien, dashboards, yaml, fehler, registry, aufgeloest, woerter} (grund None = bestimmbar; woerter = Größe der Menge
+    ids, sie zählt jedes Wort mit Punkt und ist keine Entitätenzahl – die zählt halte_unbenutzt)."""
+    try:
+        v = verwendung(config)
+    except Exception as x:  # noqa: BLE001 – ohne verlässliche Verwendung trifft die Regel nichts
+        _LOG.exception("Verwendung der Entitäten nicht bestimmbar")
+        return None, {"grund": f"Auswertung fehlgeschlagen ({type(x).__name__})", "storage": 0, "dateien": 0, "dashboards": 0, "yaml": 0,
+                      "fehler": 0, "registry": False, "aufgeloest": 0, "woerter": 0}
+    grund = verwendung_grund(v)
+    info = {"grund": grund, "storage": v["storage"], "dateien": v["dateien"], "dashboards": v.get("dashboards", 0), "yaml": v.get("yaml", 0),
+            "fehler": v["fehler"], "registry": v["registry"], "aufgeloest": v["aufgeloest"], "woerter": len(v["ids"])}
+    return (None if grund else v["ids"]), info
 
 
 def verwendete_ids(config):
-    """Alle Entity-IDs, die irgendwo in der Konfiguration genannt werden: Dashboards, Automationen, Skripte, Szenen,
-    Templates und Helfer (UI und YAML), Energie-Dashboard. Grob, aber auf der sicheren Seite: jedes Vorkommen zählt.
-    5 min zwischengespeichert."""
-    if _VERWENDET["ids"] is not None and time.time() - _VERWENDET["zeit"] < 300:
-        return _VERWENDET["ids"]
-    texte = []
-    st = os.path.join(config, ".storage")
-    try:
-        for name in os.listdir(st):
-            if name.startswith(REFERENZ_DATEIEN):
-                try:
-                    with open(os.path.join(st, name), encoding="utf-8", errors="ignore") as f:
-                        texte.append(f.read())
-                except OSError:
-                    pass
-    except OSError:
-        pass
-    for pfad in herkunft.yaml_dateien(config):
-        try:
-            with open(pfad, encoding="utf-8", errors="ignore") as f:
-                texte.append(f.read())
-        except OSError:
-            pass
-    ids = set()
-    for t in texte:
-        ids.update(_ID.findall(t))
-    _VERWENDET.update(zeit=time.time(), ids=ids)
-    return ids
+    """Alle Entity-IDs, die irgendwo in der Konfiguration genannt werden (Menge, wie bisher; Details in verwendung()). Ohne
+    Prüfung der Verlässlichkeit – für die Regel unbenutzt und die Empfehlungen gilt verwendung_sicher()."""
+    return verwendung(config)["ids"]
 
 
 # ---------------------------------------------------------------- Vorschläge (Punkt 176)
@@ -373,10 +711,16 @@ def _erweiterbar(vorschlag, bestand, pl, hist, ziel):
 def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
     ents = [e for e in pl.get("entitaeten", [])]
     reg = registry_info(config)
+    # Punkt 372: zwei Größen. verwendet = sichere Menge, None bei nicht bestimmbarer Verwendung (Lesefehler, keine Referenzdatei, Registry
+    # nicht lesbar): Grundlage für alles, was auf NICHT-Verwendung beruht (dynamische Regel, Einzelvorschläge „nirgends verwendet“,
+    # Diagnose-Gruppen Punkt 237, Langzeit Punkt 249) – bei None entfallen diese Vorschläge. verwendet_teil = möglicherweise
+    # unvollständige Menge, nur für die bremsende Prüfung bei klasse/integration („von den übrigen werden X verwendet“): Teilwissen
+    # bremst weiterhin, fehlendes Wissen nie ein Vorschlag mehr.
+    verwendet = verwendung_sicher(config)[0] or None
     try:
-        verwendet = verwendete_ids(config)
-    except Exception:  # noqa: BLE001 – ohne Verwendungsprüfung entfallen nur diese Vorschläge
-        verwendet = None
+        verwendet_teil = verwendet if verwendet is not None else (verwendung(config)["ids"] or None)
+    except Exception:  # noqa: BLE001 – ohne Teilwissen gilt nur die Anteilsprüfung der Bündel
+        verwendet_teil = None
     regeln_muster = {(r["typ"], tuple(sorted(r["muster"]))): r for r in bestand["regeln"]}
     passive = [{**r, "_aufl": rg.Aufloeser({"standard": rg.STANDARD, "regeln": [{**r, "aktiv": True}]})}
                for r in bestand["regeln"] if not r["aktiv"] and r["typ"] not in ("event", "ha_standard") and r.get("kurzzeit")]
@@ -385,21 +729,20 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
     def kurz_wirksam(e):
         return ((e["werte"] or {}).get("kurzzeit") or {}).get("tage")
 
-    ablehnung = {"grund": None}   # warum neu() zuletzt nichts vorgeschlagen hat (Begründung der Sammelregel, Punkt 233)
-
-    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz="", immer=False, langzeit=None, attribut=None):
+    def neu(vid, art, titel, typ, muster, kurzzeit, gruende, name, notiz="", immer=False, langzeit=None, attribut=None, schaetzung=None):
+        """schaetzung (Punkt 372): Entity-IDs, über die die Wirkung einer dynamischen Regel (unbenutzt) geschätzt wird – ihre Treffer
+        sind während der Karenz leer, die Rechnung nimmt stattdessen eine entity-Regel mit diesen IDs und derselben Kurzzeit
+        (Rang spielt keine Rolle: die Kandidaten haben heute keine eigene Kurzzeit). Der Vorschlag selbst bleibt die dynamische Regel."""
         regel = {"id": "VORSCHLAG", "name": name, "typ": typ, "muster": muster, "aktiv": False, "notiz": notiz,
                  "kurzzeit": kurzzeit, "attribute": attribut, "langzeit": langzeit}
         regel["name"] = rg.name_mit_suffix(name, regel)   # Punkt 241: „– 14T/∞“ statt „– 14 Tage“
         norm = rg.normalisiere({"regeln": [regel], "events": {}})["regeln"][0]
-        w = event_wirkung(norm, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(norm, pl, bestand, hist, ziel=ziel, mit_ents=True)
-        ablehnung["grund"] = None
+        rechenregel = {**norm, "typ": "entity", "muster": sorted(schaetzung)} if schaetzung is not None else norm
+        w = event_wirkung(norm, pl, bestand, hist, ziel=ziel) if typ == "event" else wirkung(rechenregel, pl, bestand, hist, ziel=ziel, mit_ents=True)
         if not immer and (not w["gewinnt"] or w["ersparnis_bytes"] <= 0 and not w["loesch_bytes"]):   # immer: Punkt 239
-            ablehnung["grund"] = "verlaengert" if w.get("verlaengert") else "spart_nichts"
             return None
         # Punkte 205/208: herkunft/klasse haben Rang vor vielschreiber – nie vorschlagen, wenn sie irgendwo verlängern
         if typ in ("herkunft", "klasse") and (w.get("verlaengert") or w["ersparnis_bytes"] <= 0):
-            ablehnung["grund"] = "verlaengert" if w.get("verlaengert") else "spart_nichts"
             return None
         if w.get("verlaengert"):   # Punkte 205/208: herkunft/klasse haben Rang vor vielschreiber und können verlängern
             gruende = gruende + [f"⚠ verlängert die Kurzzeit von {_anzahl(w['verlaengert'], 'Entität', 'Entitäten')}, "
@@ -425,6 +768,46 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
              "beispiele": [t["entity_id"] for t in w["treffer"][:6]]}
         out.append(v)
         return v
+
+    # 0. Punkt 372: dynamische Regel „nirgends verwendet“ (Typ unbenutzt, leeres Muster) statt statischer Sammelregeln. Nur mit bekannter
+    # Verwendung, ohne bestehende unbenutzt-Regel (aktiv oder passiv) und wenn mindestens eine freie unbenutzte Entität mit Daten länger
+    # als der Vorschlag behalten würde. Die Treffer der echten Regel sind während der Karenz leer – die Wirkung wird deshalb über die
+    # heute unbenutzten freien Entitäten geschätzt (neu(..., schaetzung=ids)); der Vorschlag selbst bleibt die dynamische Regel.
+    # Der Block steht vor den Einzelvorschlägen: ob die dynamische Regel empfohlen wird oder schon besteht, entscheidet dort, ob
+    # Vorschläge entfallen, die nur auf „nirgends verwendet“ beruhen (durch_unbenutzt_gedeckt). Die Schätzung umfasst weiter alle
+    # unbenutzten freien Entitäten, unabhängig von dieser Unterdrückung.
+    bestehende_ub = [r for r in bestand["regeln"] if r["typ"] == "unbenutzt"]
+    dyn_empfohlen = False
+    if verwendet is not None and not bestehende_ub:
+        ku = _tage_von(TAGE["unbenutzt"])
+        ub = sorted(e["entity_id"] for e in ents
+                    if _frei(e, ktx) and e["entity_id"] not in verwendet and e["domain"] not in NIE_UNBENUTZT
+                    and (e["rows"] or 0) > 0 and (kurz_wirksam(e) or 0) > ku)
+        if ub:
+            sammel = [r for r in bestand["regeln"] if r["typ"] == "entity" and (r.get("notiz") or "").startswith(SAMMEL_NOTIZ)]
+            gr = [f"{_anzahl(len(ub), 'Entität', 'Entitäten')} nirgends verwendet (nicht in Dashboards, Automationen, Skripten, Templates, "
+                  "Helfern, Energie), ohne eigene Kurzzeit und mit Daten – Grundlage der geschätzten Wirkung",
+                  f"dynamische Regel: sie erfasst jede Entität erst nach {rg.KARENZ_TAGE} Tagen durchgehender Nichtverwendung (Karenz); "
+                  "wird eine Entität wieder verwendet, verlässt sie die Regel mit der nächsten Berechnung (spätestens der nächsten Analyse) und die Karenz beginnt von vorn. Die Treffer werden bei "
+                  "jeder Analyse neu bestimmt, auch künftige Entitäten kommen dazu – die Wirkung hier ist deshalb eine Schätzung",
+                  "setzt nur Kurzzeit und Attribute, keine Langzeit; bereits gelöschte Daten kommen nicht zurück",
+                  "ersetzt die Einzel- und Bündelvorschläge, die nur auf „nirgends verwendet“ beruhen"]
+            if sammel:
+                namen = ", ".join(f"{r['id']} „{r['name']}“" for r in sammel[:4]) + (f" … (+{len(sammel) - 4})" if len(sammel) > 4 else "")
+                gr.append(f"kann nach Übernahme entfernt werden: {_anzahl(len(sammel), 'statische Sammelregel', 'statische Sammelregeln')} "
+                          f"für nirgends verwendete Entitäten ({namen})")
+            v_dyn = neu("unbenutzt:dynamisch", "unbenutzt", "Nirgends verwendete Entitäten (dynamisch)", "unbenutzt", [], TAGE["unbenutzt"], gr,
+                        "Nirgends verwendet", "Empfehlung des RS DB HM: nirgends verwendete Entitäten dynamisch", schaetzung=ub)
+            dyn_empfohlen = bool(v_dyn) and not v_dyn["ignoriert"]     # ignoriert: der Nutzer verzichtet darauf, die Einzelvorschläge kehren zurück
+
+    def durch_unbenutzt_gedeckt(eid):
+        """Auflage B (Punkt 372): Trifft die dynamische Regel diese Entität (empfohlen oder bereits vorhanden, aktiv oder passiv; mit
+        Entity-Muster nur dessen Treffer), entfallen Vorschläge, deren einziger Grund „nirgends verwendet“ ist."""
+        if verwendet is None:
+            return False
+        if dyn_empfohlen:
+            return True
+        return any(not r["muster"] or any(fnmatch.fnmatchcase(eid, m) for m in r["muster"]) for r in bestehende_ub)
 
     # 1. Gruppen: Diagnose-Endungen je Domain → eine glob-Regel
     gruppen = {}
@@ -504,6 +887,8 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         ri = reg.get(eid) or {}
         n, gruende, tage = e["rows_24h"] or 0, [], []
         unbenutzt = verwendet is not None and eid not in verwendet and e["domain"] not in NIE_UNBENUTZT
+        unb_grund = False      # Punkt 372: „nirgends verwendet“ ist (einer) der Gründe dieses Einzelvorschlags
+        gedeckt = unbenutzt and durch_unbenutzt_gedeckt(eid)
         if ri.get("deaktiviert") and (e["rows"] or 0) > 0:
             gruende.append("in HA deaktiviert – schreibt nichts mehr, Altdaten bleiben sonst bis purge_keep_days")
             tage.append(TAGE["deaktiviert"])
@@ -513,13 +898,17 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         if unbenutzt and n >= UNBENUTZT_PRO_TAG:
             gruende.append("nirgends verwendet (nicht in Dashboards, Automationen, Skripten, Templates, Helfern, Energie)")
             tage.append(TAGE["unbenutzt"])
+            unb_grund = True
         if (e.get("plattform") or ri.get("platform")) in UHRZEIT_PLATTFORMEN and n:   # Punkt 208
             gruende.append("Uhrzeit/Datum: der Verlauf hat keinen Nutzen")
             tage.append(TAGE["uhrzeit"])
         if not gruende:
-            if unbenutzt and n >= UNBENUTZT_BUENDEL and (kurz_wirksam(e) or 0) > _tage_von(TAGE["unbenutzt"]):
+            # Punkt 372: die dynamische Regel deckt die Entität – kein schwacher Kandidat für Bündel
+            if unbenutzt and not gedeckt and n >= UNBENUTZT_BUENDEL and (kurz_wirksam(e) or 0) > _tage_von(TAGE["unbenutzt"]):
                 schwach.append((eid, TAGE["unbenutzt"], ["nirgends verwendet, unter 500 Zeilen je Tag (nur im Bündel)"]))
             continue
+        if unb_grund and gedeckt and len(gruende) == 1:
+            continue       # Punkt 372: einziger Grund „nirgends verwendet“ und von der dynamischen Regel gedeckt → kein Einzelvorschlag
         kz = min(tage, key=_tage_von)
         if (kurz_wirksam(e) or 0) <= _tage_von(kz):
             continue
@@ -550,29 +939,8 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         t = f"{wo}: " + (_anzahl(st, 'Einzelvorschlag', 'Einzelvorschläge') + (f" und {sw}" if len(l) > st else "") if st else sw)
         return t + " – eine Regel statt vieler"
 
-    def sammelregel(schl, wo, frei, rest, benutzt, l, kz, typ):
-        """Punkte 233/234: die Muster-Regel (klasse/herkunft) ist nicht möglich – zu viele der übrigen werden verwendet oder
-        sie verlängert irgendwo → Sammelregel (entity) mit allen unbenutzten freien Entitäten, die Daten haben. Trifft keine
-        verwendete und verlängert nie (nur Entitäten ohne eigene Kurzzeit); künftige Entitäten erfasst sie nicht."""
-        anzeige = "Integrations-" if typ == "herkunft" else f"{typ}-"   # Punkt 246
-        ids = sorted(e["entity_id"] for e in frei if e["entity_id"] not in verwendet and (e["rows"] or 0) > 0)
-        if len(ids) < GRUPPE_MIN:
-            return
-        if len(benutzt) > KLASSE_VERWENDET * len(rest):
-            grund = (f"{anzeige}Regel nicht möglich: von den übrigen {len(rest)} werden {len(benutzt)} verwendet"
-                     + (f" (z. B. {', '.join(benutzt[:3])})" if benutzt else ""))
-        elif ablehnung["grund"] == "verlaengert":
-            grund = f"{anzeige}Regel nicht möglich: sie verlängert die Kurzzeit von Entitäten mit kürzerer Regel (Rang)"
-        else:
-            grund = f"{anzeige}Regel nicht möglich: sie spart nichts"
-        gr = [buendel(l, wo), grund,
-              f"enthält alle {_anzahl(len(ids), 'unbenutzte Entität', 'unbenutzten Entitäten')} ohne eigene Kurzzeit "
-              "(Zähler ausgenommen) – künftige nicht"]
-        vid = f"sammel:{schl}"
-        v = neu(vid, "sammel", f"{wo}, nirgends verwendet", "entity", ids, kz, gr + arten(l),
-                f"{wo}, nirgends verwendet – {rg.anzeige(kz)}", "Empfehlung des RS DB HM: alle unbenutzten Entitäten in einer Regel")
-        if v and vid not in ignoriert:
-            vergeben.update(ids)
+    # Punkt 372: die statische Sammelregel (Punkte 233/234, entity mit fester Liste) entfällt – unbenutzte Entitäten, für die keine
+    # klasse-/herkunft-Regel passt, deckt die dynamische Regel (Block „0.“ oben) ab
 
     # Punkt 208: Einzelvorschläge derselben Klasse (domain|device_class) → eine klasse-Regel, wenn die übrigen freien
     # Entitäten der Klasse (fast) nirgends verwendet werden – sonst träfe die Regel Werte, die jemand nutzt (z. B. power)
@@ -589,25 +957,24 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         frei = frei_alle(lambda e: e["domain"] == dom and e.get("device_class") == dc, kz)
         kand = {x[0] for x in l}
         rest = [e for e in frei if e["entity_id"] not in kand]
-        if verwendet is None:
-            if len(l) < 0.5 * len(frei):
-                continue
-            benutzt = None
-        else:
-            benutzt = [e["entity_id"] for e in rest if e["entity_id"] in verwendet]
+        if verwendet is None and len(l) < 0.5 * len(frei):
+            continue       # ohne sichere Verwendung nur, wenn die Einzelvorschläge mindestens die Hälfte der Klasse ausmachen
+        # bremsende Prüfung mit der möglicherweise unvollständigen Menge (Teilwissen bremst weiterhin)
+        benutzt = None if verwendet_teil is None else [e["entity_id"] for e in rest if e["entity_id"] in verwendet_teil]
         v = None
         if benutzt is None or len(benutzt) <= KLASSE_VERWENDET * len(rest):
             gr = [buendel(l, f"Klasse {k}"),
                   f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} dieser Klasse ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"]
             if rest and benutzt is not None:
-                gr.append(f"von den übrigen {len(rest)} werden {len(benutzt)} irgendwo verwendet")
+                gr.append(f"von den übrigen {len(rest)} werden {len(benutzt)} irgendwo verwendet"
+                          + ("; Verwendung nur teilweise bestimmbar" if verwendet is None else ""))
+            elif verwendet is None:
+                gr.append("Verwendung nicht bestimmbar – geprüft nur über den Anteil der Einzelvorschläge an der Klasse")
             vid = f"klasse:{k}"
             v = neu(vid, "klasse", f"Klasse {k}", "klasse", [k], kz, gr + arten(l), f"Klasse {k} – {rg.anzeige(kz)}",
                     "Empfehlung des RS DB HM")
             if v and vid not in ignoriert:
                 vergeben.update(x[0] for x in l)
-        if not v and benutzt is not None:
-            sammelregel(f"klasse:{k}", f"Klasse {k}", frei, rest, benutzt, l, kz, "klasse")
 
     # Punkt 205: viele Einzelvorschläge einer Integration → eine herkunft-Regel (trifft alle Entitäten der Integration);
     # Uhrzeit-Integrationen schon ab einem Vorschlag. Punkt 234: Kurzzeit wie bei klasse die längste der Einzelvorschläge,
@@ -625,7 +992,8 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
         frei = frei_alle(lambda e: e.get("plattform") == p, kz)
         kand = {x[0] for x in l}
         rest = [e for e in frei if e["entity_id"] not in kand]
-        benutzt = None if verwendet is None or uhr else [e["entity_id"] for e in rest if e["entity_id"] in verwendet]
+        # bremsende Prüfung mit der möglicherweise unvollständigen Menge (Teilwissen bremst weiterhin)
+        benutzt = None if verwendet_teil is None or uhr else [e["entity_id"] for e in rest if e["entity_id"] in verwendet_teil]
         v = None
         if benutzt is None or len(benutzt) <= KLASSE_VERWENDET * len(rest):
             quellen = sum(1 for e in ents if e.get("plattform") == p and e["status"] == "aktiv"
@@ -634,7 +1002,8 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
             gr = [buendel(l, f"Integration {p}"),
                   f"trifft alle {_anzahl(len(frei), 'Entität', 'Entitäten')} von {p} ohne eigene Kurzzeit (Zähler ausgenommen), auch künftige"]
             if rest and benutzt is not None:
-                gr.append(f"von den übrigen {len(rest)} werden {len(benutzt)} irgendwo verwendet")
+                gr.append(f"von den übrigen {len(rest)} werden {len(benutzt)} irgendwo verwendet"
+                          + ("; Verwendung nur teilweise bestimmbar" if verwendet is None else ""))
             gr += arten(l)
             if quellen:
                 gr.append(f"⚠ trifft auch {_anzahl(quellen, 'Quelle', 'Quellen')} von Energie-Dashboard oder Helfern – in der Maske prüfen")
@@ -643,8 +1012,6 @@ def vorschlaege(pl, bestand, hist, ktx, config, ignoriert=(), ziel=None):
                     "Empfehlung des RS DB HM: eine Regel je Integration statt vieler einzelner")
             if v and vid not in ignoriert:
                 vergeben.update(x[0] for x in l)
-        if not v and benutzt is not None:
-            sammelregel(f"herkunft:{p}", f"Integration {p}", frei, rest, benutzt, l, kz, "herkunft")
     einzeln = [x for x in einzeln if x[0] not in vergeben]   # schwache ohne Bündel entfallen (Punkt 236)
 
     # gleichartige Einzelvorschläge (gleiche Kurzzeit) zu Mustern verdichten, die nur Kandidaten treffen

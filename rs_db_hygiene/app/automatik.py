@@ -64,7 +64,7 @@ def melde_discovery(key, versuche=10, pause=15):
     return False
 
 
-def status(p, job, letzter_fehler, analyse_info, db_bytes, prognose_bytes, optionen, laeufe, attr_info=None, prognose_tage=None):
+def status(p, job, letzter_fehler, analyse_info, db_bytes, prognose_bytes, optionen, laeufe, attr_info=None, prognose_tage=None, bericht_zaehler=None):
     """Kompakter Zustand für die Entitäten der Integration."""
     automatik = bool(optionen.get("automatik_freigegeben"))
     # ab 0.4.3 (Punkt 83): ohne Sperre wegen alter Analyse – ein Lauf aus HA analysiert in dem Fall vorher selbst
@@ -103,8 +103,9 @@ def status(p, job, letzter_fehler, analyse_info, db_bytes, prognose_bytes, optio
         "analyse_zeit": float(analyse_info["analyse_zeit"]) if analyse_info.get("analyse_zeit") else None,
         "attribut_analyse_zeit": float(attr_info["analyse_zeit"]) if (attr_info or {}).get("analyse_zeit") else None,
         "db_bytes": db_bytes, "prognose_bytes": prognose_bytes,
-        "prognose_tage": prognose_tage,       # Punkt 81: Zeitraum der Prognose (= purge_keep_days der Analyse)
+        "prognose_tage": prognose_tage,       # Punkt 81, ab 0.6.2b1 (303): Zeitraum der Prognose = Option prognose_jahre
         "analyse_veraltet": (p or {}).get("analyse_veraltet") or None,
         "automatik_freigegeben": automatik, "loeschen_freigegeben": bool(optionen.get("loeschen_freigegeben")),
         "stufe_b": (p or {}).get("stufe_b"),
+        "bericht_zaehler": bericht_zaehler,       # Punkt 376: Zähler des Statusberichts (aus dem Zwischenspeicher, nie frisch gerechnet)
     }

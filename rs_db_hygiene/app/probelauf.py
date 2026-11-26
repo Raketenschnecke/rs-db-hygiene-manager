@@ -7,6 +7,7 @@ Interne Namen (loeschbar_*, mit_vorgemerkten) bleiben für API und Links unverä
 „Löschpotenzial“ bzw. „passive Regeln“.
   - geschätzte Größe im eingeschwungenen Zustand über den Prognosezeitraum (= angenommenes purge_keep_days)
 """
+import fnmatch
 import os
 import sqlite3
 
@@ -126,11 +127,43 @@ def _lade(cache_pfad, attr_pfad):
             "attr_letzt": attr_letzt, "attr_zuwachs": attr_zuwachs, "attr_zuwachs_z": attr_zuwachs_z, "attr_stand": attr_stand}
 
 
-def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=False, halten_pfad=None):
+def _unbenutzt_je_regel(regel_daten, u):
+    """Punkt 372: Ergebnisblock der Regeln vom Typ unbenutzt – das Kriterium ist global, das Entity-Muster (glob) der Regel
+    schränkt Treffer, Zu-/Abgänge und Karenz ein (leeres Muster = alle)."""
+    def passt(eid, muster):
+        return not muster or any(fnmatch.fnmatchcase(eid, m) for m in muster)
+    aus = {}
+    for r in regel_daten["regeln"]:
+        if r["typ"] != "unbenutzt":
+            continue
+        m = r["muster"]
+        zu, ab = [x for x in u["zugaenge"] if passt(x, m)], [x for x in u["abgaenge"] if passt(x, m)]
+        aus[r["id"]] = {"zugaenge": zu, "abgaenge": ab, "karenz": [k for k in u["karenz"] if passt(k["entity_id"], m)],
+                        "treffer": sum(1 for x in rg.UNBENUTZT["treffer"] if passt(x, m))}
+    return aus
+
+
+def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=False, halten_pfad=None,
+           unbenutzt_pfad=None, verwendet=None, verwendet_info=None):
+    """unbenutzt_pfad/verwendet (Punkt 372): Zustandsdatei und Menge der verwendeten Entity-IDs für den Regeltyp unbenutzt.
+    Ohne unbenutzt_pfad oder mit verwendet=None trifft dieser Typ nichts (Ergebnis-Schlüssel „unbenutzt“, dort das Feld „bekannt“ = False).
+    verwendet_info: Kennzahlen der Verwendungsprüfung (optimierung.verwendung_sicher: grund, storage, dateien, dashboards, yaml, fehler,
+    registry, aufgeloest, woerter); grund und Kennzahlen erscheinen im Ergebnisblock „unbenutzt“ (Felder grund und lesen). Die Zahl der
+    verwendeten Entitäten (Feld groesse) zählt halte_unbenutzt über die Entitäten des Analyse-Caches, nicht die Wörter in verwendet."""
     d = _lade(cache_pfad, attr_pfad)
     info, heute, pkd, st, lts, kurz, ents, ev = (d[k] for k in ("info", "heute", "pkd", "st", "lts", "kurz", "ents", "ev"))
     if halten_pfad:   # Punkt 201: Hysterese der vielschreiber-Regeln je Analyse-Stand fortschreiben
         rg.halte_vielschreiber(regel_daten, ents, info.get("analyse_zeit"), halten_pfad)
+    # Punkt 372: Karenz der unbenutzt-Regeln fortschreiben; ohne Pfad oder bekannte Verwendung bleibt der Modulzustand leer
+    if unbenutzt_pfad:
+        unbenutzt = rg.halte_unbenutzt(regel_daten, ents, info.get("analyse_zeit"), unbenutzt_pfad, verwendet,
+                                       grund=(verwendet_info or {}).get("grund"))
+    else:
+        rg.UNBENUTZT["treffer"], rg.UNBENUTZT["bekannt"] = frozenset(), False
+        unbenutzt = {"bekannt": False, "grund": "ohne Zustandsdatei gerechnet", "groesse": None, "karenz_tage": rg.KARENZ_TAGE,
+                     "treffer": 0, "zugaenge": [], "abgaenge": [], "karenz": []}
+    unbenutzt = {**unbenutzt, "regeln": _unbenutzt_je_regel(regel_daten, unbenutzt),
+                 "lesen": {k: v for k, v in (verwendet_info or {}).items() if k != "grund"}}
     attr_letzt, attr_zuwachs, attr_zuwachs_z, attr_stand = (d[k] for k in ("attr_letzt", "attr_zuwachs", "attr_zuwachs_z", "attr_stand"))
     ziel = int(ziel_tage or pkd)
     zb = min(pkd, ziel)    # Punkt 102: ohne Regeln bleibt höchstens purge_keep_days, im Prognosezeitraum höchstens ziel
@@ -373,6 +406,7 @@ def rechne(cache_pfad, attr_pfad, regel_daten, ziel_tage=None, mit_vorgemerkten=
         "summe": {**summe, "events_bytes": ev_p, "events_basis_bytes": ev_b, "prognose_bytes": prognose, "basis_bytes": basis_summe},
         "regeln": regeln_liste,
         "events": events_liste,
+        "unbenutzt": unbenutzt,      # Punkt 372: Treffer, Zu-/Abgänge, Karenz (global und je Regel)
         "entitaeten": zeilen,
     }
 
