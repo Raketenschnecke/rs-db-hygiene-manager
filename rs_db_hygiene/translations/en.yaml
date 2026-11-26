@@ -26,6 +26,27 @@ configuration:
   zuwachs_monate:
     name: Speicherung Zuwachsdaten (Monate)
     description: So viele Monate bleiben die Tageswerte der Zuwachs-Charts (neue Zeilen pro Tag) gespeichert; ältere werden nach jeder Analyse entfernt. Erlaubt sind 1 bis 240, Vorgabe 24. Die Werte für gelöschte Tage lassen sich nicht wiederherstellen.
+  bericht_abdeckung_gelb_pct:
+    name: "Statusbericht: Schwelle Abdeckung (Prozent)"
+    description: Der Statusbericht färbt die Ampel gelb, wenn weniger als dieser Anteil der aktiven Entitäten (in Prozent) eine eigene Regel hat. Erlaubt sind 0 bis 100, Vorgabe 80.
+  bericht_schreibrate_faktor:
+    name: "Statusbericht: Schwelle Schreibratensprung (Faktor)"
+    description: Eine Entität gilt im Statusbericht als Schreibratensprung, wenn sie mindestens so viel mal häufiger schreibt wie im Zeitraum davor. Erlaubt sind 1 bis 100, Vorgabe 3.
+  bericht_zuwachs_prognose_pct:
+    name: "Statusbericht: Schwelle Zuwachs gegen Prognose (Prozent)"
+    description: Der Statusbericht färbt die Ampel gelb, wenn der tatsächliche Zuwachs über diesem Prozentsatz des prognostizierten Zuwachses liegt. Erlaubt sind 100 bis 1000, Vorgabe 120.
+  bericht_top_n_ohne_regel:
+    name: "Statusbericht: Rangliste der stärksten Schreiber (Anzahl)"
+    description: Gehört eine neue Entität ohne eigene Regel zu dieser Anzahl der stärksten Schreiber, färbt der Statusbericht die Ampel gelb. Erlaubt sind 1 bis 100, Vorgabe 10.
+  bericht_tote_muster_rot:
+    name: "Statusbericht: Schwelle tote Muster (Anzahl)"
+    description: Ab dieser Anzahl toter Regelmuster färbt der Statusbericht die Ampel rot. Erlaubt sind 1 bis 10000, Vorgabe 1.
+  bericht_regelcheck_rot:
+    name: "Statusbericht: Schwelle Regelcheck rot (Anzahl)"
+    description: Ab dieser Anzahl Regelcheck-Befunde der Stufe rot färbt der Statusbericht die Ampel rot. Erlaubt sind 1 bis 10000, Vorgabe 1.
+  prognose_jahre:
+    name: "Prognosezeitraum für Sensor und Statusbericht (Jahre)"
+    description: "Über so viele Jahre rechnen der Sensor „Prognose“ der Integration und der Statusbericht die Prognose der Datenbankgröße (im Bericht auch die Ersparnis der Empfehlungen). Erlaubt sind 0,5 bis 20, Vorgabe 1. Die Kacheln der App rechnen weiter mit dem Feld „Prognosezeitraum“ oben in der App (im Browser gemerkt)."
   automatik_freigegeben:
     name: Automatik freigegeben
     description: Erlaubt Löschläufe aus Home Assistant heraus (Knopf, Dienst rs_db_hygiene.loeschlauf_starten, Automation) über die Integration RS DB Hygiene. Zusätzlich muss „Löschen freigegeben“ an sein.

@@ -24,7 +24,15 @@ SENSOREN = {
     # Punkt 296 (0.5.6): installierte Version der Integration (aus manifest.json). Die Version der App liefert schon die
     # Supervisor-Integration (sensor.rs_db_hygiene_manager_…_version).
     "version_integration": (None, None, None, None, True),
+    # Punkt 376 (0.6.2b1): Zähler aus dem Bericht der App (Feld bericht_zaehler im Status; ältere App → unbekannt)
+    "tote_muster": (None, "Muster", SensorStateClass.MEASUREMENT, None, False),
+    "regelcheck_rot": (None, "Befunde", SensorStateClass.MEASUREMENT, None, False),
+    "neu_ohne_regel": (None, "Entitäten", SensorStateClass.MEASUREMENT, None, False),
+    "ampel": (SensorDeviceClass.ENUM, None, None, bruecke.AMPEL, False),
 }
+
+# Punkt 376: neue Sensoren bekommen auf Neuinstallationen ebenfalls die feste ID sensor.rs_db_hygiene_<schlüssel>
+FESTE_ID = {"version_integration", "tote_muster", "regelcheck_rot", "neu_ohne_regel", "ampel"}
 
 # Punkt 244 (0.5.6b6): Sekunden, höchstens so oft übernimmt der Sensor einen neuen Wert (der Koordinator läuft weiter alle 30 s)
 DROSSELUNG = {"db_groesse": 1800}
@@ -48,9 +56,10 @@ class DbhSensor(DbhEntitaet, SensorEntity):
         self._drossel = DROSSELUNG.get(schluessel)
         self._gehalten = None      # zuletzt übernommener Wert
         self._uebernommen = None   # monotone Zeit der letzten Übernahme
-        if schluessel == "version_integration":
-            # feste ID wie die übrigen (sensor.rs_db_hygiene_…), nicht vom neuen Gerätenamen „… Manager“ abgeleitet
-            self.entity_id = f"sensor.{DOMAIN}_version_integration"
+        if schluessel in FESTE_ID:
+            # feste ID wie die übrigen (sensor.rs_db_hygiene_…), nicht vom neuen Gerätenamen „… Manager“ abgeleitet.
+            # Bestehende Einträge behalten ihre ID aus der Registry; das gilt nur für neu angelegte Entitäten.
+            self.entity_id = f"sensor.{DOMAIN}_{schluessel}"
 
     @property
     def available(self):

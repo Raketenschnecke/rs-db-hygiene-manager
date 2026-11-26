@@ -17,9 +17,11 @@ from aiohttp import web
 
 import analyse
 import automatik
+import bericht
 import bestand
 import eventsplit
 import herkunft
+import kompatibilitaet as kompat
 import loeschen
 import optimierung
 import probelauf
@@ -49,6 +51,9 @@ REGELN = os.path.join(DATA, "regeln.json")
 HALTEN = os.path.join(DATA, "vielschreiber_halten.json")   # Punkt 201: Hysterese der vielschreiber-Regeln
 UNBENUTZT_HALTEN = os.path.join(DATA, "unbenutzt_halten.json")   # Punkt 372: Karenz der unbenutzt-Regeln
 LAEUFE = os.path.join(DATA, "laeufe")
+BERICHT = os.path.join(DATA, "bericht.json")                    # Punkt 376: letzter Statusbericht (nach stichtag_setzen der neu gerechnete Standardbericht)
+BERICHT_BASIS = os.path.join(DATA, "bericht_basis.json")        # vorberechnete teure Bausteine (Vorschläge, Regelcheck-Zusammenfassung)
+BERICHT_STICHTAG = os.path.join(DATA, "bericht_stichtag.json")  # Stichtag für „neu seit dem letzten Bericht“
 LAEUFE_SUMME = os.path.join(DATA, "laeufe_summe.json")
 VORLAGE = os.path.join(APP_DIR, "regeln_vorlage.json")
 SICHERUNGEN = os.path.join(DATA, "regeln_sicherungen")   # Punkt 123
@@ -255,6 +260,8 @@ async def starte_job(art, fn=None, zusatz=None, danach=None):
             ergebnis = await asyncio.to_thread(fn or {"analyse": _analyse_sync, "attribute": _attribut_sync, "beide": _beide_sync}[art])
             Z.letzter_job = {"art": art, "ende": time.time(), "ok": True, "ergebnis": ergebnis}
             Z.letzter_fehler = None
+            if art in ("analyse", "attribute", "beide"):         # Punkt 376: Statusbericht im Hintergrund vorberechnen
+                _bericht_vorberechnen()
         except Exception as e:  # noqa: BLE001 – Fehler in der GUI anzeigen
             _LOG.exception("Job %s fehlgeschlagen", art)
             Z.letzter_fehler = f"{JOBNAMEN.get(art, art)}: {e}"
@@ -364,7 +371,8 @@ async def status(_request):
     return web.json_response({"job": Z.job, "letzter_job": Z.letzter_job, "fehler": Z.letzter_fehler,
                               "analyse": info, "attribute": attr, "optionen": optionen(), "integration": integration,
                               "regeln_geaendert": Z.mtime(REGELN), "app": APP,
-                              "pruefung": await asyncio.to_thread(pkd_pruefung)})
+                              "pruefung": await asyncio.to_thread(pkd_pruefung),
+                              "kompatibilitaet": await asyncio.to_thread(_schema_befund)})     # Punkt 302: Chip
 
 
 _PKD = {"schl": None, "erg": None}
@@ -1187,6 +1195,12 @@ async def _loesch_plan(request_or_regel, ausnahme=None):
     p["sperren"] = loeschen.sperren(p, frei, Z.job, os.environ.get("SUPERVISOR_TOKEN"), pkd)
     # Läufe aus HA analysieren bei altem Stand vorher selbst (Punkt 83) – dafür keine Sperre wegen der Analyse
     p["sperren_auto"] = loeschen.sperren(p, frei, Z.job, os.environ.get("SUPERVISOR_TOKEN"), pkd, analyse_pruefen=False)
+    # Punkt 302: Recorder-Schema nicht freigegeben → jeder Löschlauf gesperrt (manuell, aus HA, Nachtlauf), Analysen laufen weiter
+    p["schema"] = await asyncio.to_thread(_schema_befund)
+    if p["schema"]["befund"]:
+        p["sperren"].insert(0, p["schema"]["befund"]["text"])
+        p["sperren_auto"].insert(0, p["schema"]["befund"]["text"])
+    uhr("Recorder-Schema prüfen")
     # Punkt 126: mit Grenze lokale Mitternacht (exakt) gilt auch eine Analyse vom Vortag als veraltet
     p["analyse_veraltet"] = loeschen.analyse_veraltet(p["analyse_zeit"], p["purge_keep_days"], pkd, loeschen.ANALYSE_FRISCH_S, exakt=p.get("exakt", False))
     # Punkt 110 (0.4.9): während eines Backups startet kein neuer Lauf (manuell und aus HA)
@@ -1210,8 +1224,16 @@ async def _loesch_plan(request_or_regel, ausnahme=None):
         p["risiken"] = []
     laeufe = await asyncio.to_thread(loeschen.protokolle, LAEUFE, 1, Z.lauf.start if Z.lauf else None)
     uhr("Löschprotokoll")
-    p["prognose_bytes"] = (pl.get("summe") or {}).get("prognose_bytes")      # für den Status der Integration
-    p["prognose_tage"] = (pl.get("stand") or {}).get("ziel_tage")
+    # Punkt 303 (geschlossen 26.11.): Prognose für den Status der Integration über den Zeitraum der Option prognose_jahre
+    # (wie der Statusbericht), nicht über purge_keep_days; der Löschplan selbst bleibt bei purge_keep_days
+    try:
+        pp = await asyncio.to_thread(Z.probelauf, _prognose_ziel(), False) or pl
+    except Exception:  # noqa: BLE001 – Prognose ist Zusatz, der Plan soll trotzdem kommen
+        _LOG.exception("Prognose für den Status nicht berechnet")
+        pp = pl
+    uhr("Prognose (Zeitraum der Option)")
+    p["prognose_bytes"] = (pp.get("summe") or {}).get("prognose_bytes")      # für den Status der Integration
+    p["prognose_tage"] = (pp.get("stand") or {}).get("ziel_tage")
     p["letzter_lauf"] = {k: laeufe[0].get(k) for k in ("start", "ende", "status", "geloescht", "geplant_zeilen", "nur_regel", "fehler", "backup_warte_s")} if laeufe else None
     return p
 
@@ -1323,24 +1345,281 @@ def _info(pfad):
 
 
 async def auto_status(request):
-    v = request.headers.get("X-DBH-Integration-Version")     # Punkt 272: ab 0.5.6b16 meldet die Integration ihre Version
-    if v:
-        _INTEGRATION.update(version=v[:40], version_zeit=time.time())
+    _integration_kopf(request)
     uhr = _Stoppuhr("Status für HA")
     p = await _auto_plan()
     uhr("Plan (Zwischenspeicher)")
     info = _info(CACHE)
     db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
     db_bytes = await asyncio.to_thread(analyse.db_belegt_bytes, db) if os.path.exists(db) else None
+    _BERICHT["db"] = (time.time(), db_bytes)       # Punkt 376: der Statusbericht nimmt diesen Wert, statt selbst zu messen
+    await _bericht_zaehler_async()
     laeufe = await asyncio.to_thread(loeschen.protokolle, LAEUFE, 1, Z.lauf.start if Z.lauf else None)
     uhr("Löschprotokoll")
     st = automatik.status(p, Z.job, Z.letzter_fehler, info, db_bytes, (p or {}).get("prognose_bytes"),
-                          optionen(), laeufe, _info(ATTR), (p or {}).get("prognose_tage"))
+                          optionen(), laeufe, _info(ATTR), (p or {}).get("prognose_tage"), _bericht_zaehler())
     st["stand_alter_s"] = round(time.time() - _AUTO["zeit"], 1) if _AUTO["zeit"] else None
     return web.json_response(st)
 
 
+# ---------------------------------------------------------------- Statusbericht (Punkt 376)
+
+_BERICHT = {"lock": None, "zaehler": None, "geladen": False, "task": None, "nochmal": False, "db": (0, None)}
+STANDARD_BERICHT = (7, 5, "zahlen")
+PROGNOSE_JAHRE = 1.0      # Punkte 376/303: Prognosezeitraum von Bericht und Sensor, wie die Vorgabe der Oberfläche      # nur dieser Aufruf speist die Zähler der Sensoren
+DB_BYTES_ALTER_S = 600
+
+
+def _bericht_lock():
+    if _BERICHT["lock"] is None:
+        _BERICHT["lock"] = asyncio.Lock()
+    return _BERICHT["lock"]
+
+
+def _zaehler_aus(b):
+    if not isinstance(b, dict):
+        return None
+    return {"tote_muster": (b.get("drift") or {}).get("tote_muster"), "regelcheck_rot": (b.get("regelcheck") or {}).get("rot"),
+            "neu_ohne_regel": (b.get("abdeckung") or {}).get("neu_ohne_regel"), "ampel": b.get("ampel")}
+
+
+def _zaehler_laden():
+    b = bericht.lies_json(BERICHT)
+    return _zaehler_aus(b) if ((b or {}).get("stand") or {}).get("zeitraum_tage") == STANDARD_BERICHT[0] else None
+
+
+async def _bericht_zaehler_async():
+    """Einmalig nach dem Start den Zwischenspeicher aus bericht.json füllen (Dateizugriff im Thread)."""
+    if not _BERICHT["geladen"]:
+        _BERICHT["geladen"] = True
+        z = await asyncio.to_thread(_zaehler_laden)
+        if _BERICHT["zaehler"] is None:
+            _BERICHT["zaehler"] = z
+
+
+def _bericht_zaehler():
+    """Zähler für den Status der Integration – billig: nur der Zwischenspeicher im Speicher, nie eine Rechnung."""
+    return _BERICHT["zaehler"]
+
+
+async def _bericht_speichern(b, standard):
+    """Gelieferten Bericht als bericht.json ablegen; nur der Standardbericht stellt die Zähler (Zwischenspeicher)."""
+    if standard:
+        _BERICHT["zaehler"] = _zaehler_aus(b)
+    try:
+        await asyncio.to_thread(bericht.schreibe_json, BERICHT, b)
+    except OSError:
+        _LOG.exception("Statusbericht konnte nicht gespeichert werden")
+
+
+def _vorschlaege_rechnen(pl):
+    hist = optimierung.histogramme(CACHE, ATTR)
+    ktx = warnungen.kontext(HA_CONFIG)
+    liste = optimierung.vorschlaege(pl, rg.lade(REGELN, VORLAGE), hist, ktx, HA_CONFIG, optimierung.lies_ignoriert(DATA), None)
+    # nur, was der Bericht braucht (keine Detaildaten der Vorschläge ablegen)
+    return [{k: v.get(k) for k in ("titel", "art", "anzahl", "ersparnis_bytes", "ignoriert")} for v in liste]
+
+
+def _prognose_ziel():
+    """Prognosezeitraum von Statusbericht und Prognose-Sensor in Tagen aus der Option prognose_jahre (Vorgabe 1 Jahr wie das Feld
+    „Prognosezeitraum“ der Oberfläche, gleiche Umrechnung Jahre × 365). Ungültige Werte: Vorgabe."""
+    try:
+        jahre = float(optionen().get("prognose_jahre", PROGNOSE_JAHRE))
+    except (TypeError, ValueError):
+        jahre = PROGNOSE_JAHRE
+    if not 0.5 <= jahre <= 20:
+        jahre = PROGNOSE_JAHRE
+    return round(jahre * 365)
+
+
+def _basis_stempel(pl):
+    return {"analyse_zeit": (pl.get("stand") or {}).get("analyse_zeit"), "ziel_tage": (pl.get("stand") or {}).get("ziel_tage"), "regeln_mtime": Z.mtime(REGELN), "attr_mtime": Z.mtime(ATTR),
+            "struktur_mtime": Z.mtime(STRUKTUR), "ignoriert": sorted(optimierung.lies_ignoriert(DATA))}
+
+
+async def _bericht_vorschlaege(pl, frisch=False):
+    """Vorschläge aus bericht_basis.json, wenn der Stempel passt (Analyse, Regeln, Attribute, Struktur, Ignorier-Liste), sonst frisch
+    (und neu abgelegt). Ein fehlgeschlagener Baustein (None) wird nie abgelegt und beim nächsten Mal neu versucht."""
+    try:
+        stempel = await asyncio.to_thread(_basis_stempel, pl)
+        if not frisch:
+            b = await asyncio.to_thread(bericht.lies_json, BERICHT_BASIS)
+            if b and b.get("stempel") == stempel and b.get("vorschlaege") is not None:
+                return b["vorschlaege"]
+        vs = await asyncio.to_thread(_vorschlaege_rechnen, pl)
+        await asyncio.to_thread(bericht.schreibe_json, BERICHT_BASIS, {"stempel": stempel, "vorschlaege": vs})
+        return vs
+    except Exception:  # noqa: BLE001 – der Bericht darf nie an einem Baustein scheitern
+        _LOG.exception("Statusbericht: Vorschläge nicht berechnet")
+        return None
+
+
+def _lts_ohne_anzahl():
+    if not os.path.exists(CACHE):
+        return None
+    import sqlite3
+    con = sqlite3.connect(f"file:{CACHE}?mode=ro", uri=True)
+    try:
+        return con.execute("SELECT COUNT(*) FROM lts_ohne_entitaet").fetchone()[0]
+    finally:
+        con.close()
+
+
+def _registry_lesen():
+    with open(ENTITY_REGISTRY, encoding="utf-8") as f:
+        return json.load(f)
+
+
+async def _db_bytes_bericht():
+    """Zuletzt von auto_status gemessener Wert (nicht älter als 10 min), sonst frisch messen."""
+    zeit, wert = _BERICHT["db"]
+    if wert is not None and time.time() - zeit < DB_BYTES_ALTER_S:
+        return wert
+    db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
+    return await asyncio.to_thread(analyse.db_belegt_bytes, db) if os.path.exists(db) else None
+
+
+async def _bericht_eingabe(pl, vorschlaege=None, frisch=False):
+    """Eingabe-Dict für bericht.baue. Jeder Baustein für sich: Fehler → Eintrag None, nie ein Abbruch."""
+    e = {"probelauf": pl, "zuwachs_pfad": ZUWACHS, "app_version": APP["version"]}
+    e["vorschlaege"] = vorschlaege if vorschlaege is not None else await _bericht_vorschlaege(pl, frisch)
+
+    async def baustein(name, fn):
+        try:
+            e[name] = await fn()
+        except Exception:  # noqa: BLE001
+            _LOG.exception("Statusbericht: Baustein %s nicht berechnet", name)
+            e[name] = None
+
+    async def regelcheck_f():        # immer über den Zwischenspeicher mit Live-Stand – passt so zu den toten Mustern
+        _r, _b, daten = await _regelcheck_daten()
+        return (daten or {}).get("zusammenfassung")
+
+    async def tote_f():
+        bestand_, bz, _z, _da = await _tote_befund()
+        return tote.finde(bestand_, bz)
+
+    async def laeufe_f():
+        return await asyncio.to_thread(loeschen.protokolle, LAEUFE, 1000, Z.lauf.start if Z.lauf else None)
+
+    async def registry_f():
+        return await asyncio.to_thread(_registry_lesen)
+
+    async def regeln_f():
+        return await asyncio.to_thread(rg.lade, REGELN, VORLAGE)
+
+    async def lts_f():
+        return await asyncio.to_thread(_lts_ohne_anzahl)
+
+    async def stichtag_f():
+        return await asyncio.to_thread(bericht.lies_json, BERICHT_STICHTAG)
+
+    async def prog_b():
+        return (pl.get("summe") or {}).get("prognose_bytes")
+
+    async def prog_t():
+        return (pl.get("stand") or {}).get("ziel_tage")
+
+    for name, fn in (("regelcheck", regelcheck_f), ("tote", tote_f), ("db_bytes", _db_bytes_bericht), ("laeufe", laeufe_f),
+                     ("registry", registry_f), ("regeln", regeln_f), ("lts_ohne", lts_f), ("stichtag", stichtag_f),
+                     ("prognose_bytes", prog_b), ("prognose_tage", prog_t)):
+        await baustein(name, fn)
+    return e
+
+
+async def _standardbericht(pl, vorschlaege=None, e=None):
+    """Standardbericht (7 Tage, nur Zahlen) rechnen und als Zähler-Quelle ablegen; ersetzt bericht.json nicht bei Fehlern."""
+    if e is None:
+        e = await _bericht_eingabe(pl, vorschlaege)
+    b = await asyncio.to_thread(bericht.baue, e, *STANDARD_BERICHT, bericht.schwellen_aus_optionen(optionen()))
+    await _bericht_speichern(b, True)
+    return b
+
+
+async def _bericht_vorberechnung():
+    """Hintergrund: teure Bausteine ablegen, danach Standardbericht für die Zähler. Wird eine Analyse während der Rechnung fertig
+    (Flag „nochmal“), rechnet die Schleife erneut. Fehler werden nur geloggt."""
+    try:
+        while True:
+            _BERICHT["nochmal"] = False
+            try:
+                pl = await asyncio.to_thread(Z.probelauf, _prognose_ziel(), False)
+                if pl:
+                    vs = await _bericht_vorschlaege(pl, True)
+                    async with _bericht_lock():
+                        await _standardbericht(pl, vs)
+            except Exception:  # noqa: BLE001 – Vorberechnung ist Zusatz, die Analyse bleibt gültig
+                _LOG.exception("Statusbericht: Vorberechnung fehlgeschlagen")
+            if not _BERICHT["nochmal"]:
+                return
+    finally:
+        _BERICHT["task"] = None
+
+
+def _bericht_vorberechnen():
+    """Nach einer erfolgreichen Analyse oder Attribut-Analyse starten; läuft schon eine, rechnet sie danach noch einmal."""
+    t = _BERICHT["task"]
+    if t is not None and not t.done():
+        _BERICHT["nochmal"] = True
+        return
+    _BERICHT["task"] = asyncio.create_task(_bericht_vorberechnung())      # Referenz merken, sonst kann die Task eingesammelt werden
+
+
+def _bericht_parameter(q):
+    """(zeitraum_tage, top_n, details, stichtag_setzen) aus der Query; ValueError mit Text bei ungültigen Werten."""
+    def zahl(name, vorgabe, lo, hi):
+        roh = q.get(name)
+        if roh is None or roh == "":
+            return vorgabe
+        try:
+            w = int(roh)
+        except ValueError:
+            raise ValueError(f"{name} muss eine ganze Zahl sein") from None
+        if not lo <= w <= hi:
+            raise ValueError(f"{name} muss zwischen {lo} und {hi} liegen")
+        return w
+    details = q.get("details", "zahlen")
+    if details not in ("zahlen", "ids"):
+        raise ValueError("details muss zahlen oder ids sein")
+    setzen = q.get("stichtag_setzen", "0")
+    if setzen not in ("0", "1"):
+        raise ValueError("stichtag_setzen muss 0 oder 1 sein")
+    return zahl("zeitraum_tage", 7, 1, 90), zahl("top_n", 5, 1, 50), details, setzen == "1"
+
+
+async def auto_bericht(request):
+    """Punkt 376: Statusbericht für die wöchentliche Mail der Integration (Schlüsselschutz über nur_ingress)."""
+    try:
+        zeitraum, top_n, details, setzen = _bericht_parameter(request.query)
+    except ValueError as f:
+        return web.json_response({"fehler": str(f)}, status=400)
+    t = _BERICHT["task"]
+    if t is not None and not t.done():       # läuft die Vorberechnung, nicht doppelt rechnen: auf sie warten (vor dem Lock)
+        try:
+            await asyncio.shield(t)
+        except Exception:  # noqa: BLE001 – Fehler der Vorberechnung sind dort geloggt
+            pass
+    try:
+        async with _bericht_lock():        # gleichzeitige Aufrufe rechnen nicht doppelt
+            pl = await asyncio.to_thread(Z.probelauf, _prognose_ziel(), False)
+            if not pl:
+                return web.json_response({"fehler": "Noch keine Analyse vorhanden"}, status=409)
+            e = await _bericht_eingabe(pl)
+            b = await asyncio.to_thread(bericht.baue, e, zeitraum, top_n, details, bericht.schwellen_aus_optionen(optionen()))
+            await _bericht_speichern(b, (zeitraum, top_n, details) == STANDARD_BERICHT and not setzen)
+            if setzen:
+                await asyncio.to_thread(bericht.schreibe_json, BERICHT_STICHTAG, bericht.stichtag_neu(e))
+                # Standardbericht gegen den neuen Stichtag rechnen, damit die Zähler (neu_ohne_regel) zum Stand passen
+                e["stichtag"] = await asyncio.to_thread(bericht.lies_json, BERICHT_STICHTAG)
+                await _standardbericht(pl, e=e)
+    except Exception as f:  # noqa: BLE001 – klare Antwort statt 500 ohne Text
+        _LOG.exception("Statusbericht fehlgeschlagen")
+        return web.json_response({"fehler": f"Statusbericht fehlgeschlagen: {f}"}, status=500)
+    return web.json_response(b)
+
+
 async def auto_loeschlauf(request):
+    _integration_kopf(request)
     try:
         body = await request.json()
     except Exception:  # noqa: BLE001 – Aufruf ohne Body
@@ -1438,7 +1717,48 @@ def _protokoll_aufraeumen():
         _LOG.exception("Löschprotokoll aufräumen fehlgeschlagen")
 
 
-_INTEGRATION = {"zeit": 0, "da": False, "exakt": False, "version": None, "version_zeit": 0}   # Punkt 272: version meldet die Integration im Kopf ihrer Anfragen
+_INTEGRATION = {"zeit": 0, "da": False, "exakt": False, "version": None, "version_zeit": 0,   # Punkt 272: version meldet die Integration im Kopf ihrer Anfragen
+                "schema": None}           # Punkt 302: Bereich freigegebener Schemas der Integration (ab 0.6.2b1 im Kopf)
+INTEGRATION_FRISCH_S = 300
+_HA_VERSION = {"zeit": 0, "wert": None, "befund": ""}
+
+
+def _integration_kopf(request):
+    """Version (Punkt 272) und Schema-Bereich (Punkt 302) aus dem Kopf einer Anfrage der Integration merken."""
+    v = request.headers.get("X-DBH-Integration-Version")     # ab 0.5.6b16
+    if v:
+        _INTEGRATION.update(version=v[:40], version_zeit=time.time(),
+                            schema=kompat.bereich_aus_kopf(request.headers.get(kompat.KOPF_SCHEMA)))
+
+
+def _ha_version():
+    """HA-Version vom Supervisor (für die Meldungen von Punkt 302), 10 Minuten zwischengespeichert; ohne Supervisor None."""
+    if time.time() - _HA_VERSION["zeit"] > 600:
+        try:
+            wert = automatik._supervisor("/core/info")["data"]["version"]
+        except Exception:  # noqa: BLE001 – Testcontainer ohne Supervisor, HA nicht erreichbar
+            wert = None
+        _HA_VERSION.update(zeit=time.time(), wert=wert)
+    return _HA_VERSION["wert"]
+
+
+def _schema_befund():
+    """Punkt 302: {"schema", "quelle", "eigene_freigabe", "integration", "befund"} – befund None heißt: Löschen erlaubt."""
+    db = optionen().get("db_pfad", f"{HA_CONFIG}/home-assistant_v2.db")
+    k = kompat.lade(HA_CONFIG)
+    schema = kompat.schema_der_db(db)
+    frisch = time.time() - _INTEGRATION["version_zeit"] < INTEGRATION_FRISCH_S
+    integ = _INTEGRATION["schema"] if frisch else None
+    befund = kompat.bewerte(schema, k, integ, _ha_version())
+    text = befund and befund["text"]
+    if text != _HA_VERSION.get("befund"):       # nur bei Änderung ins Log, nicht bei jeder Statusabfrage
+        _HA_VERSION["befund"] = text
+        if befund:
+            _LOG.warning("Löschen gesperrt (Punkt 302): %s [%s]", befund["text"], befund["details"])
+        else:
+            _LOG.info("Recorder-Schema %s freigegeben (%s)", schema, k["quelle"])
+    return {"schema": schema, "quelle": k["quelle"], "eigene_freigabe": k["quelle"] == "eigene",
+            "app": (k["daten"] or {}).get("app"), "integration": integ, "befund": befund}
 
 
 def _integration_abfragen():
@@ -1544,6 +1864,7 @@ def erstelle_app():
         web.get("/api/loeschen/protokoll", loesch_protokoll),
         web.get("/api/loeschen/summe", loesch_summe),
         web.get("/api/auto/status", auto_status),
+        web.get("/api/auto/bericht", auto_bericht),
         web.post("/api/auto/loeschlauf", auto_loeschlauf),
         web.post("/api/auto/analyse", auto_analyse),
         web.post("/api/auto/attribut_analyse", auto_attribut_analyse),

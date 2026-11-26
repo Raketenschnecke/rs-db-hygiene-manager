@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 SCHALTER_ORT = "Einstellungen → Apps → RS DB Hygiene Manager → Konfiguration"
 ZUSTAENDE = ["bereit", "nichts_zu_tun", "gesperrt", "analyse", "attribut_analyse", "loeschlauf", "fehler", "nicht_erreichbar"]
+AMPEL = ["gruen", "gelb", "rot"]
 
 
 def _ts(sek):
@@ -13,6 +14,8 @@ def werte(d):
     """Werte und Attribute je Entitäts-Schlüssel aus /api/auto/status der App."""
     plan = d.get("plan") or {}
     ll = d.get("letzter_lauf") or {}
+    bz = d.get("bericht_zaehler") or {}     # Punkt 376 (0.6.2b1): fehlt bei älterer App → Sensoren unbekannt
+    ampel = bz.get("ampel")
     return {
         # ab 0.4.1 (Punkt 66) verständliche Namen der Schalter; „sperren“ bleibt (wird in Automationen benutzt)
         "status": (d.get("zustand"), {"sperren": d.get("sperren") or [], "fehler": d.get("fehler"), "job": d.get("job"),
@@ -33,6 +36,10 @@ def werte(d):
                      {"tage": d.get("prognose_tage"), "jahre": round(d["prognose_tage"] / 365, 1) if d.get("prognose_tage") else None}),
         "analyse_stand": (_ts(d.get("analyse_zeit")), {}),
         "letzte_attribut_analyse": (_ts(d.get("attribut_analyse_zeit")), {}),
+        "tote_muster": (bz.get("tote_muster"), {}),
+        "regelcheck_rot": (bz.get("regelcheck_rot"), {}),
+        "neu_ohne_regel": (bz.get("neu_ohne_regel"), {}),
+        "ampel": (ampel if ampel in AMPEL else None, {}),
     }
 
 

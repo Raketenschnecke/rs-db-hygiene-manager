@@ -1,0 +1,9 @@
+{
+  "_hinweis": "Punkt 302: freigegebene Recorder-Schemas. Gleiche Datei in rs_db_hygiene/app/ und custom_components/rs_db_hygiene/ (Test prüft Gleichheit). Eigene Freigabe ohne Release: Kopie als /homeassistant/rs_db_hygiene_kompatibilitaet.json.",
+  "stand": "2026-11-26",
+  "app": {"von": 53, "bis": 53},
+  "integration": {"von": 53, "bis": 53},
+  "ha_version": {"53": "2026.11"},
+  "mindest_ha": "2026.10.0",
+  "notizen": {"53": "geprüft mit HA 2026.11 (Release 2026.11.3, SCHEMA_VERSION 53 in recorder/db_schema.py)"}
+}

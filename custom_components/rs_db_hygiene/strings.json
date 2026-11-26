@@ -85,6 +85,28 @@
     "attribut_analyse_starten": {
       "name": "Start attribute analysis (RS DB Hygiene Manager)",
       "description": "Starts the read-only attribute analysis in the add-on (≈ 5–10 min)."
+    },
+    "bericht_erstellen": {
+      "name": "Create status report (RS DB Hygiene Manager)",
+      "description": "Fetches a status report from the add-on and returns it as response data (dead patterns, rule check, new entities without rule).",
+      "fields": {
+        "zeitraum_tage": {
+          "name": "Period (days)",
+          "description": "Period the report covers (1-90)"
+        },
+        "top_n": {
+          "name": "Top N",
+          "description": "Number of entries per list (1-50)"
+        },
+        "details": {
+          "name": "Details",
+          "description": "zahlen = counts only, ids = include entity IDs"
+        },
+        "stichtag_setzen": {
+          "name": "Set reference date",
+          "description": "Set the reference date for the next report in the add-on"
+        }
+      }
     }
   },
   "entity": {
@@ -128,6 +150,23 @@
       },
       "version_integration": {
         "name": "Integration version"
+      },
+      "tote_muster": {
+        "name": "Dead patterns"
+      },
+      "regelcheck_rot": {
+        "name": "Rule check red"
+      },
+      "neu_ohne_regel": {
+        "name": "New without rule"
+      },
+      "ampel": {
+        "name": "Report status",
+        "state": {
+          "gruen": "green",
+          "gelb": "yellow",
+          "rot": "red"
+        }
       }
     },
     "binary_sensor": {
@@ -148,6 +187,12 @@
       "abbrechen": {
         "name": "Abort deletion run"
       }
+    }
+  },
+  "issues": {
+    "schema_nicht_freigegeben": {
+      "title": "RS DB Hygiene Manager: Löschen pausiert",
+      "description": "{grund}\n\nBis dahin löscht der RS DB Hygiene Manager nichts; Analysen laufen weiter, deine Daten bleiben unverändert.\n\nEinzelheiten: Datenbank-Schema {schema}, freigegeben {freigegeben}."
     }
   }
 }

@@ -10,7 +10,7 @@ wofür HA keinen eigenen Dienst je Entität bzw. Event-Typ hat. Ab 0.4.5 (Punkt 
 States einzelner Entitäten vor einem exakten Zeitpunkt (z. B. lokale Mitternacht) über HAs PurgeEntitiesTask. Die Arbeit läuft als Aufgabe in der Warteschlange
 des Recorders – wie HAs eigener Purge –, damit es keine Sperrkonflikte gibt und die Caches des Recorders stimmen.
 
-Schutz: Die Integration arbeitet nur mit SQLite und nur beim Recorder-Schema, für das sie getestet ist.
+Schutz: Die Integration arbeitet nur mit SQLite und nur bei Recorder-Schemas, die in kompatibilitaet.json freigegeben sind (Punkt 302).
 Sie nutzt interne Schnittstellen des Recorders und muss nach HA-Updates geprüft werden.
 """
 from __future__ import annotations
@@ -39,21 +39,29 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service import async_register_admin_service
 
 from homeassistant.const import Platform
 from homeassistant.loader import async_get_integration
 
-from . import kern
-from .const import ALTER_TITEL, DOMAIN, KOPF_VERSION, NAME
+from . import kern, kompatibilitaet
+from .const import ALTER_TITEL, DOMAIN, KOPF_SCHEMA, KOPF_VERSION, NAME
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE = "purge"
 SERVICE_STATES = "purge_states"   # Punkt 121 (0.4.5)
 PLATTFORMEN = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
-DIENSTE_BRUECKE = ("loeschlauf_starten", "analyse_starten", "attribut_analyse_starten")
+DIENSTE_BRUECKE = ("loeschlauf_starten", "analyse_starten", "attribut_analyse_starten", "bericht_erstellen")
 SCHEMA_START = vol.Schema({vol.Optional("regel"): cv.string})
-GETESTETES_SCHEMA = 53
+# Punkt 376 (0.6.2b1): Statusbericht der App als Antwortdaten der Aktion bericht_erstellen
+SCHEMA_BERICHT = vol.Schema({
+    vol.Optional("zeitraum_tage", default=7): vol.All(vol.Coerce(int), vol.Range(min=1, max=90)),
+    vol.Optional("top_n", default=5): vol.All(vol.Coerce(int), vol.Range(min=1, max=50)),
+    vol.Optional("details", default="zahlen"): vol.In(["zahlen", "ids"]),
+    vol.Optional("stichtag_setzen", default=False): cv.boolean,
+})
+ISSUE_SCHEMA = "schema_nicht_freigegeben"   # Punkt 302: Reparaturmeldung in HA
 TAG = 86400
 WARTEN_S = 900
 
@@ -140,10 +148,39 @@ def _pruefe_recorder(hass):
     instance = get_instance(hass)
     if instance.dialect_name != SupportedDialect.SQLITE:
         raise HomeAssistantError(f"{DOMAIN}: nur SQLite wird unterstützt (gefunden: {instance.dialect_name})")
-    if SCHEMA_VERSION != GETESTETES_SCHEMA or instance.schema_version != GETESTETES_SCHEMA:
-        raise HomeAssistantError(f"{DOMAIN}: Recorder-Schema {instance.schema_version}/{SCHEMA_VERSION} – getestet ist nur "
-                                 f"{GETESTETES_SCHEMA}. Bitte erst die Integration prüfen.")
+    # Punkt 302 (0.6.2b1): freigegebener Bereich aus kompatibilitaet.json statt einer festen Zahl; Code- und DB-Schema müssen drin sein
+    k = hass.data.get(DOMAIN, {}).get("kompat") or {}
+    if not (kompatibilitaet.freigegeben(k, SCHEMA_VERSION) and kompatibilitaet.freigegeben(k, instance.schema_version)):
+        frei = f"{k['von']}–{k['bis']}" if k.get("von") is not None else f"keins ({k.get('fehler')})"
+        raise HomeAssistantError(f"{DOMAIN}: Recorder-Schema {instance.schema_version}/{SCHEMA_VERSION} ist nicht freigegeben "
+                                 f"(freigegeben: {frei}) – Löschen pausiert, bis App und Integration aktualisiert sind.")
     return instance
+
+
+async def _schema_pruefen(hass: HomeAssistant) -> None:
+    """Punkt 302: Freigabe laden und beim Start prüfen; ohne Freigabe eine Reparaturmeldung in HA anlegen, sonst entfernen."""
+    k = await hass.async_add_executor_job(kompatibilitaet.lade, hass.config.path(kompatibilitaet.EIGENE))
+    hass.data.setdefault(DOMAIN, {})["kompat"] = k
+    try:
+        schema = get_instance(hass).schema_version
+    except Exception:  # noqa: BLE001 – Recorder noch nicht bereit: Prüfung beim Dienstaufruf genügt
+        return
+    if kompatibilitaet.freigegeben(k, SCHEMA_VERSION) and kompatibilitaet.freigegeben(k, schema):
+        ir.async_delete_issue(hass, DOMAIN, ISSUE_SCHEMA)
+        return
+    if k.get("von") is None:
+        grund = f"Die Freigabe-Datei ist ungültig ({k.get('fehler')})."
+    elif max(schema or 0, SCHEMA_VERSION) > k["bis"]:
+        grund = ("Home Assistant hat den Aufbau der Datenbank geändert. Diese Version der Integration ist dafür noch nicht freigegeben. "
+                 "Bitte die Integration in HACS aktualisieren, sobald ein Update erscheint, und HA neu starten.")
+    else:
+        grund = ("Diese Version der Integration braucht ein neueres Home Assistant"
+                 + (f" (mindestens {k['ha_version'][k['von']]})" if k["ha_version"].get(k["von"]) else "") + ". Bitte HA aktualisieren.")
+    _LOGGER.warning("RS DB Hygiene: Recorder-Schema %s/%s nicht freigegeben – Löschen pausiert. %s", schema, SCHEMA_VERSION, grund)
+    ir.async_create_issue(hass, DOMAIN, ISSUE_SCHEMA, is_fixable=False, severity=ir.IssueSeverity.ERROR,
+                          translation_key=ISSUE_SCHEMA,
+                          translation_placeholders={"grund": grund, "schema": str(schema), "freigegeben":
+                                                    f"{k['von']}–{k['bis']}" if k.get("von") is not None else "–"})
 
 
 async def _purge(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
@@ -183,6 +220,7 @@ async def _purge_states(hass: HomeAssistant, call: ServiceCall) -> ServiceRespon
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    await _schema_pruefen(hass)      # Punkt 302
     if entry.title == ALTER_TITEL:
         # Punkt 298 (0.5.6): gespeicherten Titel einmal angleichen; einen vom Nutzer gewählten Titel nicht anfassen
         hass.config_entries.async_update_entry(entry, title=NAME)
@@ -210,6 +248,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = DbhCoordinator(hass, entry)
     coordinator.version = str((await async_get_integration(hass, DOMAIN)).version)
     coordinator.kopf[KOPF_VERSION] = coordinator.version     # Punkt 272
+    sk = kompatibilitaet.kopf(hass.data[DOMAIN]["kompat"])
+    if sk:
+        coordinator.kopf[KOPF_SCHEMA] = sk                   # Punkt 302: die App unterscheidet damit „Integration veraltet“
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
@@ -223,9 +264,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def attribut_analyse(call: ServiceCall) -> None:
         await coordinator.befehl("attribut_analyse")
 
+    async def bericht(call: ServiceCall) -> ServiceResponse:
+        return await coordinator.bericht(dict(call.data))
+
     async_register_admin_service(hass, DOMAIN, "loeschlauf_starten", starten, schema=SCHEMA_START, supports_response=SupportsResponse.OPTIONAL)
     async_register_admin_service(hass, DOMAIN, "analyse_starten", analyse)
     async_register_admin_service(hass, DOMAIN, "attribut_analyse_starten", attribut_analyse)
+    async_register_admin_service(hass, DOMAIN, "bericht_erstellen", bericht, schema=SCHEMA_BERICHT, supports_response=SupportsResponse.ONLY)
     await hass.config_entries.async_forward_entry_setups(entry, PLATTFORMEN)
     return True
 

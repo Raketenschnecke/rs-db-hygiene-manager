@@ -2185,7 +2185,8 @@ const HILFE = {
 };
 const hilfeTexte = (k) => HILFE[k].slice(1).map(t => t.replaceAll("{ziel}", jahreText(zielJahre()))
   .replaceAll("{pkd}", S.status?.analyse?.purge_keep_days || "?"));
-const hilfeTip = k => { const [b, e, h] = hilfeTexte(k); return `${b}\n\n${e}\n\nEmpfehlung: ${h}`; };
+// Punkt 377: Tooltips der Raster-Köpfe (Kacheln) ohne Absatz „Empfehlung“ – der steht weiter im ⓘ-Dialog
+const hilfeTip = (k, mitEmpfehlung = true) => { const [b, e, h] = hilfeTexte(k); return `${b}\n\n${e}` + (mitEmpfehlung ? `\n\nEmpfehlung: ${h}` : ""); };
 function setzeBedienTooltips() {
   $("#lblZiel").title = hilfeTip("ziel");
   $("#lblPassiv").title = hilfeTip("passiv");
@@ -2269,9 +2270,9 @@ function rasterHtml(s, st) {
   const zsub = { ist: "Stand der Analyse", loesch: "aktive Regeln, ohne Obergrenze", prog: `über ${zr}` };
   const knopf = (k, name) => `<button class="hilfeknopf" data-hilfe="${k}" aria-label="Erläuterung: ${esc(name)}">ⓘ</button>`;
   let h = `<div></div>` + RSPALTEN.map(([k, name, kurz]) =>
-    `<div class="rkopf" title="${esc(hilfeTip("c_" + k))}"><span class="lang">${esc(name)}</span><span class="kurz">${esc(kurz)}</span>${knopf("c_" + k, name)}</div>`).join("");
+    `<div class="rkopf" title="${esc(hilfeTip("c_" + k, false))}"><span class="lang">${esc(name)}</span><span class="kurz">${esc(kurz)}</span>${knopf("c_" + k, name)}</div>`).join("");
   for (const [z, zname, zkurz, klasse] of RZEILEN) {
-    h += `<div class="zkopf ${klasse}" title="${esc(hilfeTip("r_" + z))}"><div><span class="lang">${esc(zname)}</span><span class="kurz">${esc(zkurz)}</span>${knopf("r_" + z, zname)}</div>
+    h += `<div class="zkopf ${klasse}" title="${esc(hilfeTip("r_" + z, false))}"><div><span class="lang">${esc(zname)}</span><span class="kurz">${esc(zkurz)}</span>${knopf("r_" + z, zname)}</div>
       <span class="sub">${esc(zsub[z])}</span></div>`;
     for (const [k, kname] of RSPALTEN) {
       const c = werte[z][k];
@@ -4540,18 +4541,27 @@ function zeigeChips() {
   else if (ig && !ig.exakt) chip("integration", "Integration ohne purge_states", "warn", "Die geladene Integration ist älter als 0.4.5 – Löschen bis zur lokalen Mitternacht ist nicht möglich.");
   else if (ig?.version && versionNr(ig.version) && versionKleiner(versionNr(ig.version), [0, 5, 6, 9]))
     chip("integration", `Integration ${ig.version} zu alt`, "warn", "Das Abtrennen und Löschen der Attribute braucht die Integration ab 0.5.6b9 (nach dem Update HA neu starten).");
+  // 5b. Punkt 302: Datenbank-Aufbau (Recorder-Schema) nicht freigegeben bzw. eigene Freigabe aktiv
+  const ko = st.kompatibilitaet;
+  if (ko?.befund) chip("schema", SCHEMA_CHIP[ko.befund.fall] || "Löschen pausiert", "warn", `${ko.befund.text}\n\nEinzelheiten: ${ko.befund.details}`);
+  if (ko?.eigene_freigabe) chip("schema", "Eigene Freigabe aktiv", "warn",
+    "Die Datei /homeassistant/rs_db_hygiene_kompatibilitaet.json ersetzt die Freigaben dieser Version"
+    + (ko.app ? ` (App: Schema ${ko.app.von}–${ko.app.bis})` : "") + ". Nach dem nächsten Update wieder entfernen.");
   // 6. Sperren – nur wenn gesetzt
   if (op.loeschen_freigegeben === false) chip("sperre", "Löschen aus", "warn", "Der Hauptschalter „Löschen freigegeben“ ist aus – kein Löschlauf wird ausgeführt.");
   else if (op.automatik_freigegeben === false) chip("sperre", "Automatik aus", "warn", "„Automatik freigegeben“ ist aus – Läufe aus HA (Knopf, Dienst, Automation) werden abgelehnt.");
   zeile.innerHTML = chips.join("");
 }
-const CHIP_KLICK = { ha: "Einstellungen des HA-Standards öffnen", attr: "Attribut-Standard ändern", analyse: "Analyse starten", integration: "Erklärung zeigen", sperre: "zum Tab Löschen" };
+const CHIP_KLICK = { ha: "Einstellungen des HA-Standards öffnen", attr: "Attribut-Standard ändern", analyse: "Analyse starten", integration: "Erklärung zeigen", sperre: "zum Tab Löschen", schema: "zum Tab Löschen" };
+// Punkt 302: Kurztext je Fall (kompatibilitaet.bewerte); der volle Text steht im Tooltip und als Sperre im Tab Löschen
+const SCHEMA_CHIP = { 0: "Löschen pausiert: Freigabe prüfen", 1: "Löschen pausiert: Integration veraltet", 2: "Löschen pausiert: HA-Update noch nicht freigegeben",
+  3: "Löschen pausiert: HA zu alt", 4: "Löschen pausiert: App veraltet" };
 function chipKlick(id) {
   if (id === "attr") return attrStandardDialog();
   if (id === "ha") { const i = S.regeln.regeln.findIndex(r => r.id === HA_STD); if (i >= 0) bearbeiteRegel(i); return; }
   if (id === "analyse") return $("#btnAnalyse").click();
   if (id === "integration") return meldung("Integration RS DB Hygiene", INTEGRATION_FEHLT);
-  if (id === "sperre") document.querySelector('#tabs button[data-tab="loeschen"]').click();
+  if (id === "sperre" || id === "schema") document.querySelector('#tabs button[data-tab="loeschen"]').click();
 }
 function attrStandardDialog() {
   dialog("Attribut-Standard", `<div class="sub">Frist, nach der ein Löschlauf die Attributzeilen löscht – für alles, was keine Regel mit eigenem Attribut-Wert trifft.
