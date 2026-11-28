@@ -4,6 +4,10 @@ Kurzfassung je Version.
 Alle 0.1.x-Versionen: nur Analyse und Probelauf – es wird nichts gelöscht.
 Ab 0.2.0: Löschen der Kurzzeit-States per recorder.purge_entities, nur auf Knopfdruck und mit Hauptschalter.
 
+## 0.6.3b1 (Beta)
+- **Zähler-Schutz in der Entitätentabelle sichtbar (Punkt 378):** Bei Zählern (`state_class: total` bzw. `total_increasing`) greifen Integrations-, Muster-, Klassen-, unbenutzt- und Vielschreiber-Regeln nie. Bisher sah man in der Kurzzeit-Spalte dann nur „HA:standard“ und der Hinweis „!“ an der Entität verschwand bei langen IDs durch das Abschneiden. Jetzt zeigt die Kurzzeit-Zelle hinter dem Regel-Chip einen Chip „Z“; sein Tooltip nennt die übersprungenen Regeln und die Abhilfe (entity-Regel oder eigene Vorhaltezeit `E:`). Fehlt der Platz, wird in diesen Zellen der Regel-Chip mit „…“ gekürzt (volle Regel-ID im Tooltip, Klickverhalten unverändert). Der Tooltip am Hinweis „!“ nennt den Zähler-Schutz ausdrücklich, die Hilfe ist ergänzt.
+- Die Integration ändert sich nicht
+
 ## 0.6.2
 Release mit den Betas seit 0.6.0 (0.5.8b4, 0.6.1b2, 0.6.2b1); Einzelheiten in deren Abschnitten unten. Nach dem Update der Integration (HACS) HA neu starten.
 - **Neu:** Statusbericht zum Regelwerk mit Beispiel-Automation für eine wöchentliche Mail aus HA (die App sendet nichts ins Netz); Löschen pausiert, wenn ein HA-Update den Aufbau der Datenbank ändert (Meldung in App, Status-Sensor und HA-Reparaturen); dynamische Regel „unbenutzt“ mit erweiterter Erkennung der Verwendung; Events-Tabelle mit Drilldown je Event-Typ; Zeitverlauf mit Auffälligkeiten je Eintrag und ein-/ausblendbaren Serien.

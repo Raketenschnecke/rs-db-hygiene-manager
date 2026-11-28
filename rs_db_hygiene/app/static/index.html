@@ -396,6 +396,9 @@ table.gruppiert th.gstart, table.gruppiert td.gstart { border-left: 1px solid co
 .wzelle { display: flex; align-items: center; min-width: 0; }
 .wzelle .wtext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .wzelle .chip { flex: none; max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* Punkt 160 */
+/* Punkt 378: mit Zusatz-Chip („Z“) darf der Regel-Chip schrumpfen (gekürzt mit …), der Zusatz-Chip bleibt fest */
+.wzelle.wzusatz .chip { flex: 0 1 auto; min-width: 2.5em; }
+.wzelle.wzusatz .chip.zusatz { flex: none; min-width: 0; }
 tr.summenzeile th { font-weight: 400; padding: 3px 9px 5px; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
 tr.summenzeile th b { font-weight: 600; }
 tr.summenzeile th .ges { display: block; color: var(--muted); font-size: 11px; }
@@ -1010,7 +1013,7 @@ table.ana-t.fest thead tr.titelzeile th { position: relative; padding-right: 14p
         <p>Beispiel: <code>sensor.uv_uptime</code> wird von R05 (glob <code>sensor.*_uptime*</code>, Kurzzeit 1 Woche) und R22 (entity, Kurzzeit 60 Tage) getroffen. Es gilt <b>R22</b>, weil entity vor glob kommt.</p>
         <ul id="h-wichtig">
           <li><b>Platzhalter nur bei glob (und schutz):</b> Bei entity wird <code>*</code> wörtlich genommen; die Regel trifft dann nichts. Die App warnt beim Speichern.</li>
-          <li><b>Zähler-Schutz:</b> glob-, klasse-, integration-, unbenutzt- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der bei Zählern nur die Kurzzeit kürzt – ihre Langzeit bleibt immer unbegrenzt).</li>
+          <li><b>Zähler-Schutz:</b> glob-, klasse-, integration-, unbenutzt- und vielschreiber-Regeln greifen nie bei Zählern (<code>state_class: total</code> bzw. <code>total_increasing</code>), damit das Energie-Dashboard keine Historie verliert. Für Zähler wirken nur schutz-, entity-, E:- und verwaist-Regeln sowie der HA-Standard (der bei Zählern nur die Kurzzeit kürzt – ihre Langzeit bleibt immer unbegrenzt). In der Tabelle Entitäten zeigt die Kurzzeit-Zelle dann den Chip „Z“ (Zähler; Tooltip nennt die Regel); der Hinweis „!“ an der Entität nennt die betroffene Regel ebenfalls.</li>
           <li><b>Daten dauerhaft schützen:</b> eine Regel vom Typ <b>schutz</b> (Kurzzeit global, Langzeit unbegrenzt fest; höchster Rang, auch vor E:). Im Tab Entitäten zeigt 🔒, was geschützt ist; der Löschplan lässt diese Entitäten aus.</li>
           <li id="h-ha-standard"><b>HA-Standard (<code>HA:standard</code>):</b> bildet das Löschverhalten von Home Assistant in der Grundeinstellung ab (<a class="hverweis" href="#h-faq-ha-vorbereiten"><code>purge_keep_days: 10</code></a>): States, 5-Min-Statistik, Attribute und Events nach 10 Tagen, Langzeitstatistik nie. Sie gilt für alles, wofür keine andere Regel einen Wert setzt, auch für Zähler. Bei einer neuen Installation ist sie aktiv, bei bestehenden wird sie passiv ergänzt. Sie lässt sich nicht entfernen, nur passiv schalten. Die Kurzzeit ist einstellbar (Klick auf die Regel): Mit z. B. 90 Tagen wird sie zur Auffangregel für alles ohne eigene Regel – anders als eine glob-Regel <code>*</code>, die vor allen klasse-Regeln rangiert und Zähler auslässt. Die Kurzzeit gilt dann auch für die Events. Auch die <b>Langzeit</b> ist einstellbar (Voreinstellung unbegrenzt): Mit z. B. 1 Jahr wird die Regel zum <b>Lumpensammler</b> für die Stundenstatistik aller Entitäten ohne eigene Langzeit-Regel, <a class="hverweis" href="#h-faq-langzeit">Wie begrenze ich die Langzeit?</a> Die Langzeit der Zähler bleibt dabei immer erhalten. Die Linie „nur HA-Standard“ im Prognose-Verlauf rechnet immer mit 10 Tagen und unbegrenzter Langzeit. Ist sie aktiv, weist die App vor jedem Löschlauf aus dem Tab Löschen darauf hin.</li>
           <li><b>Vorschau:</b> Der Regeldialog zeigt Treffer und ob eine andere Regel irgendwo Vorrang hat. Die Spalten „Entitäten mit Kurzzeit/Langzeit aus dieser Regel“ (Tab Prognose) zählen Entitäten, keine Zeilen.</li>
@@ -3049,13 +3052,25 @@ $("#filterReset").onclick = () => {
 const chipText = id => String(id).startsWith("E:") ? "E" : id;
 // Punkt 274: Klick auf den Chip (Regel bzw. „Std.“) wählt im Spaltenkopf der Vorhaltezeit „aus Regel …“ bzw. „nur Standard“ und filtert danach –
 // wie bei den Labels; Umschalt+Klick öffnet die Regel wie bisher. art = Spalte (kurzzeit, attribute, langzeit)
-function wertZelle(w, art) {
+// zusatz: optionaler fertiger HTML-Chip hinter dem Regel-Chip (bleibt wie dieser immer sichtbar)
+function wertZelle(w, art, zusatz = "") {
   if (!w) return "–";
   const wa = art ? ` data-wart="${esc(art)}"` : "";
   const spalte = art && SPALTE[art] ? SPALTE[art][1] : "";
   const quelle = w.regel ? `<span class="chip regel rklick" data-regel="${esc(w.regel)}"${wa} title="${esc(w.regel.startsWith("E:") ? "eigene Regel " + w.regel : w.muster)}\nKlick: ${art ? "nur Entitäten, deren " + spalte + " aus Regel " + w.regel + " stammt · Umschalt+Klick: Regel öffnen" : "Regel " + w.regel + " öffnen"}">${esc(chipText(w.regel))}</span>`
     : `<span class="chip${art ? " rklick" : ""}" ${art ? `data-std="1"${wa}` : ""} title="Standard (keine Regel)${art ? "\nKlick: nur Entitäten ohne Regel für diesen Wert (" + spalte + ")" : ""}">Std.</span>`;
-  return `<span class="wzelle"><span class="wtext" title="${esc(w.anzeige)}">${esc(w.anzeige)}</span>${quelle}</span>`;
+  return `<span class="wzelle${zusatz ? " wzusatz" : ""}"><span class="wtext" title="${esc(w.anzeige)}">${esc(w.anzeige)}</span>${quelle}${zusatz}</span>`;
+}
+// Punkt 378 (28.11.2026): Zähler-Schutz in der Kurzzeit-Zelle sichtbar – der „!“-Chip in der Entitätsspalte verschwindet bei langen IDs
+// durch das Abschneiden. Chip „Z“ (Zähler) ohne eigene Klickaktion, nennt die übersprungenen Regeln aus e.geschuetzt;
+// Kürzel statt „Zähler“, weil die Kurzzeit-Spalte in Standardbreite sonst den Chip abschneidet (Entscheidung Andreas 28.11.2026).
+function zaehlerChip(e) {
+  const g = e.geschuetzt || [];
+  if (!g.length) return "";
+  const tip = `Zähler (state_class total/total_increasing): Regel ${g.join(", ")} ${g.length > 1 ? "greifen" : "greift"} hier nicht (Zähler-Schutz). `
+    + "Integrations-, Muster-, Klassen-, unbenutzt- und Vielschreiber-Regeln wirken nie auf Zähler. "
+    + "Abhilfe bei Bedarf: entity-Regel oder eigene Vorhaltezeit (E:).";
+  return `<span class="chip warn zusatz" title="${esc(tip)}" aria-label="${esc(`Zähler-Schutz: Regel ${g.join(", ")} ${g.length > 1 ? "greifen" : "greift"} nicht`)}">Z</span>`;
 }
 function oeffneRegel(id) {
   const i = (S.regeln?.regeln || []).findIndex(r => r.id === id);
@@ -3090,7 +3105,9 @@ const attrTd = (v, f) => `<td class="n">${v == null ? '<span class="sub" title="
 // Zelle je Spalte – die Tabelle zeigt nur die ausgewählten Spalten
 const ZELLEN = {
   entity_id: e => {
-    const hinweis = [...e.hinweise, ...e.geschuetzt.map(g => "geschützt vor " + g)];
+    // Punkt 378 (28.11.2026): Tooltip nennt den Zähler-Schutz als Grund
+    const hinweis = [...e.hinweise, ...e.geschuetzt.map(g => "geschützt vor " + g + " (Zähler-Schutz)"),
+      ...(e.geschuetzt.length ? ["Zähler-Schutz: Zähler (state_class total/total_increasing) – Integrations-, Muster-, Klassen-, unbenutzt- und Vielschreiber-Regeln wirken nie auf Zähler"] : [])];
     const schloss = e.schutz ? `<span class="chip regel" title="geschützt durch ${esc(e.schutz)}: wird nie gekürzt">🔒</span>` : "";   // Punkt 111
     return `<td class="mono" title="${esc(e.entity_id)}">${esc(e.entity_id)}${schloss}${hinweis.length ? `<span class="chip warn" title="${esc(hinweis.join("\n"))}">!</span>` : ""}</td>`;
   },
@@ -3107,7 +3124,7 @@ const ZELLEN = {
   lts_rows: e => `<td class="n">${e.lts_rows ? zahl(e.lts_rows) : "–"}</td>`,
   kurz_rows: e => `<td class="n">${e.kurz_rows ? zahl(e.kurz_rows) : "–"}</td>`,   // Punkt 135
   faktor_bestand: e => `<td class="n">${verhaeltnis(e.rows, e.kurz_rows)}</td>`,   // Punkt 366
-  kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit, "kurzzeit")}</td>`,
+  kurzzeit: e => `<td>${wertZelle((e.werte || {}).kurzzeit, "kurzzeit", zaehlerChip(e))}</td>`,   // Punkt 378
   attribute: e => `<td>${wertZelle((e.werte || {}).attribute, "attribute")}</td>`,
   langzeit: e => `<td>${wertZelle((e.werte || {}).langzeit, "langzeit")}</td>`,
   ...Object.fromEntries(["loesch_summe", "loesch_states", "loesch_kurz", "loesch_lts", "loesch_attr_zeilen"].map(k =>
